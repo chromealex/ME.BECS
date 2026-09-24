@@ -6,6 +6,7 @@ using ME.BECS.Editor.Jobs;
 namespace ME.BECS.Editor.Systems {
 
     public class SystemDependenciesCodeGenerator : CustomCodeGenerator {
+        private readonly SourceGeneratorJobSafety sourceSafety = new SourceGeneratorJobSafety();
 
         private static uint awaitCount;
         private readonly object lockObj = new object();
@@ -515,7 +516,7 @@ namespace ME.BECS.Editor.Systems {
                             hasInterestInstructions = true;
                             if (methodInfo.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                                 var jobType = methodInfo.GetGenericArguments()[0];
-                                var info = JobsEarlyInitCodeGenerator.GetJobTypesInfo(jobType);
+                                var info = this.sourceSafety.Select(jobType);
                                 foreach (var typeInfo in info) {
                                     uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
                                         type = typeInfo.type,

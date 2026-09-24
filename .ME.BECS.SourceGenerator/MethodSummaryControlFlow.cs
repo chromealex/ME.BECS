@@ -90,6 +90,8 @@ internal static class MethodSummaryControlFlow {
         ControlFlowGraph? graph = root switch {
             IMethodBodyOperation method => ControlFlowGraph.Create(method, cancellation),
             IConstructorBodyOperation constructor => ControlFlowGraph.Create(constructor, cancellation),
+            IFieldInitializerOperation field => ControlFlowGraph.Create(field, cancellation),
+            IPropertyInitializerOperation property => ControlFlowGraph.Create(property, cancellation),
             IBlockOperation block => ControlFlowGraph.Create(block, cancellation),
             _ => null,
         };

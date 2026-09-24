@@ -537,6 +537,8 @@ namespace ME.BECS {
                 reuse = true;
                 return jobInfo.GetEntity(groupId);
             }
+
+            jobInfo.CheckEntityLimit();
             
             if (JobUtils.IsInParallelJob() == true) {
                 throw new System.Exception("EnsureFree must be called before parallel job");

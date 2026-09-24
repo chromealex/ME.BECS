@@ -11,8 +11,21 @@ namespace ME.BECS.Editor.Jobs {
 
         private System.Collections.Generic.List<(System.Type job, string call)> earlyInitDiagnostics;
         private MethodInfo[] earlyInitMethods;
+        private static readonly System.Type[] EarlyInitContracts = {
+            typeof(IJobForComponentsBase), typeof(IJobParallelForComponentsBase), typeof(IJobForComponentsBase),
+            typeof(IJobParallelForAspectsBase), typeof(IJobForAspectsBase), typeof(IJobForAspectsComponentsBase),
+            typeof(IJobParallelForAspectsComponentsBase),
+        };
         private readonly SourceGeneratorJobWeights sourceWeights = new SourceGeneratorJobWeights();
+        private readonly SourceGeneratorJobEntityCounts sourceEntityCounts = new SourceGeneratorJobEntityCounts();
+        private readonly SourceGeneratorJobSizes sourceSizes = new SourceGeneratorJobSizes();
+        private readonly SourceGeneratorJobSafety sourceSafety = new SourceGeneratorJobSafety();
         private readonly System.Collections.Generic.Dictionary<System.Type, uint> selectedWeights = new System.Collections.Generic.Dictionary<System.Type, uint>();
+
+        // Only one generation pass may reuse these statements: their dependencies include
+        // called methods, component layouts, entity-group ordering and source catalogs.
+        private readonly System.Collections.Generic.Dictionary<System.Type, string[]> jobInitializations =
+            new System.Collections.Generic.Dictionary<System.Type, string[]>();
 
         private uint SelectWeight(System.Type jobType) {
             if (this.selectedWeights.TryGetValue(jobType, out var weight)) return weight;
@@ -25,7 +38,13 @@ namespace ME.BECS.Editor.Jobs {
         private string WeightInitialization(System.Type jobType) => this.sourceWeights.TryGetInitializer(jobType, out var call)
             ? call : $"JobStaticInfo<{EditorUtils.GetTypeName(jobType)}>.opsWeight = {this.SelectWeight(jobType)}u;";
 
-        internal static string CompareEarlyInit(System.Collections.Generic.List<System.Type> jobs, bool editor) {
+        internal static string CompareEarlyInit(System.Collections.Generic.List<System.Type> jobs, bool editor, out int unavailable) {
+            return CompareEarlyInit(jobs, editor, out unavailable, out _);
+        }
+
+        private static string CompareEarlyInit(System.Collections.Generic.List<System.Type> jobs, bool editor, out int unavailable,
+            out System.Collections.Generic.List<(System.Type job, string call)> initialization) {
+            unavailable = 0;
             var generator = new JobsEarlyInitCodeGenerator {
                 jobTypes = jobs, editorAssembly = editor, asms = EditorUtils.GetAssembliesInfo(),
                 earlyInitDiagnostics = new System.Collections.Generic.List<(System.Type job, string call)>(),
@@ -42,10 +61,94 @@ namespace ME.BECS.Editor.Jobs {
                     if (resolved != entry.call) ++generated;
                     else fallback.Add(entry.job.FullName + " [" + entry.job.Assembly.GetName().Name + "] — " + reason);
                 }
-                report.AppendLine($"Job EarlyInit ({(generic ? "generic" : "ordinary")}): generated={generated}, fallback={fallback.Count}, selected calls={entries.Length}");
+                unavailable += fallback.Count;
+                report.AppendLine($"Job EarlyInit ({(generic ? "generic" : "ordinary")}): generated={generated}, unavailable={fallback.Count}, selected calls={entries.Length} (legacy fallback disabled)");
                 foreach (var entry in fallback.OrderBy(s => s, System.StringComparer.Ordinal)) report.Append("  ").AppendLine(entry);
             }
+            var selectionsCompared = 0;
+            var selectionsDifferent = 0;
+            foreach (var group in generator.earlyInitDiagnostics.GroupBy(entry => entry.job).OrderBy(group => group.Key.AssemblyQualifiedName, System.StringComparer.Ordinal)) {
+                if (!SourceGeneratorBridge.TryGetJobEarlyInitSelection(group.Key, out var sourceCalls, out var reason)) {
+                    ++unavailable;
+                    report.AppendLine("EarlyInit source selection unavailable: " + group.Key.AssemblyQualifiedName + " — " + reason);
+                    continue;
+                }
+                ++selectionsCompared;
+                var legacyCalls = group.Select(entry => entry.call).Distinct(System.StringComparer.Ordinal).OrderBy(call => call, System.StringComparer.Ordinal).ToArray();
+                if (sourceCalls.SequenceEqual(legacyCalls, System.StringComparer.Ordinal)) continue;
+                ++selectionsDifferent;
+                ++unavailable;
+                report.AppendLine("EarlyInit SELECTION DIFFERS: " + group.Key.AssemblyQualifiedName);
+                foreach (var call in sourceCalls.Except(legacyCalls, System.StringComparer.Ordinal)) report.AppendLine("  source only: " + call);
+                foreach (var call in legacyCalls.Except(sourceCalls, System.StringComparer.Ordinal)) report.AppendLine("  legacy only: " + call);
+            }
+            report.AppendLine($"EarlyInit independent source selections: compared={selectionsCompared}, different={selectionsDifferent} (distinct call sets; registration order NOT checked)");
+            generator.CompareEarlyInitOrder(report, ref unavailable, out initialization);
             return report.AppendLine("EarlyInit diagnostics: fresh selection, no cache files read/written; initialization methods NOT invoked.").ToString();
+        }
+
+        private void CompareEarlyInitOrder(System.Text.StringBuilder report, ref int unavailable,
+            out System.Collections.Generic.List<(System.Type job, string call)> initialization) {
+            initialization = new System.Collections.Generic.List<(System.Type job, string call)>();
+            var contracts = EarlyInitContracts;
+            var source = new System.Collections.Generic.List<(System.Type job, string call)>();
+            var plans = new System.Collections.Generic.Dictionary<System.Type, System.Collections.Generic.KeyValuePair<int, string>[]>();
+            var incomplete = 0;
+            for (var phase = 0; phase < contracts.Length; ++phase) {
+                foreach (var job in this.SelectEarlyInitJobs(contracts[phase])) {
+                    if (!job.IsValueType || !job.IsVisible || !this.IsValidTypeForAssembly(job)) continue;
+                    if (!plans.TryGetValue(job, out var plan)) {
+                        if (!SourceGeneratorBridge.TryGetJobEarlyInitPlan(job, out plan, out var reason)) {
+                            ++incomplete;
+                            report.AppendLine("EarlyInit ordered plan unavailable: " + job.AssemblyQualifiedName + " — " + reason);
+                        }
+                        plans.Add(job, plan);
+                    }
+                    if (plan == null) continue;
+                    var candidates = plan.Where(entry => entry.Key == phase).ToArray();
+                    if (candidates.Length > 1) {
+                        ++incomplete;
+                        report.AppendLine("EarlyInit ambiguous source phase " + phase + ": " + job.AssemblyQualifiedName);
+                        continue;
+                    }
+                    string generated = null;
+                    if (candidates.Length == 1) {
+                        var call = candidates[0].Value;
+                        source.Add((job, call));
+                        generated = SourceGeneratorBridge.ResolveJobEarlyInit(job, call, out var reason);
+                        if (generated == call) {
+                            ++incomplete;
+                            report.AppendLine("EarlyInit ordered wrapper unavailable: " + job.AssemblyQualifiedName + " — " + reason);
+                            continue;
+                        }
+                    }
+                    // Include stat-only slots in the validated snapshot, not only EarlyInit calls.
+                    initialization.Add((job, generated));
+                }
+            }
+            unavailable += incomplete;
+            if (incomplete != 0) {
+                report.AppendLine("EarlyInit registration order: INCOMPLETE, unavailable/ambiguous=" + incomplete);
+                return;
+            }
+            var equal = source.SequenceEqual(this.earlyInitDiagnostics);
+            report.AppendLine($"EarlyInit registration order: {(equal ? "equal" : "DIFFERS")}, source={source.Count}, legacy={this.earlyInitDiagnostics.Count} (duplicates retained; shared discovery order)");
+            if (equal) return;
+            ++unavailable;
+            var differences = 0;
+            for (var index = 0; index < System.Math.Max(source.Count, this.earlyInitDiagnostics.Count) && differences < 16; ++index) {
+                var actual = index < source.Count ? source[index] : default;
+                var expected = index < this.earlyInitDiagnostics.Count ? this.earlyInitDiagnostics[index] : default;
+                if (actual.Equals(expected)) continue;
+                ++differences;
+                report.AppendLine("  index " + index + ": source=" + (actual.call ?? "<end>") + "; legacy=" + (expected.call ?? "<end>"));
+            }
+        }
+
+        private System.Collections.Generic.List<System.Type> SelectEarlyInitJobs(System.Type contract) {
+            var jobs = this.GetTypesDerivedFrom(contract).OrderBy(type => type.FullName).ToList();
+            CodeGenerator.PatchSystemsList(jobs);
+            return jobs;
         }
 
         public struct TypeInfo : System.IEquatable<TypeInfo> {
@@ -72,32 +175,64 @@ namespace ME.BECS.Editor.Jobs {
 
         }
 
-        private void Generate<TJobBase, T0, T1>(System.Collections.Generic.List<string> dataList, string method) {
+        private string[] GetJobInitialization(System.Type jobType) {
+            if (this.jobInitializations.TryGetValue(jobType, out var cached)) return cached;
+            var content = new System.Collections.Generic.List<string>();
+            var jobTypeFullName = EditorUtils.GetTypeName(jobType);
+            if (this.sourceEntityCounts.TrySelect(jobType, this, out var countInitializer)) {
+                content.Add(countInitializer);
+            } else {
+                var entsInfo = GetJobEntInfo(jobType, this);
+                var maximum = jobType.GetCustomAttribute<EntitiesJobMaxCountAttribute>()?.count ?? 0u;
+                content.Add($"JobStaticInfo<{jobTypeFullName}>.entitiesMaxCount = {maximum}u;");
+                uint[] reservations = entsInfo.count?.Select(count => (uint)count).ToArray();
+                if (maximum > 0u && entsInfo.brCount > 0) {
+                    reservations ??= new uint[entsInfo.loopGroups.Length];
+                    for (var group = 0; group < reservations.Length; ++group)
+                        if (entsInfo.loopGroups[group]) reservations[group] = maximum;
+                }
+                content.Add($"JobStaticInfo<{jobTypeFullName}>.loopCount = {entsInfo.brCount}u;");
+                if (reservations != null) {
+                    content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = _makeArray<uint>({reservations.Length}u, Allocator.Domain);");
+                    for (uint i = 0u; i < reservations.Length; ++i) {
+                        if (reservations[i] > 0) content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount[{i}u] = {reservations[i]}u;");
+                    }
+                } else {
+                    content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = default;");
+                }
+            }
 
-            if (this.earlyInitDiagnostics == null) this.cache.SetKey($"{method}:{typeof(TJobBase).Name}:{typeof(T0).Name}:{typeof(T1).Name}");
-            var jobsComponents = this.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
-            CodeGenerator.PatchSystemsList(jobsComponents);
+            var typeInfos = this.sourceSafety.Select(jobType);
+            var sizeComponents = typeInfos.Select(item => item.type)
+                .Where(type => typeof(IComponent).IsAssignableFrom(type)).Distinct().ToArray();
+            content.Add(this.WeightInitialization(jobType));
+            if (this.sourceSizes.TrySelect(jobType, sizeComponents, out var sizeInitializer))
+                content.Add(sizeInitializer);
+            else {
+                var maxStructSize = 0u;
+                foreach (var component in sizeComponents) {
+                    var size = (uint)System.Runtime.InteropServices.Marshal.SizeOf(component);
+                    if (size > maxStructSize) maxStructSize = size;
+                }
+                content.Add($"JobStaticInfo<{jobTypeFullName}>.maxStructSize = {maxStructSize}u;");
+            }
+
+            var result = content.ToArray();
+            this.jobInitializations.Add(jobType, result);
+            return result;
+        }
+
+        // Migration oracle only; production consumes the source selection catalog below.
+        private void CollectLegacyEarlyInit<TJobBase, T0, T1>(string method) {
+
+            var jobsComponents = this.SelectEarlyInitJobs(typeof(TJobBase));
             foreach (var jobType in jobsComponents) {
 
-                if (this.earlyInitDiagnostics == null && this.cache.TryGetValue<System.Collections.Generic.List<string>>(jobType, out var list) == true) {
-                    // This cache hashes the job's own script, not transitive methods or
-                    // source-generator metadata. Never reuse an opsWeight from that cache.
-                    var weightPrefix = $"JobStaticInfo<{EditorUtils.GetTypeName(jobType)}>.opsWeight = ";
-                    foreach (var line in list) {
-                        var current = line.StartsWith(weightPrefix, System.StringComparison.Ordinal) || line.StartsWith("global::ME.BECS.SourceGenerated.JobWeight_", System.StringComparison.Ordinal)
-                            ? this.WeightInitialization(jobType)
-                            : line;
-                        dataList.Add(SourceGeneratorBridge.ResolveJobEarlyInit(jobType, current));
-                    }
-                    continue;
-                }
-                
                 if (jobType.IsValueType == false) continue;
                 if (jobType.IsVisible == false) continue;
 
                 if (this.IsValidTypeForAssembly(jobType) == false) continue;
 
-                var content = new System.Collections.Generic.List<string>();
                 if (jobType.IsGenericType == true && jobType.DeclaringType != null && jobType.DeclaringType.IsGenericType == true) {
                 } else if (jobType.IsGenericType == true) {
                     throw new System.Exception($"[ CodeGenerator ] Generic jobs are not supported (job type {jobType.FullName}). Use generic systems instead.");
@@ -127,32 +262,6 @@ namespace ME.BECS.Editor.Jobs {
                     }
                 }
 
-                if (this.earlyInitDiagnostics == null) {
-                var entsInfo = GetJobEntInfo(jobType, this);
-                if (entsInfo.brCount > 0) {
-                    content.Add($"JobStaticInfo<{jobTypeFullName}>.loopCount = {entsInfo.brCount}u;");
-                }
-                if (entsInfo.count != null) {
-                    content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = _makeArray<uint>({entsInfo.count.Length}u, Allocator.Domain);");
-                    for (uint i = 0u; i < entsInfo.count.Length; ++i) {
-                        if (entsInfo.count[i] > 0) content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount[{i}u] = {entsInfo.count[i]};");
-                    }
-                }
-
-                var typeInfos = GetJobTypesInfo(jobType);
-                var maxStructSize = 0u;
-                foreach (var item in typeInfos) {
-                    if (typeof(IComponent).IsAssignableFrom(item.type) == false) continue;
-                    var size = (uint)System.Runtime.InteropServices.Marshal.SizeOf(item.type);
-                    if (size > maxStructSize) {
-                        maxStructSize = size;
-                    }
-                }
-                
-                content.Add(this.WeightInitialization(jobType));
-                content.Add($"JobStaticInfo<{jobTypeFullName}>.maxStructSize = {maxStructSize}u;");
-                }
-
                 if (workInterface != null && components.Count == workInterface.GenericTypeArguments.Length) {
 
                     var methods = this.earlyInitMethods ??= typeof(ME.BECS.Jobs.EarlyInit).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
@@ -178,20 +287,13 @@ namespace ME.BECS.Editor.Jobs {
                     }
 
                     if (methodInfoResult == null) {
-                        if (this.earlyInitDiagnostics != null) throw new System.InvalidOperationException($"Legacy EarlyInit method not found for {jobTypeFullName} ({method}).");
-                        UnityEngine.Debug.LogWarning($"[ CodeGenerator ] Failed to generate EarlyInit method for job type {jobTypeFullName}.");
-                        continue;
+                        throw new System.InvalidOperationException($"EarlyInit selection failed for {jobTypeFullName} ({method}); initialization cannot omit a selected job.");
                     }
                     var str = $"EarlyInit.{methodInfoResult.Name}<{jobTypeFullName}, {string.Join(", ", components)}>();";
                     if (components.Count == 0) str = $"EarlyInit.{methodInfoResult.Name}<{jobTypeFullName}>();";
-                    content.Add(str);
-                    if (this.earlyInitDiagnostics != null) this.earlyInitDiagnostics.Add((jobType, str));
+                    this.earlyInitDiagnostics.Add((jobType, str));
 
                 }
-
-                if (this.earlyInitDiagnostics != null) continue;
-                this.cache.Add(jobType, content);
-                foreach (var line in content) dataList.Add(SourceGeneratorBridge.ResolveJobEarlyInit(jobType, line));
 
             }
             
@@ -340,7 +442,7 @@ namespace ME.BECS.Editor.Jobs {
                     }
                 }
 
-                var uniqueTypes = GetJobTypesInfo(jobType);
+                var uniqueTypes = this.sourceSafety.Select(jobType);
                 
                 ++uniqueId;
                 var structName = $"JobDebugData{uniqueId}";
@@ -611,6 +713,7 @@ namespace ME.BECS.Editor.Jobs {
 
             public int[] count;
             public int brCount;
+            public bool[] loopGroups;
 
         }
         
@@ -621,6 +724,7 @@ namespace ME.BECS.Editor.Jobs {
             var result = new NewEntInfo();
             var anyCount = 0;
             result.count = new int[groupsCount];
+            result.loopGroups = new bool[groupsCount];
             result.brCount = 0;
             var newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public).GetGenericMethodDefinition();
             var root = jobType.GetMethod("Execute");
@@ -629,15 +733,10 @@ namespace ME.BECS.Editor.Jobs {
             var brOpen = 0;
             for (int i = 0; i < instructions.Count; ++i) {
                 var inst = instructions[i];
-                if ((inst.OpCode == System.Reflection.Emit.OpCodes.Br ||
-                     inst.OpCode == System.Reflection.Emit.OpCodes.Br_S ||
-                     inst.OpCode == System.Reflection.Emit.OpCodes.Brtrue ||
-                     inst.OpCode == System.Reflection.Emit.OpCodes.Brtrue_S ||
-                     inst.OpCode == System.Reflection.Emit.OpCodes.Brfalse ||
-                     inst.OpCode == System.Reflection.Emit.OpCodes.Brfalse_S) &&
-                    ((Instruction)inst.Operand).Offset < inst.Offset) {
+                if ((inst.OpCode.FlowControl == FlowControl.Branch || inst.OpCode.FlowControl == FlowControl.Cond_Branch) &&
+                    inst.Operand is Instruction loopTarget && loopTarget.Offset < inst.Offset) {
                     // jump to previous instruction - make it open
-                    ++((Instruction)inst.Operand).loopInfo.openCount;
+                    ++loopTarget.loopInfo.openCount;
                     ++inst.loopInfo.closeCount;
                 }
 
@@ -665,6 +764,7 @@ namespace ME.BECS.Editor.Jobs {
                     if (methodInfo.IsGenericMethod == true && methodInfo.GetGenericMethodDefinition() == newEntMethod && allTypes.TryGetValue(methodInfo.GetGenericArguments()[0], out var gId) == true) {
                         if (brOpen > 0) {
                             ++result.brCount;
+                            result.loopGroups[gId] = true;
                         } else {
                             ref var count = ref result.count[gId];
                             ++count;
@@ -827,15 +927,33 @@ namespace ME.BECS.Editor.Jobs {
         
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
 
-            if (this.earlyInitDiagnostics == null) this.GenerateJobsDebug(dataList, references);
-            this.Generate<IJobForComponentsBase, TNull, TNull>(dataList, "DoComponents");
-            this.Generate<IJobParallelForComponentsBase, IComponentBase, TNull>(dataList, "DoParallelForComponents");
-            this.Generate<IJobForComponentsBase, IComponentBase, TNull>(dataList, "DoComponents");
-            this.Generate<IJobParallelForAspectsBase, IAspect, TNull>(dataList, "DoParallelForAspect");
-            this.Generate<IJobForAspectsBase, IAspect, TNull>(dataList, "DoAspect");
-            this.Generate<IJobForAspectsComponentsBase, IAspect, IComponentBase>(dataList, "DoAspectsComponents");
-            this.Generate<IJobParallelForAspectsComponentsBase, IAspect, IComponentBase>(dataList, "DoParallelForAspectsComponents");
+            if (this.earlyInitDiagnostics == null) {
+                // Until the legacy oracle is retired, every export must prove full selection/order
+                // parity for the current assemblies. A mismatch is not permission to fall back.
+                var comparison = CompareEarlyInit(this.jobTypes, this.editorAssembly, out var issues, out var initialization);
+                if (issues != 0) throw new System.InvalidOperationException("Source EarlyInit preflight failed:\n" + comparison);
+                this.GenerateJobsDebug(dataList, references);
+                this.AddSourceEarlyInit(dataList, initialization);
+                return;
+            }
+            this.CollectLegacyEarlyInit<IJobForComponentsBase, TNull, TNull>("DoComponents");
+            this.CollectLegacyEarlyInit<IJobParallelForComponentsBase, IComponentBase, TNull>("DoParallelForComponents");
+            this.CollectLegacyEarlyInit<IJobForComponentsBase, IComponentBase, TNull>("DoComponents");
+            this.CollectLegacyEarlyInit<IJobParallelForAspectsBase, IAspect, TNull>("DoParallelForAspect");
+            this.CollectLegacyEarlyInit<IJobForAspectsBase, IAspect, TNull>("DoAspect");
+            this.CollectLegacyEarlyInit<IJobForAspectsComponentsBase, IAspect, IComponentBase>("DoAspectsComponents");
+            this.CollectLegacyEarlyInit<IJobParallelForAspectsComponentsBase, IAspect, IComponentBase>("DoParallelForAspectsComponents");
             
+        }
+
+        private void AddSourceEarlyInit(System.Collections.Generic.List<string> dataList,
+            System.Collections.Generic.List<(System.Type job, string call)> initialization) {
+            // Emit exactly the snapshot verified by preflight; do not rediscover, reselect or
+            // invoke argument getters between comparison and emission.
+            foreach (var entry in initialization) {
+                dataList.AddRange(this.GetJobInitialization(entry.job));
+                if (entry.call != null) dataList.Add(entry.call);
+            }
         }
 
     }

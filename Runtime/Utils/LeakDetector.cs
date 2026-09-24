@@ -374,6 +374,32 @@ namespace ME.BECS {
             
         }
 
+        [Conditional(COND.LEAK_DETECTION)]
+        [Conditional(COND.LEAK_DETECTION_ALLOCATOR)]
+        public static void FreeAllocatorZone(void* start, uint size) {
+            if (start == null || size == 0u) return;
+            LeakDetectorData.Validate();
+            var keys = new UnsafeList<LeakDetectorData.Key>(1, Unity.Collections.Allocator.Temp);
+            for (int i = 0; i < LeakDetectorData.SHARDS_COUNT; ++i) {
+                ref var shard = ref LeakDetectorData.shards.Data.ElementAt(i);
+                shard.spinner.Lock();
+                if (shard.tracked.IsCreated) {
+                    keys.Clear();
+                    foreach (var entry in shard.tracked) {
+                        var address = (ulong)entry.Value.ptr.ToPointer();
+                        if (entry.Value.allocator == Unity.Collections.Allocator.FirstUserIndex &&
+                            address >= (ulong)start && address - (ulong)start < size)
+                            keys.Add(entry.Key);
+                    }
+                    // Do not mutate the hash map while its enumerator is active. Other
+                    // zones and the raw zone allocation remain tracked independently.
+                    for (int key = 0; key < keys.Length; ++key) shard.tracked.Remove(keys[key]);
+                }
+                shard.spinner.Unlock();
+            }
+            keys.Dispose();
+        }
+
         public static void ClearAllocated() {
             if (LeakDetectorData.counter.Data.IsCreated == true) LeakDetectorData.counter.Data.Dispose();
             LeakDetectorData.Validate();

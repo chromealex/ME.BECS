@@ -5,55 +5,19 @@ namespace ME.BECS.Editor {
 
     public class ComponentDestroyCodeGenerator : CustomCodeGenerator {
 
+        internal static System.Type[] GetSelectedComponents(bool editor, System.Collections.Generic.List<AssemblyInfo> assemblies) =>
+            UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentDestroy>()
+                .Where(type => type.IsValueType && EditorUtils.IsValidTypeForAssembly(editor, type, assemblies))
+                .OrderBy(type => type.FullName, System.StringComparer.Ordinal)
+                .ThenBy(type => type.Assembly.FullName, System.StringComparer.Ordinal).ToArray();
+
         public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
 
-            var definitions = new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
-            var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentDestroy>().OrderBy(x => x.FullName).ToArray();
-            foreach (var component in allComponents) {
-                if (component.IsValueType == false || this.IsValidTypeForAssembly(component) == false) continue;
-                if (SourceGeneratorBridge.TryGetDestroyRegistration(component, out var generatedRegistration)) {
-                    definitions.Add(new CodeGenerator.MethodDefinition { generatedRegistration = generatedRegistration });
-                    references.Add(component);
-                    continue;
-                }
-
-                var contentItem = new System.Collections.Generic.List<string>();
-                var type = component;
-                var strType = EditorUtils.GetTypeName(type);
-                                if (this.cache.TryGetValue<System.Collections.Generic.List<string>>(component, out var cacheData) == true) {
-                    contentItem.AddRange(cacheData);
-                } else {
-
-                    if (component.IsValueType == false) continue;
-                    if (this.IsValidTypeForAssembly(component) == false) continue;
-
-                    contentItem.Add("{");
-                    contentItem.Add("if (comp == null) {");
-                    contentItem.Add($"default({strType}).Destroy(in ent);");
-                    contentItem.Add("} else {");
-                    contentItem.Add($"(({strType}*)comp)->Destroy(in ent);");
-                    contentItem.Add("}");
-                    contentItem.Add("}");
-
-                    if (contentItem.Count > 0) this.cache.Add(component, contentItem);
-                }
-
-                if (contentItem.Count > 0u) {
-                    var def = new CodeGenerator.MethodDefinition() {
-                        methodName = $"AutoDestroyRegistry_Destroy_{EditorUtils.GetCodeName(strType)}",
-                        type = strType,
-                        registerMethodName = "RegisterAutoDestroyCallback",
-                        definition = "in Ent ent, byte* comp",
-                        content = string.Join("\n", contentItem),
-                        burstCompile = true,
-                        pInvoke = "AutoDestroyRegistry.DestroyDelegate",
-                    };
-                    definitions.Add(def);
-                }
-
-            }
-
-            return definitions;
+            references.AddRange(GetSelectedComponents(this.editorAssembly, this.asms));
+            // Preserve the registry phase position; Roslyn owns callbacks and ordered registration.
+            return new System.Collections.Generic.List<CodeGenerator.MethodDefinition> {
+                new CodeGenerator.MethodDefinition { generatedRegistration = "global::ME.BECS.SourceGenerated.DestroyInputs.Initialize();" },
+            };
 
         }
 

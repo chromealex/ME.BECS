@@ -25,6 +25,8 @@ internal static class MethodSummaryContracts {
     internal static void Append(StringBuilder rows, ISymbol symbol, Compilation compilation,
         System.Collections.Generic.Dictionary<INamedTypeSymbol, int?> refModes) {
         if (symbol is IMethodSymbol scalar && IsScalarComparison(scalar)) rows.Append("\t!scalar-comparison");
+        if (symbol is IMethodSymbol intrinsic && (IsObjectConstructor(intrinsic) || IsAddressIntrinsic(intrinsic, compilation) ||
+            IsBurstHint(intrinsic, compilation))) rows.Append("\t!ecs-leaf");
         if (Has(symbol, "ME.BECS.DisableContainerSafetyRestrictionAttribute")) rows.Append("\t!disable-safety");
         if (Has(symbol, "ME.BECS.CodeGeneratorIgnoreAttribute")) rows.Append("\t!ignore");
         if (symbol is IMethodSymbol weighted && SymbolEqualityComparer.Default.Equals(weighted.ContainingAssembly,
@@ -59,6 +61,45 @@ internal static class MethodSummaryContracts {
             var component = MethodSummaryType.TypeOwners(type).SelectMany(static t => t.TypeArguments).FirstOrDefault();
             if (component != null) rows.Append("\t!component=").Append(MethodSummaryType.From(component).Encode());
         }
+    }
+
+    private static bool IsObjectConstructor(IMethodSymbol method) =>
+        method.ContainingType.SpecialType == SpecialType.System_Object &&
+        method.MethodKind == MethodKind.Constructor && !method.IsStatic &&
+        method.Parameters.Length == 0 && method.DeclaringSyntaxReferences.Length == 0;
+
+    private static bool IsBurstHint(IMethodSymbol method, Compilation compilation) {
+        // These exact Burst intrinsics only hint at branch probability/assumptions.
+        // The caller still visits argument expressions before exporting this leaf call.
+        if (method.DeclaringSyntaxReferences.Length != 0 || method.ContainingAssembly.Name != "Unity.Burst" ||
+            !method.IsStatic || method.Arity != 0 || method.Parameters.Length != 1 ||
+            method.Parameters[0].RefKind != RefKind.None || method.Parameters[0].Type.SpecialType != SpecialType.System_Boolean ||
+            method.ReturnsByRef || method.ReturnsByRefReadonly ||
+            !SymbolEqualityComparer.Default.Equals(method.ContainingType,
+                compilation.GetTypeByMetadataName("Unity.Burst.CompilerServices.Hint"))) return false;
+        return (method.Name is "Likely" or "Unlikely" && method.ReturnType.SpecialType == SpecialType.System_Boolean) ||
+               (method.Name == "Assume" && method.ReturnsVoid);
+    }
+
+    private static bool IsAddressIntrinsic(IMethodSymbol method, Compilation compilation) {
+        // Address conversions neither dereference the reference nor dispatch user code.
+        // This does NOT whitelist memory reads/writes, generic comparers, or the Unsafe type.
+        if (method.DeclaringSyntaxReferences.Length != 0 || !method.IsStatic || method.Arity != 1 || method.Parameters.Length != 1 ||
+            !SymbolEqualityComparer.Default.Equals(method.ContainingType,
+                compilation.GetTypeByMetadataName("System.Runtime.CompilerServices.Unsafe"))) return false;
+        var definition = method.OriginalDefinition;
+        var parameter = definition.Parameters[0];
+        var argument = definition.TypeParameters[0];
+        bool IsVoidPointer(ITypeSymbol type) => type is IPointerTypeSymbol pointer && pointer.PointedAtType.SpecialType == SpecialType.System_Void;
+        if (method.Name == "AsPointer")
+            return !definition.ReturnsByRef && IsVoidPointer(definition.ReturnType) && parameter.RefKind == RefKind.Ref &&
+                SymbolEqualityComparer.Default.Equals(parameter.Type, argument);
+        if (method.Name == "AsRef")
+            return definition.ReturnsByRef && !definition.ReturnsByRefReadonly &&
+                SymbolEqualityComparer.Default.Equals(definition.ReturnType, argument) &&
+                ((parameter.RefKind == RefKind.None && IsVoidPointer(parameter.Type)) ||
+                 (parameter.RefKind == RefKind.In && SymbolEqualityComparer.Default.Equals(parameter.Type, argument)));
+        return false;
     }
 
     // Only strongly typed primitive comparisons. Object overloads, strings, enums and

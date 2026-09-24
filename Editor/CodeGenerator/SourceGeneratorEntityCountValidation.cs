@@ -24,6 +24,8 @@ namespace ME.BECS.Editor {
                 var generator = new EntityTypeCodeGenerator { entityTypes = used.entityTypes, editorAssembly = true, asms = EditorUtils.GetAssembliesInfo() };
                 var groups = EntityTypeCodeGenerator.GetAllTypes(generator, out var groupCount);
                 var keys = groups.ToDictionary(g => g.Item1.Assembly.FullName + "\tT:" + g.Item1.FullName.Replace('+', '.'), g => g.Item2);
+                var groupNames = groups.GroupBy(g => g.Item2).ToDictionary(group => group.Key,
+                    group => string.Join(", ", group.Select(item => item.Item1.AssemblyQualifiedName).OrderBy(name => name, StringComparer.Ordinal)));
                 var jobs = used.jobTypes.ToList();
                 CodeGenerator.PatchSystemsList(jobs);
                 var catalogs = new Dictionary<Assembly, Dictionary<string, string[]>>();
@@ -42,6 +44,9 @@ namespace ME.BECS.Editor {
                 var matched = 0;
                 var unavailable = 0;
                 var incomplete = 0;
+                var countInitializers = 0;
+                var countInitializerIssues = 0;
+                var countInitializerMatches = 0;
                 foreach (var job in jobs.Distinct().Where(t => t.IsValueType && t.IsVisible && !t.ContainsGenericParameters)
                              .OrderBy(t => t.FullName, StringComparer.Ordinal).ThenBy(t => t.Assembly.FullName, StringComparer.Ordinal)) {
                     if (weightConsumer.TryGetInitializer(job, out _)) ++generatedWeightInitializers;
@@ -98,13 +103,20 @@ namespace ME.BECS.Editor {
                     }
                     string[] summary;
                     if (!(job.IsGenericType ? closedJobs.TryGet(job, "JobEntityCounts", out summary) : catalog.TryGetValue(job.FullName, out summary)) || summary == null) { ++unavailable; continue; }
+                    var hasInitializer = SourceGeneratorJobEntityCounts.TryGetInitializer(job, summary, keys, groupCount, out _, out var initializerReason);
+                    if (hasInitializer) ++countInitializers;
+                    else {
+                        ++countInitializerIssues;
+                        report.AppendLine("Entity-count initializer unavailable: " + job.AssemblyQualifiedName + " — " + initializerReason);
+                    }
                     if (!int.TryParse(summary[2], NumberStyles.None, CultureInfo.InvariantCulture, out var gaps)) {
                         report.AppendLine("Malformed count summary: " + job.FullName);
                         ++unavailable;
                         continue;
                     }
                     var counts = new int[groupCount];
-                    var loops = 0;
+                    var loopCounts = new int[groupCount];
+                    long loops = 0;
                     var invalid = false;
                     var seen = new HashSet<uint>();
                     foreach (var row in summary.Skip(3)) {
@@ -114,11 +126,19 @@ namespace ME.BECS.Editor {
                             !int.TryParse(fields[3], NumberStyles.None, CultureInfo.InvariantCulture, out var inline) ||
                             !int.TryParse(fields[4], NumberStyles.None, CultureInfo.InvariantCulture, out var loop)) { invalid = true; break; }
                         counts[group] = inline;
+                        loopCounts[group] = loop;
                         loops = checked(loops + loop);
                     }
                     if (invalid) { ++unavailable; report.AppendLine("Unresolved count/group mapping: " + job.FullName); continue; }
                     var legacy = Jobs.JobsEarlyInitCodeGenerator.GetJobEntInfo(job, generator);
-                    var equal = loops == legacy.brCount && counts.Select((count, index) => count == (legacy.count == null ? 0 : legacy.count[index])).All(x => x);
+                    if (hasInitializer) {
+                        if (SourceGeneratorJobEntityCounts.MatchesLegacy(summary, keys, groupCount, legacy)) ++countInitializerMatches;
+                        else report.AppendLine("Entity-count initializer differs from legacy (including loop-group reservations): " + job.AssemblyQualifiedName);
+                    }
+                    var loopGroupsKnown = legacy.loopGroups != null && legacy.loopGroups.Length == loopCounts.Length;
+                    var equal = loopGroupsKnown && loops == legacy.brCount && counts.Select((count, index) =>
+                        count == (legacy.count == null ? 0 : legacy.count[index]) &&
+                        (loopCounts[index] > 0) == legacy.loopGroups[index]).All(x => x);
                     ++compared;
                     if (gaps != 0) ++incomplete;
                     if (equal) ++matched;
@@ -126,7 +146,12 @@ namespace ME.BECS.Editor {
                         report.AppendLine($"{job.FullName}: {(equal ? "counts match" : "COUNTS DIFFER")}, analysis gaps={gaps}, loops source/legacy={loops}/{legacy.brCount}");
                         for (var i = 0; i < counts.Length; ++i) {
                             var oldCount = legacy.count == null ? 0 : legacy.count[i];
-                            if (counts[i] != oldCount) report.AppendLine($"  group {i}: source={counts[i]}, legacy={oldCount}");
+                            var oldLoop = loopGroupsKnown ? (legacy.loopGroups[i] ? "yes" : "no") : "unknown";
+                            if (counts[i] != oldCount || !loopGroupsKnown || (loopCounts[i] > 0) != legacy.loopGroups[i]) {
+                                groupNames.TryGetValue((uint)i, out var groupName);
+                                report.AppendLine($"  group {i} [{groupName ?? "unmapped"}]: inline source/legacy={counts[i]}/{oldCount}, " +
+                                    $"loop sites source={loopCounts[i]}, legacy loop membership={oldLoop}");
+                            }
                         }
                         foreach (var gap in summary.Skip(3).Where(s => s.StartsWith("G\t", StringComparison.Ordinal))) report.AppendLine("  " + gap.Substring(2));
                     }
@@ -135,10 +160,12 @@ namespace ME.BECS.Editor {
                 report.AppendLine($"Weights: compared={weightsCompared}, equal={weightsMatched}, different={weightsCompared - weightsMatched}, incomplete={weightsIncomplete}, unavailable={weightsUnavailable}");
                 var selection = $"Weight consumer: generated initializer={generatedWeightInitializers}, source value={sourceWeightValues}, legacy fallback={legacyWeightFallbacks} (availability only; methods NOT invoked)";
                 report.AppendLine(selection);
-                report.AppendLine("Read-only: no cache files, registrations or jobs executed. Matching incomplete summaries do NOT establish coverage. Counts remain legacy; regenerated initialization uses source weights only for unambiguous zero-gap summaries. This comparison always computes independent legacy weights.");
+                var countSelection = $"Entity-count initializers: available={countInitializers}, matching={countInitializerMatches}, different={countInitializers - countInitializerMatches}, unavailable/incomplete={countInitializerIssues} (group IDs, loop groups and EntitiesJobMaxCount checked; methods NOT invoked)";
+                report.AppendLine(countSelection);
+                report.AppendLine("Read-only: no cache files, registrations or jobs executed. Matching incomplete summaries do NOT establish coverage. Production uses validated zero-gap v3 source count initializers; legacy parity is diagnostic, not a selection gate (legacy deduplicates repeated calls and loop contexts). Unavailable coverage remains legacy. Source weights require unambiguous zero-gap summaries. Legacy analysis here remains independent.");
                 SourceGeneratorReport.Publish("EntityCountsAndWeights",
                     $"Entity counts: compared={compared}, equal={matched}, different={compared - matched}, incomplete={incomplete}, unavailable={unavailable}\n" +
-                    $"Weights: compared={weightsCompared}, equal={weightsMatched}, different={weightsCompared - weightsMatched}, incomplete={weightsIncomplete}, unavailable={weightsUnavailable}\n" + selection, report.ToString());
+                    $"Weights: compared={weightsCompared}, equal={weightsMatched}, different={weightsCompared - weightsMatched}, incomplete={weightsIncomplete}, unavailable={weightsUnavailable}\n" + selection + "\n" + countSelection, report.ToString());
             } catch (Exception exception) {
                 UnityEngine.Debug.LogException(exception);
             }

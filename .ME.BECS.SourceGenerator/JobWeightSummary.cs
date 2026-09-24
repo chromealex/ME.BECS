@@ -46,8 +46,8 @@ internal static class JobWeightSummary {
             foreach (var unresolved in method.Unresolved) gaps.Add(unresolved + ": " + id);
             active.Add(instance);
                 foreach (var rawOperation in method.Operations) {
-                    var operation = JobConstrainedCall.Resolve(rawOperation, compilation, environment, gaps);
-                    if (MethodSummaryContracts.Has(operation, "scalar-comparison")) continue;
+                    var operation = JobConstrainedCall.Resolve(rawOperation, compilation, environment, gaps, methods, conflicts);
+                    if (MethodSummaryContracts.Has(operation, "scalar-comparison") || MethodSummaryContracts.Has(operation, "ecs-leaf")) continue;
                 if (work > 20000) break;
                 if (operation.Length < 5) { gaps.Add("MalformedOperation: " + id); continue; }
                 if (operation[0] == "field" || operation[0] == "parameter-override") continue;
@@ -73,7 +73,12 @@ internal static class JobWeightSummary {
                     }
                 }
                 if (MethodSummaryContracts.Has(operation, "ignore")) continue;
-                if (operation[0] == "new") gaps.Add("ConstructorTraversalDiffersFromLegacy: " + operation[3]);
+                // A constructor is an executed call, not an analysis gap merely because
+                // legacy IL traversal omitted it. Require a summary with initializer coverage.
+                if (operation[0] == "new" &&
+                    (!methods.TryGetValue((operation[2], operation[3]), out var constructor) ||
+                     !constructor.Flags.Contains("constructor-schema=1")))
+                    gaps.Add("MissingConstructorContract: " + operation[3]);
                 var receiver = decode(operation[4])?.Substitute(environment);
                 if (receiver == null || receiver.Kind != 'n' || receiver.IsUnsupported) { gaps.Add("UnsupportedReceiver: " + operation[3]); continue; }
                 var targetArguments = new List<MethodSummaryType>(receiver.Arguments);

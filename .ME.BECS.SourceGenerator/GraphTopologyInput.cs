@@ -9,7 +9,7 @@ namespace ME.BECS.SourceGenerator;
 
 internal sealed class GraphTopologyInput {
     internal sealed class Occurrence {
-        internal int Parent, ParentNode, GraphId, Capacity;
+        internal int Parent, ParentNode, GraphId, Capacity, Entry, Exit;
         internal readonly List<Node> Nodes = new();
     }
     internal sealed class Node {
@@ -29,16 +29,19 @@ internal sealed class GraphTopologyInput {
         try {
             var parsed = new GraphTopologyInput();
             var rows = payload.Split('\n');
-            if (rows.Length < 3 || rows[0] != "ME.BECS.GraphTopology.v2" || rows[rows.Length - 1] != "") throw new FormatException("Invalid topology header/terminator");
+            if (rows.Length < 3 || rows[0] != "ME.BECS.GraphTopology.v3" || rows[rows.Length - 1] != "") throw new FormatException("Invalid topology header/terminator; regenerate graph inputs with the current Editor exporter");
             var children = new HashSet<(int Parent, int Node)>();
             for (var line = 1; line < rows.Length - 1; ++line) {
                 var fields = rows[line].Split('\t');
                 if (fields.Length < 3) throw new FormatException("Short topology record");
                 var occurrenceId = Integer(fields[1], 0);
                 if (fields[0] == "graph") {
-                    if (fields.Length != 6 || occurrenceId != parsed.Occurrences.Count) throw new FormatException("Graph occurrence order/shape");
+                    if (fields.Length != 8 || occurrenceId != parsed.Occurrences.Count) throw new FormatException("Graph occurrence order/shape");
                     var occurrence = new Occurrence { Parent = Integer(fields[2], -1), ParentNode = Integer(fields[3], -1),
-                        GraphId = Integer(fields[4], int.MinValue), Capacity = Integer(fields[5], 0) };
+                        GraphId = Integer(fields[4], int.MinValue), Capacity = Integer(fields[5], 0),
+                        Entry = Integer(fields[6], -1), Exit = Integer(fields[7], -1) };
+                    if (occurrence.Entry >= occurrence.Capacity || occurrence.Exit >= occurrence.Capacity ||
+                        (occurrence.Entry >= 0 && occurrence.Entry == occurrence.Exit)) throw new FormatException("Invalid graph entry/exit");
                     if (occurrenceId == 0) {
                         if (occurrence.Parent != -1 || occurrence.ParentNode != -1 || occurrence.GraphId != rootId) throw new FormatException("Root mismatch");
                     } else if (occurrence.Parent < 0 || occurrence.Parent >= occurrenceId || occurrence.ParentNode < 0 ||
@@ -76,6 +79,17 @@ internal sealed class GraphTopologyInput {
             }
             if (parsed.Occurrences.Count == 0 || parsed.Occurrences.Any(graph => graph.Nodes.Count != graph.Capacity || graph.Nodes.Any(node => node.Phases.Count != 5)))
                 throw new FormatException("Incomplete topology");
+            foreach (var graph in parsed.Occurrences) {
+                var inputs = new HashSet<(int Source, int Target)>();
+                var outputs = new HashSet<(int Source, int Target)>();
+                for (var node = 0; node < graph.Nodes.Count; ++node) {
+                    foreach (var port in graph.Nodes[node].Inputs)
+                        foreach (var source in port) inputs.Add((source, node));
+                    foreach (var port in graph.Nodes[node].Outputs)
+                        foreach (var target in port) outputs.Add((node, target));
+                }
+                if (!inputs.SetEquals(outputs)) throw new FormatException("Input/output topology edges disagree");
+            }
             topology = parsed;
             return true;
         } catch (FormatException exception) { reason = exception.Message; return false; }
@@ -87,6 +101,20 @@ internal sealed class GraphTopologyInput {
         var children = this.Occurrences.Skip(1).ToDictionary(graph => (graph.Parent, graph.ParentNode));
         for (var occurrence = 0; occurrence < this.Occurrences.Count; ++occurrence) {
             var graph = this.Occurrences[occurrence];
+            // Match GetStartNode(0)/GetEndNode: the first matching node in asset order.
+            var entry = -1;
+            var exit = -1;
+            var boundaryTypesResolved = true;
+            for (var index = 0; index < graph.Nodes.Count; ++index) {
+                var type = resolver.ResolveDefinition(graph.Nodes[index].Type, out _);
+                if (type == null) { boundaryTypesResolved = false; continue; }
+                if (entry < 0 && DerivesFrom(type, "ME.BECS.FeaturesGraph.Nodes.StartNode")) entry = index;
+                if (exit < 0 && DerivesFrom(type, "ME.BECS.FeaturesGraph.Nodes.ExitNode")) exit = index;
+            }
+            if (boundaryTypesResolved && (entry != graph.Entry || exit != graph.Exit)) {
+                reason = "Topology entry/exit differs from node types and asset order";
+                return false;
+            }
             var parent = occurrence == 0 ? null : this.Occurrences[graph.Parent].Nodes[graph.ParentNode];
             var cursor = parent?.SlotStart ?? 0;
             for (var index = 0; index < graph.Nodes.Count; ++index) {

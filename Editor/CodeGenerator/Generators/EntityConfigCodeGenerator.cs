@@ -5,149 +5,42 @@ namespace ME.BECS.Editor.Aspects {
 
     public class EntityConfigCodeGenerator : CustomCodeGenerator {
 
+        internal static System.Type[] GetMaskComponents(bool editor, System.Collections.Generic.List<AssemblyInfo> assemblies) =>
+            UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponent>()
+                .Where(type => type.IsValueType && EditorUtils.IsValidTypeForAssembly(editor, type, assemblies) &&
+                    type.GetFields(BindingFlags.Instance | BindingFlags.Public).Length > 1)
+                .OrderBy(type => type.FullName, System.StringComparer.Ordinal)
+                .ThenBy(type => type.Assembly.FullName, System.StringComparer.Ordinal).ToArray();
+
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
-            
-            {
-                var str = "StaticTypes.collectionsCount.Resize(StaticTypes.counter + 1u);";
-                dataList.Add(str);
-            }
-            var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponent>().OrderBy(x => x.FullName).ToArray();
-            var allStaticComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponentStatic>().OrderBy(x => x.FullName).ToArray();
-            var allSharedComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponentShared>().OrderBy(x => x.FullName).ToArray();
-            allComponents = allComponents.Concat(allStaticComponents).Concat(allSharedComponents).ToArray();
-            foreach (var component in allComponents) {
-
-                if (component.IsValueType == false) continue;
-                if (this.IsValidTypeForAssembly(component) == false) continue;
-
-                var collectionsCount = GetCollectionsCount(component);
-                if (collectionsCount == 0u) continue;
-                if (SourceGeneratorBridge.TryGetConfigCollectionsRegistration(component, true, out var generatedCount, out _)) {
-                    dataList.Add(generatedCount);
-                    references.Add(component);
-                    continue;
-                }
-                var type = EditorUtils.GetTypeName(component);
-                var str = $"StaticTypes<{type}>.SetCollectionsCount({collectionsCount}u);";
-                dataList.Add(str);
-
-            }
-            
+            references.AddRange(GetCollectionComponents(this.editorAssembly, this.asms));
+            dataList.Add("global::ME.BECS.SourceGenerated.ConfigCollectionCounts.Initialize();");
         }
+
+        internal static System.Type[] GetCollectionComponents(bool editor, System.Collections.Generic.List<AssemblyInfo> assemblies) {
+            System.Collections.Generic.IEnumerable<System.Type> Ordered(System.Type contract) =>
+                UnityEditor.TypeCache.GetTypesDerivedFrom(contract).OrderBy(type => type.FullName, System.StringComparer.Ordinal)
+                    .ThenBy(type => type.Assembly.FullName, System.StringComparer.Ordinal);
+            return Ordered(typeof(IConfigComponent)).Concat(Ordered(typeof(IConfigComponentStatic))).Concat(Ordered(typeof(IConfigComponentShared)))
+                .Where(type => type.IsValueType && EditorUtils.IsValidTypeForAssembly(editor, type, assemblies) && GetCollectionsCount(type) > 0u)
+                .Distinct().ToArray();
+        }
+
+        internal static FieldInfo[] GetCollectionFields(System.Type component) =>
+            component.GetFields(BindingFlags.Instance | BindingFlags.Public)
+                .Where(field => typeof(IUnmanagedList).IsAssignableFrom(field.FieldType))
+                .OrderBy(field => field.FieldType.FullName, System.StringComparer.Ordinal).ToArray();
 
         public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
-
-            var definitions = new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
-            var content = new System.Collections.Generic.List<string>();
-            var allConfigComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponent>().OrderBy(x => x.FullName).ToArray();
-            var allStaticComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponentStatic>().OrderBy(x => x.FullName).ToArray();
-            var allSharedComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponentShared>().OrderBy(x => x.FullName).ToArray();
-            var allComponents = allConfigComponents.Concat(allStaticComponents).Concat(allSharedComponents).ToArray();
-            foreach (var component in allConfigComponents) {
-                
-                if (component.IsValueType == false) continue;
-                if (this.IsValidTypeForAssembly(component) == false) continue;
-
-                if (SourceGeneratorBridge.TryGetConfigMaskRegistration(component, out var generatedRegistration, out _)) {
-                    definitions.Add(new CodeGenerator.MethodDefinition { generatedRegistration = generatedRegistration });
-                    references.Add(component);
-                    continue;
-                }
-                
-                content.Clear();
-                
-                var type = component;
-                var strType = EditorUtils.GetTypeName(type);
-                var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public).ToArray();
-                var idx = 0u;
-                content.Add($"var allocator = ent.World.state.ptr->allocator;");
-                content.Add($"var mask = (BitArray*)maskPtr;");
-                content.Add($"var component = ({strType}*)componentPtr;");
-                content.Add($"var componentSrc = ({strType}*)configComponent;");
-                foreach (var field in fields) {
-                    
-                    var compFieldStr = $"component->{field.Name}";
-                    var compSrcFieldStr = $"componentSrc->{field.Name}";
-                    content.Add($"if (mask->IsSet(in allocator, {idx}) == true) {compFieldStr} = {compSrcFieldStr};");
-                    ++idx;
-
-                }
-
-                if (idx > 1u) {
-                    var def = new CodeGenerator.MethodDefinition() {
-                        methodName = $"EntityConfigComponentMaskApply{EditorUtils.GetCodeName(strType)}",
-                        type = strType,
-                        registerMethodName = "RegisterConfigComponentMaskCallback",
-                        definition = "in UnsafeEntityConfig config, void* componentPtr, void* configComponent, void* maskPtr, in Ent ent",
-                        content = string.Join("\n", content),
-                        burstCompile = true,
-                        pInvoke = "ME.BECS.UnsafeEntityConfig.MethodMaskCallerDelegate",
-                    };
-                    definitions.Add(def);
-                }
-            }
-            
-            foreach (var component in allComponents) {
-
-                if (component.IsValueType == false) continue;
-                if (this.IsValidTypeForAssembly(component) == false) continue;
-
-                var type = component;
-                if (SourceGeneratorBridge.TryGetConfigCollectionsRegistration(component, false, out var generatedRegistration, out _)) {
-                    definitions.Add(new CodeGenerator.MethodDefinition { generatedRegistration = generatedRegistration });
-                    references.Add(component);
-                    continue;
-                }
-                var strType = EditorUtils.GetTypeName(type);
-                var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public).OrderBy(x => x.FieldType.FullName).ToArray();
-                var count = 0u;
-                content.Clear();
-                content.Add($"var component = ({strType}*)componentPtr;");
-                foreach (var field in fields) {
-                    var fieldType = field.FieldType;
-                    if (typeof(IUnmanagedList).IsAssignableFrom(fieldType) == true) {
-                        var gType = fieldType.GenericTypeArguments[0];
-                        if (gType.IsVisible == false) continue;
-                        var typeStr = $"{EditorUtils.GetDataTypeName(fieldType)}<{EditorUtils.GetTypeName(gType)}>";
-                        var compFieldStr = $"component->{field.Name}";
-                        content.Add("{");
-                        content.Add($"var res = config.GetCollectionById({compFieldStr}.GetConfigId(), out var data, out var length);");
-                        content.Add($"if ({compFieldStr}.IsCreated == true) {compFieldStr}.Dispose();");
-                        content.Add("if (res == true) {");
-                        content.Add($"{compFieldStr} = new {typeStr}(in ent, data, length);");
-                        if (typeof(IMemList).IsAssignableFrom(fieldType) == true) {
-                            content.Add("} else {");
-                            content.Add($"{compFieldStr} = new {typeStr}(in ent, 1u);");
-                        } else if (typeof(IMemArray).IsAssignableFrom(fieldType) == true) {
-                            content.Add("} else {");
-                            content.Add($"{compFieldStr} = {typeStr}.Empty;");
-                        }
-                        content.Add("}");
-                        content.Add("}");
-                        ++count;
-                    }
-                }
-
-                if (count > 0u) {
-                    var def = new CodeGenerator.MethodDefinition() {
-                        methodName = $"EntityConfigComponentApply{EditorUtils.GetCodeName(strType)}",
-                        type = strType,
-                        registerMethodName = "RegisterConfigComponentCallback",
-                        definition = "in UnsafeEntityConfig config, void* componentPtr, in Ent ent",
-                        content = string.Join("\n", content),
-                        burstCompile = true,
-                        pInvoke = "ME.BECS.UnsafeEntityConfig.MethodCallerDelegate",
-                    };
-                    definitions.Add(def);
-                }
-
-            }
-            
-            return definitions;
-
+            references.AddRange(GetMaskComponents(this.editorAssembly, this.asms));
+            references.AddRange(GetCollectionComponents(this.editorAssembly, this.asms));
+            return new System.Collections.Generic.List<CodeGenerator.MethodDefinition> {
+                new CodeGenerator.MethodDefinition { generatedRegistration = "global::ME.BECS.SourceGenerated.ConfigMaskInputs.Initialize();" },
+                new CodeGenerator.MethodDefinition { generatedRegistration = "global::ME.BECS.SourceGenerated.ConfigCollectionsInputs.Initialize();" },
+            };
         }
 
-        private static uint GetCollectionsCount(System.Type componentType) {
+        internal static uint GetCollectionsCount(System.Type componentType) {
             var count = 0u;
             var fields = componentType.GetFields(BindingFlags.Public | BindingFlags.Instance);
             foreach (var field in fields) {

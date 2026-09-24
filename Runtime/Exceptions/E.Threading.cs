@@ -36,12 +36,17 @@ namespace ME.BECS {
 
         }
 
-        [Conditional(COND.EXCEPTIONS_THREAD_SAFE)]
         [HIDE_CALLSTACK]
         public static void THROW_ENT_NEW() {
             
-            throw new System.Exception("AsParallel could not be processed because job code contains Ent.New(), but it could not be counted (used in loops).");
+            throw new System.Exception("AsParallel cannot create entities in a loop without [EntitiesJobMaxCount(number)] on the job. Specify a positive maximum total number of Ent.New calls per Execute (including calls outside loops and all entity groups), and pass in jobInfo to Ent.New.");
             
+        }
+
+        // Unconditional: exceeding a reservation must never access another iteration's entities.
+        [HIDE_CALLSTACK]
+        public static void JOB_ENTITIES_MAX_COUNT() {
+            throw new System.Exception("[ ME.BECS ] EntitiesJobMaxCount exceeded: total Ent.New calls in one Execute invocation exceed the declared maximum.");
         }
 
     }

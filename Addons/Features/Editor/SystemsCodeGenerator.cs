@@ -218,7 +218,7 @@ namespace ME.BECS.Editor.Systems {
 
         }
         
-        public static scg::List<string> AddGraph<T>(CustomCodeGenerator generator, string baseName, int startNodeIndex, string method, Method methodEnum, scg::List<string> content, SystemsGraph graph) where T : class {
+        public static scg::List<string> AddGraph<T>(CustomCodeGenerator generator, string baseName, int startNodeIndex, string method, Method methodEnum, scg::List<string> content, SystemsGraph graph, scg::List<string> lifecycleTrace = null, LifecycleDependencyTrace dependencyTrace = null) where T : class {
 
             var graphRootId = GetId(graph);
             static void AddNodesArrDefinition(CustomCodeGenerator generator, string baseName, scg::List<string> content, SystemsGraph graph, scg::List<string> arrMethodDef, int graphRootId) {
@@ -247,6 +247,7 @@ namespace ME.BECS.Editor.Systems {
                     var containers = new scg::List<string>();
                     var collectedDeps = new CollectedDeps();
                     string lastDependency = string.Empty;
+                    string[] lastDependencyInputs = System.Array.Empty<string>();
                     var nodesCount = 0u;
                     {
                         var customInputDeps = new scg::Dictionary<ME.BECS.Extensions.GraphProcessor.BaseNode, ME.BECS.Extensions.GraphProcessor.BaseNode>();
@@ -263,21 +264,9 @@ namespace ME.BECS.Editor.Systems {
                         var maxIter = 10_000;
                         var methodContent = content;
 
-                        bool IsSyncNotRequired(System.Type systemType) {
-                            var needApplyJob = false;
-                            {
-                                var types = new scg::HashSet<System.Type>();
-                                SourceGeneratorScheduledJobs.Collect(systemType, types, typeof(T));
-                                foreach (var jobType in types) {
-                                    var typeInfos = ME.BECS.Editor.Jobs.JobsEarlyInitCodeGenerator.GetJobTypesInfo(jobType);
-                                    foreach (var typeInfo in typeInfos) {
-                                        if (typeInfo.op == RefOp.ReadOnly || typeInfo.isArg == true) continue;
-                                        needApplyJob = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            return needApplyJob == false;
+                        void TraceInputs(string expression, string[] dependencies) {
+                            if (dependencyTrace == null || (dependencies.Length == 0 && expression == "dependsOn")) return;
+                            dependencyTrace.Merge(expression, dependencies.Select(collectedDeps.GetReadOpString));
                         }
 
                         string AddPreApply(ME.BECS.Extensions.GraphProcessor.BaseNode node, GraphLink index, ref string schemeDependsOn, string dependsOn) {
@@ -290,6 +279,7 @@ namespace ME.BECS.Editor.Systems {
                                         schemeDependsOn = v;
                                         scheme.Add($" * {Align("Batches.Apply (Pre)", 32)} :  {Align($"{schemeDependsOn} => {v}", 16 + 32 + 4, CutType.Start)} [  SYNC   ]");
                                         methodContent.Add($"var {v} = Batches.Apply({dependsOn}, in world);");
+                                        dependencyTrace?.Apply(v, dependsOn);
                                         return v;
                                     }
                                 }
@@ -310,12 +300,13 @@ namespace ME.BECS.Editor.Systems {
                             return true;
                         }
 
-                        void AddApply(ME.BECS.Extensions.GraphProcessor.BaseNode node, GraphLink index, ref string schemeDependsOn, string customDep = null, string customOutputDep = null, bool forceWithoutSync = false) {
+                        void AddApply(ME.BECS.Extensions.GraphProcessor.BaseNode node, GraphLink index, ref string schemeDependsOn, string customDep = null, string customOutputDep = null) {
 
                             var indexStr = index.ToString();
                             if (customDep == null) customDep = $"dep{indexStr}";
                             if (customOutputDep == null) customOutputDep = $"dep{indexStr}";
                             if (!RequiresApply(node)) {
+                                dependencyTrace?.Copy(customOutputDep, customDep);
                                 methodContent.Add($"{customOutputDep} = {customDep};");
                                 return;
                             }
@@ -324,11 +315,6 @@ namespace ME.BECS.Editor.Systems {
                             #else
                             var tag = "[  SYNC   ]";
 
-                            /*if (forceWithoutSync == true) {
-                                methodContent.Add("// Force sync point removed");
-                                methodContent.Add($"{customOutputDep} = {customDep};");
-                                return;
-                            }*/
                             #endif
                             
                             var resDep = $"dep{indexStr}";
@@ -336,6 +322,7 @@ namespace ME.BECS.Editor.Systems {
                             //methodContent.Add($"{resDep} = Batches.Apply({resDep}, in world);");
                             schemeDependsOn = resDep;
                             methodContent.Add($"{customOutputDep} = Batches.Apply({customDep}, in world);");
+                            dependencyTrace?.Apply(customOutputDep, customDep);
                         }
                         
                         while (q.Count > 0) {
@@ -385,6 +372,7 @@ namespace ME.BECS.Editor.Systems {
 
                             }
 
+                            TraceInputs(dependsOn, deps);
                             if (n is ME.BECS.FeaturesGraph.Nodes.ExitNode exitNode) {
 
                                 if (customInputDeps.TryGetValue(exitNode, out var parentNode) == true) {
@@ -400,17 +388,22 @@ namespace ME.BECS.Editor.Systems {
                                     var dep = GetIndex(n, n.graph);
                                     printedDependencies.Add($"dep{dep}");
                                     var dependsOnExit = GetDeps(startNodeIndex, exitNode, out var schemeDependsOnExit, out var depsExit, collectedDeps);
+                                    TraceInputs(dependsOnExit, depsExit);
                                     scheme.Add($" * EXIT dep{dep} = {schemeDependsOnExit};");
                                     collectedDeps.Add($"dep{dep}");
                                     methodContent.Add($"{collectedDeps.GetReadOpString($"dep{dep}")} = {dependsOnExit};");
+                                    dependencyTrace?.Copy(collectedDeps.GetReadOpString($"dep{dep}"), dependsOnExit);
 
                                 } else {
 
                                     var dependsOnExit = GetDeps(startNodeIndex, exitNode, out var schemeDependsOnExit, out var depsExit, collectedDeps);
+                                    TraceInputs(dependsOnExit, depsExit);
                                     scheme.Add($" * EXIT dependsOn = {schemeDependsOnExit};");
                                     methodContent.Add($"dependsOn = {dependsOnExit};");
+                                    dependencyTrace?.Copy("dependsOn", dependsOnExit);
                                     //collectedDeps.Add(dependsOnExit);
                                     lastDependency = dependsOnExit;
+                                    lastDependencyInputs = depsExit;
 
                                 }
 
@@ -424,12 +417,13 @@ namespace ME.BECS.Editor.Systems {
 
                                     var customAttr = string.Empty;
                                     var notUsedDescr = " - Empty Node";
-                                    var hasMethod = HasMethod<T>(n);
+                                    var hasMethod = HasMethod(n, method);
                                     if (hasMethod == false ||
                                         n.enabled == false || n.IsGroupEnabled() == false) {
                                         
                                         collectedDeps.Add($"dep{index.ToString()}");
                                         methodContent.Add($"{collectedDeps.GetReadOpString($"dep{index.ToString()}")} = {dependsOn};");
+                                        dependencyTrace?.Copy(collectedDeps.GetReadOpString($"dep{index.ToString()}"), dependsOn);
 
                                         if (hasMethod == false) {
                                             notUsedDescr = $" - Method {typeof(T)} was not found. Node skipped.";
@@ -441,6 +435,21 @@ namespace ME.BECS.Editor.Systems {
                                         notUsedDescr = string.Empty;
 
                                         var isBursted = IsBursted(generator, n, method);
+                                        if (lifecycleTrace != null) {
+                                            var tracedType = systemNode.system.GetType();
+                                            var count = 1;
+                                            var mode = "ordinary";
+                                            if (tracedType.IsGenericType) {
+                                                var definition = tracedType.GetGenericTypeDefinition();
+                                                var constraint = EditorUtils.GetFirstInterfaceConstraintType(definition);
+                                                count = constraint == null ? 0 : EditorUtils.GetTypesDerivedFrom(constraint, definition).Length;
+                                                mode = definition.GetCustomAttribute<SystemGenericParallelModeAttribute>() != null ? "parallel" : "sequential";
+                                            }
+                                            var preApply = systemNode.GetSyncPoint(methodEnum).syncPoint && systemNode.inputPorts.Count > 0 && systemNode.inputPorts[0].GetEdges().Count > 1;
+                                            lifecycleTrace.Add(index.globalIndex.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\t" +
+                                                count.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\t" + mode + "\t" +
+                                                (preApply ? "1" : "0") + "\t" + (RequiresApply(systemNode) ? "1" : "0") + "\t" + (isBursted ? "1" : "0"));
+                                        }
                                         if (isOpened == false || isInBurst != isBursted) {
                                             if (isOpened == true) {
                                                 // close
@@ -501,36 +510,18 @@ namespace ME.BECS.Editor.Systems {
                                                         customAttr = "[ PARALLEL ]";
                                                         // Parallel mode
                                                         var srcDep = index;
-                                                        methodContent.Add($"var depsGeneric{srcDep.ToString()} = new NativeArray<Unity.Jobs.JobHandle>({types.Length}, Constants.ALLOCATOR_TEMP);");
-                                                        var withoutSync = true;
-                                                        foreach (var cType in types) {
-                                                            var type = systemType.MakeGenericType(cType);
-                                                            var indexStr = index.ToString();
-                                                            methodContent.Add("{");
-                                                            methodContent.Add($"systemContext = SystemContext.Create(dt, in world, {dependsOn});");
-                                                            methodContent.Add($"InvokeSystem_{index.globalIndex + index.genericIndex}(systems[{index.globalIndex + index.genericIndex}], ref systemContext);");
-                                                            methodContent.Add($"depsGeneric{srcDep.ToString()}[{index.genericIndex}] = systemContext.dependsOn;");
-                                                            methodContent.Add("}");
-                                                            if (index.genericIndex == 0) collectedDeps.Add($"dep{indexStr}");
-                                                            printedDependencies.Add($"dep{indexStr}");
-                                                            if (withoutSync == true) {
-                                                                var syncState = IsSyncNotRequired(type);
-                                                                if (syncState == false) withoutSync = false;
-                                                            }
-                                                            index.AddGeneric();
-                                                        }
-
-                                                        methodContent.Add("{");
-                                                        var combinedGenericDependency = types.Length == 0 ? dependsOn : $"Unity.Jobs.JobHandle.CombineDependencies(depsGeneric{srcDep.ToString()})";
-                                                        AddApply(systemNode, srcDep, ref schemeDependsOn, combinedGenericDependency, collectedDeps.GetReadOpString($"dep{srcDep.ToString()}"), forceWithoutSync: withoutSync);
-                                                        methodContent.Add("}");
+                                                        var combinedGenericDependency = $"combinedGeneric{srcDep}";
+                                                        methodContent.Add($"var {combinedGenericDependency} = InvokeParallel_{index.globalIndex}_{types.Length}(dt, in world, {dependsOn}, systems);");
+                                                        dependencyTrace?.Generic(combinedGenericDependency, dependsOn, index.globalIndex, types.Length, true, false);
+                                                        AddApply(systemNode, srcDep, ref schemeDependsOn, combinedGenericDependency, collectedDeps.GetReadOpString($"dep{srcDep.ToString()}"));
                                                         index = srcDep;
                                                     } else {
                                                         // One-by-one mode
                                                         customAttr = "[ ONE-BY-ONE ]";
                                                         var srcDep = index;
-                                                        var prevIndex = dependsOn;
-                                                        methodContent.Add($"{prevIndex} = InvokeSequential_{index.globalIndex}_{types.Length}(dt, in world, {prevIndex}, systems, {(RequiresApply(systemNode) ? "true" : "false")});");
+                                                        var prevIndex = $"sequentialGeneric{srcDep}";
+                                                        methodContent.Add($"var {prevIndex} = InvokeSequential_{index.globalIndex}_{types.Length}(dt, in world, {dependsOn}, systems, {(RequiresApply(systemNode) ? "true" : "false")});");
+                                                        dependencyTrace?.Generic(prevIndex, dependsOn, index.globalIndex, types.Length, false, RequiresApply(systemNode));
                                                         AddApply(systemNode, srcDep, ref schemeDependsOn, prevIndex, collectedDeps.GetReadOpString($"dep{srcDep.ToString()}"));
 
                                                         index = srcDep;
@@ -540,14 +531,13 @@ namespace ME.BECS.Editor.Systems {
 
                                         } else {
 
-                                            var systemType = systemNode.system.GetType();
                                             collectedDeps.Add($"dep{index.ToString()}");
                                             methodContent.Add("{");
                                             methodContent.Add($"systemContext = SystemContext.Create(dt, in world, {dependsOn});");
                                             methodContent.Add($"InvokeSystem_{index.globalIndex}(systems[{index.globalIndex}], ref systemContext);");
+                                            dependencyTrace?.Invoke("systemContext.dependsOn", dependsOn, index.globalIndex);
 
-                                            var withoutSync = IsSyncNotRequired(systemType);
-                                            AddApply(systemNode, index, ref schemeDependsOn, "systemContext.dependsOn", collectedDeps.GetReadOpString($"dep{index.ToString()}"), forceWithoutSync: withoutSync);
+                                            AddApply(systemNode, index, ref schemeDependsOn, "systemContext.dependsOn", collectedDeps.GetReadOpString($"dep{index.ToString()}"));
                                             methodContent.Add("}");
                                             
                                         }
@@ -591,6 +581,7 @@ namespace ME.BECS.Editor.Systems {
 
                                     collectedDeps.Add($"dep{index.ToString()}");
                                     methodContent.Add($"{collectedDeps.GetReadOpString($"dep{index.ToString()}")} = {dependsOn};");
+                                    dependencyTrace?.Copy(collectedDeps.GetReadOpString($"dep{index.ToString()}"), dependsOn);
                                     scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(n.name, 32, CutType.End)} [ SKIPPED ]");
                                     printedDependencies.Add($"dep{index.ToString()}");
 
@@ -645,9 +636,13 @@ namespace ME.BECS.Editor.Systems {
                         //content.Clear();
                     } else {
                         content.Add($"dependsOn = {lastDependency};");
+                        if (dependencyTrace != null && lastDependency != "dependsOn")
+                            dependencyTrace.Merge(lastDependency, lastDependencyInputs.Select(collectedDeps.GetReadOpString));
+                        dependencyTrace?.Copy("dependsOn", lastDependency);
                     }
 
                     if (nodesCount == 0u) {
+                        dependencyTrace?.Reset();
                         content.Clear();
                         content.Add("// All graph's nodes were skipped");
                     }
@@ -811,6 +806,8 @@ namespace ME.BECS.Editor.Systems {
                 type = type.GetGenericTypeDefinition();
             }
             var isSystemBursted = generator.burstedTypes.Contains(type);
+            if (SourceGeneratorSystemLifecycle.TryGet(type, method, out var present, out var burst, out var discarded))
+                return present && !discarded && (isSystemBursted || burst);
             var methodInfo = SourceGeneratorScheduledJobsValidation.GetLifecycleMethod(type, method);
             if (methodInfo == null) return false;
             var isBursted = System.Attribute.IsDefined(methodInfo, typeof(Unity.Burst.BurstCompileAttribute));
@@ -820,11 +817,14 @@ namespace ME.BECS.Editor.Systems {
             return true;
         }
 
-        private static bool HasMethod<T>(ME.BECS.Extensions.GraphProcessor.BaseNode node) where T : class {
+        private static bool HasMethod(ME.BECS.Extensions.GraphProcessor.BaseNode node, string method) {
             if (node == null) return false;
             var sysNode = node as ME.BECS.FeaturesGraph.Nodes.SystemNode;
             if (sysNode == null) return true;
-            return System.Array.IndexOf(sysNode.system.GetType().GetInterfaces(), typeof(T)) >= 0;
+            if (sysNode.system == null) return false;
+            var type = sysNode.system.GetType();
+            if (SourceGeneratorSystemLifecycle.TryGet(type, method, out var present, out _, out _)) return present;
+            return SourceGeneratorScheduledJobsValidation.GetLifecycleMethod(type, method) != null;
         }
 
         public static void GetSystemGraph(CustomCodeGenerator generator, scg::List<string> content, SystemsGraph graph) {

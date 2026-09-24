@@ -67,6 +67,29 @@ namespace ME.BECS.Editor {
                     .Append(flags.ToString(CultureInfo.InvariantCulture)).Append('\n');
             }
             Append(result, "component-group", used.componentsGroup);
+            result.Append("destroy-schema\t0\t").Append(Encode("v1")).Append('\n');
+            Append(result, "destroy-registration", ComponentDestroyCodeGenerator.GetSelectedComponents(editor, assemblies));
+            result.Append("config-mask-schema\t0\t").Append(Encode("v1")).Append('\n');
+            var maskOrdinal = 0;
+            result.Append("config-collection-count-schema\t0\t").Append(Encode("v1")).Append('\n');
+            result.Append("config-collection-callback-schema\t0\t").Append(Encode("v1")).Append('\n');
+            var collectionCountOrdinal = 0;
+            foreach (var component in Aspects.EntityConfigCodeGenerator.GetCollectionComponents(editor, assemblies)) {
+                var ordinal = (collectionCountOrdinal++).ToString(CultureInfo.InvariantCulture);
+                result.Append("config-collection-count\t").Append(ordinal)
+                    .Append('\t').Append(Encode(component.AssemblyQualifiedName)).Append('\t')
+                    .Append(Aspects.EntityConfigCodeGenerator.GetCollectionsCount(component).ToString(CultureInfo.InvariantCulture)).Append('\n');
+                var collectionFields = Aspects.EntityConfigCodeGenerator.GetCollectionFields(component);
+                result.Append("config-collection-callback\t").Append(ordinal)
+                    .Append('\t').Append(Encode(component.AssemblyQualifiedName)).Append('\t')
+                    .Append(Encode(string.Join(",", System.Array.ConvertAll(collectionFields, field => field.Name)))).Append('\n');
+            }
+            foreach (var component in Aspects.EntityConfigCodeGenerator.GetMaskComponents(editor, assemblies)) {
+                var fields = component.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                result.Append("config-mask-registration\t").Append((maskOrdinal++).ToString(CultureInfo.InvariantCulture))
+                    .Append('\t').Append(Encode(component.AssemblyQualifiedName)).Append('\t')
+                    .Append(Encode(string.Join(",", System.Array.ConvertAll(fields, field => field.Name)))).Append('\n');
+            }
             var groupOrdinal = 0;
             foreach (var component in used.componentsGroup) {
                 if (!EditorUtils.IsValidTypeForAssembly(editor, component, assemblies, true)) continue;
@@ -421,6 +444,18 @@ namespace ME.BECS.Editor {
             if (types == null) throw new InvalidOperationException("Missing discovery list: " + kind);
             var seen = new HashSet<string>(StringComparer.Ordinal);
             for (var i = 0; i < types.Count; ++i) {
+                var identity = types[i]?.AssemblyQualifiedName;
+                if (string.IsNullOrEmpty(identity) || !seen.Add(identity)) throw new InvalidOperationException("Invalid/duplicate " + kind + " at ordinal " + i);
+                // Preserve supplied order, including open generic definitions; specialization
+                // selection is a separate stage and must not silently change these ordinals.
+                output.Append(kind).Append('\t').Append(i.ToString(CultureInfo.InvariantCulture)).Append('\t').Append(Encode(identity)).Append('\n');
+            }
+        }
+
+        private static void Append(StringBuilder output, string kind, Type[] types) {
+            if (types == null) throw new InvalidOperationException("Missing discovery list: " + kind);
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (var i = 0; i < types.Length; ++i) {
                 var identity = types[i]?.AssemblyQualifiedName;
                 if (string.IsNullOrEmpty(identity) || !seen.Add(identity)) throw new InvalidOperationException("Invalid/duplicate " + kind + " at ordinal " + i);
                 // Preserve supplied order, including open generic definitions; specialization

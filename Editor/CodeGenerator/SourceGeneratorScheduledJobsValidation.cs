@@ -19,6 +19,8 @@ namespace ME.BECS.Editor {
         }
 
         public static bool IsLifecycleBurstAllowed(Type system, string name) {
+            if (SourceGeneratorSystemLifecycle.TryGet(system, name, out var present, out _, out var discarded))
+                return present && !discarded;
             var method = GetLifecycleMethod(system, name);
             return method != null && !Attribute.IsDefined(method, typeof(WithoutBurstAttribute));
         }

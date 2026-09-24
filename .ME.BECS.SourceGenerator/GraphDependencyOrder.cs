@@ -9,7 +9,7 @@ namespace ME.BECS.SourceGenerator;
 // Structural scheduling input only: does not decide batches, Burst boundaries or lifecycle filtering.
 internal static class GraphDependencyOrder {
     internal static string Analyze(GraphTopologyInput topology) {
-        var report = new StringBuilder("ME.BECS.GraphDependencyOrder.v1\n");
+        var report = new StringBuilder("ME.BECS.GraphDependencyOrder.v2\n");
         for (var occurrence = 0; occurrence < topology.Occurrences.Count; ++occurrence) {
             var graph = topology.Occurrences[occurrence];
             var inputs = new List<int>[graph.Nodes.Count];
@@ -27,10 +27,28 @@ internal static class GraphDependencyOrder {
                     if (!inputs[dependent].Contains(node)) mismatches.Add(node.ToString(CultureInfo.InvariantCulture) + ">" + dependent.ToString(CultureInfo.InvariantCulture));
             }
             report.Append("occurrence\t").Append(occurrence.ToString(CultureInfo.InvariantCulture)).Append('\n');
+            report.Append("entry-exit\t").Append(graph.Entry.ToString(CultureInfo.InvariantCulture)).Append('\t')
+                .Append(graph.Exit.ToString(CultureInfo.InvariantCulture)).Append('\n');
             if (mismatches.Count != 0) {
                 report.Append("inconsistent-edges\t").Append(string.Join(",", mismatches.Distinct().OrderBy(static item => item, StringComparer.Ordinal))).Append('\n');
                 continue;
             }
+            // Reachability is entry-specific. Disconnected editor nodes must not become runtime roots
+            // just because they have zero indegree. This remains structural (all ports, no phase filter).
+            var reachable = new HashSet<int>();
+            var pending = new Queue<int>();
+            if (graph.Entry >= 0) { reachable.Add(graph.Entry); pending.Enqueue(graph.Entry); }
+            while (pending.Count != 0) {
+                var current = pending.Dequeue();
+                foreach (var next in outputs[current]) if (reachable.Add(next)) pending.Enqueue(next);
+            }
+            report.Append("entry-reachable\t").Append(string.Join(",", reachable.OrderBy(static index => index)
+                .Select(index => index.ToString(CultureInfo.InvariantCulture)))).Append('\n');
+            if (graph.Entry < 0) report.Append("missing-entry\n");
+            if (graph.Exit < 0) report.Append("missing-exit\n");
+            else if (!reachable.Contains(graph.Exit)) report.Append("unreachable-exit\n");
+            report.Append("disconnected\t").Append(string.Join(",", Enumerable.Range(0, graph.Nodes.Count)
+                .Where(index => !reachable.Contains(index)).Select(index => index.ToString(CultureInfo.InvariantCulture)))).Append('\n');
             var indegree = inputs.Select(static edges => edges.Count).ToArray();
             var ready = new SortedSet<int>();
             for (var node = 0; node < indegree.Length; ++node) if (indegree[node] == 0) ready.Add(node);

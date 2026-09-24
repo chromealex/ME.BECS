@@ -44,12 +44,21 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                         "Incomplete or altered manifest: " + file.Path + ". Regenerate type inputs using the current Editor exporter."));
                     return;
                 }
-                var kinds = new HashSet<string>(new[] { "system", "system-registration", "component", "component-group", "job", "entity", "entity-registration", "aspect", "aspect-registration", "aspect-construction" }, StringComparer.Ordinal);
+                var kinds = new HashSet<string>(new[] { "system", "system-registration", "component", "component-group", "job", "entity", "entity-registration", "aspect", "aspect-registration", "aspect-construction", "destroy-schema", "destroy-registration", "config-mask-schema", "config-collection-count-schema", "config-collection-callback-schema" }, StringComparer.Ordinal);
                 var next = new Dictionary<string, int>(StringComparer.Ordinal);
                 var unique = new HashSet<string>(StringComparer.Ordinal);
                 var records = new List<string>();
                 var resolutions = new List<string>();
                 var entityRegistrations = new List<INamedTypeSymbol>();
+                var destroyRegistrations = new List<INamedTypeSymbol>();
+                var destroySchema = false;
+                var maskSchema = false;
+                var collectionCountSchema = false;
+                var collectionCallbackSchema = false;
+                var collectionCallbackTypes = new List<INamedTypeSymbol>();
+                var collectionCallbackBodies = new List<string>();
+                var collectionCounts = new List<(INamedTypeSymbol Type, uint Count)>();
+                var maskRegistrations = new List<ConfigMaskInputEmitter>();
                 var systemRegistrations = new List<(string Identity, INamedTypeSymbol Type)>();
                 var aspectRegistrations = new List<(INamedTypeSymbol Type, IMethodSymbol Query)>();
                 var aspectConstructors = new List<IMethodSymbol>();
@@ -71,6 +80,10 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                     var componentRecord = fields[0] == "component-registration";
                     var groupRecord = fields[0] == "group-registration";
                     var injectionRecord = fields[0] == "system-injection";
+                    var maskRecord = fields[0] == "config-mask-registration";
+                    var collectionCallbackRecord = fields[0] == "config-collection-callback";
+                    var collectionCountRecord = fields[0] == "config-collection-count";
+                    uint collectionCount = 0;
                     var deltaRecord = fields[0] == "job-delta-registration";
                     var graphRecord = fields[0] == "graph-registration";
                     var slotRecord = fields[0] == "graph-system";
@@ -86,11 +99,13 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                     var componentFlags = 0;
                     var valid = graphJobRecord ? fields.Length == 5 && header[2] == "runtime" &&
                         int.TryParse(fields[3], NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out graphId) &&
-                        fields[3] == graphId.ToString(CultureInfo.InvariantCulture) : componentRecord
+                        fields[3] == graphId.ToString(CultureInfo.InvariantCulture) : collectionCountRecord
+                        ? fields.Length == 4 && uint.TryParse(fields[3], NumberStyles.None, CultureInfo.InvariantCulture, out collectionCount) &&
+                            collectionCount > 0 && fields[3] == collectionCount.ToString(CultureInfo.InvariantCulture) : componentRecord
                         ? fields.Length == 4 && int.TryParse(fields[3], NumberStyles.None, CultureInfo.InvariantCulture, out componentFlags) &&
                             componentFlags >= 0 && componentFlags <= 63 && fields[3] == componentFlags.ToString(CultureInfo.InvariantCulture) &&
                             (componentFlags & 5) != 5 && ((componentFlags & 16) == 0 || (componentFlags & 8) != 0)
-                        : groupRecord || injectionRecord || deltaRecord ? fields.Length == 4 : graphRecord
+                        : groupRecord || injectionRecord || deltaRecord || maskRecord || collectionCallbackRecord ? fields.Length == 4 : graphRecord
                             ? fields.Length == 5 && header[2] == "runtime" && int.TryParse(fields[4], NumberStyles.None,
                                 CultureInfo.InvariantCulture, out graphCapacity) && graphCapacity >= 0 &&
                                 fields[4] == graphCapacity.ToString(CultureInfo.InvariantCulture) && int.TryParse(fields[3], NumberStyles.AllowLeadingSign,
@@ -112,7 +127,7 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                     if (valid) {
                         try {
                             type = Decode(fields[2]);
-                            if (groupRecord || injectionRecord || deltaRecord) {
+                            if (groupRecord || injectionRecord || deltaRecord || maskRecord || collectionCallbackRecord) {
                                 groupIdentity = Decode(fields[3]);
                                 valid = groupIdentity.Length > 0 && !groupIdentity.Any(char.IsControl);
                             }
@@ -131,6 +146,26 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                     }
                     if (!valid) { output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid or duplicate record at " + file.Path + ":" + (i + 1))); return; }
                     records.Add(header[2] + "\t" + lines[i]);
+                    if (fields[0] == "config-collection-callback-schema") {
+                        if (type != "v1" || collectionCallbackSchema) { output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid collection callback schema")); return; }
+                        collectionCallbackSchema = true;
+                        continue;
+                    }
+                    if (fields[0] == "config-collection-count-schema") {
+                        if (type != "v1" || collectionCountSchema) { output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid collection count schema")); return; }
+                        collectionCountSchema = true;
+                        continue;
+                    }
+                    if (fields[0] == "config-mask-schema") {
+                        if (type != "v1" || maskSchema) { output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid config mask schema")); return; }
+                        maskSchema = true;
+                        continue;
+                    }
+                    if (fields[0] == "destroy-schema") {
+                        if (type != "v1" || destroySchema) { output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid destroy registration schema")); return; }
+                        destroySchema = true;
+                        continue;
+                    }
                     if (topologyRecord) {
                         if (type != "topology" || !graphSlots.ContainsKey(graphId) || graphTopologies.ContainsKey(graphId)) {
                             output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid topology graph reference: " + graphId));
@@ -168,6 +203,33 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                         continue;
                     }
                     var symbol = resolver.ResolveDefinition(type, out var resolutionGap);
+                    if (collectionCallbackRecord) {
+                        var body = ConfigCollectionsInputEmitter.Describe(symbol, input.Right, groupIdentity.Split(','), fields[1]);
+                        if (body == null) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid config collection fields/construction contract: " + type));
+                            return;
+                        }
+                        collectionCallbackTypes.Add(symbol!);
+                        collectionCallbackBodies.Add(body);
+                    }
+                    if (collectionCountRecord) {
+                        if (symbol == null || !symbol.IsUnmanagedType || symbol.IsRefLikeType || MethodSummaryType.From(symbol).IsOpen ||
+                            !input.Right.IsSymbolAccessibleWithin(symbol, input.Right.Assembly) ||
+                            !symbol.AllInterfaces.Any(static contract => contract.ToDisplayString() is "ME.BECS.IConfigComponent" or "ME.BECS.IConfigComponentStatic" or "ME.BECS.IConfigComponentShared") ||
+                            symbol.GetMembers().OfType<IFieldSymbol>().Count(static field => !field.IsStatic && field.DeclaredAccessibility == Accessibility.Public &&
+                                field.Type.AllInterfaces.Any(static contract => contract.ToDisplayString() == "ME.BECS.IUnmanagedList")) != collectionCount) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid config collection count: " + type));
+                            return;
+                        }
+                        collectionCounts.Add((symbol, collectionCount));
+                    }
+                    if (maskRecord) {
+                        if (!ConfigMaskInputEmitter.TryCreate(symbol, groupIdentity, input.Right, out var maskEntry)) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid config mask type/field order: " + type));
+                            return;
+                        }
+                        maskRegistrations.Add(maskEntry!);
+                    }
                     if (graphJobRecord) {
                         var plan = graphSlots.TryGetValue(graphId, out var jobSlots)
                             ? GraphJobPatchPlan.Create(input.Right, symbol, type, groupIdentity, jobSlots.Select(static s => s.Type).ToArray()) : null;
@@ -332,8 +394,26 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                         }
                         entityRegistrations.Add(symbol);
                     }
+                    if (fields[0] == "destroy-registration") {
+                        var contract = input.Right.GetTypeByMetadataName("ME.BECS.IComponentDestroy");
+                        if (symbol == null || !symbol.IsUnmanagedType || symbol.IsRefLikeType || MethodSummaryType.From(symbol).IsOpen ||
+                            !input.Right.IsSymbolAccessibleWithin(symbol, input.Right.Assembly) || contract == null ||
+                            !symbol.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, contract))) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid destroy component registration: " + type));
+                            return;
+                        }
+                        destroyRegistrations.Add(symbol);
+                    }
                     resolutions.Add(header[2] + "\t" + fields[0] + "\t" + fields[1] + "\t" +
                         (symbol == null ? "unresolved\t" + resolutionGap : "resolved\t" + symbol.GetDocumentationCommentId() + "\t" + MethodSummaryType.From(symbol).Encode()));
+                }
+                if (!destroySchema || !maskSchema || !collectionCountSchema || !collectionCallbackSchema) {
+                    output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Missing destroy/config registration schema. Regenerate type inputs with the current Editor exporter."));
+                    return;
+                }
+                if (!collectionCounts.Select(static entry => entry.Type).SequenceEqual(collectionCallbackTypes, SymbolEqualityComparer.Default)) {
+                    output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Collection count and callback selections differ. Regenerate type inputs."));
+                    return;
                 }
                 if (graphRegistrations.Any(g => graphSlots[g.Id].Count != g.Capacity)) {
                     output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Graph system slots do not match declared capacity. Regenerate inputs."));
@@ -346,8 +426,27 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                     }
                 }
                 var source = new StringBuilder("// <auto-generated/>\n");
+                var lifecyclePhases = new[] { "Awake", "Start", "Update", "Destroy", "DrawGizmos" };
+                var lifecyclePlans = new Dictionary<(int Graph, string Phase), GraphLifecyclePlan>();
+                var flatQueries = input.Right.SyntaxTrees.Any(tree => tree.Options is Microsoft.CodeAnalysis.CSharp.CSharpParseOptions options &&
+                    options.PreprocessorSymbolNames.Contains("ENABLE_BECS_FLAT_QUERIES"));
+                foreach (var topology in graphTopologies.OrderBy(static pair => pair.Key)) {
+                    for (var phaseIndex = 0; phaseIndex < lifecyclePhases.Length; ++phaseIndex) {
+                        var phase = lifecyclePhases[phaseIndex];
+                        var available = GraphLifecyclePlan.TryCreate(topology.Value, resolver, phase, phaseIndex + 1, flatQueries,
+                            out var plan, out var planError);
+                        if (available) lifecyclePlans.Add((topology.Key, phase), plan!);
+                        if (available)
+                            source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.GraphSyncComparison.v1\", ")
+                                .Append(SymbolDisplay.FormatLiteral(topology.Key.ToString(CultureInfo.InvariantCulture) + "\n" + phase + "\n" + plan!.SyncDifferences, true)).Append(")]\n");
+                        var planPayload = topology.Key.ToString(CultureInfo.InvariantCulture) + "\n" + phase + "\n" +
+                            (available ? plan!.Serialize() : "unavailable\n" + planError);
+                        source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.GraphLifecyclePlan.v1\", ")
+                            .Append(SymbolDisplay.FormatLiteral(planPayload, true)).Append(")]\n");
+                    }
+                }
                 foreach (var topology in graphTopologies.OrderBy(static pair => pair.Key))
-                    source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.GraphDependencyOrder.v1\", ")
+                    source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.GraphDependencyOrder.v2\", ")
                         .Append(SymbolDisplay.FormatLiteral(topology.Key.ToString(CultureInfo.InvariantCulture) + "\n" + GraphDependencyOrder.Analyze(topology.Value), true))
                         .Append(")]\n");
                 foreach (var record in records)
@@ -358,6 +457,16 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                 foreach (var resolution in resolutions)
                     source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.TypeInputResolution.v1\", ")
                         .Append(SymbolDisplay.FormatLiteral(resolution, true)).Append(")]\n");
+                DestroyInputEmitter.Append(source, destroyRegistrations);
+                DestroyInputEmitter.EmitCatalog(output, input.Right, destroyRegistrations);
+                ConfigMaskInputEmitter.Append(source, maskRegistrations);
+                ConfigCollectionsInputEmitter.Append(source, collectionCallbackBodies);
+                source.Append("namespace ME.BECS.SourceGenerated { internal static class ConfigCollectionCounts { public static void Initialize() {\n")
+                    .Append("global::ME.BECS.StaticTypes.collectionsCount.Resize(global::ME.BECS.StaticTypes.counter + 1u);\n");
+                foreach (var entry in collectionCounts)
+                    source.Append("global::ME.BECS.StaticTypes<").Append(entry.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                        .Append(">.SetCollectionsCount(").Append(entry.Count.ToString(CultureInfo.InvariantCulture)).Append("u);\n");
+                source.Append("} } }\n");
                 source.Append("namespace ME.BECS.SourceGenerated { internal static class EntityInputs { public static void Initialize() {\n")
                     .Append("global::ME.BECS.EntityTypes.Init();\n");
                 for (var entityId = 0; entityId < entityRegistrations.Count; ++entityId)
@@ -410,25 +519,35 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                                 .Append(phase).Append('<').Append(systemName).Append(">(ref *((").Append(systemName).Append("*)pointer), ref context);\n");
                         }
                         if (graphTopologies.TryGetValue(graph.Id, out var topology)) {
-                            var groups = new HashSet<(int Start, int Count)>();
+                            var groups = new HashSet<(int Start, int Count, bool Parallel)>();
                             foreach (var node in topology.Occurrences.SelectMany(static occurrence => occurrence.Nodes)) {
-                                if (node.Parallel || node.SystemType.Length == 0) continue;
+                                if (node.SystemType.Length == 0) continue;
                                 var definition = resolver.ResolveDefinition(node.SystemType, out _);
                                 if (definition == null || !definition.IsGenericType || contract == null ||
                                     !definition.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, contract)) ||
-                                    !groups.Add((node.SlotStart, node.SlotCount))) continue;
+                                    !groups.Add((node.SlotStart, node.SlotCount, node.Parallel))) continue;
                                 source.Append("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]\n")
-                                    .Append("private static global::Unity.Jobs.JobHandle InvokeSequential_").Append(node.SlotStart.ToString(CultureInfo.InvariantCulture))
+                                    .Append("private static global::Unity.Jobs.JobHandle Invoke").Append(node.Parallel ? "Parallel_" : "Sequential_").Append(node.SlotStart.ToString(CultureInfo.InvariantCulture))
                                     .Append('_').Append(node.SlotCount.ToString(CultureInfo.InvariantCulture))
-                                    .Append("(uint dt, in global::ME.BECS.World world, global::Unity.Jobs.JobHandle dependsOn, global::System.IntPtr* systems, bool apply) {\n");
+                                    .Append("(uint dt, in global::ME.BECS.World world, global::Unity.Jobs.JobHandle dependsOn, global::System.IntPtr* systems")
+                                    .Append(node.Parallel ? ") {\n" : ", bool apply) {\n");
+                                if (node.Parallel && node.SlotCount > 0)
+                                    source.Append("var results = new global::Unity.Collections.NativeArray<global::Unity.Jobs.JobHandle>(")
+                                        .Append(node.SlotCount.ToString(CultureInfo.InvariantCulture)).Append(", global::ME.BECS.Constants.ALLOCATOR_TEMP);\n");
                                 for (var slot = node.SlotStart; slot < node.SlotStart + node.SlotCount; ++slot) {
                                     source.Append("{ var context = global::ME.BECS.SystemContext.Create(dt, in world, dependsOn);\nInvokeSystem_")
                                         .Append(slot.ToString(CultureInfo.InvariantCulture)).Append("(systems[").Append(slot.ToString(CultureInfo.InvariantCulture))
-                                        .Append("], ref context);\ndependsOn = apply ? global::ME.BECS.Batches.Apply(context.dependsOn, in world) : context.dependsOn; }\n");
+                                        .Append("], ref context);\n");
+                                    if (node.Parallel) source.Append("results[").Append((slot - node.SlotStart).ToString(CultureInfo.InvariantCulture)).Append("] = context.dependsOn; }\n");
+                                    else source.Append("dependsOn = apply ? global::ME.BECS.Batches.Apply(context.dependsOn, in world) : context.dependsOn; }\n");
                                 }
+                                if (node.Parallel && node.SlotCount > 0)
+                                    source.Append("dependsOn = global::Unity.Jobs.JobHandle.CombineDependencies(results);\nresults.Dispose();\n");
                                 source.Append("return dependsOn;\n}\n");
                             }
                         }
+                        if (lifecyclePlans.TryGetValue((graph.Id, phase), out var lifecyclePlan))
+                            GraphLifecycleEmitter.Append(source, lifecyclePlan, "global::" + graph.Prefix + "Initialize." + storage);
                         source.Append("} }\n");
                     }
                     source.Append("namespace ").Append(graph.Prefix.Substring(0, split)).Append(" { using Unity.Collections; public unsafe partial class ")
@@ -554,7 +673,8 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                         .Append(registration.Query.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
                         .Append('.').Append(registration.Query.Name).Append("();\n");
                 }
-                source.Append("}\npublic static void Construct(ref global::ME.BECS.World world) {\n");
+                source.Append("}\npublic static void RegisterConstruction() => global::ME.BECS.WorldStaticCallbacks.RegisterCallback<global::ME.BECS.World>(Construct);\n")
+                    .Append("public static void Construct(ref global::ME.BECS.World world) {\n");
                 foreach (var constructor in aspectConstructors)
                     source.Append(constructor.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
                         .Append('.').Append(constructor.Name).Append("(ref world);\n");

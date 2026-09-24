@@ -19,6 +19,9 @@ namespace ME.BECS.Editor {
             internal readonly Dictionary<(Type, string), MethodInfo> methods = new Dictionary<(Type, string), MethodInfo>();
             internal readonly Dictionary<(Type, Type), Type[]> genericComponents = new Dictionary<(Type, Type), Type[]>();
             internal readonly Dictionary<Type, Type[]> derivedTypes = new Dictionary<Type, Type[]>();
+            internal readonly Dictionary<Assembly, string[][]> inputRecords = new Dictionary<Assembly, string[][]>();
+            internal readonly Dictionary<Type, (bool success, KeyValuePair<int, string>[] calls, string reason)> earlyInitPlans =
+                new Dictionary<Type, (bool, KeyValuePair<int, string>[], string)>();
             internal LookupScope() { this.previous = lookup; lookup = this; }
             public void Dispose() {
                 if (this.disposed) return;
@@ -29,78 +32,137 @@ namespace ME.BECS.Editor {
                 this.methods.Clear();
                 this.genericComponents.Clear();
                 this.derivedTypes.Clear();
+                this.inputRecords.Clear();
+                this.earlyInitPlans.Clear();
                 this.disposed = true;
             }
         }
 
         internal static LookupScope BeginLookupScope() => new LookupScope();
 
-        internal static bool TryGetConfigCollectionsRegistration(Type component, bool countOnly, out string call, out string reason) {
+        internal static bool TryGetConfigCollectionsRegistration(Type component, bool countOnly, bool editor, out string call, out string reason) {
+            if (countOnly) return TryGetConfigCollectionCount(component, editor, out call, out reason);
             call = null;
-            reason = "generated method unavailable";
-            if (!component.IsVisible || component.IsGenericType) return false;
-            var catalog = component.Assembly.GetType("ME.BECS.SourceGenerated.ConfigCollections_" + Encode(component.Assembly.GetName().Name), false);
+            reason = "manifest collection callback unavailable";
+            if (component.ContainsGenericParameters) return false;
+            var profile = editor ? "editor" : "runtime";
+            var assemblyName = "ME.BECS.Gen." + (editor ? "Editor" : "Runtime");
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a => !a.IsDynamic && a.GetName().Name == assemblyName).ToArray();
+            if (assemblies.Length != 1) return false;
+            var catalog = assemblies[0].GetType("ME.BECS.SourceGenerated.ConfigCollectionsInputs", false);
             if (catalog == null) return false;
-            var key = Encode("global::" + component.FullName.Replace('+', '.'));
-            var methodName = (countOnly ? "RegisterCount_" : "Register_") + key;
-            var register = FindMethod(catalog, methodName, Type.EmptyTypes);
-            if (register == null || register.ReturnType != typeof(void)) return false;
-            var fields = component.GetFields(BindingFlags.Instance | BindingFlags.Public)
-                .Where(f => typeof(IUnmanagedList).IsAssignableFrom(f.FieldType)).ToArray();
-            if (countOnly) {
-                var metadata = FindMethod(catalog, "Count_" + key, Type.EmptyTypes);
-                if (metadata == null || metadata.ReturnType != typeof(uint) || (uint)metadata.Invoke(null, null) != (uint)fields.Length) {
-                    reason = "collection count mismatch";
-                    return false;
-                }
-            } else {
-                var metadata = FindMethod(catalog, "Fields_" + key, Type.EmptyTypes);
-                if (metadata == null || metadata.ReturnType != typeof(string[])) return false;
-                var expected = fields.OrderBy(f => f.FieldType.FullName)
-                    .Where(f => f.FieldType.GenericTypeArguments.Length > 0 && f.FieldType.GenericTypeArguments[0].IsVisible)
-                    .Select(f => f.Name).ToArray();
-                var actual = metadata.Invoke(null, null) as string[];
-                if (actual == null || !expected.SequenceEqual(actual, StringComparer.Ordinal)) {
-                    reason = "collection field order mismatch";
-                    return false;
-                }
-            }
-            call = "global::" + catalog.FullName + "." + methodName + "();";
+            var records = GetInputRecords(assemblies[0]);
+            if (records.Count(row => row.Length == 4 && row[0] == profile && row[1] == "config-collection-callback-schema" && row[2] == "0" && row[3] == "djE=") != 1) return false;
+            var identity = Convert.ToBase64String(Encoding.UTF8.GetBytes(component.AssemblyQualifiedName));
+            var selected = records.Where(row => row.Length == 5 && row[0] == profile && row[1] == "config-collection-callback" && row[3] == identity).ToArray();
+            if (selected.Length != 1 || !int.TryParse(selected[0][2], System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out var ordinal) ||
+                selected[0][2] != ordinal.ToString(System.Globalization.CultureInfo.InvariantCulture)) return false;
+            var initialize = FindMethod(catalog, "Initialize", Type.EmptyTypes);
+            var callback = FindMethod(catalog, "Apply_" + selected[0][2],
+                new[] { typeof(UnsafeEntityConfig).MakeByRefType(), typeof(void).MakePointerType(), typeof(Ent).MakeByRefType() });
+            if (initialize == null || initialize.ReturnType != typeof(void) || callback == null || callback.IsGenericMethod || callback.ReturnType != typeof(void)) return false;
+            string[] actual;
+            try { actual = Encoding.UTF8.GetString(Convert.FromBase64String(selected[0][4])).Split(','); }
+            catch (FormatException) { reason = "invalid collection field encoding"; return false; }
+            var expected = Aspects.EntityConfigCodeGenerator.GetCollectionFields(component).Select(field => field.Name);
+            if (!expected.SequenceEqual(actual, StringComparer.Ordinal)) { reason = "collection field order mismatch"; return false; }
+            call = "global::ME.BECS.SourceGenerated.ConfigCollectionsInputs.Initialize();";
             reason = null;
             return true;
         }
 
-        internal static bool TryGetConfigMaskRegistration(Type component, out string call, out string reason) {
+        private static bool TryGetConfigCollectionCount(Type component, bool editor, out string call, out string reason) {
+            call = null;
+            reason = "manifest collection count unavailable";
+            if (component.ContainsGenericParameters) return false;
+            var profile = editor ? "editor" : "runtime";
+            var assemblyName = "ME.BECS.Gen." + (editor ? "Editor" : "Runtime");
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a => !a.IsDynamic && a.GetName().Name == assemblyName).ToArray();
+            if (assemblies.Length != 1) return false;
+            var catalog = assemblies[0].GetType("ME.BECS.SourceGenerated.ConfigCollectionCounts", false);
+            if (catalog == null) return false;
+            var records = GetInputRecords(assemblies[0]);
+            if (records.Count(r => r.Length == 4 && r[0] == profile && r[1] == "config-collection-count-schema" && r[2] == "0" && r[3] == "djE=") != 1) return false;
+            var identity = Convert.ToBase64String(Encoding.UTF8.GetBytes(component.AssemblyQualifiedName));
+            var selected = records.Where(r => r.Length == 5 && r[0] == profile && r[1] == "config-collection-count" && r[3] == identity).ToArray();
+            if (selected.Length != 1 || !uint.TryParse(selected[0][4], System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out var count) || count == 0 ||
+                selected[0][4] != count.ToString(System.Globalization.CultureInfo.InvariantCulture)) return false;
+            if (count != Aspects.EntityConfigCodeGenerator.GetCollectionsCount(component)) { reason = "collection count mismatch"; return false; }
+            var initialize = FindMethod(catalog, "Initialize", Type.EmptyTypes);
+            if (initialize == null || initialize.ReturnType != typeof(void)) return false;
+            call = "global::ME.BECS.SourceGenerated.ConfigCollectionCounts.Initialize();";
+            reason = null;
+            return true;
+        }
+
+        private static string[][] GetInputRecords(Assembly assembly) {
+            if (lookup != null && lookup.inputRecords.TryGetValue(assembly, out var cached)) return cached;
+            var records = assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+                .Where(a => a.Key == "ME.BECS.TypeInput.v1" && a.Value != null).Select(a => a.Value.Split('\t')).ToArray();
+            if (lookup != null) lookup.inputRecords.Add(assembly, records);
+            return records;
+        }
+
+        internal static bool TryGetConfigMaskRegistration(Type component, bool editor, out string call, out string reason) {
             call = null;
             reason = "generated callback unavailable";
-            if (!component.IsVisible || component.IsGenericType || !typeof(IConfigComponent).IsAssignableFrom(component)) return false;
-            var catalog = component.Assembly.GetType("ME.BECS.SourceGenerated.ConfigMask_" + Encode(component.Assembly.GetName().Name), false);
+            if (component.ContainsGenericParameters || !typeof(IConfigComponent).IsAssignableFrom(component)) return false;
+            var profile = editor ? "editor" : "runtime";
+            var assemblyName = "ME.BECS.Gen." + (editor ? "Editor" : "Runtime");
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a => !a.IsDynamic && a.GetName().Name == assemblyName).ToArray();
+            if (assemblies.Length != 1) return false;
+            var catalog = assemblies[0].GetType("ME.BECS.SourceGenerated.ConfigMaskInputs", false);
             if (catalog == null) return false;
-            var key = Encode("global::" + component.FullName.Replace('+', '.'));
-            var register = FindMethod(catalog, "Register_" + key, Type.EmptyTypes);
-            var metadata = FindMethod(catalog, "Fields_" + key, Type.EmptyTypes);
-            if (register == null || register.ReturnType != typeof(void) || metadata == null || metadata.ReturnType != typeof(string[])) return false;
-            // Only pure field metadata is invoked, never registration or the Burst callback.
+            var records = GetInputRecords(assemblies[0]);
+            if (records.Count(r => r.Length == 4 && r[0] == profile && r[1] == "config-mask-schema" && r[2] == "0" && r[3] == "djE=") != 1) return false;
+            var identity = Convert.ToBase64String(Encoding.UTF8.GetBytes(component.AssemblyQualifiedName));
+            var selected = records.Where(r => r.Length == 5 && r[0] == profile && r[1] == "config-mask-registration" && r[3] == identity).ToArray();
+            if (selected.Length != 1 || !int.TryParse(selected[0][2], System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out var ordinal) ||
+                selected[0][2] != ordinal.ToString(System.Globalization.CultureInfo.InvariantCulture)) return false;
+            var register = FindMethod(catalog, "Initialize", Type.EmptyTypes);
+            var pointer = typeof(void).MakePointerType();
+            var callback = FindMethod(catalog, "Apply_" + selected[0][2],
+                new[] { typeof(UnsafeEntityConfig).MakeByRefType(), pointer, pointer, pointer, typeof(Ent).MakeByRefType() });
+            if (register == null || register.ReturnType != typeof(void) || callback == null || callback.IsGenericMethod || callback.ReturnType != typeof(void)) return false;
             var expected = component.GetFields(BindingFlags.Instance | BindingFlags.Public).Select(f => f.Name).ToArray();
-            var actual = metadata.Invoke(null, null) as string[];
-            if (actual == null || !expected.SequenceEqual(actual, StringComparer.Ordinal)) {
+            string[] actual;
+            try { actual = Encoding.UTF8.GetString(Convert.FromBase64String(selected[0][4])).Split(','); }
+            catch (FormatException) { reason = "invalid field encoding"; return false; }
+            if (!expected.SequenceEqual(actual, StringComparer.Ordinal)) {
                 reason = "field order mismatch";
                 return false;
             }
-            call = "global::" + catalog.FullName + ".Register_" + key + "();";
+            call = "global::ME.BECS.SourceGenerated.ConfigMaskInputs.Initialize();";
             reason = null;
             return true;
         }
 
-        internal static bool TryGetDestroyRegistration(Type component, out string call) {
+        internal static bool TryGetDestroyRegistration(Type component, bool editor, out string call) {
             call = null;
-            if (!component.IsVisible || component.IsGenericType || !typeof(IComponentDestroy).IsAssignableFrom(component)) return false;
-            var catalog = component.Assembly.GetType("ME.BECS.SourceGenerated.ComponentDestroy_" + Encode(component.Assembly.GetName().Name), false);
+            if (component.ContainsGenericParameters || !typeof(IComponentDestroy).IsAssignableFrom(component)) return false;
+            var profile = editor ? "editor" : "runtime";
+            var assemblyName = "ME.BECS.Gen." + (editor ? "Editor" : "Runtime");
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a => !a.IsDynamic && a.GetName().Name == assemblyName).ToArray();
+            if (assemblies.Length != 1) return false;
+            var catalog = assemblies[0].GetType("ME.BECS.SourceGenerated.DestroyInputs", false);
             if (catalog == null) return false;
-            var name = "Register_" + Encode("global::" + component.FullName.Replace('+', '.'));
-            var method = FindMethod(catalog, name, Type.EmptyTypes);
-            if (method == null || method.ReturnType != typeof(void)) return false;
-            call = "global::" + catalog.FullName + "." + name + "();";
+            var identity = Convert.ToBase64String(Encoding.UTF8.GetBytes(component.AssemblyQualifiedName));
+            var records = GetInputRecords(assemblies[0]);
+            if (records.Count(r => r.Length == 4 && r[0] == profile && r[1] == "destroy-schema" && r[2] == "0" && r[3] == "djE=") != 1) return false;
+            var selected = records.Where(r => r.Length == 4 && r[0] == profile && r[1] == "destroy-registration" && r[3] == identity).ToArray();
+            if (selected.Length != 1 || !int.TryParse(selected[0][2], System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out var ordinal) ||
+                selected[0][2] != ordinal.ToString(System.Globalization.CultureInfo.InvariantCulture)) return false;
+            var initialize = FindMethod(catalog, "Initialize", Type.EmptyTypes);
+            var callback = catalog.GetMethod("Destroy_" + selected[0][2], BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly);
+            if (initialize == null || initialize.ReturnType != typeof(void) || callback == null || callback.IsGenericMethod || callback.ReturnType != typeof(void)) return false;
+            var parameters = callback.GetParameters();
+            if (parameters.Length != 2 || parameters[0].ParameterType != typeof(Ent).MakeByRefType() ||
+                !parameters[1].ParameterType.IsPointer || parameters[1].ParameterType.GetElementType() != typeof(byte)) return false;
+            call = "global::ME.BECS.SourceGenerated.DestroyInputs.Initialize();";
             return true;
         }
 
@@ -111,8 +173,73 @@ namespace ME.BECS.Editor {
             return types;
         }
 
-        internal static string ResolveJobEarlyInit(Type job, string legacyCall) {
-            return ResolveJobEarlyInit(job, legacyCall, out _);
+        // Independent source selection for migration diagnostics. Only Type[] metadata getters
+        // are invoked; job initialization and its wrapper are never executed here.
+        internal static bool TryGetJobEarlyInitSelection(Type job, out string[] calls, out string reason) {
+            calls = null;
+            if (!TryGetJobEarlyInitPlan(job, out var plan, out reason)) return false;
+            calls = plan.Select(entry => entry.Value).OrderBy(call => call, StringComparer.Ordinal).ToArray();
+            return true;
+        }
+
+        internal static bool TryGetJobEarlyInitPlan(Type job, out KeyValuePair<int, string>[] calls, out string reason) {
+            if (lookup != null && lookup.earlyInitPlans.TryGetValue(job, out var cached)) {
+                calls = cached.calls == null ? null : (KeyValuePair<int, string>[])cached.calls.Clone();
+                reason = cached.reason;
+                return cached.success;
+            }
+            var success = ReadJobEarlyInitPlan(job, out calls, out reason);
+            if (lookup != null) lookup.earlyInitPlans.Add(job,
+                (success, calls == null ? null : (KeyValuePair<int, string>[])calls.Clone(), reason));
+            return success;
+        }
+
+        private static bool ReadJobEarlyInitPlan(Type job, out KeyValuePair<int, string>[] calls, out string reason) {
+            calls = null;
+            reason = "source selection catalog unavailable";
+            if (!job.IsVisible || job.ContainsGenericParameters) return false;
+            var catalog = job.Assembly.GetType("ME.BECS.SourceGenerated.JobEarlyInit_" + Encode(job.Assembly.GetName().Name), false);
+            if (catalog == null || !catalog.IsVisible) return false;
+            var definition = job.IsGenericType ? job.GetGenericTypeDefinition() : job;
+            var arguments = job.IsGenericType ? job.GetGenericArguments() : Type.EmptyTypes;
+            var selected = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var field in catalog.GetFields(BindingFlags.Public | BindingFlags.Static)) {
+                if (!field.IsLiteral || field.FieldType != typeof(string) || !field.Name.StartsWith("Selection_", StringComparison.Ordinal)) continue;
+                var row = (field.GetRawConstantValue() as string)?.Split('\t');
+                if (row == null || row.Length != 7 || row[0] != "v2") { reason = "invalid source selection schema (requires v2)"; return false; }
+                if (row[1] != definition.FullName) continue;
+                if (!int.TryParse(row[6], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var phase) ||
+                    phase < 0 || phase > 6) { reason = "unsupported source selection phase"; return false; }
+                if (row[5] != arguments.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) ||
+                    !row[2].StartsWith("Do", StringComparison.Ordinal)) { reason = "invalid source selection arity/method"; return false; }
+                var wrapper = FindMethod(catalog, row[3], Type.EmptyTypes);
+                var metadata = FindMethod(catalog, row[4], Type.EmptyTypes);
+                if (wrapper == null || metadata == null || wrapper.ReturnType != typeof(void) || metadata.ReturnType != typeof(Type[]) ||
+                    wrapper.GetGenericArguments().Length != arguments.Length || metadata.GetGenericArguments().Length != arguments.Length) {
+                    reason = "source selection wrapper/arguments signature mismatch"; return false;
+                }
+                Type[] actual;
+                try {
+                    if (arguments.Length != 0) {
+                        wrapper.MakeGenericMethod(arguments);
+                        metadata = metadata.MakeGenericMethod(arguments);
+                    }
+                    actual = (Type[])metadata.Invoke(null, null);
+                } catch (ArgumentException exception) { reason = "source selection constraint mismatch: " + exception.Message; return false; }
+                  catch (TargetInvocationException exception) { reason = "source selection metadata failed: " + exception.GetBaseException().Message; return false; }
+                if (actual == null || actual.Length == 0 || actual[0] != job || actual.Any(type => type == null || type.ContainsGenericParameters)) {
+                    reason = "source selection contains invalid/unbound argument types"; return false;
+                }
+                var call = "EarlyInit." + row[2] + "<" + EditorUtils.GetTypeName(job) +
+                    (actual.Length > 1 ? ", " + string.Join(", ", actual.Skip(1).Select(type => EditorUtils.GetDataTypeName(type))) : "") + ">();";
+                if (selected.ContainsKey(call)) { reason = "duplicate source selection: " + call; return false; }
+                selected.Add(call, phase);
+            }
+            if (selected.Count == 0) { reason = "source selection absent for job (recompile its catalog)"; return false; }
+            calls = selected.OrderBy(entry => entry.Value).ThenBy(entry => entry.Key, StringComparer.Ordinal)
+                .Select(entry => new KeyValuePair<int, string>(entry.Value, entry.Key)).ToArray();
+            reason = null;
+            return true;
         }
 
         internal static string ResolveJobEarlyInit(Type job, string legacyCall, out string reason) {
@@ -124,7 +251,7 @@ namespace ME.BECS.Editor {
             var name = "Init_" + HashEarlyInitCall(legacyCall);
             var method = FindMethod(catalog, name, Type.EmptyTypes);
             reason = method == null ? "wrapper for exact legacy call missing (unsupported signature or spelling mismatch)" : "wrapper return type differs";
-            if (method == null || method.ReturnType != typeof(void)) return legacyCall;
+            if (method == null || method.ReturnType != typeof(void) || method.ContainsGenericParameters || !catalog.IsVisible) return legacyCall;
             reason = null;
             return "global::" + catalog.FullName + "." + name + "();";
         }

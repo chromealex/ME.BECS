@@ -57,8 +57,8 @@ namespace ME.BECS.Editor {
                     .Where(t => t.IsValueType && EditorUtils.IsValidTypeForAssembly(editor, t, destroyAssemblies, true)).ToArray();
                 var destroyGenerated = 0;
                 foreach (var type in destroyTypes) {
-                    if (SourceGeneratorBridge.TryGetDestroyRegistration(type, out _)) ++destroyGenerated;
-                    else unsupported.Add("Destroy callback uses legacy: " + Name(type));
+                    if (SourceGeneratorBridge.TryGetDestroyRegistration(type, editor, out _)) ++destroyGenerated;
+                    else issues.Add("Manifest destroy callback unavailable: " + Name(type));
                 }
                 report.AppendLine($"Component destroy callbacks: generated={destroyGenerated}, total={destroyTypes.Length} (callbacks/registration NOT invoked)");
                 var maskTypes = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponent>()
@@ -66,8 +66,8 @@ namespace ME.BECS.Editor {
                                 t.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public).Length > 1).ToArray();
                 var maskGenerated = 0;
                 foreach (var type in maskTypes) {
-                    if (SourceGeneratorBridge.TryGetConfigMaskRegistration(type, out _, out var reason)) ++maskGenerated;
-                    else unsupported.Add("Config mask callback uses legacy: " + Name(type) + " — " + reason);
+                    if (SourceGeneratorBridge.TryGetConfigMaskRegistration(type, editor, out _, out var reason)) ++maskGenerated;
+                    else issues.Add("Manifest config mask callback unavailable: " + Name(type) + " — " + reason);
                 }
                 report.AppendLine($"Config mask callbacks: generated={maskGenerated}, total={maskTypes.Length} (field order checked; callbacks/registration NOT invoked)");
                 var collectionTypes = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponent>()
@@ -80,13 +80,14 @@ namespace ME.BECS.Editor {
                     var generated = 0;
                     var label = countOnly ? "Config collection counts" : "Config collection callbacks";
                     foreach (var type in collectionTypes) {
-                        if (SourceGeneratorBridge.TryGetConfigCollectionsRegistration(type, countOnly, out _, out var reason)) ++generated;
-                        else unsupported.Add(label + " uses legacy: " + Name(type) + " — " + reason);
+                        if (SourceGeneratorBridge.TryGetConfigCollectionsRegistration(type, countOnly, editor, out _, out var reason)) ++generated;
+                        else issues.Add(label + " manifest unavailable: " + Name(type) + " — " + reason);
                     }
                     report.AppendLine($"{label}: generated={generated}, total={collectionTypes.Length} (metadata checked; callbacks/registration NOT invoked)");
                 }
                 try {
-                    report.Append(Jobs.JobsEarlyInitCodeGenerator.CompareEarlyInit(used.jobTypes, editor));
+                    report.Append(Jobs.JobsEarlyInitCodeGenerator.CompareEarlyInit(used.jobTypes, editor, out var unavailableEarlyInit));
+                    if (unavailableEarlyInit != 0) issues.Add("Source-generated EarlyInit coverage/selection issues: " + unavailableEarlyInit + "; legacy fallback is disabled. See EarlyInit diagnostics.");
                 } catch (Exception exception) {
                     issues.Add("Job EarlyInit comparison incomplete: " + exception.GetBaseException().Message);
                 }

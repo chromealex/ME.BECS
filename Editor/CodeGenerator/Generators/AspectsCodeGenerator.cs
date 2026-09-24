@@ -62,11 +62,7 @@ namespace ME.BECS.Editor.Aspects {
             }
             
             var def = new CodeGenerator.MethodDefinition() {
-                methodName = "AspectsConstruct",
-                type = "World",
-                registerMethodName = "RegisterCallback",
-                definition = "ref World world",
-                content = "global::ME.BECS.SourceGenerated.AspectInputs.Construct(ref world);",
+                generatedRegistration = "global::ME.BECS.SourceGenerated.AspectInputs.RegisterConstruction();",
             };
             return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>() { def };
 

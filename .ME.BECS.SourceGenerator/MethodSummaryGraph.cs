@@ -23,7 +23,9 @@ internal static class MethodSummaryGraph {
         internal readonly List<string[]> Operations = new List<string[]>();
     }
 
-    internal static void EmitCoverage(SourceProductionContext output, Compilation compilation, string[] localRows) {
+    internal static (Dictionary<(string Assembly, string Id), Summary> Methods,
+        HashSet<(string Assembly, string Id)> Conflicts, List<Summary> Roots)
+        LoadCatalog(SourceProductionContext output, Compilation compilation, string[] localRows) {
         var ownAssembly = compilation.Assembly.Identity.ToString();
         var methods = new Dictionary<(string Assembly, string Id), Summary>();
         var conflicts = new HashSet<(string Assembly, string Id)>();
@@ -73,6 +75,12 @@ internal static class MethodSummaryGraph {
             }
         }
 
+        return (methods, conflicts, roots);
+    }
+
+    internal static void EmitCoverage(SourceProductionContext output, Compilation compilation, string[] localRows) {
+        var ownAssembly = compilation.Assembly.Identity.ToString();
+        var (methods, conflicts, roots) = LoadCatalog(output, compilation, localRows);
         roots.AddRange(JobGenericRoots.Create(output, compilation, methods));
         if (roots.Count == 0) return;
 
@@ -117,8 +125,8 @@ internal static class MethodSummaryGraph {
                 for (var i = 0; i < node.Arguments.Length; ++i) environment[method.Environment[i].Identity] = node.Arguments[i];
                 foreach (var unresolved in method.Unresolved) gaps.Add(unresolved + ": " + key.Id);
                 foreach (var rawOperation in method.Operations) {
-                    var operation = JobConstrainedCall.Resolve(rawOperation, compilation, environment, gaps);
-                    if (MethodSummaryContracts.Has(operation, "scalar-comparison")) continue;
+                    var operation = JobConstrainedCall.Resolve(rawOperation, compilation, environment, gaps, methods, conflicts);
+                    if (MethodSummaryContracts.Has(operation, "scalar-comparison") || MethodSummaryContracts.Has(operation, "ecs-leaf")) continue;
                     if (operation.Length < 5) { gaps.Add("MalformedOperation: " + key.Id); continue; }
                     if (operation[0] == "field" || operation[0] == "parameter-override" || MethodSummaryContracts.Has(operation, "ignore")) continue;
                     if (systemRoot && operation[0] == "method-ref") {

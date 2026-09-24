@@ -7,6 +7,38 @@ namespace ME.BECS.Editor {
     using ME.BECS.FeaturesGraph;
 
     public static class SourceGeneratorGraphTopology {
+        public static void PublishLifecycleComparison(string totals, string details) =>
+            SourceGeneratorReport.Publish("GraphLifecycleComparison", totals, details);
+
+        [UnityEditor.MenuItem("ME.BECS/Source Generator/Export Compiled Lifecycle Plans")]
+        private static void ExportLifecyclePlans() {
+            if (UnityEditor.EditorApplication.isCompiling) { UnityEngine.Debug.LogWarning("[ME.BECS] Wait for compilation."); return; }
+            var report = new StringBuilder();
+            var available = 0; var unavailable = 0; var errors = 0;
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            Array.Sort(assemblies, (left, right) => StringComparer.Ordinal.Compare(left.FullName, right.FullName));
+            foreach (var assembly in assemblies) {
+                if (assembly.IsDynamic) continue;
+                try {
+                    foreach (System.Reflection.AssemblyMetadataAttribute attribute in assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyMetadataAttribute), false)) {
+                        if (attribute.Key == "ME.BECS.GraphSyncComparison.v1") {
+                            report.AppendLine("fresh-vs-saved-sync\t" + assembly.FullName).AppendLine(attribute.Value);
+                            continue;
+                        }
+                        if (attribute.Key != "ME.BECS.GraphLifecyclePlan.v1") continue;
+                        var rows = attribute.Value?.Split('\n');
+                        if (rows == null || rows.Length < 4) { ++errors; report.AppendLine("Malformed plan in " + assembly.FullName); continue; }
+                        if (rows[2] == "ME.BECS.GraphLifecyclePlan.v1") ++available;
+                        else if (rows[2] == "unavailable") ++unavailable;
+                        else ++errors;
+                        report.AppendLine("assembly\t" + assembly.FullName).AppendLine(attribute.Value);
+                    }
+                } catch (Exception exception) { ++errors; report.AppendLine("ERROR " + assembly.FullName + ": " + exception.Message); }
+            }
+            SourceGeneratorReport.Publish("GraphLifecyclePlans", "Compiled phase plans: available=" + available + ", unavailable=" + unavailable +
+                ", errors=" + errors + ". Diagnostic IR only; runtime bodies still use the transitional planner. Zero plans does not prove coverage.", report.ToString());
+        }
+
         [UnityEditor.MenuItem("ME.BECS/Source Generator/Export Graph Topology")]
         private static void Export() {
             if (UnityEditor.EditorApplication.isCompiling) {
@@ -32,7 +64,7 @@ namespace ME.BECS.Editor {
         }
 
         public static string Serialize(SystemsGraph root) {
-            var result = new StringBuilder("ME.BECS.GraphTopology.v2\n");
+            var result = new StringBuilder("ME.BECS.GraphTopology.v3\n");
             var active = new HashSet<SystemsGraph>();
             var layouts = new Dictionary<SystemsGraph, List<SourceGeneratorInputManifest.GraphSystemInput>>();
             List<SourceGeneratorInputManifest.GraphSystemInput> Layout(SystemsGraph graph) {
@@ -61,8 +93,13 @@ namespace ME.BECS.Editor {
                         if (node is FeaturesGraph.Nodes.GraphNode nested) counts[index] = Layout(nested.graphValue).Count;
                         cursor = checked(cursor + counts[index]);
                     }
+                    var entry = graph.GetStartNode(0);
+                    var exit = graph.GetEndNode();
+                    var entryIndex = entry != null && indices.TryGetValue(entry, out var startIndex) ? startIndex : -1;
+                    var exitIndex = exit != null && indices.TryGetValue(exit, out var endIndex) ? endIndex : -1;
                     result.Append("graph\t").Append(Number(occurrence)).Append('\t').Append(Number(parent)).Append('\t').Append(Number(parentNode))
-                        .Append('\t').Append(Number(graph.GetId())).Append('\t').Append(Number(graph.nodes.Count)).Append('\n');
+                        .Append('\t').Append(Number(graph.GetId())).Append('\t').Append(Number(graph.nodes.Count))
+                        .Append('\t').Append(Number(entryIndex)).Append('\t').Append(Number(exitIndex)).Append('\n');
                     for (var index = 0; index < graph.nodes.Count; ++index) {
                         var node = graph.nodes[index];
                         var system = (node as FeaturesGraph.Nodes.SystemNode)?.system;

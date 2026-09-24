@@ -72,14 +72,19 @@ public sealed class JobEarlyInitGenerator : IIncrementalGenerator {
                 // Exact legacy spelling is the compatibility key. Nonmatching spellings simply fall back.
                 var legacy = "EarlyInit." + method.Name + "<" + string.Join(", ", names.Select(static n => n.Replace("global::", ""))) + ">();";
                 if (genericParameters.Length == 0) {
-                    result.Add("public static void Init_" + HashCall(legacy) + "() => global::ME.BECS.Jobs.EarlyInit." + method.Name +
-                        "<" + string.Join(", ", names) + ">();");
+                    var key = HashCall(legacy);
+                    result.Add("public static void Init_" + key + "() => global::ME.BECS.Jobs.EarlyInit." + method.Name +
+                        "<" + string.Join(", ", names) + ">();\n" +
+                        "public static global::System.Type[] Args_" + key + "() => new global::System.Type[] {" +
+                        string.Join(", ", names.Select(static n => "typeof(" + n + ")")) + "};\n" +
+                        Selection(metadataName, method.Name, "Init_" + key, "Args_" + key, 0, arguments.Length));
                 } else {
                     var key = HashCall(metadataName + "|" + method.Name);
                     var body = "public static void InitGeneric_" + key + genericSuffix + "()" + constraints +
                         " => global::ME.BECS.Jobs.EarlyInit." + method.Name + "<" + string.Join(", ", names) + ">();\n" +
                         "public static global::System.Type[] ArgsGeneric_" + key + genericSuffix + "()" + constraints +
-                        " => new global::System.Type[] {" + string.Join(", ", names.Select(static n => "typeof(" + n + ")")) + "};";
+                        " => new global::System.Type[] {" + string.Join(", ", names.Select(static n => "typeof(" + n + ")")) + "};\n" +
+                        Selection(metadataName, method.Name, "InitGeneric_" + key, "ArgsGeneric_" + key, genericParameters.Length, arguments.Length);
                     if (!genericBodies.TryGetValue(key, out var bodies)) genericBodies.Add(key, bodies = new HashSet<string>(StringComparer.Ordinal));
                     bodies.Add(body);
                 }
@@ -88,6 +93,18 @@ public sealed class JobEarlyInitGenerator : IIncrementalGenerator {
         // Ambiguous EarlyInit overloads keep the legacy path rather than silently choosing one.
         foreach (var bodies in genericBodies.Values) if (bodies.Count == 1) result.Add(bodies.Single());
         return result.Count == 0 ? null : string.Join("\n", result.Distinct(StringComparer.Ordinal).OrderBy(static s => s, StringComparer.Ordinal));
+    }
+
+    private static string Selection(string job, string method, string wrapper, string arguments, int arity, int argumentCount) {
+        // Explicit bootstrap phases; never depend on Roslyn member enumeration order.
+        var phase = method == "DoComponents" ? (argumentCount == 1 ? 0 : 2) :
+            method == "DoParallelForComponents" ? 1 : method == "DoParallelForAspect" ? 3 :
+            method == "DoAspect" ? 4 : method.StartsWith("DoAspectsComponents", StringComparison.Ordinal) ? 5 :
+            method.StartsWith("DoParallelForAspectsComponents", StringComparison.Ordinal) ? 6 : -1;
+        var row = "v2\t" + job + "\t" + method + "\t" + wrapper + "\t" + arguments + "\t" +
+            arity.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\t" + phase.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return "public const string Selection_" + HashCall(row) + " = " +
+            Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(row, true) + ";";
     }
 
     private static bool IsPublicSimple(INamedTypeSymbol type) {

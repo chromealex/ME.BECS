@@ -20,11 +20,21 @@ dependency version in Unity 6000.2.14f1's local csc.deps.json. Unity analyzer lo
 
 ## Current scope
 
-ComponentDestroyGenerator owns complete destroy callback bodies, Burst/MonoPInvokeCallback attributes, and
-registration methods for supported public unmanaged non-generic components. Legacy AddMethods omits those
-bodies and emits only registration at the original callback-registry position. Null and non-null component
-semantics are preserved. Inaccessible/unsupported signatures or missing compiler dependencies use fallback.
-The comparison report checks destroy callback registration coverage without invoking callbacks.
+DestroyInputEmitter owns destroy callback bodies, Burst/MonoPInvokeCallback attributes and ordered
+registration in the target input assembly. The Editor selector and manifest exporter share one type list,
+ordered ordinally by full type name and assembly identity (not the machine's culture). Editor AddMethods
+only collects references and calls DestroyInputs.Initialize at the original callback-registry position.
+The old body/cache fallback and redundant per-component-assembly ComponentDestroyGenerator were removed.
+Every selected type is checked for a closed accessible unmanaged IComponentDestroy implementation before
+emission; invalid selection is an explicit diagnostic rather than missing registration. The mandatory
+destroy-schema/v1 marker distinguishes a valid empty selection from stale manifests: regenerate inputs
+after this upgrade. Component source assemblies no longer need allowUnsafe merely to own a callback.
+The comparison report now checks target-manifest records and callback signatures without invoking them;
+unavailable callbacks are issues, not claimed legacy fallbacks. Unity/Burst execution remains unverified.
+Destroy callbacks dispatch through a private constrained generic helper, so explicit
+IComponentDestroy.Destroy implementations are supported. A non-null component is passed by ref from
+its pointer (no boxing or live-value copy); a null pointer uses a local default value as before.
+The actual AOT/Burst callback remains non-generic and names a concrete component specialization.
 
 ## Full migration target
 
@@ -170,13 +180,28 @@ constrained ref-T dispatch, supporting explicit interface implementations withou
 system state. Transitional ordinary/sequential-generic/parallel-generic bodies call these helpers at
 their original positions; SystemContext creation, dependsOn propagation and batch placement remain
 unchanged. The runtime bridge is separate from the AOT-only null-node reachability helpers.
+SystemLifecycleGenerator exports per-definition ME.BECS.SystemLifecycle.v1 metadata, including open
+generic and nested system definitions. Three five-bit masks describe phase availability, method-level
+BurstCompile, and WithoutBurst. Roslyn binds actual interface implementations (including explicit
+implementations); derived attribute types are recognized. No lifecycle code or generic specialization
+is instantiated by this catalog. SourceGeneratorSystemLifecycle reads and validates the entire assembly
+catalog once, normalizes closed generic types to their definitions, and provides graph method selection
+and Burst eligibility. Existing type-level Burst selection and graph Burst boundaries are unchanged.
+Missing/invalid catalogs retain reflection fallback. Compare System Lifecycle independently compares
+all flags with reflection interface maps for definitions and selected closed variants, without invoking
+methods; passing this check is not Burst execution/stripping validation. Full graph planning remains open.
 Sequential generic groups now also execute through Roslyn-generated InvokeSequential_<start>_<count>
 helpers derived from bound topology ranges. Variants retain manifest slot order; every call receives
 the preceding handle and optionally applies batches before the next variant. Empty groups return the
 incoming handle. Editor supplies the existing node/ancestor/flat-query apply decision via a shared
-RequiresApply predicate and retains the final group apply and incoming dependency assignment. The
-old per-variant IL safety query was only fed into an unused forceWithoutSync argument and is no longer
-performed for sequential groups. Parallel-group emission and outer graph traversal remain transitional.
+RequiresApply predicate and retains the final group apply. The returned handle is stored separately:
+the input can be a combined-dependency expression and must not be assigned to or overwritten for siblings.
+Parallel generic groups execute through InvokeParallel_<start>_<count> helpers from the same bound
+topology. Every variant receives the original input handle, results are combined, and temporary handle
+storage is disposed after combination. Empty groups return the input without allocating. The outer
+group apply remains Editor-owned. The old IL safety query only fed an unused forceWithoutSync argument;
+both the query and argument have been removed for all lifecycle nodes. Outer graph traversal, sync
+decisions and Burst grouping remain transitional; these changes do not complete graph migration.
 Production graph discovery now uses SourceGeneratorScheduledJobs: complete zero-gap summaries must
 cover the exact full interface-map lifecycle set, each typed root must be unique, and Type[] must
 round-trip to the encoded job set. Only then can all jobs or a selected lifecycle phase be collected
@@ -191,14 +216,17 @@ It uses fresh graph/IL discovery and the production selectors, reads no generate
 does not modify the registry and never invokes patch/registration methods. Counts describe selection
 only, not successful generated compilation, Burst execution or runtime equivalence. Graph errors are
 reported separately and must not be treated as zero fallback coverage.
-`Export Graph Topology` writes diagnostic GraphTopology.txt snapshots in Temp. GraphTopology.v2
+`Export Graph Topology` writes diagnostic GraphTopology.txt snapshots in Temp. GraphTopology.v3
 assigns preorder occurrence IDs to nested graph uses (not asset IDs), preserving repeated uses.
 Rows retain local node order, node/system type identities, enabled/group-enabled flags, stored sync
 data for each phase, and input/output port edge order including duplicates. Missing sync arrays are
 explicitly unknown; the exporter never calls the mutating GetSyncPoint normalization. Cycles,
 missing nodes/graphs and missing/cross-graph endpoints fail a snapshot instead of producing a partial
 plan. Runtime manifests now carry the snapshot in `graph-topology` records (ordinal, base64 `topology`,
-signed root graph ID, base64 GraphTopology.v2 payload). Roslyn parses typed occurrences/nodes/ports
+signed root graph ID, base64 GraphTopology.v3 payload). Each occurrence includes the first start and
+exit node indices, or -1 when missing, matching GetStartNode(0)/GetEndNode without mutating assets.
+Roslyn validates their ranges and, when node types resolve, their identities and asset order.
+Roslyn parses typed occurrences/nodes/ports
 and rejects bad root/parent references, duplicate or missing nodes/phases, noncanonical values and
 out-of-range edges. Unknown sync data stays unknown. These inputs are not yet used to emit lifecycle
 bodies; topology equality alone does not prove scheduling equivalence. Each node now carries an
@@ -206,14 +234,82 @@ absolute slot start/count and generic-parallel flag. Binding checks contiguous r
 range agreement, complete single ownership of allocated slots, original system definitions, unique
 closed variants within each node and SystemGenericParallelMode. Repeated graph occurrences own
 distinct ranges. Refreshing sync analysis and compiling dependencies remain required before switching
-the lifecycle planner. Old v1 topology snapshots must be regenerated.
-Roslyn now exports ME.BECS.GraphDependencyOrder.v1 metadata for each topology. This independent
+the lifecycle planner. Old v1/v2 topology snapshots must be regenerated.
+Roslyn now exports ME.BECS.GraphDependencyOrder.v2 metadata for each topology. This independent
 structural pass checks reciprocal edges, deduplicates dependencies in first-edge order and uses a
 stable node-index topological traversal. Cycles/blocked dependents are explicit and never produce a
 partial success order. All nested occurrences are analyzed separately. This is diagnostic planning
-data, not the runtime scheduling order: entry reachability, phase filtering, sync/batch decisions and
-generic parallel expansion still need to be incorporated before replacing lifecycle bodies. Stored
+data, not the runtime scheduling order. It also records entry-reachable and disconnected nodes,
+missing boundaries and unreachable exits using a bounded visited-set traversal over all ports.
+Phase filtering, nested execution, sync/batch decisions and generic group calls still need to be
+incorporated into the runtime planner before replacing lifecycle bodies. Stored
 sync accumulators are signed integers, matching the existing in-degree/out-degree calculation.
+
+GraphLifecyclePlan builds typed per-phase operations from topology: stable queued traversal, all-port
+dependency order, other-entry filtering, nested occurrence entry/exit forwarding, generic slot ranges,
+pre/post batch decisions and symbol-bound lifecycle/Burst flags. Each handle refers to a preceding
+operation; -1 means caller input, while an empty list means default handle. Repeated graph assets use
+independent occurrence keys. A full stalled queue reports a cycle/unreachable dependency instead of
+emitting a partial plan. Unknown node kinds are explicit unavailable plans. Phase plans
+use the compilation's ENABLE_BECS_FLAT_QUERIES setting and invariant numeric serialization.
+InputManifestGenerator publishes diagnostic ME.BECS.GraphLifecyclePlan.v1 metadata for all five phases.
+`Export Compiled Lifecycle Plans` saves it to Temp/ME.BECS.SourceGenerator/GraphLifecyclePlans.txt,
+without reading generated C# or invoking systems. This is not yet the production emitter: fresh sync
+decisions, ordering and nested scheduling need comparison before switching callback bodies to this IR.
+
+GraphSyncAnalysis now computes candidate sync decisions from topology and compiler lifecycle symbols,
+not stored asset sync arrays. Nested occurrences are processed bottom-up; inactive phase nodes are
+bypassed, reachable cycles rejected before projection, and unique ancestors collected with a visited
+set. The structural branch accumulator and redundant direct-exit treatment remain, but inactive nodes
+no longer retain phantom edges and one phase cannot reset another phase's start-node state. Arithmetic
+uses a wide accumulator and checked final conversion. Disabled systems/groups do not keep a phase
+node active. These are deliberate differences requiring review rather than blind legacy equivalence.
+GraphLifecyclePlan uses these fresh decisions for candidate bodies. ME.BECS.GraphSyncComparison.v1
+records differences against stored sync/count values; Export Compiled Lifecycle Plans includes them.
+No asset is modified, no sync array normalized, and registered runtime callbacks are still transitional.
+Before bottom-up sync calculation, a top-down reachability pass selects active occurrences. A disabled
+or disconnected GraphNode does not activate its nested occurrence, so internal cycles or missing
+execution boundaries there cannot reject an otherwise valid phase. Slot/type input validation still
+covers storage for all graph occurrences; this change concerns execution planning only.
+
+GraphLifecycleEmitter now emits candidate bodies for available phase plans, inside a private nested
+PlannedLifecycle class. Plans up to 64 steps keep temporary handles in a bounded stack buffer;
+larger plans retain a Temp NativeArray with finally disposal. Completion validation rejects forward
+references, so each stack slot is assigned before use; pointers are consumed synchronously by the
+generated groups and never stored in jobs. This avoids a per-call allocation for small candidate plans
+without changing scheduling order. Unity/Burst execution of this path remains unverified.
+The registered callback still calls the transitional Editor body. Candidate
+groups preserve IR order, use the existing per-slot and generic helpers, and split on the next invoked
+system's Burst flag. Only the candidate container/groups receive Burst attributes; the transitional
+phase class is unchanged. Handles live in invocation-local native storage, released in finally after
+scheduling (not after job completion: jobs do not retain this handle array). No world/State fields or
+shared scheduling buffers are added. Every handle reference must point backward or to caller input;
+invalid result references are rejected before emission. Empty phases return without allocation.
+This compiles the candidate C# when Unity recompiles, but does not prove runtime/Burst equivalence.
+The IR completion validator rejects forward/out-of-range handle references and requires every invoke
+or batch operation to be an ancestor of the returned handle. An unjoined branch is an unavailable plan,
+not silently scheduled work omitted from completion. The emitter repeats this validation before writing
+its candidate body. This proves structural joins only, not that each system implementation preserves
+its input dependency. All input ports participate in saved port/edge order, with duplicate dependency
+nodes removed at their first occurrence, matching BaseNode.GetInputNodes rather than the legacy
+first-port limit. Pre-apply detects multiple incoming edges across all ports. The snapshot parser
+verifies reciprocal input/output endpoint sets, so sync projection and handle dependencies cannot
+use different edge sets.
+
+Compare Graph Lifecycle Calls instruments the actual transitional AddGraph traversal with an optional
+invocation trace. Normal generation does not allocate a trace. The diagnostic compares ordered slot
+ranges, generic mode, pre/post batches and Burst flags against compiled IR invoke operations. It refuses
+missing/duplicate/stale topology snapshots and unknown sync arrays before running the Editor traversal,
+which only constructs strings in memory: no generated files or registration/lifecycle methods are used.
+The result is written to Temp/ME.BECS.SourceGenerator/GraphLifecycleComparison.txt.
+LifecycleDependencyTrace additionally models handles at the actual Editor emission sites and evaluates
+the compiled IR independently. It compares ordered invoke/apply events (including pass-through batches),
+their symbolic inputs and the final handle. Pure joins flatten and deduplicate their leaves; batches
+and invocations remain distinct ordered operations. Uninitialized symbolic reads are errors, not default
+handles. Generic sequential/parallel helpers are expanded symbolically using their actual mode.
+This verifies static dependency wiring, not system implementations, Burst execution or stripping and
+must not alone authorize switching runtime callbacks. Legacy differences must be investigated, not
+automatically copied into the source planner. Traces allocate only during the diagnostic command.
 
 The obsolete per-assembly `JobDeltaTimeGenerator` was removed after production selection moved to
 manifest-owned callbacks. Its partial-scope construction is retained as PartialTypeScope and used by
@@ -286,7 +382,11 @@ are checked against reflection field order by the manifest producer; absent or i
 stop generation rather than silently dropping filters. The Editor aspect initializer retains reference
 collection only, not cached C# registration/query statements. Aspect construction bodies now also come
 from Roslyn: ordered aspect-construction entries call existing per-assembly constructors through
-AspectInputs.Construct(ref World). The existing callback registration slot remains unchanged. Empty
+AspectInputs.Construct(ref World). Source-owned RegisterConstruction registers that method directly
+as the managed World callback; the redundant Editor AspectsConstruct wrapper is removed. The existing
+callback registration slot and default subId remain unchanged; registration is not moved into the
+earlier aspect-ID/query phase. This callback was not Burst-compiled or a native function pointer and
+retains its managed delegate semantics. Empty
 aspects are omitted (no storage allocation); nonempty aspects require a compatible generated constructor,
 checked for field order and shape before export. The Editor no longer emits pointer assignments or
 reflection SetValueDirect fallback bodies. Recompile catalogs and regenerate inputs after updating;
@@ -321,12 +421,40 @@ registration/AOT, each custom generator phase and cache I/O, formatting/import, 
 include synchronous asset operations but not subsequent Unity compilation. Compare commands do not run Build.
 EarlyInit method enumeration is reused per generator instance; interface TypeCache results are snapshotted per
 lookup scope. Legacy discovery fallback remains enabled until timing data identifies the next useful removal.
+Job initialization no longer reads or writes the script-only persistent cache: entity counts, component
+sizes and generated initializer selection depend on transitive methods, group IDs and referenced catalogs.
+The count/weight/size statements are memoized only inside one Build instance, shared across job categories;
+Editor and Runtime builds get separate instances. EarlyInit calls are selected afresh per category.
+Counts and component-size analysis still use IL pending source coverage verification. This removes stale
+cached decisions, not that remaining analyzer. Existing disk cache files are left untouched.
 
 Compare Editor Catalogs / Compare Runtime Usage now also report ordinary/generic job EarlyInit coverage and
-fallback reasons. Diagnostics reuse the actual legacy selection routine in read-only diagnostic mode, skipping
+unavailable-wrapper reasons. Diagnostics reuse the actual legacy selection routine in read-only diagnostic mode, skipping
 cache access, IL/safety/weight analysis and debug generation. Counts are distinct selected calls, not all declared
 job types; cache contents are not validated. Generic metadata accessors may run, but EarlyInit never runs.
 Legacy selection failures mark the comparison incomplete rather than reporting successful zero coverage.
+Each source EarlyInit wrapper now has a v2 Selection_<hash> constant describing its job
+definition, selected method, wrapper, ordered-argument metadata accessor, generic arity and explicit
+bootstrap phase (0..6). Phase selection does not depend on Roslyn member enumeration order.
+Comparison reads this catalog independently of legacy call spelling and closes generic argument
+accessors with the selected system component. It compares distinct call sets per job and reports
+source-only/legacy-only calls as validation issues. Only Type[] getters execute, never initialization.
+A second comparison reconstructs the full source call sequence using those phases and the same
+discovery/generic-expansion order as the existing bootstrap. It retains duplicates, rejects ambiguous
+per-job/per-phase selections, and compares every position against actual legacy selection. Missing
+metadata marks the sequence INCOMPLETE, never equal. This proves only call selection/order for that
+snapshot, not independent discovery correctness or runtime initialization. Production consumes source
+phase selections, with a mandatory full preflight comparison for the current assemblies before adding
+EarlyInit initialization statements. Reflection selection remains only in CollectLegacyEarlyInit as a
+migration oracle, not as an emitter or fallback. Mismatches stop generation. Counter/weight/size
+initialization stays at each original category/job slot, even slots without an EarlyInit call;
+duplicate slots are not collapsed. Assemblies must be recompiled for v2 records. Missing records
+are not empty coverage. Runtime/Burst/IL2CPP behavior remains unverified; remove the oracle only after
+project coverage and runtime validation, not simply after building the generator DLL.
+Preflight returns the exact resolved initialization snapshot consumed by emission, including stat-only
+slots. Emission no longer rediscovers jobs, rereads argument getters or rebuilds the selection it just
+validated. Source plan successes and failures are memoized per closed job in the thread-local lookup
+scope; arrays are copied on return, and scope disposal clears them. There is no cross-reload cache.
 
 EarlyInit now also supports public jobs nested in a generic system with one unmanaged type parameter and
 supported public non-generic interface constraints. The emitted wrapper carries the outer constraints.
@@ -342,9 +470,15 @@ timestamps, file paths or culture. Changing helper names does not change simulat
 
 JobEarlyInitGenerator emits EarlyInit wrappers for public unmanaged non-generic jobs with supported public
 non-generic arguments. It matches the EarlyInit interface constraints; the Editor bridge replaces only an exact
-legacy call spelling. Cached content stays legacy and is resolved at emission time, including cache hits.
-Generic jobs, unsupported signatures and missing methods fall back. Entity creation counts, operation weights,
-max component size, safety/debug metadata and dependency analysis remain with the existing job generator.
+legacy call spelling. Production now requires the matching source wrapper for every selected call,
+including closed generic jobs supported by the generic wrappers described above. Missing catalogs,
+unsupported signatures and ambiguous/missing wrappers stop export with the job identity and reason;
+there is no direct legacy EarlyInit fallback. Missing legacy method selection also fails instead of
+logging a warning and omitting initialization. Comparison remains nonthrowing per missing wrapper and
+counts it as a validation issue; no initialization executes. Reflection-based selection remains only
+in the mandatory migration preflight. Entity creation counts, max component size, safety/debug metadata and
+dependency analysis remain with the existing job generator; weights use complete source summaries
+where available. Persistent initialization-cache entries are no longer consumed.
 
 Generic component candidate snapshots are memoized by (open system definition, interface constraint) in the
 existing per-Build/per-comparison lookup scope. Registration, graph sizing, allocation and execution reuse the
@@ -450,20 +584,101 @@ The implementation is in the hidden `.ME.BECS.SourceGenerator` directory, which 
 
 ## Integration stages
 
-Config mask callbacks now have complete Roslyn-owned bodies in `ConfigMaskGenerator`, including Burst and
-MonoPInvokeCallback attributes. The transitional editor bootstrap selects a per-component registration only
-after checking the exported public field order against legacy reflection order. This preserves mask bit
-meaning, including partial declarations. Unsupported types/fields retain legacy emission and appear in
-`Config mask callbacks` comparison diagnostics. Metadata access does not execute callbacks or registration.
-`ConfigCollectionsGenerator` owns collection counts and materialization callbacks for ListAuto/MemArrayAuto,
+Config mask callbacks now have complete Roslyn-owned bodies in `ConfigMaskInputEmitter`, including Burst and
+MonoPInvokeCallback attributes. The manifest carries every selected component's public instance fields
+in reflection order; the compiler verifies exact field-set coverage and uses that explicit order for
+mask bits, including partial declarations. The Editor body-emission fallback and redundant per-assembly
+ConfigMaskGenerator are removed. Unsupported/nonwritable fields now produce a diagnostic. The shared
+selector uses ordinal type ordering, while field order is never sorted. Editor initialization calls
+ConfigMaskInputs.Initialize in the original mask-registration position before collection callbacks.
+The mandatory config-mask-schema/v1 marker requires regenerating older manifests and distinguishes
+empty selection from stale input. Validation compares manifest field order and concrete callback
+signatures without invoking callbacks or metadata getter methods; input records are cached per lookup
+scope. Unity/Burst execution is still unverified.
+Collection counts are now manifest-owned via config-collection-count records and a mandatory
+config-collection-count-schema/v1 marker. Roslyn verifies each number against public instance
+IUnmanagedList fields and emits ConfigCollectionCounts.Initialize, including the original resize.
+Editor AddInitialization only collects references and calls it in the original count phase. The selector
+retains ordinary/static/shared category order, uses ordinal type ordering and deduplicates identical
+types (repeated SetCollectionsCount writes had no extra semantics). Per-assembly count getters and
+registrations are removed. Validation reads target-assembly records, not executable count getters.
+Older manifests must be regenerated. `ConfigCollectionsInputEmitter` now owns materialization
+callbacks through config-collection-callback records and a mandatory config-collection-callback-schema/v1
+marker. Callback and count selections must contain exactly the same types in the same order.
+The Editor exports collection field names in ordinal field-type order (preserving reflection order
+for ties); the compiler verifies exact coverage and uses this explicit order, including partial types.
+Editor AddMethods only collects references and calls ConfigCollectionsInputs.Initialize after masks.
+The old per-assembly ConfigCollectionsGenerator and Editor callback body fallback are removed.
+Materialization covers ListAuto/MemArrayAuto,
 including dispose-before-replacement and legacy missing-data behavior (new list capacity 1 / empty array).
 The bridge compares counts and callback field order independently before selecting them. Custom collection
-implementations retain callback fallback until their construction contract is supported. Both phases have
+implementations now use source callbacks when their public construction contract is verified: in-Ent
+data/length constructor, GetConfigId, IsCreated, Dispose, and the appropriate list capacity constructor
+or array Empty field/property. The data argument must have an implicit unmanaged conversion; boxing
+constructors are rejected. Non-generic custom collection fields are no longer excluded by bridge metadata
+selection. Collections implementing neither IMemList nor IMemArray preserve the old no-replacement
+missing-data branch. Unverified contracts now produce a compiler diagnostic rather than fallback.
+Validation checks target-assembly manifest records and concrete callback signatures without invoking
+metadata getters. Unity/Burst execution remains unverified. Both phases have
 comparison counters; no callback is executed by validation. The inactive `CopyFromCodeGenerator` is retained
 for the requested follow-up investigation after the source-generator migration. Both editor and runtime
 paths return an empty result unconditionally and its callback bodies are commented out. Do not reactivate
 it implicitly. Investigate the recorded Unity Cloud Burst failure, collection cloning/ownership and element
 CopyFrom semantics before designing its source-generator replacement.
+
+Query jobs can declare `[EntitiesJobMaxCount(32)]` to bound total entity creation per Execute invocation,
+including calls outside loops and across all entity groups. Pass `in jobInfo` to Ent.New. The limit must
+be positive; it is not a per-worker or whole-query budget. A per-invocation counter shared by JobInfo
+copies resets before Execute, while different workers allocate independent counters. Both sequential
+and parallel query execution check the limit; overflow throws E.JOB_ENTITIES_MAX_COUNT unconditionally.
+Parallel creation in detected loops without the attribute throws an error explaining how to add it.
+The current bootstrap reserves the declared maximum for each group with loop creation, preserving
+index-based deterministic allocation and returning unused entities after the job. This can reserve
+maximum * query size * affected group count slots; oversized per-group allocations are rejected.
+Loop detection in the transitional IL analyzer includes comparison back-branches (blt/bge/etc.), not
+just br/brtrue/brfalse. No State fields, global counters or atomic allocation-order IDs are introduced.
+Source method summaries carry entity-limit-schema=1 and entity-max-count, including generic job roots.
+Zero-gap entity summaries emit a source-owned JobEntityCounts initializer, with v3 initializer metadata
+and explicit group-ID parameters in reserved C-row order. Bootstrap selects validated v3 initializers
+without running legacy count analysis. v3 counts each call site and preserves separate inline/loop
+contexts; legacy visited-method deduplication can undercount both and is not a correctness oracle.
+Independent legacy comparison remains diagnostic; incomplete/missing source coverage still uses the
+legacy body pending migration. IL analysis is therefore not yet removed. The initializer executes at
+the original count-initialization slot; group IDs remain owned by ordered global discovery.
+Raw C rows remain analysis counts; L records the attribute limit.
+The entity-count comparison additionally validates each source initializer without invoking it:
+exact ordinary/closed-generic job identity, zero gaps, canonical ordered count records, selected group
+IDs and bounds, current attribute limit, v3 initializer identity and closed signature. Unknown records,
+duplicate groups/initializers and ambiguous assemblies are unavailable, not silently accepted. This
+availability check is reported separately from full parity and does not execute either initializer.
+Recompile catalogs and regenerate
+bootstrap inputs to apply attribute changes. Tests cover bounds/reset/copy/worker isolation and
+bounded-loop ID equality across batch sizes, but have not been run in Unity.
+
+Production job dependency consumers now select complete source D records after exact normalized
+RO/WO/RW and isArg parity against the current loaded job. This applies to debug safety containers,
+job component-size selection, and scheduled-job dependencies inside system analysis. Closed generic
+jobs use their specialization catalog. Incomplete/ambiguous metadata remains legacy; complete
+dependency differences stop export. Selection caches live for one export pass and return copies,
+because callers merge/mutate dependency sets. The legacy IL oracle and system-body traversal are
+still present; this selection stage does not claim their removal or runtime/Burst validation.
+Complete accessible summaries export an A/v1 JobSafetyTypes catalog containing ordered typeof
+references for all D records. The Editor validates catalog identity, assembly uniqueness, getter
+signature, component types and exact D-row order. Legacy no longer supplies the Type bindings;
+it is used only for parity/fallback. GetTypes does not initialize statics or run jobs. Catalog
+availability is reported separately and is not proof of runtime safety or IL2CPP preservation.
+
+Zero-gap safety analysis additionally emits a candidate JobMaxStructSize initializer
+for accessible unmanaged IComponent dependencies, including closed generic job roots. It calculates the
+maximum using UnsafeUtility.SizeOf<T>, not managed marshalling size, and exports ordered GetComponents /
+GetSizes metadata getters plus an S/v1 initializer record. The getters do not initialize job statics.
+Production maxStructSize remains legacy until component-set and size differences (notably bool layout)
+are reviewed; this value affects automatic batch size. Candidate generation is not runtime verification.
+Compare Job Safety now validates the size initializer identity/signature, invokes only GetComponents
+and GetSizes, and compares the component set and maximum against independent legacy Marshal.SizeOf.
+Per-component layout differences are listed even when the maximum coincides. Size counters cover jobs
+with readable safety summaries and successful legacy analysis; missing summaries remain in the broader
+safety unavailable count. No Apply, jobs or registration methods execute, and production is unchanged.
 
 `MethodSummaryGenerator` exports raw method operation records using assembly metadata with the versioned
 key `ME.BECS.MethodSummary.v2`. Downstream compilations can read them without method bodies or executing
@@ -473,6 +688,69 @@ identity, target declaration ID, constructed containing type, method type argume
 structural encoding: named definitions + arguments, scoped type parameters, arrays and pointers. Parameter
 identity includes its declaring type/method, not just the name T. This replaces ambiguous display/reference
 strings. v1 data is deliberately not accepted as v2; dependent assemblies need recompilation.
+
+Production maxStructSize emission now selects the source Apply initializer for complete safety
+summaries only after validating its identity/signature, exact component set and maximum size against
+the independent legacy calculation. Closed generic jobs use their specialization catalog. Incomplete
+or unavailable metadata keeps the legacy assignment; a complete differing result stops export.
+This does not remove the IL safety analyzer or switch runtime safety dependencies.
+
+External `System.Runtime.CompilerServices.Unsafe.AsPointer<T>(ref T)` and
+`AsRef<T>(void*)` / `AsRef<T>(in T)` have a signature-checked `ecs-leaf` contract:
+they only convert addresses and do not execute callbacks, schedule jobs or create entities.
+Their argument expressions remain traversed. No other Unsafe methods are implicitly covered;
+source-defined lookalikes are excluded. Counts, safety, weights and scheduled-job discovery
+consume the same marker rather than treating the entire external assembly as safe.
+The metadata-defined parameterless System.Object constructor also has this contract;
+user constructors and other base constructors do not inherit it. Constructor metadata tests
+check both the positive Object case and the negative user-constructor case.
+
+Entity-count traversal treats each closed generic instantiation and loop context as a separate
+analysis node. It caches transitive count contributions and adds them at every call site, rather
+than skipping later calls to an already visited helper. Recursion and integer overflow remain gaps.
+The cache is bounded to 200,000 group contributions per root (`EntityCountCacheLimit`), and the
+sum of loop counts must fit the runtime uint field (`EntityLoopCountOverflow`) before emission.
+This intentionally corrects legacy under-reservation for repeated helper calls; parity checks
+remain in place so new discrepancies cannot silently switch production metadata.
+`LegacyGenericVisitIdentity` is no longer an incompleteness condition: a fully resolved generic
+graph can be complete even when the old IL visitor conflates specializations. Actual count/loop
+differences still fail the independent production parity check and require investigation.
+
+Manifest-driven destroy registration additionally exports `ME.BECS.DestroyCallbackTargets.v1`
+assembly metadata: selected component count, unresolved count and ordered target rows with the
+component token, implementation assembly/documentation ID and constructed receiver. Per-target
+`S` rows distinguish available, missing, ambiguous, malformed and locally incomplete method
+summaries. Available means body metadata exists, NOT that transitive analysis is complete. Explicit
+interface implementations are resolved through Roslyn. Source method summaries export a `destroy-owner`
+binding from the source interface map. When referenced metadata exposes an interface forwarding method
+without a summary, only a unique matching binding may select the source body; the catalog records
+that analysis target in an `A` row. A method name alone is never sufficient.
+`ME.BECS.DestroyCallbackSafety.v1` additionally
+exports transitive per-target safety analysis using the same summary loader and analyzer as jobs,
+with runtime initializer emission disabled. The callback's writable component receiver is explicitly
+included as an RW argument dependency, even if its body only mutates fields through `this`.
+`ME.BECS.DestroyCallbackCounts.v1` exports per-invocation entity counts and internal loop sites using
+the shared count analyzer, also without initializer emission. These counts do not establish a bound
+on how many callbacks a runtime registry iteration invokes; callers still need that context.
+Missing/conflicting summaries and generic binding errors
+remain explicit. Consumers do not yet close runtime-registry calls from it, and such calls remain incomplete. It does not
+assign component IDs or invoke registrations/callbacks.
+
+Constructor summaries carry `constructor-schema=1`. Entity counts, safety and weights traverse
+these calls rather than treating disagreement with legacy constructor traversal as an intrinsic gap.
+Missing or old constructor summaries remain incomplete. Explicit constructors also export instance
+field/property initializer expressions in compilation/declaration order before the constructor CFG.
+A `this(...)` delegating constructor does not repeat them. Each expression uses its own source file's
+semantic model and field/property initializer CFG, so unreachable branches are not counted.
+Unavailable initializer CFGs remain explicit `InitializerControlFlowUnavailable` gaps;
+unknown expressions remain gaps, and a missing operation is reported as
+`ConstructorInitializerOperationUnavailable`. Implicit parameterless constructors of ordinary source
+classes now export the same initializer summaries and a transitive call to the parameterless base
+constructor (except the no-op System.Object constructor). Partial declarations export once. Record
+synthesis and base constructors requiring optional-argument binding remain unsupported rather than
+being assumed empty; missing external base summaries still prevent complete coverage.
+Existing production
+selection/parity checks remain in force; constructor support alone does not establish full coverage.
 
 Ordinary method/constructor summaries now walk reachable Roslyn CFG blocks. Iterative SCC analysis marks
 repeating blocks; loop acquisition/initialization outside a cycle is not classified as repeating. Exceptional
