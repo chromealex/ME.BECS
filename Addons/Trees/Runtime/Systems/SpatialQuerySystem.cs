@@ -104,11 +104,7 @@ namespace ME.BECS {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref SpatialQueryAspect query, ref TransformAspect tr) {
 
-                var q = query.readQuery;
-                if (q.updatePerTick != 0 && ((query.ent.World.CurrentTick + query.ent.id) % q.updatePerTick) != 0) return;
-                if (tr.IsCalculated == true) {
-                    this.system.Value.FillNearest(ref query, in tr, new AlwaysTrueSpatialSubFilter());
-                }
+                this.system.Value.FillNearest(ref query, in tr, new AlwaysTrueSpatialSubFilter());
 
             }
 
