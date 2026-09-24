@@ -323,7 +323,7 @@ namespace ME.BECS.Attack {
         [INLINE(256)]
         public static BulletAspect CreateBulletSpatial(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in ME.BECS.Views.View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo = default) {
 
-            var bullet = CreateBullet_INTERNAL(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, 200u, in jobInfo);
+            var bullet = CreateBullet_INTERNAL(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, muzzleLifetimeMs, in jobInfo);
             var attack = bullet.ent.GetOrCreateAspect<SpatialQueryAspect>();
             attack.query.ignoreSorting = true;
             attack.query.treeMask = targetsMask; // Search for targets in this tree
