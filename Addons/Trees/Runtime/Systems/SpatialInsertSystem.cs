@@ -329,6 +329,9 @@ namespace ME.BECS {
         public readonly void FillNearest<T>(ref SpatialQueryAspect query, in TransformAspect tr, in T subFilter = default) where T : struct, ISpatialSubFilter<Ent> {
             
             var q = query.readQuery;
+            if (q.updatePerTick != 0 && ((query.ent.World.CurrentTick + query.ent.id) % q.updatePerTick) != 0) return;
+            if (tr.IsCalculated == false) return;
+            
             var ent = query.ent;
 
             var worldPos = tr.GetWorldMatrixPosition();
