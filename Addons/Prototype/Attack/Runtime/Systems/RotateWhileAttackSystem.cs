@@ -16,10 +16,10 @@ namespace ME.BECS.Attack {
 
     [BURST]
     [UnityEngine.Tooltip("Rotate unit while attacking")]
-    public struct RotateWhileAttackSystem : IUpdate {
+    public partial struct RotateWhileAttackSystem : IUpdate {
 
         [BURST]
-        public struct IdleJob : IJobForAspects<UnitAspect, TransformAspect> {
+        public partial struct IdleJob : IJobForAspects<UnitAspect, TransformAspect> {
 
             public tfloat dt;
             
@@ -40,7 +40,7 @@ namespace ME.BECS.Attack {
         }
 
         [BURST]
-        public struct RotateAttackSensorJob : IJobFor2Aspects1Components<AttackAspect, TransformAspect, RotateAttackSensorComponent> {
+        public partial struct RotateAttackSensorJob : IJobFor2Aspects1Components<AttackAspect, TransformAspect, RotateAttackSensorComponent> {
 
             public tfloat dt;
             

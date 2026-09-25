@@ -95,10 +95,10 @@ namespace ME.BECS {
     
     [BURST]
     [RequiredDependencies(typeof(QuadTreeInsertSystem))]
-    public struct QuadTreeQuerySystem : IUpdate {
+    public partial struct QuadTreeQuerySystem : IUpdate {
 
         [BURST]
-        public struct Job : IJobForAspects<QuadTreeQueryAspect, TransformAspect> {
+        public partial struct Job : IJobForAspects<QuadTreeQueryAspect, TransformAspect> {
 
             public QuadTreeInsertSystem system;
 

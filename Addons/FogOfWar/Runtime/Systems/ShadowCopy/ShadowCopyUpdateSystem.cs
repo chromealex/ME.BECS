@@ -8,7 +8,7 @@ namespace ME.BECS.FogOfWar {
 
     [BURST]
     [RequiredDependencies(typeof(ShadowCopySystem))]
-    public struct ShadowCopyUpdateSystem : IUpdate {
+    public partial struct ShadowCopyUpdateSystem : IUpdate {
 
         private static bool UpdateShadowCopy(in Ent ent, ref FogOfWarShadowCopyComponent shadowCopy) {
             
@@ -67,7 +67,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST]
-        public struct UpdatePointsJob : IJobForComponents<FogOfWarShadowCopyComponent> {
+        public partial struct UpdatePointsJob : IJobForComponents<FogOfWarShadowCopyComponent> {
 
             public CreateSystem fow;
             
@@ -81,7 +81,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST]
-        public struct UpdateRectJob : IJobForComponents<FogOfWarShadowCopyComponent, FogOfWarShadowCopyPointsComponent> {
+        public partial struct UpdateRectJob : IJobForComponents<FogOfWarShadowCopyComponent, FogOfWarShadowCopyPointsComponent> {
 
             public CreateSystem fow;
             

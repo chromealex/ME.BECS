@@ -8,10 +8,10 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Views;
 
     [BURST]
-    public struct ShadowCopySystem : IUpdate {
+    public partial struct ShadowCopySystem : IUpdate {
 
         [BURST]
-        public struct CreateJob : IJobForComponents<OwnerComponent, FogOfWarShadowCopyRequiredRuntimeComponent> {
+        public partial struct CreateJob : IJobForComponents<OwnerComponent, FogOfWarShadowCopyRequiredRuntimeComponent> {
 
             public Players.PlayersSystem playersSystem;
             public World world;

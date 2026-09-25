@@ -21,10 +21,10 @@ namespace ME.BECS.Pathfinding {
     [BURST]
     [UnityEngine.Tooltip("Schedule building a path.")]
     [RequiredDependencies(typeof(BuildGraphSystem))]
-    public struct FollowPathSystem : IUpdate {
+    public partial struct FollowPathSystem : IUpdate {
 
         [BURST]
-        public struct PathFollowJob : IJobForAspects<TransformAspect, UnitAspect> {
+        public partial struct PathFollowJob : IJobForAspects<TransformAspect, UnitAspect> {
 
             public World world;
             public tfloat dt;
@@ -142,7 +142,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [BURST]
-        public struct SpeedDownOnHoldJob : IJobForAspects<UnitAspect> {
+        public partial struct SpeedDownOnHoldJob : IJobForAspects<UnitAspect> {
 
             public tfloat dt;
             

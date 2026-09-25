@@ -7,10 +7,10 @@ namespace ME.BECS.Commands {
     
     [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem))]
-    public struct CommandMoveSystem : IUpdate {
+    public partial struct CommandMoveSystem : IUpdate {
 
         [BURST]
-        public struct Job : IJobForAspects<UnitCommandGroupAspect> {
+        public partial struct Job : IJobForAspects<UnitCommandGroupAspect> {
 
             public BuildGraphSystem buildGraphSystem;
             

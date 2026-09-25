@@ -16,10 +16,10 @@ namespace ME.BECS.Pathfinding {
     [BURST]
     [UnityEngine.Tooltip("Schedule building a path.")]
     [RequiredDependencies(typeof(BuildGraphSystem))]
-    public struct BuildPathSystem : IUpdate {
+    public partial struct BuildPathSystem : IUpdate {
 
         [BURST]
-        public unsafe struct UpdatePathJob : IJobForComponents<TargetComponent> {
+        public unsafe partial struct UpdatePathJob : IJobForComponents<TargetComponent> {
 
             public World world;
             public Filter filter;

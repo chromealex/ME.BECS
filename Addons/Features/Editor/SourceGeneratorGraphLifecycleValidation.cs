@@ -13,11 +13,22 @@ namespace ME.BECS.Editor.Systems {
             var report = new StringBuilder();
             var plans = new scg.Dictionary<(int, string), scg.List<string[]>>();
             var snapshots = new scg.Dictionary<int, scg.List<string>>();
+            var execution = new scg.Dictionary<(int, string), scg.List<string>>();
             var metadataErrors = 0;
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
                 if (assembly.IsDynamic) continue;
                 try {
                     foreach (var attribute in assembly.GetCustomAttributes<AssemblyMetadataAttribute>()) {
+                        if (attribute.Key == "ME.BECS.GraphLifecycleExecution.v1") {
+                            var selection = attribute.Value?.Split('\n');
+                            if (selection == null || selection.Length != 3 ||
+                                !int.TryParse(selection[0], NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var graphId) ||
+                                selection[2] != "source-plan") throw new FormatException("Malformed lifecycle execution selection");
+                            var executionKey = (graphId, selection[1]);
+                            if (!execution.TryGetValue(executionKey, out var owners)) execution.Add(executionKey, owners = new scg.List<string>());
+                            owners.Add(assembly.FullName);
+                            continue;
+                        }
                         if (attribute.Key == "ME.BECS.TypeInput.v1") {
                             var fields = attribute.Value?.Split('\t');
                             if (fields != null && fields.Length == 6 && fields[0] == "runtime" && fields[1] == "graph-topology") {
@@ -38,6 +49,8 @@ namespace ME.BECS.Editor.Systems {
                 } catch (Exception exception) { ++metadataErrors; report.AppendLine("Metadata error: " + assembly.FullName + ": " + exception.Message); }
             }
             var compared = 0; var equal = 0; var unavailable = 0; var errors = 0; var dependencyEqual = 0;
+            var sourceSelected = 0;
+            var selectionUnavailable = 0;
             var generator = new SystemsCodeGenerator { burstedTypes = UnityEditor.TypeCache.GetTypesWithAttribute<Unity.Burst.BurstCompileAttribute>() };
             var guids = UnityEditor.AssetDatabase.FindAssets("t:SystemsGraph");
             Array.Sort(guids, StringComparer.Ordinal);
@@ -46,6 +59,12 @@ namespace ME.BECS.Editor.Systems {
                 if (graph == null || graph.isInnerGraph) continue;
                 foreach (var phase in new[] { Method.Awake, Method.Start, Method.Update, Method.Destroy, Method.DrawGizmos }) {
                     var label = graph.name + " [" + graph.GetId().ToString(CultureInfo.InvariantCulture) + "] " + phase;
+                    if (execution.TryGetValue((graph.GetId(), phase.ToString()), out var owners) && owners.Count == 1) {
+                        ++sourceSelected;
+                    } else {
+                        ++selectionUnavailable;
+                        report.AppendLine(label + ": source execution selection missing or ambiguous; recompile the runtime manifest/catalog");
+                    }
                     try {
                         // GetSyncPoint may normalize missing arrays: refuse those assets before tracing.
                         var topology = SourceGeneratorGraphTopology.Serialize(graph);
@@ -98,6 +117,7 @@ namespace ME.BECS.Editor.Systems {
             SourceGeneratorGraphTopology.PublishLifecycleComparison("Lifecycle call traces: compared=" + compared + ", equal=" + equal +
                 ", dependency traces equal=" + dependencyEqual +
                 ", unavailable=" + unavailable + ", errors=" + errors + ", metadata errors=" + metadataErrors +
+                ", source execution metadata=" + sourceSelected + ", execution selection unavailable=" + selectionUnavailable +
                 ". Checks call metadata plus symbolic dependency events and final handle, including pass-through batches. Does NOT verify runtime system behavior, Burst execution or stripping. No systems invoked; no C# files read/written.", report.ToString());
         }
 

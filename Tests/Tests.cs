@@ -1,15 +1,53 @@
 using NUnit.Framework;
+using System.Linq;
 
 namespace ME.BECS.Tests {
 
     public static class AllTests {
 
         public static void Start() {
+            var type = ResolveEditorBootstrap();
+            var load = type.GetMethod("Load", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static,
+                null, System.Type.EmptyTypes, null);
+            if (load == null || load.ReturnType != typeof(void))
+                throw new System.InvalidOperationException("ME.BECS Editor bootstrap is incompatible: expected public static void StaticMethods.Load(). Regenerate the Editor bootstrap and wait for Unity compilation.");
             ObjectReferenceRegistry.ClearRuntimeObjects();
-            {
-                var type = System.Type.GetType("ME.BECS.Editor.StaticMethods, ME.BECS.Gen.Editor");
-                type.GetMethod("Load").Invoke(null, null);
+            load.Invoke(null, null);
+        }
+
+        private static System.Type ResolveEditorBootstrap() {
+            const string assemblyName = "ME.BECS.Gen.Editor";
+            const string typeName = "ME.BECS.Editor.StaticMethods";
+            var loaded = System.AppDomain.CurrentDomain.GetAssemblies();
+            var candidates = loaded.Where(assembly => !assembly.IsDynamic && assembly.GetName().Name == assemblyName).ToArray();
+            if (candidates.Length > 1)
+                throw new System.InvalidOperationException("Ambiguous Editor bootstrap: multiple loaded assemblies named " + assemblyName + ". Restart the Unity domain before running integration tests.");
+            System.Reflection.Assembly owner;
+            if (candidates.Length == 1) {
+                owner = candidates[0];
+            } else {
+                // Resolve by assembly explicitly: Type.GetType returning null conflates a
+                // missing assembly with an existing assembly that lacks the expected type.
+                try {
+                    owner = System.Reflection.Assembly.Load(new System.Reflection.AssemblyName(assemblyName));
+                } catch (System.Exception exception) when (exception is System.IO.FileNotFoundException ||
+                    exception is System.IO.FileLoadException || exception is System.BadImageFormatException) {
+                    var related = loaded.Select(assembly => assembly.GetName().Name)
+                        .Where(name => name.StartsWith("ME.BECS", System.StringComparison.Ordinal))
+                        .OrderBy(name => name, System.StringComparer.Ordinal);
+                    throw new System.InvalidOperationException("Editor bootstrap assembly cannot be loaded: " + assemblyName +
+                        ". Loader error: " + exception.GetType().Name + ": " + exception.Message +
+                        "\nLoaded BECS assemblies: " + string.Join(", ", related) +
+                        "\nThis is an assembly loading/compilation failure, not an entity-count mismatch.", exception);
+                }
             }
+            var type = owner.GetType(typeName, false);
+            if (type == null)
+                throw new System.InvalidOperationException("Editor bootstrap assembly is loaded (" + owner.FullName +
+                    "), but type " + typeName + " is absent. StaticTypesInitializer present: " +
+                    (owner.GetType("ME.BECS.Editor.StaticTypesInitializer", false) != null) +
+                    ". Check the first Editor export error: compiled source catalogs alone do not provide the bootstrap entry point.");
+            return type;
         }
 
         public static void Dispose() {

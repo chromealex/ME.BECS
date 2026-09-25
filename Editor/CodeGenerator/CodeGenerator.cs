@@ -578,6 +578,7 @@ namespace ME.BECS.Editor {
                 //var template = "namespace " + ECS + " {\n [UnityEngine.Scripting.PreserveAttribute] public static unsafe class AOTBurstHelper { \n[UnityEngine.Scripting.PreserveAttribute] \npublic static void AOT() { \n{{CONTENT}} \n}\n }\n }";
                 var aotContent = new System.Collections.Generic.List<string>();
                 var typesContent = new System.Collections.Generic.List<string>();
+                typesContent.Add("global::ME.BECS.SourceGenerated.CoreTypeInputs.Initialize();");
                 timings.Mark("setup / templates");
                 ME.BECS.Editor.Systems.SystemDependenciesCodeGenerator.GetUsedObjects(editorAssembly, out var usedObjects);
                 // Compiler input, produced only by this source generator feeder. Preserve the
@@ -620,7 +621,6 @@ namespace ME.BECS.Editor {
                     var systemRegistration = "global::ME.BECS.SourceGenerated.SystemInputs.Register_" +
                         ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(type.AssemblyQualifiedName) + "();";
                     aotContent.Add(systemRegistration);
-                    typesContent.Add(systemRegistration);
 
                     var isBursted = (burstedTypes.Contains(type) == true);
                     var hasAwake = typeof(IAwake).IsAssignableFrom(type);
@@ -674,7 +674,6 @@ namespace ME.BECS.Editor {
                     if (drawGizmosBurst == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "DrawGizmos", "Factory", out var drawGizmosFactoryAotPointer) ? drawGizmosFactoryAotPointer : $"BurstCompileMethod.MakeDrawGizmos<{systemType}>(default);");
                 }
 
-                typesContent.Add("global::ME.BECS.SourceGenerated.GroupInputs.Initialize();");
                 foreach (var component in usedObjects.componentsGroup) {
 
                     var asm = component.Assembly.GetName().Name;
@@ -697,7 +696,6 @@ namespace ME.BECS.Editor {
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var registrationKey = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(component.AssemblyQualifiedName);
-                        typesContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.Register_" + registrationKey + "();");
                         componentTypes.Add(component);
                         aotContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.Aot_" + registrationKey + "();");
 
@@ -715,7 +713,6 @@ namespace ME.BECS.Editor {
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var registrationKey = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(component.AssemblyQualifiedName);
-                        typesContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.RegisterShared_" + registrationKey + "();");
                         componentTypes.Add(component);
                         aotContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.AotShared_" + registrationKey + "();");
 
@@ -733,7 +730,6 @@ namespace ME.BECS.Editor {
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var registrationKey = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(component.AssemblyQualifiedName);
-                        typesContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.RegisterStatic_" + registrationKey + "();");
                         componentTypes.Add(component);
                         aotContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.AotStatic_" + registrationKey + "();");
 
@@ -751,7 +747,6 @@ namespace ME.BECS.Editor {
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var registrationKey = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(component.AssemblyQualifiedName);
-                        typesContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.RegisterConfig_" + registrationKey + "();");
                         componentTypes.Add(component);
                         aotContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.AotConfig_" + registrationKey + "();");
 

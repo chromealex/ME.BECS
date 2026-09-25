@@ -11,8 +11,15 @@ namespace ME.BECS.Editor {
         private readonly Dictionary<Type, HashSet<TypeInfo>> selected = new Dictionary<Type, HashSet<TypeInfo>>();
         private readonly Dictionary<Assembly, Dictionary<string, string[]>> catalogs = new Dictionary<Assembly, Dictionary<string, string[]>>();
         private SourceGeneratorClosedJobCatalog closed;
+        private readonly object selectionLock = new object();
 
         internal HashSet<TypeInfo> Select(Type job) {
+            // SystemDependenciesCodeGenerator shares this run-local consumer across workers.
+            // Protect the complete lazy-selection transaction, including the closed catalog.
+            lock (this.selectionLock) return this.SelectLocked(job);
+        }
+
+        private HashSet<TypeInfo> SelectLocked(Type job) {
             if (this.selected.TryGetValue(job, out var cached)) return new HashSet<TypeInfo>(cached);
             var legacy = Jobs.JobsEarlyInitCodeGenerator.GetJobTypesInfo(job);
             var result = legacy;

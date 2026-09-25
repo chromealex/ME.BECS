@@ -435,6 +435,11 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                         var phase = lifecyclePhases[phaseIndex];
                         var available = GraphLifecyclePlan.TryCreate(topology.Value, resolver, phase, phaseIndex + 1, flatQueries,
                             out var plan, out var planError);
+                        if (!available) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None,
+                                "Cannot generate graph lifecycle " + topology.Key.ToString(CultureInfo.InvariantCulture) + " / " + phase + ": " + planError));
+                            return;
+                        }
                         if (available) lifecyclePlans.Add((topology.Key, phase), plan!);
                         if (available)
                             source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.GraphSyncComparison.v1\", ")
@@ -443,6 +448,23 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                             (available ? plan!.Serialize() : "unavailable\n" + planError);
                         source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.GraphLifecyclePlan.v1\", ")
                             .Append(SymbolDisplay.FormatLiteral(planPayload, true)).Append(")]\n");
+                    }
+                }
+                foreach (var graph in graphRegistrations) {
+                    if (!graphApply.ContainsKey(graph.Id)) {
+                        output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None,
+                            "Missing source injection plan for registered graph " + graph.Id.ToString(CultureInfo.InvariantCulture) +
+                            ". Export Injection Coverage, resolve unsupported fields/jobs, and regenerate inputs."));
+                        return;
+                    }
+                    foreach (var phase in lifecyclePhases) {
+                        if (!lifecyclePlans.ContainsKey((graph.Id, phase))) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None,
+                                "Missing source lifecycle plan for registered graph " + graph.Id.ToString(CultureInfo.InvariantCulture) + " / " + phase));
+                            return;
+                        }
+                        source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.GraphLifecycleExecution.v1\", ")
+                            .Append(SymbolDisplay.FormatLiteral(graph.Id.ToString(CultureInfo.InvariantCulture) + "\n" + phase + "\nsource-plan", true)).Append(")]\n");
                     }
                 }
                 foreach (var topology in graphTopologies.OrderBy(static pair => pair.Key))
@@ -505,8 +527,7 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                             .Append(graph.Prefix.Substring(split + 1)).Append(phase).Append(" {\n")
                             .Append("[global::AOT.MonoPInvokeCallback(typeof(global::ME.BECS.SystemsStatic.On").Append(phase).Append("))]\n")
                             .Append("public static void GraphOn").Append(phase).Append('_').Append(suffix)
-                            .Append("(uint dt, ref global::ME.BECS.World world, ref global::Unity.Jobs.JobHandle dependsOn) => ExecuteGraphOn")
-                            .Append(phase).Append('_').Append(suffix).Append("(dt, ref world, ref dependsOn);\n");
+                            .Append("(uint dt, ref global::ME.BECS.World world, ref global::Unity.Jobs.JobHandle dependsOn) => PlannedLifecycle.Execute(dt, ref world, ref dependsOn);\n");
                         var contract = input.Right.GetTypeByMetadataName("ME.BECS.I" + phase);
                         var phaseSlots = graphSlots[graph.Id];
                         for (var slot = 0; slot < phaseSlots.Count; ++slot) {
@@ -542,7 +563,7 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                                     else source.Append("dependsOn = apply ? global::ME.BECS.Batches.Apply(context.dependsOn, in world) : context.dependsOn; }\n");
                                 }
                                 if (node.Parallel && node.SlotCount > 0)
-                                    source.Append("dependsOn = global::Unity.Jobs.JobHandle.CombineDependencies(results);\nresults.Dispose();\n");
+                                    source.Append("dependsOn = global::Unity.Jobs.JobHandle.CombineDependencies(results);\n");
                                 source.Append("return dependsOn;\n}\n");
                             }
                         }
@@ -625,6 +646,21 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                         .Append(">.FromPointer(target); }\n");
                 }
                 source.Append("} }\n");
+                // Preserve the historical registration passes, not per-component grouping:
+                // shared/static validation has its own counters and must follow all normal IDs.
+                source.Append("namespace ME.BECS.SourceGenerated { internal static class CoreTypeInputs { public static void Initialize() {\n");
+                foreach (var registration in systemRegistrations)
+                    source.Append("SystemInputs.Register_").Append(ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(registration.Identity)).Append("();\n");
+                source.Append("GroupInputs.Initialize();\n");
+                foreach (var registration in componentRegistrations)
+                    source.Append("ComponentInputs.Register_").Append(ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(registration.Identity)).Append("();\n");
+                foreach (var registration in componentRegistrations.Where(item => (item.Flags & 8) != 0))
+                    source.Append("ComponentInputs.RegisterShared_").Append(ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(registration.Identity)).Append("();\n");
+                foreach (var registration in componentRegistrations.Where(item => (item.Flags & 2) != 0))
+                    source.Append("ComponentInputs.RegisterStatic_").Append(ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(registration.Identity)).Append("();\n");
+                foreach (var registration in componentRegistrations.Where(item => (item.Flags & 32) != 0))
+                    source.Append("ComponentInputs.RegisterConfig_").Append(ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(registration.Identity)).Append("();\n");
+                source.Append("} } }\n");
                 source.Append("namespace ME.BECS.SourceGenerated { internal static class ComponentInputs {\n");
                 foreach (var registration in componentRegistrations) {
                     var name = registration.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);

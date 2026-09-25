@@ -20,10 +20,10 @@ namespace ME.BECS.Commands {
     
     [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem), typeof(CommandBuildSystem))]
-    public struct CommandBuildUpdateSystem : IUpdate {
+    public partial struct CommandBuildUpdateSystem : IUpdate {
 
         [BURST]
-        public struct UpdateProgressJob : IJobForComponents<BuildInProgress> {
+        public partial struct UpdateProgressJob : IJobForComponents<BuildInProgress> {
 
             public tfloat dt;
             

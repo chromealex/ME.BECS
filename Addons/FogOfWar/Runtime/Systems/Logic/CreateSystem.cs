@@ -23,7 +23,7 @@ namespace ME.BECS.FogOfWar {
 
     [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem))]
-    public struct CreateSystem : IAwake, IUpdate {
+    public partial struct CreateSystem : IAwake, IUpdate {
 
         public float2 mapPosition;
         public float2 mapSize;
@@ -35,7 +35,7 @@ namespace ME.BECS.FogOfWar {
         public readonly Ent GetHeights() => this.heights;
         
         [BURST]
-        public struct CreateJob : IJobForAspects<TeamAspect> {
+        public partial struct CreateJob : IJobForAspects<TeamAspect> {
 
             public uint2 fowSize;
             
@@ -52,7 +52,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST]
-        public struct CleanUpJob : IJobForAspects<TeamAspect> {
+        public partial struct CleanUpJob : IJobForAspects<TeamAspect> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TeamAspect player) {
                 
@@ -64,7 +64,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST]
-        public struct UpdateHeightJob : IJobParallelFor {
+        public partial struct UpdateHeightJob : IJobParallelFor {
 
             public MemArrayAuto<ulong> dirtyChunks;
             public World world;

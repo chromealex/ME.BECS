@@ -106,7 +106,7 @@ namespace ME.BECS {
     }
     
     [BURST]
-    public unsafe struct OctreeInsertSystem : IAwake, IUpdate, IDestroy, IDrawGizmos {
+    public unsafe partial struct OctreeInsertSystem : IAwake, IUpdate, IDestroy, IDrawGizmos {
         
         public static OctreeInsertSystem Default => new OctreeInsertSystem() {
             mapSize = new float3(200f, 200f, 200f),
@@ -120,7 +120,7 @@ namespace ME.BECS {
         private ushort worldId;
 
         [BURST]
-        public struct CollectRectJob : IJobForAspects<OctreeAspect, TransformAspect> {
+        public partial struct CollectRectJob : IJobForAspects<OctreeAspect, TransformAspect> {
             
             public UnsafeList<safe_ptr> trees;
 
@@ -144,7 +144,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        public struct CollectJob : IJobForAspects<OctreeAspect, TransformAspect> {
+        public partial struct CollectJob : IJobForAspects<OctreeAspect, TransformAspect> {
             
             public UnsafeList<safe_ptr> trees;
 
@@ -163,7 +163,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        public struct ApplyJob : Unity.Jobs.IJobParallelFor {
+        public partial struct ApplyJob : Unity.Jobs.IJobParallelFor {
 
             public UnsafeList<safe_ptr> trees;
             
@@ -177,7 +177,7 @@ namespace ME.BECS {
         }
         
         [BURST]
-        public struct ClearJob : Unity.Jobs.IJobParallelFor {
+        public partial struct ClearJob : Unity.Jobs.IJobParallelFor {
 
             public UnsafeList<safe_ptr> trees;
 

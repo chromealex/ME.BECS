@@ -15,10 +15,10 @@ namespace ME.BECS.FogOfWar {
 
     [BURST]
     [UnityEngine.Tooltip("If target is shadow copy - we need to change it to original if it is visible")]
-    public struct ChangeAttackTargetFromShadowCopySystem : IUpdate {
+    public partial struct ChangeAttackTargetFromShadowCopySystem : IUpdate {
 
         [BURST]
-        public struct TargetJob : IJobForAspects<AttackAspect> {
+        public partial struct TargetJob : IJobForAspects<AttackAspect> {
 
             public CreateSystem createSystem;
             
@@ -37,7 +37,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST]
-        public struct TargetsJob : IJobForAspects<AttackAspect> {
+        public partial struct TargetsJob : IJobForAspects<AttackAspect> {
 
             public CreateSystem createSystem;
 

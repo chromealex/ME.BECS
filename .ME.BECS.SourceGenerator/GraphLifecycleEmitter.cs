@@ -5,7 +5,7 @@ using System.Text;
 
 namespace ME.BECS.SourceGenerator;
 
-// Produces the candidate runtime body from the IR. Registration is intentionally a separate switch.
+// Produces the runtime body used by the registered graph lifecycle callbacks.
 internal static class GraphLifecycleEmitter {
     private const int StackHandleLimit = 64;
     internal static void Append(StringBuilder source, GraphLifecyclePlan plan, string storageExpression) {
@@ -21,8 +21,8 @@ internal static class GraphLifecycleEmitter {
             burst = step.Burst;
         }
         if (start < plan.Steps.Count) groups.Add((start, plan.Steps.Count, burst));
-        // Keep candidate Burst attributes off the transitional phase class: merely compiling the
-        // candidate must not alter Burst discovery for existing lifecycle methods.
+        // Keep Burst grouping scoped to this implementation; phases may mix managed and
+        // Burst-compatible systems without applying Burst to the managed outer dispatcher.
         source.Append("[global::Unity.Burst.BurstCompile] private static class PlannedLifecycle {\n")
             .Append("public static void Execute(uint dt, ref global::ME.BECS.World world, ref global::Unity.Jobs.JobHandle dependsOn) {\n");
         if (plan.Steps.Count == 0) { source.Append("}\n}\n"); return; }
@@ -35,7 +35,7 @@ internal static class GraphLifecycleEmitter {
                 .Append(Number(plan.Steps.Count)).Append("];\n");
         } else {
             source.Append("var storage = new global::Unity.Collections.NativeArray<global::Unity.Jobs.JobHandle>(")
-                .Append(Number(plan.Steps.Count)).Append(", global::ME.BECS.Constants.ALLOCATOR_TEMP);\ntry {\n")
+                .Append(Number(plan.Steps.Count)).Append(", global::ME.BECS.Constants.ALLOCATOR_TEMP);\n")
                 .Append("var handles = (global::Unity.Jobs.JobHandle*)global::Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(storage);\n");
         }
         source.Append("var systems = (global::System.IntPtr*)global::Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafePtr(")
@@ -43,7 +43,7 @@ internal static class GraphLifecycleEmitter {
         for (var index = 0; index < groups.Count; ++index)
             source.Append("PlannedLifecycleGroup_").Append(Number(index)).Append("(dt, in world, in input, systems, handles);\n");
         source.Append("dependsOn = ").Append(Handle(plan.Result)).Append(";\n");
-        if (!stackHandles) source.Append("} finally { storage.Dispose(); }\n");
+        // Allocator.Temp owns this scratch memory; no pointer escapes this invocation.
         source.Append("}\n");
         for (var index = 0; index < groups.Count; ++index) {
             var group = groups[index];

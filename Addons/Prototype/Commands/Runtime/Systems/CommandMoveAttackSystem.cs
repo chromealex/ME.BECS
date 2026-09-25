@@ -9,10 +9,10 @@ namespace ME.BECS.Commands {
 
     [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem))]
-    public struct CommandMoveAttackSystem : IUpdate {
+    public partial struct CommandMoveAttackSystem : IUpdate {
 
         [BURST]
-        public struct CleanUpJob : IJobForAspects<UnitAspect> {
+        public partial struct CleanUpJob : IJobForAspects<UnitAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit) {
 
@@ -26,7 +26,7 @@ namespace ME.BECS.Commands {
         }
 
         [BURST]
-        public struct Job : IJobForAspects<UnitCommandGroupAspect> {
+        public partial struct Job : IJobForAspects<UnitCommandGroupAspect> {
 
             public BuildGraphSystem buildGraphSystem;
             
@@ -51,7 +51,7 @@ namespace ME.BECS.Commands {
         }
 
         [BURST]
-        public struct StopToAttackJob : IJobForAspects<UnitCommandGroupAspect> {
+        public partial struct StopToAttackJob : IJobForAspects<UnitCommandGroupAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitCommandGroupAspect commandGroup) {
 

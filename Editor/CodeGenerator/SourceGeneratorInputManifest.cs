@@ -262,14 +262,6 @@ namespace ME.BECS.Editor {
             return TryGetGraphJobFields(system, layout, out plan);
         }
 
-        public static bool TryGetGraphSystemInjection(ME.BECS.FeaturesGraph.SystemsGraph graph, Type system, out string call) {
-            call = null;
-            if (!TryGetGraphSystemFields(system, GetGraphSystems(graph), out _)) return false;
-            call = "global::ME.BECS.GraphGraph" + EditorUtils.GetCodeName(graph.name) + "Initialize.InjectSystem_" +
-                ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(system.AssemblyQualifiedName) + "();";
-            return true;
-        }
-
         public static bool TryGetGraphJobFields(Type job, List<GraphSystemInput> layout, out string[] plan) {
             plan = null;
             if (!job.IsVisible || job.ContainsGenericParameters) return false;
@@ -296,14 +288,6 @@ namespace ME.BECS.Editor {
             }
             if (!hasSystem) return false;
             plan = fields.ToArray();
-            return true;
-        }
-
-        public static bool TryGetGraphJobRegistration(ME.BECS.FeaturesGraph.SystemsGraph graph, Type job, out string call) {
-            call = null;
-            if (!TryGetGraphJobFields(job, GetGraphSystems(graph), out _)) return false;
-            call = "global::ME.BECS.GraphGraph" + EditorUtils.GetCodeName(graph.name) + "Initialize.RegisterJob_" +
-                ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(job.AssemblyQualifiedName) + "();";
             return true;
         }
 
@@ -394,10 +378,6 @@ namespace ME.BECS.Editor {
             if (argumentIndex != arguments.Length) throw new ArgumentException("Inconsistent nested generic type.", nameof(type));
             return result.ToString();
         }
-
-        public static string GetSystemInjectionMethodName(Type owner, string fieldName) =>
-            "global::ME.BECS.SourceGenerated.SystemInjectionInputs.Inject_" +
-            ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(owner.AssemblyQualifiedName + "\n" + fieldName);
 
         // Shared by the core exporter and Features.Editor without a reverse assembly dependency.
         public readonly struct GraphSystemInput {

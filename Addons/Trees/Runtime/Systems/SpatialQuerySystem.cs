@@ -95,10 +95,10 @@ namespace ME.BECS {
     
     [BURST]
     [RequiredDependencies(typeof(SpatialInsertSystem))]
-    public struct SpatialQuerySystem : IUpdate {
+    public partial struct SpatialQuerySystem : IUpdate {
 
         [BURST]
-        public struct Job : IJobForAspects<SpatialQueryAspect, TransformAspect> {
+        public partial struct Job : IJobForAspects<SpatialQueryAspect, TransformAspect> {
 
             public InjectSystem<SpatialInsertSystem> system;
 

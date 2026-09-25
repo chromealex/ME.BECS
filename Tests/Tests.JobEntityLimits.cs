@@ -6,18 +6,6 @@ using static ME.BECS.Cuts;
 
 namespace ME.BECS.Tests {
     public unsafe class Tests_JobEntityLimits {
-        [UnityEngine.TestTools.UnitySetUp]
-        public System.Collections.IEnumerator SetUp() {
-            AllTests.Start();
-            yield return null;
-        }
-
-        [UnityEngine.TestTools.UnityTearDown]
-        public System.Collections.IEnumerator TearDown() {
-            AllTests.Dispose();
-            yield return null;
-        }
-
         public struct RepeatedCreationJob : IJobForComponents<TestComponent> {
             private static void Create(in JobInfo info) => Ent.New(in info);
 
@@ -39,8 +27,7 @@ namespace ME.BECS.Tests {
                 "Two calls to a helper creating one entity require two reservations");
             Assert.AreEqual("0", rows[2], "The initializer requires complete analysis");
             Assert.IsTrue(rows.Any(row => row.StartsWith("I\t") && row.EndsWith("\tApply\tv3")));
-            Assert.AreEqual(2u, JobStaticInfo<RepeatedCreationJob>.inlineCount[EntityTypes<DefaultEntityType>.id],
-                "Bootstrap must select source counts, not the legacy visited-method count");
+            AssertSourceInitializer<RepeatedCreationJob>(rows, 2u, 0u, 0u);
         }
 
         [EntitiesJobMaxCount(3)]
@@ -65,9 +52,59 @@ namespace ME.BECS.Tests {
                 "The same creation helper must contribute both an inline and a repeating allocation site");
             Assert.AreEqual("0", rows[2], "The initializer requires complete analysis");
             Assert.IsTrue(rows.Any(row => row.StartsWith("I\t") && row.EndsWith("\tApply\tv3")));
-            Assert.AreEqual(1u, JobStaticInfo<MixedLoopCreationJob>.loopCount);
-            Assert.AreEqual(3u, JobStaticInfo<MixedLoopCreationJob>.entitiesMaxCount);
-            Assert.AreEqual(3u, JobStaticInfo<MixedLoopCreationJob>.inlineCount[EntityTypes<DefaultEntityType>.id]);
+            AssertSourceInitializer<MixedLoopCreationJob>(rows, 3u, 1u, 3u);
+        }
+
+        [Test]
+        public void BootstrapInitializesSharedHelperJobs() {
+            AllTests.Start();
+            try {
+                AssertBootstrapInitializesSharedHelperJobs();
+            } finally {
+                AllTests.Dispose();
+            }
+        }
+
+        private static void AssertBootstrapInitializesSharedHelperJobs() {
+            const string message = "Loaded Editor bootstrap has not initialized the current source entity counts. Regenerate the Editor bootstrap and wait for compilation; metadata comparison alone does not execute or regenerate it.";
+            Assert.IsTrue(JobStaticInfo<RepeatedCreationJob>.inlineCount.ptr != null, message);
+            Assert.AreEqual(2u, JobStaticInfo<RepeatedCreationJob>.inlineCount[EntityTypes<DefaultEntityType>.id], message);
+            Assert.IsTrue(JobStaticInfo<MixedLoopCreationJob>.inlineCount.ptr != null, message);
+            Assert.AreEqual(1u, JobStaticInfo<MixedLoopCreationJob>.loopCount, message);
+            Assert.AreEqual(3u, JobStaticInfo<MixedLoopCreationJob>.entitiesMaxCount, message);
+            Assert.AreEqual(3u, JobStaticInfo<MixedLoopCreationJob>.inlineCount[EntityTypes<DefaultEntityType>.id], message);
+        }
+
+        private static void AssertSourceInitializer<TJob>(string[] rows, uint inline, uint loops, uint maximum) where TJob : struct {
+            // Unit-test the exported body independently of the currently loaded bootstrap.
+            // Use a private one-group layout and restore every shared static afterwards.
+            var records = rows.Where(row => row.StartsWith("I\t")).Select(row => row.Split('\t')).ToArray();
+            Assert.AreEqual(1, records.Length);
+            Assert.AreEqual(5, records[0].Length);
+            var assemblies = System.AppDomain.CurrentDomain.GetAssemblies()
+                .Where(assembly => !assembly.IsDynamic && assembly.FullName == records[0][1]).ToArray();
+            Assert.AreEqual(1, assemblies.Length);
+            var owner = assemblies[0].GetType(records[0][2], true);
+            var apply = owner.GetMethod("Apply", BindingFlags.Public | BindingFlags.Static);
+            Assert.IsNotNull(apply);
+            Assert.AreEqual(2, apply.GetParameters().Length, "These fixtures reserve exactly one entity group");
+            var previousInline = JobStaticInfo<TJob>.inlineCount;
+            var previousLoops = JobStaticInfo<TJob>.loopCount;
+            var previousMaximum = JobStaticInfo<TJob>.entitiesMaxCount;
+            JobStaticInfo<TJob>.inlineCount = default;
+            try {
+                apply.MakeGenericMethod(typeof(TJob)).Invoke(null, new object[] { 1u, 0u });
+                Assert.IsTrue(JobStaticInfo<TJob>.inlineCount.ptr != null, "Source initializer must allocate reservation counts");
+                Assert.AreEqual(inline, JobStaticInfo<TJob>.inlineCount[0u]);
+                Assert.AreEqual(loops, JobStaticInfo<TJob>.loopCount);
+                Assert.AreEqual(maximum, JobStaticInfo<TJob>.entitiesMaxCount);
+            } finally {
+                var allocated = JobStaticInfo<TJob>.inlineCount;
+                JobStaticInfo<TJob>.inlineCount = previousInline;
+                JobStaticInfo<TJob>.loopCount = previousLoops;
+                JobStaticInfo<TJob>.entitiesMaxCount = previousMaximum;
+                if (allocated.ptr != null) _free(allocated, Unity.Collections.Allocator.Domain);
+            }
         }
 
         [EntitiesJobMaxCount(3)]
@@ -85,7 +122,12 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void BoundedLoopsHaveDeterministicIdsAcrossBatchSizes() {
-            CollectionAssert.AreEqual(RunBoundedCreation(1u), RunBoundedCreation(16u));
+            AllTests.Start();
+            try {
+                CollectionAssert.AreEqual(RunBoundedCreation(1u), RunBoundedCreation(16u));
+            } finally {
+                AllTests.Dispose();
+            }
         }
 
         private static uint[] RunBoundedCreation(uint batch) {

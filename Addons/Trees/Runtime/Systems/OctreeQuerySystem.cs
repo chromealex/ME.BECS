@@ -94,10 +94,10 @@ namespace ME.BECS {
     
     [BURST]
     [RequiredDependencies(typeof(OctreeInsertSystem))]
-    public struct OctreeQuerySystem : IUpdate {
+    public partial struct OctreeQuerySystem : IUpdate {
 
         [BURST]
-        public struct Job : IJobForAspects<OctreeQueryAspect, TransformAspect> {
+        public partial struct Job : IJobForAspects<OctreeQueryAspect, TransformAspect> {
 
             public OctreeInsertSystem system;
 

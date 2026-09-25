@@ -87,7 +87,7 @@ namespace ME.BECS {
     }
     
     [BURST]
-    public unsafe struct QuadTreeInsertSystem : IAwake, IUpdate, IDestroy, IDrawGizmos {
+    public unsafe partial struct QuadTreeInsertSystem : IAwake, IUpdate, IDestroy, IDrawGizmos {
         
         public static QuadTreeInsertSystem Default => new QuadTreeInsertSystem() {
             mapSize = new float2(200f, 200f),
@@ -101,7 +101,7 @@ namespace ME.BECS {
         private ushort worldId;
 
         [BURST]
-        public struct CollectRectJob : IJobForAspects<QuadTreeAspect, TransformAspect> {
+        public partial struct CollectRectJob : IJobForAspects<QuadTreeAspect, TransformAspect> {
             
             public UnsafeList<safe_ptr> trees;
 
@@ -119,7 +119,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        public struct CollectJob : IJobForAspects<QuadTreeAspect, TransformAspect> {
+        public partial struct CollectJob : IJobForAspects<QuadTreeAspect, TransformAspect> {
             
             public UnsafeList<safe_ptr> trees;
 
@@ -137,7 +137,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        public struct ApplyJob : Unity.Jobs.IJobParallelFor {
+        public partial struct ApplyJob : Unity.Jobs.IJobParallelFor {
 
             public UnsafeList<safe_ptr> trees;
             
@@ -151,7 +151,7 @@ namespace ME.BECS {
         }
         
         [BURST]
-        public struct ClearJob : Unity.Jobs.IJobParallelFor {
+        public partial struct ClearJob : Unity.Jobs.IJobParallelFor {
 
             public QuadTreeInsertSystem system;
             public UnsafeList<safe_ptr> trees;

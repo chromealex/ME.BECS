@@ -21,7 +21,7 @@ namespace ME.BECS.Pathfinding {
     using ME.BECS.Jobs;
     using static Cuts;
 
-    public unsafe struct ShowBuildingGridSystem : IStart, IUpdate, IDestroy {
+    public unsafe partial struct ShowBuildingGridSystem : IStart, IUpdate, IDestroy {
 
         private static UnityEngine.Texture2D tempTextureCache;
         
@@ -68,7 +68,7 @@ namespace ME.BECS.Pathfinding {
         public ClassPtr<UnityEngine.Texture2D> GetTexturePtr() => this.texture;
 
         [BURST]
-        public struct ClearTextureJob : IJob {
+        public partial struct ClearTextureJob : IJob {
 
             public Unity.Collections.NativeArray<UnityEngine.Color32> buffer;
             
@@ -79,7 +79,7 @@ namespace ME.BECS.Pathfinding {
         }
         
         [BURST]
-        public struct UpdateTextureJob : Unity.Jobs.IJobParallelFor {
+        public partial struct UpdateTextureJob : Unity.Jobs.IJobParallelFor {
 
             public World world;
             public Ent graph;

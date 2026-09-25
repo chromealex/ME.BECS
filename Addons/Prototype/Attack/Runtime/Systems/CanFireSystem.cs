@@ -16,10 +16,10 @@ namespace ME.BECS.Attack {
     [BURST]
     [UnityEngine.Tooltip("Can Fire system")]
     [RequiredDependencies(typeof(ReloadSystem))]
-    public struct CanFireSystem : IUpdate {
+    public partial struct CanFireSystem : IUpdate {
 
         [BURST]
-        public struct Job : IJobForAspects<AttackAspect> {
+        public partial struct Job : IJobForAspects<AttackAspect> {
 
             public tfloat dt;
             

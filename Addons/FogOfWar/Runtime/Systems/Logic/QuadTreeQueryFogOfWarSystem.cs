@@ -6,10 +6,10 @@ namespace ME.BECS.FogOfWar {
 
     [BURST]
     [RequiredDependencies(typeof(CreateSystem), typeof(QuadTreeInsertSystem))]
-    public struct QuadTreeQueryFogOfWarSystem : IUpdate {
+    public partial struct QuadTreeQueryFogOfWarSystem : IUpdate {
 
         [BURST]
-        public struct Job : IJobFor2Aspects1Components<QuadTreeQueryAspect, TransformAspect, QuadTreeQueryFogOfWarFilter> {
+        public partial struct Job : IJobFor2Aspects1Components<QuadTreeQueryAspect, TransformAspect, QuadTreeQueryFogOfWarFilter> {
 
             public QuadTreeInsertSystem system;
             public CreateSystem fow;

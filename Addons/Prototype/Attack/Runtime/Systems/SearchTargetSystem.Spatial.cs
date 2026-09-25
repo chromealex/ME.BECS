@@ -16,7 +16,7 @@ namespace ME.BECS.Attack {
     public partial struct SearchTargetSystem : IUpdate {
 
         [BURST]
-        public struct SpatialSearchTargetJob : IJobForAspects<AttackAspect, SpatialQueryAspect, TransformAspect> {
+        public partial struct SpatialSearchTargetJob : IJobForAspects<AttackAspect, SpatialQueryAspect, TransformAspect> {
 
             public World world;
             
@@ -54,7 +54,7 @@ namespace ME.BECS.Attack {
         }
 
         [BURST]
-        public struct SpatialSearchTargetsJob : IJobFor3Aspects1Components<AttackAspect, SpatialQueryAspect, TransformAspect, AttackTargetsCountComponent> {
+        public partial struct SpatialSearchTargetsJob : IJobFor3Aspects1Components<AttackAspect, SpatialQueryAspect, TransformAspect, AttackTargetsCountComponent> {
 
             public World world;
             

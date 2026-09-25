@@ -11,7 +11,7 @@ namespace ME.BECS.FogOfWar {
 
     //[BURST]
     [RequiredDependencies(typeof(CreateTextureSystem))]
-    public unsafe struct UpdateTextureSystem : IUpdate {
+    public unsafe partial struct UpdateTextureSystem : IUpdate {
 
         public sfloat fadeInSpeed;
         public sfloat fadeOutSpeed;
@@ -20,7 +20,7 @@ namespace ME.BECS.FogOfWar {
         private ulong lastTick;
 
         [BURST(CompileSynchronously = true, FloatMode = Unity.Burst.FloatMode.Fast, FloatPrecision = Unity.Burst.FloatPrecision.Low, OptimizeFor = Unity.Burst.OptimizeFor.Performance)]
-        public struct UpdateJob : IJobParallelFor {
+        public partial struct UpdateJob : IJobParallelFor {
 
             public sfloat dt;
             public sfloat fadeInSpeed;
@@ -68,7 +68,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST(CompileSynchronously = true, FloatMode = Unity.Burst.FloatMode.Fast, FloatPrecision = Unity.Burst.FloatPrecision.Low, OptimizeFor = Unity.Burst.OptimizeFor.Performance)]
-        public struct UpdateTextureJob : IJob {
+        public partial struct UpdateTextureJob : IJob {
 
             [NativeDisableParallelForRestriction]
             [NativeDisableUnsafePtrRestriction]
@@ -84,7 +84,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST(CompileSynchronously = true, FloatMode = Unity.Burst.FloatMode.Fast, FloatPrecision = Unity.Burst.FloatPrecision.Low, OptimizeFor = Unity.Burst.OptimizeFor.Performance)]
-        public struct ClearTextureJob : IJob {
+        public partial struct ClearTextureJob : IJob {
 
             [NativeDisableParallelForRestriction]
             [NativeDisableUnsafePtrRestriction]
@@ -99,7 +99,7 @@ namespace ME.BECS.FogOfWar {
 
         }
 
-        public struct ApplyTextureJob : IJobMainThread {
+        public partial struct ApplyTextureJob : IJobMainThread {
 
             public CreateTextureSystem system;
             public NativeArray<byte> colorBuffer;

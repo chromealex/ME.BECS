@@ -88,7 +88,7 @@ namespace ME.BECS {
     }
     
     [BURST]
-    public unsafe struct SpatialInsertSystem : IAwake, IUpdate, IDestroy, IDrawGizmos {
+    public unsafe partial struct SpatialInsertSystem : IAwake, IUpdate, IDestroy, IDrawGizmos {
         
         public static SpatialInsertSystem Default => new SpatialInsertSystem() {
             capacity = 1000,
@@ -107,7 +107,7 @@ namespace ME.BECS {
         private ulong stateTick;
 
         [BURST]
-        public struct CollectRectJob : IJobForAspects<SpatialAspect, TransformAspect> {
+        public partial struct CollectRectJob : IJobForAspects<SpatialAspect, TransformAspect> {
             
             public UnsafeList<safe_ptr> trees;
             public bool isStatic;
@@ -131,7 +131,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        public struct CollectJob : IJobForAspects<SpatialAspect, TransformAspect> {
+        public partial struct CollectJob : IJobForAspects<SpatialAspect, TransformAspect> {
             
             public UnsafeList<safe_ptr> trees;
             public bool isStatic;
@@ -155,7 +155,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        public struct ApplyJob : Unity.Jobs.IJobParallelFor {
+        public partial struct ApplyJob : Unity.Jobs.IJobParallelFor {
 
             public UnsafeList<safe_ptr> trees;
             public UnsafeList<safe_ptr> staticTrees;
@@ -173,7 +173,7 @@ namespace ME.BECS {
         }
         
         [BURST]
-        public struct ClearJob : Unity.Jobs.IJobParallelFor {
+        public partial struct ClearJob : Unity.Jobs.IJobParallelFor {
 
             public UnsafeList<safe_ptr> trees;
             public UnsafeList<safe_ptr> staticTrees;

@@ -22,10 +22,10 @@ namespace ME.BECS.FogOfWar {
     [BURST]
     [UnityEngine.Tooltip("Move unit if it was damaged and is not attacking and without hold")]
     [RequiredDependencies(typeof(BuildGraphSystem))]
-    public struct MoveToAttackerSystem : IUpdate {
+    public partial struct MoveToAttackerSystem : IUpdate {
 
         [BURST]
-        public struct MoveToAttackerJob : IJobFor2Aspects1Components<UnitAspect, TransformAspect, DamageTookEvent> {
+        public partial struct MoveToAttackerJob : IJobFor2Aspects1Components<UnitAspect, TransformAspect, DamageTookEvent> {
 
             public BuildGraphSystem buildGraphSystem;
             public SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem;
@@ -66,7 +66,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST]
-        public struct StopOnTargetJob : IJobFor1Aspects1Components<UnitAspect, UnitAttackCommandComponent> {
+        public partial struct StopOnTargetJob : IJobFor1Aspects1Components<UnitAspect, UnitAttackCommandComponent> {
 
             public BuildGraphSystem buildGraphSystem;
             public SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem;
@@ -96,7 +96,7 @@ namespace ME.BECS.FogOfWar {
         }
         
         [BURST]
-        public struct StopOnTargetOnMoveJob : IJobFor1Aspects1Components<UnitAspect, UnitAttackOnMoveCommandComponent> {
+        public partial struct StopOnTargetOnMoveJob : IJobFor1Aspects1Components<UnitAspect, UnitAttackOnMoveCommandComponent> {
 
             public BuildGraphSystem buildGraphSystem;
             public SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem;
@@ -126,7 +126,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST]
-        public struct UpdatePathJob : IJobFor1Aspects1Components<UnitCommandGroupAspect, CommandAttack> {
+        public partial struct UpdatePathJob : IJobFor1Aspects1Components<UnitCommandGroupAspect, CommandAttack> {
 
             public BuildGraphSystem buildGraphSystem;
             public SystemLink<ME.BECS.FogOfWar.CreateSystem> fowSystem;
@@ -151,7 +151,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST]
-        public struct ComebackAfterAttackJob : IJobFor2Aspects1Components<TransformAspect, UnitAspect, ComebackAfterAttackComponent> {
+        public partial struct ComebackAfterAttackJob : IJobFor2Aspects1Components<TransformAspect, UnitAspect, ComebackAfterAttackComponent> {
 
             public BuildGraphSystem buildGraphSystem;
             

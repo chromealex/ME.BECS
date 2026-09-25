@@ -32,6 +32,7 @@ namespace ME.BECS.Editor.Systems {
             var allNodes = new System.Collections.Generic.Dictionary<System.Type, Graph.Node>();
             var tempItems = new System.Collections.Generic.Dictionary<System.Type, Item>();
             var cacheLoaded = new System.Collections.Generic.HashSet<System.Type>();
+            var workerErrors = new System.Collections.Generic.List<System.Exception>();
             
             awaitCount = 0;
             var systems = this.systems;
@@ -234,7 +235,8 @@ namespace ME.BECS.Editor.Systems {
                         //UnityEngine.Debug.Log("Processed: " + system.FullName);
 
                     } catch (System.Exception ex) {
-                        UnityEngine.Debug.LogException(ex);
+                        lock (this.lockObj) workerErrors.Add(new System.InvalidOperationException(
+                            "Failed to generate dependencies for " + system.AssemblyQualifiedName, ex));
                     } finally {
                         //UnityEngine.Debug.Log("BREAK: " + system.FullName);
                         JobUtils.Decrement(ref awaitCount);
@@ -248,6 +250,11 @@ namespace ME.BECS.Editor.Systems {
                 UnityEditor.EditorUtility.DisplayProgressBar(CodeGenerator.PROGRESS_BAR_CAPTION, $"Await for Systems Generator ({(systems.Count - awaitCount)} of {systems.Count})", (systems.Count - awaitCount) / (float)systems.Count);
             }
             
+            lock (this.lockObj) {
+                if (workerErrors.Count != 0)
+                    throw new System.AggregateException("System dependency export failed; bootstrap was not generated.",
+                        workerErrors.OrderBy(error => error.Message, System.StringComparer.Ordinal));
+            }
             var selectItems = new System.Collections.Generic.List<Item>();
             foreach (var kv in tempItems) {
                 selectItems.Add(kv.Value);

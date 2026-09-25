@@ -18,7 +18,7 @@ namespace ME.BECS.Attack {
     public partial struct FireSystem : IUpdate {
 
         [BURST]
-        public struct FireTargetJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
+        public partial struct FireTargetJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
 
             public tfloat dt;
             
@@ -71,7 +71,7 @@ namespace ME.BECS.Attack {
         }
 
         [BURST]
-        public struct FireTargetsJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
+        public partial struct FireTargetsJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
 
             public tfloat dt;
             

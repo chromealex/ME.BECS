@@ -14,7 +14,7 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Pathfinding;
 
     [BURST]
-    public struct DrawGizmosSystem : IDrawGizmos {
+    public partial struct DrawGizmosSystem : IDrawGizmos {
 
         public bbool drawGizmos;
         

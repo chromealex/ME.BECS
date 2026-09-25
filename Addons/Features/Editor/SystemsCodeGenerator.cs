@@ -10,23 +10,6 @@ namespace ME.BECS.Editor.Systems {
     
     public class SystemsCodeGenerator : CustomCodeGenerator {
 
-        private void AddMethod<T>(SystemsGraph graph, string baseName, string methodName, Method method, out scg::List<string> content, out scg::List<string> innerMethods) where T : class {
-            //var name = System.Text.RegularExpressions.Regex.Replace(graph.name, @"(\s+|@|&|'|\(|\)|<|>|#|-)", "_");
-            content = new scg::List<string>();
-            content.Add($"private static void ExecuteGraph{methodName}_{GetId(graph)}_{this.GetType().Name}(uint dt, ref World world, ref Unity.Jobs.JobHandle dependsOn) {{");
-            //content.Add("/*");
-            {
-                content.Add("// " + graph.name);
-                var contentFill = new scg::List<string>();
-                var startNodeIndex = 0;
-                //UnityEngine.Debug.LogWarning("GRAPH: " + graph.name);
-                innerMethods = new System.Collections.Generic.List<string>();
-                innerMethods = AddGraph<T>(this, baseName, startNodeIndex, methodName, method, contentFill, graph);
-                content.AddRange(contentFill);
-            }
-            //content.Add("*/");
-            content.Add("}");
-        }
 
         public override FileContent[] AddFileContent(System.Collections.Generic.List<System.Type> references) {
 
@@ -55,7 +38,6 @@ namespace ME.BECS.Editor.Systems {
                         var graph = UnityEditor.AssetDatabase.LoadAssetAtPath<SystemsGraph>(path);
                         if (graph.isInnerGraph == true) continue;
                         var id = GetId(graph);
-                        var systemTypeToVar = new scg::Dictionary<System.Type, string>();
                         var baseName = $"Graph{EditorUtils.GetCodeName(graph.name)}";
                         var graphInitialize = new FileContent() {
                             filename = $"{baseName}.Initialize",
@@ -91,39 +73,15 @@ namespace ME.BECS.Editor.Systems {
                         //var name = System.Text.RegularExpressions.Regex.Replace(graph.name, @"(\s+|@|&|'|\(|\)|<|>|#|-)", "_");
 
                         { // initialize method
-                            InitializeGraph(this, systemTypeToVar, graphInitializeContent, graph, id, 0);
                             if (!SourceGeneratorInputManifest.TryGetGraphApplyPlan(graph, out _)) {
-                                graphInitializeContent.Add("private static void ApplyInjections() {");
-                                graphInitializeContent.Add($"// {graph.name}");
-                                InitializeInjections(graph, graphInitializeContent, systemTypeToVar);
-                                graphInitializeContent.Add("}");
+                                throw new System.InvalidOperationException("Source injection plan unavailable for graph " + graph.name +
+                                    ". Export Injection Coverage and resolve unsupported fields/jobs; legacy injection emission is disabled.");
                             }
                         }
-                        {
-                            this.AddMethod<IAwake>(graph, baseName, "OnAwake", Method.Awake, out var caller, out var innerMethods);
-                            graphAwakeContent.AddRange(innerMethods);
-                            graphAwakeContent.AddRange(caller);
-                        }
-                        {
-                            this.AddMethod<IStart>(graph, baseName, "OnStart", Method.Start, out var caller, out var innerMethods);
-                            graphStartContent.AddRange(innerMethods);
-                            graphStartContent.AddRange(caller);
-                        }
-                        {
-                            this.AddMethod<IUpdate>(graph, baseName, "OnUpdate", Method.Update, out var caller, out var innerMethods);
-                            graphUpdateContent.AddRange(innerMethods);
-                            graphUpdateContent.AddRange(caller);
-                        }
-                        {
-                            this.AddMethod<IDestroy>(graph, baseName, "OnDestroy", Method.Destroy, out var caller, out var innerMethods);
-                            graphDestroyContent.AddRange(innerMethods);
-                            graphDestroyContent.AddRange(caller);
-                        }
-                        {
-                            this.AddMethod<IDrawGizmos>(graph, baseName, "OnDrawGizmos", Method.DrawGizmos, out var caller, out var innerMethods);
-                            graphDrawGizmosContent.AddRange(innerMethods);
-                            graphDrawGizmosContent.AddRange(caller);
-                        }
+                        // Lifecycle bodies and entry points are owned by the source generator.
+                        // Keep empty phase files in the export set so normal regeneration
+                        // replaces previously emitted legacy bodies without manual deletion.
+                        // AddGraph remains only as the independent diagnostic oracle.
 
                         graphInitializeContent.Add("}");
                         graphAwakeContent.Add("}");
@@ -868,158 +826,9 @@ namespace ME.BECS.Editor.Systems {
             return index;
         }
 
-        public static int InitializeGraph(CustomCodeGenerator generator, scg::Dictionary<System.Type, string> systemTypeToVar, scg::List<string> content, SystemsGraph graph, int rootGraphId, int index) {
-            foreach (var input in SourceGeneratorInputManifest.GetGraphSystems(graph)) {
-                var variable = $"graphNodes{rootGraphId}_{generator.GetType().Name}[{index}]";
-                systemTypeToVar.TryAdd(input.type, variable);
-                index = checked(index + 1);
-            }
-
-            return index;
-        }
-
         public static int GetSystemsCount(SystemsGraph graph) {
             return SourceGeneratorInputManifest.GetSystemsCount(graph);
         }
-
-        
-        public static void InitializeInjections(SystemsGraph graph, scg::List<string> content, scg::Dictionary<System.Type, string> systemTypeToVar) {
-            content.Add("// Injections:");
-            foreach (var kv in systemTypeToVar) {
-                var type = kv.Key;
-                InjectDependencies(graph, content, systemTypeToVar, type);
-            }
-        }
-
-        public static void InjectDependencies(SystemsGraph graph, scg::List<string> content, scg::Dictionary<System.Type, string> typeToVar, System.Type systemType) {
-            var localContent = new scg::List<string>();
-            if (SourceGeneratorInputManifest.TryGetGraphSystemInjection(graph, systemType, out var systemInjection)) {
-                content.Add(systemInjection);
-            } else {
-                var variable = typeToVar[systemType];
-                var src = SourceGeneratorInputManifest.GetClosedTypeName(systemType);
-                var fields = systemType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                var containsBool = false;
-                foreach (var field in fields) {
-                    if (field.FieldType == typeof(bool)) {
-                        containsBool = true;
-                    }
-                    if (typeof(IInject).IsAssignableFrom(field.FieldType) == true) {
-                        var injectType = field.FieldType.GenericTypeArguments[0];
-                        if (injectType.IsVisible == false) continue;
-                        var t = EditorUtils.GetTypeName(injectType);
-                        var v = typeToVar[injectType];
-                        if (field.IsPublic && !field.IsInitOnly && field.FieldType.IsGenericType && field.FieldType.GetGenericTypeDefinition() == typeof(InjectSystem<>)) {
-                            var method = SourceGeneratorInputManifest.GetSystemInjectionMethodName(systemType, field.Name);
-                            localContent.Add($"{method}(ref *(({src}*){variable}), (void*){v});");
-                        } else if (SourceGeneratorInputManifest.TryGetPrivateSystemInjectionMethod(field, out var privateMethod)) {
-                            localContent.Add($"{privateMethod}(ref *(({src}*){variable}), (void*){v});");
-                        } else if (field.IsPublic == false) {
-                            localContent.Add("{");
-                            localContent.Add($"ref var s = ref *(({src}*){variable});");
-                            localContent.Add($"typeof({src}).GetField(\"{field.Name}\", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValueDirect(__makeref(s), new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v})));");
-                            localContent.Add("}");
-                        } else {
-                            localContent.Add($"(({src}*){variable})->{field.Name} = new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v}));");
-                        }
-                    }
-                }
-
-                if (containsBool == true && localContent.Count > 0) {
-                    UnityEngine.Debug.LogError($"[CodeGenerator] Graph {graph.name} inject dependency failed because type {systemType} contains boolean field. This leads to errors, injection will be ignored. You can use bbool type instead.");
-                } else {
-                    content.AddRange(localContent);
-                }
-            }
-
-            localContent.Clear();
-            
-            // Find jobs
-            var types = new scg::HashSet<System.Type>();
-            SourceGeneratorScheduledJobs.Collect(systemType, types);
-            
-            var methodContent = new scg::List<string>();
-            foreach (var jobType in types.OrderBy(t => t.FullName, System.StringComparer.Ordinal)
-                                         .ThenBy(t => t.Assembly.FullName, System.StringComparer.Ordinal)) {
-                if (jobType.IsVisible == false) continue;
-                if (SourceGeneratorInputManifest.TryGetGraphJobRegistration(graph, jobType, out var graphJobRegistration)) {
-                    content.Add(graphJobRegistration);
-                    continue;
-                }
-                if (SourceGeneratorInputManifest.TryGetJobDeltaTimeRegistration(jobType, out var deltaTimeRegistration)) {
-                    content.Add(deltaTimeRegistration);
-                    continue;
-                }
-                var fields = jobType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                var jobTypeStr = SourceGeneratorInputManifest.GetClosedTypeName(jobType);
-                var methodName = $"Patch_{EditorUtils.GetCodeName(jobTypeStr)}";
-                var containsBool = false;
-                localContent.Clear();
-                methodContent.Clear();
-                methodContent.Add($"[AOT.MonoPInvokeCallbackAttribute(typeof(JobPatchInjectDelegate.PatchDelegate))] [BURST] static unsafe void {methodName}(void* jobPtr, ushort worldId) {{");
-                methodContent.Add($"var job = ({jobTypeStr}*)jobPtr;");
-                var hasPatch = false;
-                foreach (var field in fields) {
-                    if (field.FieldType == typeof(bool)) {
-                        containsBool = true;
-                    }
-
-                    var hasAny = false;
-                    if (typeof(IInject).IsAssignableFrom(field.FieldType) == true) {
-                        var injectType = field.FieldType.GenericTypeArguments[0];
-                        if (typeToVar.TryGetValue(injectType, out var v) == true) {
-                            if (SourceGeneratorInputManifest.TryGetPartialInjectionMethod(field, out var injectionMethod)) {
-                                methodContent.Add($"{injectionMethod}(ref *job, (void*){v});");
-                            } else {
-                                methodContent.Add($"job->{field.Name} = InjectSystem<{SourceGeneratorInputManifest.GetClosedTypeName(injectType)}>.FromPointer((void*){v});");
-                            }
-                            hasAny = true;
-                        } else {
-                            UnityEngine.Debug.LogError($"[CodeGenerator] {graph.name} failed to inject system {injectType.Name} because it's missing in current graph. If this graph is inner, use `Is Inner Graph` flag on graph object.");
-                        }
-                    }
-                    var attr = field.GetCustomAttribute<InjectDeltaTimeAttribute>();
-                    if (attr != null && SourceGeneratorInputManifest.TryGetPartialDeltaTimeMethod(field, out var deltaMethod)) {
-                        methodContent.Add($"{deltaMethod}(ref *job, worldId);");
-                        hasAny = true;
-                    } else if (attr != null) {
-                        byte fieldType = 0;
-                        if (field.FieldType == typeof(sfloat)) {
-                            fieldType = 1;
-                        } else if (field.FieldType == typeof(float)) {
-                            fieldType = 1;
-                        } else if (field.FieldType == typeof(uint)) {
-                            fieldType = 2;
-                        }
-                        methodContent.Add("{");
-                        methodContent.Add("var dtMs = Worlds.GetWorldDeltaTime(worldId);");
-                        methodContent.Add("var systemContext = SystemContext.Create(dtMs, default, default);");
-                        if (fieldType == 1) {
-                            methodContent.Add($"job->{field.Name} = systemContext.deltaTime;");
-                        } else if (fieldType == 2) {
-                            methodContent.Add($"job->{field.Name} = systemContext.deltaTimeMs;");
-                        }
-                        methodContent.Add("}");
-                        hasAny = true;
-                    }
-
-                    hasPatch |= hasAny;
-                }
-                methodContent.Add("}");
-                if (hasPatch == true) {
-                    content.InsertRange(1, methodContent);
-                    localContent.Add($"JobInject<{jobTypeStr}>.Register({methodName});");
-                }
-
-                if (containsBool == true && localContent.Count > 0) {
-                    UnityEngine.Debug.LogError($"[CodeGenerator] Graph {graph.name} inject dependency failed because type {jobType} contains boolean field. This leads to errors, injection will be ignored. You can use bbool type instead.");
-                } else {
-                    content.AddRange(localContent);
-                }
-            }
-        }
-        
-        
 
     }
 

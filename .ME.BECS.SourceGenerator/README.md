@@ -264,21 +264,25 @@ set. The structural branch accumulator and redundant direct-exit treatment remai
 no longer retain phantom edges and one phase cannot reset another phase's start-node state. Arithmetic
 uses a wide accumulator and checked final conversion. Disabled systems/groups do not keep a phase
 node active. These are deliberate differences requiring review rather than blind legacy equivalence.
-GraphLifecyclePlan uses these fresh decisions for candidate bodies. ME.BECS.GraphSyncComparison.v1
+GraphLifecyclePlan uses these fresh decisions for runtime bodies. ME.BECS.GraphSyncComparison.v1
 records differences against stored sync/count values; Export Compiled Lifecycle Plans includes them.
-No asset is modified, no sync array normalized, and registered runtime callbacks are still transitional.
+No asset is modified and no sync array normalized. Registered runtime callbacks now execute the source plan.
 Before bottom-up sync calculation, a top-down reachability pass selects active occurrences. A disabled
 or disconnected GraphNode does not activate its nested occurrence, so internal cycles or missing
 execution boundaries there cannot reject an otherwise valid phase. Slot/type input validation still
 covers storage for all graph occurrences; this change concerns execution planning only.
 
-GraphLifecycleEmitter now emits candidate bodies for available phase plans, inside a private nested
+GraphLifecycleEmitter emits runtime bodies for available phase plans, inside a private nested
 PlannedLifecycle class. Plans up to 64 steps keep temporary handles in a bounded stack buffer;
-larger plans retain a Temp NativeArray with finally disposal. Completion validation rejects forward
+larger plans use a Temp NativeArray whose scratch memory is reclaimed by Allocator.Temp, without
+per-call Dispose/try-finally. Parallel generic groups follow the same policy. Completion validation rejects forward
 references, so each stack slot is assigned before use; pointers are consumed synchronously by the
 generated groups and never stored in jobs. This avoids a per-call allocation for small candidate plans
 without changing scheduling order. Unity/Burst execution of this path remains unverified.
-The registered callback still calls the transitional Editor body. Candidate
+The registered callback calls PlannedLifecycle.Execute. Missing/invalid plans reject generation;
+there is no silent lifecycle fallback. ME.BECS.GraphLifecycleExecution.v1 records each selected phase
+as source-plan. Old Editor bodies remain temporarily for comparison until Unity/Burst execution is
+verified; they are no longer the registered execution target. Generated
 groups preserve IR order, use the existing per-slot and generic helpers, and split on the next invoked
 system's Burst flag. Only the candidate container/groups receive Burst attributes; the transitional
 phase class is unchanged. Handles live in invocation-local native storage, released in finally after

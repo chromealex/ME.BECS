@@ -17,36 +17,18 @@ namespace ME.BECS {
         }
     }
     
-    public static unsafe class StaticTypesInitializer {
-        [UnityEngine.Scripting.PreserveAttribute] 
-        public static void Load() {
-            JobUtils.Initialize();
+    public static unsafe partial class StaticTypesInitializer {
+        private static void RegisterGeneratedTypes() {
             {{CONTENT_TYPES}}
-            LocksCache.Initialize(LocksCache.COMPONENTS, StaticTypes.counter + 1u);
-            LocksCache.Initialize(LocksCache.ENT_GROUPS, EntityTypes.groupsCount + 1u);
         }
     }
     
     [UnityEngine.Scripting.PreserveAttribute]
     [UnityEngine.DefaultExecutionOrder(-100_000)]
     [BURST]
-    public static unsafe class StaticMethods {
-        [UnityEngine.Scripting.PreserveAttribute] 
-        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]
-        public static void Load() {
-            Logger.Core.Log("[ ME.BECS ] Loading...");
-            LeakDetector.ClearAllocated();
-            Worlds.Initialize();
-            SystemsStatic.Initialize();
-            StaticTypesInitializer.Load();
-            GlobalEvents.Initialize();
-            CustomModules.InvokeResetPass();
+    public static unsafe partial class StaticMethods {
+        private static void RegisterGeneratedMethods() {
             {{CUSTOM_METHOD_REGISTRY}}
-            EntityConfigRegistry.Initialize();
-            EntityConfigsRegistry.Initialize();
-            CustomModules.InvokeFirstPass();
-            CustomModules.InvokeSecondPass();
-            Logger.Core.Log("[ ME.BECS ] Loaded");
         }
         {{CUSTOM_METHODS}}
     }
