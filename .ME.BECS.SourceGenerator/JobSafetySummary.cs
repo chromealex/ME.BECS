@@ -11,7 +11,7 @@ internal static class JobSafetySummary {
 
     internal static string Analyze(SourceProductionContext output, Compilation compilation, string assembly, MethodSummaryGraph.Summary root,
         IReadOnlyDictionary<(string Assembly, string Id), MethodSummaryGraph.Summary> methods,
-        ISet<(string Assembly, string Id)> conflicts, Func<string, MethodSummaryType?> decode, bool emitInitializer = true) {
+        ISet<(string Assembly, string Id)> conflicts, Func<string, MethodSummaryType?> decode, bool emitInitializer = true, bool emitSizeInitializer = true) {
         var gaps = new HashSet<string>(StringComparer.Ordinal);
         var dependencies = new SortedDictionary<string, (int Bits, bool IsArgument)>(StringComparer.Ordinal);
         var componentTypes = new Dictionary<string, bool?>(StringComparer.Ordinal);
@@ -132,7 +132,7 @@ internal static class JobSafetySummary {
             }
             var components = dependencies.Keys.Select(key => componentSymbols[key])
                 .Where(static type => type.AllInterfaces.Any(static contract => contract.ToDisplayString() == "ME.BECS.IComponent")).ToArray();
-            if (components.All(type => type.IsUnmanagedType && compilation.IsSymbolAccessibleWithin(type, compilation.Assembly)) &&
+            if (emitSizeInitializer && components.All(type => type.IsUnmanagedType && compilation.IsSymbolAccessibleWithin(type, compilation.Assembly)) &&
                 compilation.GetTypeByMetadataName("ME.BECS.JobStaticInfo`1") != null &&
                 compilation.GetTypeByMetadataName("Unity.Collections.LowLevel.Unsafe.UnsafeUtility") != null) {
                 var suffix = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(compilation.Assembly.Identity + "\n" + jobType + "\n" + root.Id);

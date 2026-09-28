@@ -47,7 +47,7 @@ namespace ME.BECS.Tests {
 
     }
     
-    public unsafe class Tests_Queries {
+    public unsafe partial class Tests_Queries {
 
         [UnityEngine.TestTools.UnitySetUpAttribute]
         public System.Collections.IEnumerator SetUp() {
@@ -62,7 +62,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct JobComponents : IJobForComponents<TestComponent> {
+        public partial struct JobComponents : IJobForComponents<TestComponent> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent component) {
 
@@ -695,7 +695,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct ScheduleJob : IJobCommandBuffer {
+        public partial struct ScheduleJob : IJobCommandBuffer {
 
             public void Execute(in CommandBufferJob buffer) {
 
@@ -705,7 +705,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct ScheduleJob2 : IJobCommandBuffer {
+        public partial struct ScheduleJob2 : IJobCommandBuffer {
 
             public void Execute(in CommandBufferJob buffer) {
 
@@ -716,7 +716,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct ScheduleParallelJob : IJobForEntity {
+        public partial struct ScheduleParallelJob : IJobForEntity {
 
             public void Execute(in JobInfo jobInfo, in Ent ent) {
                 ent.Get<TestComponent>().data = 2;
@@ -922,7 +922,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct Job1 : IJobForEntity {
+        public partial struct Job1 : IJobForEntity {
             
             public void Execute(in JobInfo jobInfo, in Ent ent) {
                 ent.Set(new Test2Component());
@@ -931,7 +931,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct Job2 : IJobForEntity {
+        public partial struct Job2 : IJobForEntity {
             
             public void Execute(in JobInfo jobInfo, in Ent ent) {
                 ent.Set(new Test3Component());
@@ -976,7 +976,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct Job1Unsafe : IJobForComponents<TestComponent> {
+        public partial struct Job1Unsafe : IJobForComponents<TestComponent> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent component) {
                 ent.Set(new Test2Component());
@@ -985,7 +985,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct Job2Unsafe : IJobForComponents<TestComponent> {
+        public partial struct Job2Unsafe : IJobForComponents<TestComponent> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent component) {
                 ent.Set(new Test3Component());
@@ -994,7 +994,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct TestA1Job : IJobForAspects<TestAspect> {
+        public partial struct TestA1Job : IJobForAspects<TestAspect> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestAspect asp) {
                 asp.data.data = asp.data5read.data;
@@ -1003,7 +1003,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct TestA2Job : IJobForAspects<TestAspect> {
+        public partial struct TestA2Job : IJobForAspects<TestAspect> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestAspect asp) {
                 asp.data2.data = 123;
@@ -1046,7 +1046,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct EntityCreateJob : IJobForComponents<TestComponent> {
+        public partial struct EntityCreateJob : IJobForComponents<TestComponent> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent test) {
                 {
@@ -1138,7 +1138,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct EntityCreate1Job : IJobForComponents<Test1Component> {
+        public partial struct EntityCreate1Job : IJobForComponents<Test1Component> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref Test1Component test) {
                 {
@@ -1156,7 +1156,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct EntityCreate2Job : IJobForComponents<Test2Component> {
+        public partial struct EntityCreate2Job : IJobForComponents<Test2Component> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref Test2Component test) {
                 {
@@ -1173,7 +1173,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct JobWait : IJob {
+        public partial struct JobWait : IJob {
 
             public void Execute() {
                 System.Threading.Thread.Sleep(100);

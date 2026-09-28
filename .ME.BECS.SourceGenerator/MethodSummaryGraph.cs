@@ -81,6 +81,7 @@ internal static class MethodSummaryGraph {
     internal static void EmitCoverage(SourceProductionContext output, Compilation compilation, string[] localRows) {
         var ownAssembly = compilation.Assembly.Identity.ToString();
         var (methods, conflicts, roots) = LoadCatalog(output, compilation, localRows);
+        ViewSafetySummary.Emit(output, compilation, methods, conflicts);
         roots.AddRange(JobGenericRoots.Create(output, compilation, methods));
         if (roots.Count == 0) return;
 

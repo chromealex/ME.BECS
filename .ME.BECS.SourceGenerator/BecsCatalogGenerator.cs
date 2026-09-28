@@ -35,25 +35,14 @@ public sealed class BecsCatalogGenerator : IIncrementalGenerator {
         var entityType = type.AllInterfaces.Any(static i => i.ToDisplayString() == "ME.BECS.IEntityType");
         if (!component && !aspect && !system && !entityType) return null;
         // Shared/static phases remain separate from ordinary component registration.
-        var shared = type.AllInterfaces.Any(static i => i.ToDisplayString() == "ME.BECS.IComponentShared");
-        var isStatic = type.AllInterfaces.Any(static i => i.ToDisplayString() == "ME.BECS.IConfigComponentStatic");
-        var configInitialize = type.AllInterfaces.Any(static i => i.ToDisplayString() == "ME.BECS.IConfigInitialize");
-        var hasFields = type.GetMembers().OfType<IFieldSymbol>().Any(static field => !field.IsStatic);
-        var explicitSize = 0;
-        foreach (var attribute in type.GetAttributes()) {
-            if (attribute.AttributeClass?.ToDisplayString() != "System.Runtime.InteropServices.StructLayoutAttribute") continue;
-            foreach (var argument in attribute.NamedArguments) {
-                if (argument.Key == "Size" && argument.Value.Value is int size) explicitSize = size;
-            }
-        }
-        var tag = !hasFields && explicitSize <= 1;
-        var defaultProperty = type.GetMembers("Default").OfType<IPropertySymbol>().FirstOrDefault(property =>
-            property.IsStatic && property.DeclaredAccessibility == Accessibility.Public && property.GetMethod != null &&
-            property.GetMethod.DeclaredAccessibility == Accessibility.Public &&
-            SymbolEqualityComparer.Default.Equals(property.Type, type));
+        var flags = ComponentRegistrationFlags.Get(type);
+        var shared = (flags & 8) != 0;
+        var isStatic = (flags & 2) != 0;
+        var configInitialize = (flags & 32) != 0;
+        var tag = (flags & 1) != 0;
         var partialScope = aspect && allowUnsafe ? DescribePartialScope(type) : null;
         return new Candidate(type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), component, aspect,
-            ordinary && !shared && !isStatic, tag, !tag && defaultProperty != null, shared, isStatic,
+            ordinary && !shared && !isStatic, tag, (flags & 4) != 0, shared, isStatic,
             aspect ? DescribeQuery(type) : null, aspect && allowUnsafe ? DescribeConstruction(type, partialScope != null) : null, partialScope, configInitialize, system, entityType);
     }
 

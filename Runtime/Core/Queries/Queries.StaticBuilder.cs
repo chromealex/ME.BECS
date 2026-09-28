@@ -12,10 +12,10 @@ namespace ME.BECS {
     using Jobs;
     
     #if !ENABLE_BECS_FLAT_QUERIES
-    public unsafe struct QueryBuilderDisposable {
+    public unsafe partial struct QueryBuilderDisposable {
 
         [BURST]
-        public struct DisposeJob : IJob {
+        public partial struct DisposeJob : IJob {
 
             public QueryBuilderDisposable builder;
             public void Execute() {

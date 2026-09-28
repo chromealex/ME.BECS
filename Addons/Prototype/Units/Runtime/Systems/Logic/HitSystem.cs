@@ -8,10 +8,10 @@ namespace ME.BECS.Units {
 
     [BURST]
     [UnityEngine.Tooltip("Apply damage from DamageTookComponent")]
-    public struct HitSystem : IUpdate {
+    public partial struct HitSystem : IUpdate {
 
         [BURST]
-        public struct Job : IJobForComponents<DamageTookComponent> {
+        public partial struct Job : IJobForComponents<DamageTookComponent> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref DamageTookComponent damageComponent) {
                 if (damageComponent.damage == 0u) return;

@@ -314,7 +314,7 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
             }
             this.Visit(target.Instance);
             this.Visit(operation.HandlerValue);
-            this.Accessor(operation.Adds ? target.Event.AddMethod : target.Event.RemoveMethod, ReceiverType(target.Instance));
+            this.Accessor(operation.Adds ? target.Event.AddMethod : target.Event.RemoveMethod, target.Instance);
         }
 
         private bool IsOmittedConditionalCall(InvocationExpressionSyntax invocation) {
@@ -418,7 +418,7 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
 
         public override void VisitPropertyReference(IPropertyReferenceOperation operation) {
             base.VisitPropertyReference(operation);
-            this.Accessor(operation.Property.GetMethod, ReceiverType(operation.Instance));
+            this.Accessor(operation.Property.GetMethod, operation.Instance);
         }
 
         private void PropertyTarget(IPropertyReferenceOperation target) {
@@ -428,14 +428,17 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
             foreach (var argument in target.Arguments) this.Visit(argument);
         }
 
-        private void Accessor(IMethodSymbol? method, ITypeSymbol? receiver = null) {
+        private void Accessor(IMethodSymbol? method, IOperation? instance = null) {
             if (method == null) { this.Unresolved.Add("MissingAccessor"); return; }
+            var receiver = ReceiverType(instance);
             if (method.ContainingType.TypeKind == TypeKind.Interface &&
                 receiver != null && receiver.IsValueType) {
                 this.Member("call", method, receiver);
                 return;
             }
-            if (NeedsVirtualResolution(method)) this.Unresolved.Add("VirtualDispatch");
+            // Unlike a virtual access through this/a variable, an explicit base access
+            // invokes this exact accessor even when the property can be overridden.
+            if (instance?.Syntax is not BaseExpressionSyntax && NeedsVirtualResolution(method)) this.Unresolved.Add("VirtualDispatch");
             this.Method("call", method);
         }
 
@@ -470,7 +473,7 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
                 else this.Member("field", backing);
                 return;
             }
-            this.Accessor(target.Property.SetMethod, ReceiverType(target.Instance));
+            this.Accessor(target.Property.SetMethod, target.Instance);
         }
 
         public override void VisitCoalesceAssignment(ICoalesceAssignmentOperation operation) {
@@ -478,7 +481,7 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
             var target = (IPropertyReferenceOperation)operation.Target;
             this.Visit(target);
             this.Visit(operation.Value);
-            this.Accessor(target.Property.SetMethod, ReceiverType(target.Instance));
+            this.Accessor(target.Property.SetMethod, target.Instance);
             // RHS/setter only execute on the null branch. Counts must use CFG, not these raw rows.
             this.Unresolved.Add("ConditionalWrite");
         }
@@ -511,7 +514,7 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
         public override void VisitIncrementOrDecrement(IIncrementOrDecrementOperation operation) {
             base.VisitIncrementOrDecrement(operation);
             if (operation.OperatorMethod != null) this.Method("operator", operation.OperatorMethod);
-            if (HasSetterTarget(operation.Target)) this.Accessor(((IPropertyReferenceOperation)operation.Target).Property.SetMethod, ReceiverType(((IPropertyReferenceOperation)operation.Target).Instance));
+            if (HasSetterTarget(operation.Target)) this.Accessor(((IPropertyReferenceOperation)operation.Target).Property.SetMethod, ((IPropertyReferenceOperation)operation.Target).Instance);
         }
 
         public override void VisitCompoundAssignment(ICompoundAssignmentOperation operation) {
@@ -520,7 +523,7 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
             this.Visit(operation.Value);
             if (operation.OperatorMethod != null) this.Method("operator", operation.OperatorMethod);
             if (operation.OutConversion.MethodSymbol != null) this.Method("conversion", operation.OutConversion.MethodSymbol);
-            if (HasSetterTarget(operation.Target)) this.Accessor(((IPropertyReferenceOperation)operation.Target).Property.SetMethod, ReceiverType(((IPropertyReferenceOperation)operation.Target).Instance));
+            if (HasSetterTarget(operation.Target)) this.Accessor(((IPropertyReferenceOperation)operation.Target).Property.SetMethod, ((IPropertyReferenceOperation)operation.Target).Instance);
         }
 
         public override void VisitAnonymousFunction(IAnonymousFunctionOperation operation) {

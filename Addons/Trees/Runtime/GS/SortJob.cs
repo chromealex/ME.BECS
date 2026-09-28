@@ -46,7 +46,7 @@ namespace ME.BECS.Trees {
     /// <typeparam name="T">The type of the elements to sort.</typeparam>
     /// <typeparam name="TU">The type of the comparer.</typeparam>
     [GenerateTestsForBurstCompatibility(GenericTypeArguments = new[] { typeof(int), typeof(NativeSortExtension.DefaultComparer<int>) })]
-    public unsafe struct SortJobDefer<T, TU>
+    public unsafe partial struct SortJobDefer<T, TU>
         where T : unmanaged
         where TU : IComparer<T> {
 
@@ -61,7 +61,7 @@ namespace ME.BECS.Trees {
         public TU comp;
 
         [BurstCompile]
-        private struct SegmentSort : IJobParallelForDefer {
+        private partial struct SegmentSort : IJobParallelForDefer {
 
             [NativeDisableUnsafePtrRestriction]
             public T* data;
@@ -80,7 +80,7 @@ namespace ME.BECS.Trees {
         }
 
         [BurstCompile]
-        private struct SegmentSortMerge : IJob {
+        private partial struct SegmentSortMerge : IJob {
 
             [NativeDisableUnsafePtrRestriction]
             public T* data;

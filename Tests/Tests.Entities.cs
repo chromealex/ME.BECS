@@ -15,7 +15,7 @@ namespace ME.BECS.Tests {
     using Unity.Jobs;
     
     [Unity.Burst.BurstCompileAttribute]
-    public unsafe class Tests_Entities {
+    public unsafe partial class Tests_Entities {
 
         [UnityEngine.TestTools.UnitySetUpAttribute]
         public System.Collections.IEnumerator SetUp() {
@@ -240,7 +240,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct CreateEntitiesJob : ME.BECS.Jobs.IJobForComponents<TestComponent> {
+        public partial struct CreateEntitiesJob : ME.BECS.Jobs.IJobForComponents<TestComponent> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent data) {
                 
@@ -437,7 +437,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct DestroyEntitiesJob : Unity.Jobs.IJobParallelFor {
+        public partial struct DestroyEntitiesJob : Unity.Jobs.IJobParallelFor {
 
             public World world;
 

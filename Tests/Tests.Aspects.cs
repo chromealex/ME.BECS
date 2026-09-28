@@ -45,7 +45,7 @@ namespace ME.BECS.Tests {
     }
 
     [Unity.Burst.BurstCompileAttribute]
-    public unsafe class Tests_Aspects {
+    public unsafe partial class Tests_Aspects {
 
         [UnityEngine.TestTools.UnitySetUpAttribute]
         public System.Collections.IEnumerator SetUp() {
@@ -77,7 +77,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestJobFor : ME.BECS.Jobs.IJobForAspects<Test2Aspect> {
+        public partial struct TestJobFor : ME.BECS.Jobs.IJobForAspects<Test2Aspect> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref Test2Aspect c0) {
 
@@ -100,7 +100,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestSetJob : ME.BECS.Jobs.IJobForAspects<Test2Aspect> {
+        public partial struct TestSetJob : ME.BECS.Jobs.IJobForAspects<Test2Aspect> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref Test2Aspect c0) {
 
@@ -118,7 +118,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestDestroyJobFor : IJobForComponents<TestTargetComponent> {
+        public partial struct TestDestroyJobFor : IJobForComponents<TestTargetComponent> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestTargetComponent c0) {
                 if (c0.parent.Read<T1>().data % 2 == 0) {
@@ -237,7 +237,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct UpdateJob : Unity.Jobs.IJobParallelFor {
+        public partial struct UpdateJob : Unity.Jobs.IJobParallelFor {
 
             public Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent> list;
 

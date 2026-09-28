@@ -4,11 +4,11 @@ namespace ME.BECS.FeaturesGraph.Nodes {
     using g = System.Collections.Generic;
     
     [System.Serializable]
-    public class StartNode : FeaturesGraphNode {
+    public partial class StartNode : FeaturesGraphNode {
 
         public SystemHandle rootDependsOn;
         
-        private struct RootSystem : ISystem {}
+        private partial struct RootSystem : ISystem {}
 
         [Output(name = "Out", allowMultiple = true)]
         public g::List<SystemHandle> output;

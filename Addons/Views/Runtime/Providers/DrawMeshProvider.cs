@@ -31,7 +31,7 @@ namespace ME.BECS.Views {
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
     #endif
-    public unsafe struct DrawMeshProvider : IViewProvider<EntityView> {
+    public unsafe partial struct DrawMeshProvider : IViewProvider<EntityView> {
 
         public struct Info : System.IEquatable<Info> {
 
@@ -129,7 +129,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
-        private struct UpdateMatricesJob : IJobParallelFor {
+        private partial struct UpdateMatricesJob : IJobParallelFor {
 
             public NativeList<UnityEngine.Matrix4x4>.ParallelWriter matrices;
             [ReadOnly]

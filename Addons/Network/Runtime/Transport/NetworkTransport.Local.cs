@@ -5,7 +5,7 @@ namespace ME.BECS.Network {
     using static Cuts;
     using System.Runtime.InteropServices;
 
-    public class LocalTransport : INetworkTransport {
+    public partial class LocalTransport : INetworkTransport {
 
         public enum SimulationMode {
 
@@ -22,7 +22,7 @@ namespace ME.BECS.Network {
         public UnityEngine.TextAsset replayData;
         public uint pingMs = 0u;
         
-        private unsafe struct ConnectJob : Unity.Jobs.IJob {
+        private unsafe partial struct ConnectJob : Unity.Jobs.IJob {
 
             public World world;
             public SimulationMode simulationMode;

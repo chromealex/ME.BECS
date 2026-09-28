@@ -13,7 +13,7 @@ namespace ME.BECS.Tests {
     }
     
     [Unity.Burst.BurstCompileAttribute]
-    public class Tests_Systems_Graph {
+    public partial class Tests_Systems_Graph {
 
         [UnityEngine.TestTools.UnitySetUpAttribute]
         public System.Collections.IEnumerator SetUp() {
@@ -202,11 +202,11 @@ namespace ME.BECS.Tests {
             
         }
 
-        public struct TestSystem1 : IAwake, IUpdate {
+        public partial struct TestSystem1 : IAwake, IUpdate {
 
             public int count;
             
-            public struct Job : IJobForEntity {
+            public partial struct Job : IJobForEntity {
                 
                 public void Execute(in JobInfo jobInfo, in Ent ent) {
                     ent.Get<TestComponent>().data = 1;
@@ -239,9 +239,9 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestSystem2_1 : IUpdate {
+        public partial struct TestSystem2_1 : IUpdate {
 
-            public struct Job : IJobForEntity {
+            public partial struct Job : IJobForEntity {
                 
                 public void Execute(in JobInfo jobInfo, in Ent ent) {
                     ent.Get<TestComponent>().data = 2;
@@ -256,9 +256,9 @@ namespace ME.BECS.Tests {
             
         }
 
-        public struct TestSystem2_2 : IUpdate {
+        public partial struct TestSystem2_2 : IUpdate {
 
-            public struct Job : IJobForEntity {
+            public partial struct Job : IJobForEntity {
                 
                 public void Execute(in JobInfo jobInfo, in Ent ent) {
                     ent.Get<TestComponent>().data = 3;
@@ -273,9 +273,9 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestSystem3 : IUpdate {
+        public partial struct TestSystem3 : IUpdate {
 
-            public struct Job : IJobForEntity {
+            public partial struct Job : IJobForEntity {
                 
                 public void Execute(in JobInfo jobInfo, in Ent ent) {
                     if (ent.Read<TestComponent>().data == 2) {
@@ -293,32 +293,32 @@ namespace ME.BECS.Tests {
             }
         }
 
-        public struct TestGraphSystem1_1 : IUpdate, IAwake, IDestroy {
+        public partial struct TestGraphSystem1_1 : IUpdate, IAwake, IDestroy {
             public void OnUpdate(ref SystemContext context) => Sync.Inc(ref systemUpdateCounter);
             public void OnAwake(ref SystemContext context) => Sync.Inc(ref systemAwakeCounter);
             public void OnDestroy(ref SystemContext context) => Sync.Inc(ref systemDestroyCounter);
         }
 
-        public struct TestGraphSystem1_2 : IUpdate, IAwake, IDestroy {
+        public partial struct TestGraphSystem1_2 : IUpdate, IAwake, IDestroy {
             public void OnUpdate(ref SystemContext context) => Sync.Inc(ref systemUpdateCounter);
             public void OnAwake(ref SystemContext context) => Sync.Inc(ref systemAwakeCounter);
             public void OnDestroy(ref SystemContext context) => Sync.Inc(ref systemDestroyCounter);
         }
 
-        public struct TestGraphSystem1_3 : IUpdate, IAwake, IDestroy {
+        public partial struct TestGraphSystem1_3 : IUpdate, IAwake, IDestroy {
             public void OnUpdate(ref SystemContext context) => Sync.Inc(ref systemUpdateCounter);
             public void OnAwake(ref SystemContext context) => Sync.Inc(ref systemAwakeCounter);
             public void OnDestroy(ref SystemContext context) => Sync.Inc(ref systemDestroyCounter);
         }
 
-        public struct TestGraphSystem1_4 : IUpdate, IAwake, IDestroy {
+        public partial struct TestGraphSystem1_4 : IUpdate, IAwake, IDestroy {
             public void OnUpdate(ref SystemContext context) => Sync.Inc(ref systemUpdateCounter);
             public void OnAwake(ref SystemContext context) => Sync.Inc(ref systemAwakeCounter);
             public void OnDestroy(ref SystemContext context) => Sync.Inc(ref systemDestroyCounter);
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct TestGraphSystem2_1 : IUpdate, IAwake, IDestroy {
+        public partial struct TestGraphSystem2_1 : IUpdate, IAwake, IDestroy {
             public void OnUpdate(ref SystemContext context) => Sync.Inc(ref systemUpdateCounter);
             [WithoutBurst]
             public void OnAwake(ref SystemContext context) => Sync.Inc(ref systemAwakeCounter);
@@ -326,28 +326,28 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct TestGraphSystem2_2 : IUpdate, IAwake, IDestroy {
+        public partial struct TestGraphSystem2_2 : IUpdate, IAwake, IDestroy {
             public void OnUpdate(ref SystemContext context) => Sync.Inc(ref systemUpdateCounter);
             public void OnAwake(ref SystemContext context) => Sync.Inc(ref systemAwakeCounter);
             public void OnDestroy(ref SystemContext context) => Sync.Inc(ref systemDestroyCounter);
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct TestGraphSystem2_3 : IUpdate, IAwake, IDestroy {
+        public partial struct TestGraphSystem2_3 : IUpdate, IAwake, IDestroy {
             public void OnUpdate(ref SystemContext context) => Sync.Inc(ref systemUpdateCounter);
             public void OnAwake(ref SystemContext context) => Sync.Inc(ref systemAwakeCounter);
             public void OnDestroy(ref SystemContext context) => Sync.Inc(ref systemDestroyCounter);
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct TestGraphSystem2_4 : IUpdate, IAwake, IDestroy {
+        public partial struct TestGraphSystem2_4 : IUpdate, IAwake, IDestroy {
             public void OnUpdate(ref SystemContext context) => Sync.Inc(ref systemUpdateCounter);
             public void OnAwake(ref SystemContext context) => Sync.Inc(ref systemAwakeCounter);
             public void OnDestroy(ref SystemContext context) => Sync.Inc(ref systemDestroyCounter);
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct TestGraphSystem3_1 : IUpdate, IAwake, IDestroy {
+        public partial struct TestGraphSystem3_1 : IUpdate, IAwake, IDestroy {
             public void OnUpdate(ref SystemContext context) => Sync.Inc(ref systemUpdateCounter);
             public void OnAwake(ref SystemContext context) => Sync.Inc(ref systemAwakeCounter);
             public void OnDestroy(ref SystemContext context) => Sync.Inc(ref systemDestroyCounter);

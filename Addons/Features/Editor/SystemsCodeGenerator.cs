@@ -73,7 +73,7 @@ namespace ME.BECS.Editor.Systems {
                         //var name = System.Text.RegularExpressions.Regex.Replace(graph.name, @"(\s+|@|&|'|\(|\)|<|>|#|-)", "_");
 
                         { // initialize method
-                            if (!SourceGeneratorInputManifest.TryGetGraphApplyPlan(graph, out _)) {
+                            if (!SourceGeneratorInputManifest.TryGetGraphApplyPlan(graph, out _, requireCompiledSetters: false)) {
                                 throw new System.InvalidOperationException("Source injection plan unavailable for graph " + graph.name +
                                     ". Export Injection Coverage and resolve unsupported fields/jobs; legacy injection emission is disabled.");
                             }

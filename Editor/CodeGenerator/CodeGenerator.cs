@@ -256,6 +256,9 @@ namespace ME.BECS.Editor {
 
         public virtual void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) { }
 
+        // Addon input transport only. Implementations export data records, never C# bodies.
+        public virtual void AppendSourceGeneratorInputs(System.Text.StringBuilder manifest) { }
+
         public virtual scg::List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
             return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
         }
@@ -575,15 +578,12 @@ namespace ME.BECS.Editor {
                     fileTemplate = EditorUtils.LoadResource<UnityEngine.TextAsset>($"ME.BECS.Resources/Templates/Types-FileTemplate.txt").text;
                 }
 
-                //var template = "namespace " + ECS + " {\n [UnityEngine.Scripting.PreserveAttribute] public static unsafe class AOTBurstHelper { \n[UnityEngine.Scripting.PreserveAttribute] \npublic static void AOT() { \n{{CONTENT}} \n}\n }\n }";
-                var aotContent = new System.Collections.Generic.List<string>();
                 var typesContent = new System.Collections.Generic.List<string>();
-                typesContent.Add("global::ME.BECS.SourceGenerated.CoreTypeInputs.Initialize();");
                 timings.Mark("setup / templates");
                 ME.BECS.Editor.Systems.SystemDependenciesCodeGenerator.GetUsedObjects(editorAssembly, out var usedObjects);
                 // Compiler input, produced only by this source generator feeder. Preserve the
                 // discovery snapshot before legacy specialization mutates its type lists.
-                var inputManifest = SourceGeneratorInputManifest.Serialize($"{ECS}.Gen.{postfix}", editorAssembly, usedObjects, registerGraphReferences: true);
+                var inputManifest = SourceGeneratorInputManifest.Serialize($"{ECS}.Gen.{postfix}", editorAssembly, usedObjects, registerGraphReferences: true, addonFeeders: generators);
                 if (!System.IO.File.Exists(inputManifestPath) || System.IO.File.ReadAllText(inputManifestPath) != inputManifest) {
                     System.IO.File.WriteAllText(inputManifestPath, inputManifest, new System.Text.UTF8Encoding(false));
                     UnityEditor.AssetDatabase.ImportAsset(inputManifestPath);
@@ -605,74 +605,6 @@ namespace ME.BECS.Editor {
                 PatchSystemsList(typesDestroy);
                 var typesDrawGizmos = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDrawGizmos)).OrderBy(x => x.FullName).ToList();
                 PatchSystemsList(typesDrawGizmos);*/
-                aotContent.Add("var nullContext = new SystemContext();");
-                for (var index = 0; index < types.Count; ++index) {
-
-                    var type = types[index];
-                    if (type.IsValueType == false) continue;
-                    var asm = type.Assembly;
-                    var name = asm.GetName().Name;
-                    var info = FindAssembly(name);
-                    if (editorAssembly == false && info.isEditor == true) continue;
-
-                    if (type.IsVisible == false) continue;
-
-                    var systemType = EditorUtils.GetTypeName(type);
-                    var systemRegistration = "global::ME.BECS.SourceGenerated.SystemInputs.Register_" +
-                        ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(type.AssemblyQualifiedName) + "();";
-                    aotContent.Add(systemRegistration);
-
-                    var isBursted = (burstedTypes.Contains(type) == true);
-                    var hasAwake = typeof(IAwake).IsAssignableFrom(type);
-                    var hasStart = typeof(IStart).IsAssignableFrom(type);
-                    var hasUpdate = typeof(IUpdate).IsAssignableFrom(type);
-                    var hasDestroy = typeof(IDestroy).IsAssignableFrom(type);
-                    var hasDrawGizmos = typeof(IDrawGizmos).IsAssignableFrom(type);
-                    //if (burstedTypes.Contains(type) == false) continue;
-
-                    var awakeBurst = hasAwake && SourceGeneratorScheduledJobsValidation.IsLifecycleBurstAllowed(type, nameof(IAwake.OnAwake));
-                    var startBurst = hasStart && SourceGeneratorScheduledJobsValidation.IsLifecycleBurstAllowed(type, nameof(IStart.OnStart));
-                    var updateBurst = hasUpdate && SourceGeneratorScheduledJobsValidation.IsLifecycleBurstAllowed(type, nameof(IUpdate.OnUpdate));
-                    var destroyBurst = hasDestroy && SourceGeneratorScheduledJobsValidation.IsLifecycleBurstAllowed(type, nameof(IDestroy.OnDestroy));
-                    var drawGizmosBurst = hasDrawGizmos && SourceGeneratorScheduledJobsValidation.IsLifecycleBurstAllowed(type, nameof(IDrawGizmos.OnDrawGizmos));
-                    if (awakeBurst == true) {
-                        if (isBursted == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Awake", "Burst", out var awakeBurstAotPointer) ? awakeBurstAotPointer : $"{AWAKE_METHOD}<{systemType}>.MakeMethod(null);");
-                    }
-
-                    if (startBurst == true) {
-                        if (isBursted == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Start", "Burst", out var startBurstAotPointer) ? startBurstAotPointer : $"{START_METHOD}<{systemType}>.MakeMethod(null);");
-                    }
-
-                    if (updateBurst == true) {
-                        if (isBursted == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Update", "Burst", out var updateBurstAotPointer) ? updateBurstAotPointer : $"{UPDATE_METHOD}<{systemType}>.MakeMethod(null);");
-                    }
-
-                    if (destroyBurst == true) {
-                        if (isBursted == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Destroy", "Burst", out var destroyBurstAotPointer) ? destroyBurstAotPointer : $"{DESTROY_METHOD}<{systemType}>.MakeMethod(null);");
-                    }
-
-                    if (drawGizmosBurst == true) {
-                        if (isBursted == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "DrawGizmos", "Burst", out var drawGizmosBurstAotPointer) ? drawGizmosBurstAotPointer : $"{DRAWGIZMOS_METHOD}<{systemType}>.MakeMethod(null);");
-                    }
-                    
-                    if (hasAwake == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Awake", "NoBurst", out var awakeNoBurstAotPointer) ? awakeNoBurstAotPointer : $"{AWAKE_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
-                    if (hasStart == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Start", "NoBurst", out var startNoBurstAotPointer) ? startNoBurstAotPointer : $"{START_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
-                    if (hasUpdate == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Update", "NoBurst", out var updateNoBurstAotPointer) ? updateNoBurstAotPointer : $"{UPDATE_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
-                    if (hasDestroy == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Destroy", "NoBurst", out var destroyNoBurstAotPointer) ? destroyNoBurstAotPointer : $"{DESTROY_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
-                    if (hasDrawGizmos == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "DrawGizmos", "NoBurst", out var drawGizmosNoBurstAotPointer) ? drawGizmosNoBurstAotPointer : $"{DRAWGIZMOS_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
-
-                    if (hasAwake == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemLifecycleAot(type, "Awake", out var awakeAot) ? awakeAot : $"new {systemType}().OnAwake(ref nullContext);");
-                    if (hasStart == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemLifecycleAot(type, "Start", out var startAot) ? startAot : $"new {systemType}().OnStart(ref nullContext);");
-                    if (hasUpdate == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemLifecycleAot(type, "Update", out var updateAot) ? updateAot : $"new {systemType}().OnUpdate(ref nullContext);");
-                    if (hasDestroy == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemLifecycleAot(type, "Destroy", out var destroyAot) ? destroyAot : $"new {systemType}().OnDestroy(ref nullContext);");
-                    if (hasDrawGizmos == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemLifecycleAot(type, "DrawGizmos", out var drawGizmosAot) ? drawGizmosAot : $"new {systemType}().OnDrawGizmos(ref nullContext);");
-
-                    if (awakeBurst == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Awake", "Factory", out var awakeFactoryAotPointer) ? awakeFactoryAotPointer : $"BurstCompileMethod.MakeAwake<{systemType}>(default);");
-                    if (startBurst == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Start", "Factory", out var startFactoryAotPointer) ? startFactoryAotPointer : $"BurstCompileMethod.MakeStart<{systemType}>(default);");
-                    if (updateBurst == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Update", "Factory", out var updateFactoryAotPointer) ? updateFactoryAotPointer : $"BurstCompileMethod.MakeUpdate<{systemType}>(default);");
-                    if (destroyBurst == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Destroy", "Factory", out var destroyFactoryAotPointer) ? destroyFactoryAotPointer : $"BurstCompileMethod.MakeDestroy<{systemType}>(default);");
-                    if (drawGizmosBurst == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "DrawGizmos", "Factory", out var drawGizmosFactoryAotPointer) ? drawGizmosFactoryAotPointer : $"BurstCompileMethod.MakeDrawGizmos<{systemType}>(default);");
-                }
 
                 foreach (var component in usedObjects.componentsGroup) {
 
@@ -695,9 +627,7 @@ namespace ME.BECS.Editor {
                         var info = FindAssembly(asm);
                         if (editorAssembly == false && info.isEditor == true) continue;
 
-                        var registrationKey = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(component.AssemblyQualifiedName);
                         componentTypes.Add(component);
-                        aotContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.Aot_" + registrationKey + "();");
 
                     }
                 }
@@ -712,9 +642,7 @@ namespace ME.BECS.Editor {
                         var info = FindAssembly(asm);
                         if (editorAssembly == false && info.isEditor == true) continue;
 
-                        var registrationKey = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(component.AssemblyQualifiedName);
                         componentTypes.Add(component);
-                        aotContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.AotShared_" + registrationKey + "();");
 
                     }
                 }
@@ -729,9 +657,7 @@ namespace ME.BECS.Editor {
                         var info = FindAssembly(asm);
                         if (editorAssembly == false && info.isEditor == true) continue;
 
-                        var registrationKey = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(component.AssemblyQualifiedName);
                         componentTypes.Add(component);
-                        aotContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.AotStatic_" + registrationKey + "();");
 
                     }
                 }
@@ -746,9 +672,7 @@ namespace ME.BECS.Editor {
                         var info = FindAssembly(asm);
                         if (editorAssembly == false && info.isEditor == true) continue;
 
-                        var registrationKey = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(component.AssemblyQualifiedName);
                         componentTypes.Add(component);
-                        aotContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.AotConfig_" + registrationKey + "();");
 
                     }
                 }
@@ -803,7 +727,7 @@ namespace ME.BECS.Editor {
                                                     $"{(x.burstCompile == true ? "[BURST]" : string.Empty)} {(string.IsNullOrEmpty(x.pInvoke) == false ? $"[AOT.MonoPInvokeCallbackAttribute(typeof({x.pInvoke}))]" : string.Empty)} public static unsafe void {x.methodName}({x.definition}) {{\n{x.content}\n}}")
                                             .ToArray();
 
-                var newContent = template.Replace("{{CONTENT}}", string.Join("\n", aotContent));
+                var newContent = template;
                 newContent = newContent.Replace("{{CUSTOM_METHOD_REGISTRY}}", string.Join("\n", methodRegistryContents));
                 newContent = newContent.Replace("{{CUSTOM_METHODS}}", string.Join("\n", publicContent) + "\n" + string.Join("\n", methodContents));
                 newContent = newContent.Replace("{{CONTENT_TYPES}}", string.Join("\n", typesContent));

@@ -4,7 +4,7 @@ using ME.BECS.Jobs;
 namespace ME.BECS.Tests {
 
     #if !ENABLE_BECS_FLAT_QUERIES
-    public class Tests_Queries_Static {
+    public partial class Tests_Queries_Static {
 
         [UnityEngine.TestTools.UnitySetUpAttribute]
         public System.Collections.IEnumerator SetUp() {
@@ -149,7 +149,7 @@ namespace ME.BECS.Tests {
 
         }*/
 
-        public struct TestSystemDefer1 : IAwake, IUpdate, IDestroy {
+        public partial struct TestSystemDefer1 : IAwake, IUpdate, IDestroy {
 
             public Query query;
             private int sum;
@@ -175,7 +175,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestSystem1 : IAwake, IUpdate, IDestroy {
+        public partial struct TestSystem1 : IAwake, IUpdate, IDestroy {
 
             public Query query;
             private int sum;
@@ -201,7 +201,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestSystem2 : IAwake {
+        public partial struct TestSystem2 : IAwake {
 
             public void OnAwake(ref SystemContext context) {
                 {
@@ -220,7 +220,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestSystem3 : IAwake {
+        public partial struct TestSystem3 : IAwake {
 
             public void OnAwake(ref SystemContext context) {
                 {
@@ -239,10 +239,10 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestSystem4 : IAwake, IUpdate {
+        public partial struct TestSystem4 : IAwake, IUpdate {
 
             [Unity.Burst.BurstCompileAttribute]
-            public struct Job : IJobCommandBuffer {
+            public partial struct Job : IJobCommandBuffer {
 
                 public Unity.Collections.NativeReference<int> sum;
 
@@ -253,7 +253,7 @@ namespace ME.BECS.Tests {
             }
 
             [Unity.Burst.BurstCompileAttribute]
-            public struct JobForComponents : IJobForComponents<TestComponent> {
+            public partial struct JobForComponents : IJobForComponents<TestComponent> {
 
                 public Unity.Collections.NativeReference<int> sum;
 

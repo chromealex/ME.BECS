@@ -25,7 +25,7 @@ namespace ME.BECS.Trees {
     //Multithreaded sort from https://coffeebraingames.wordpress.com/2020/06/07/a-multithreaded-sorting-attempt/
 
     [BurstCompile]
-    public unsafe struct GridSearch<T> where T : unmanaged {
+    public unsafe partial struct GridSearch<T> where T : unmanaged {
 
         private const int MAXGRIDSIZE = 256;
         
@@ -230,7 +230,7 @@ namespace ME.BECS.Trees {
         }
 
         [BurstCompile]
-        public struct InitializeJob : IJob {
+        public partial struct InitializeJob : IJob {
 
             [NativeDisableUnsafePtrRestriction]
             public GridSearch<T>* tree;
@@ -390,7 +390,7 @@ namespace ME.BECS.Trees {
 
 
         [BurstCompile]
-        private struct GetminmaxJob : IJob {
+        private partial struct GetminmaxJob : IJob {
 
             [NativeDisableUnsafePtrRestriction]
             public GridSearch<T>* tree;
@@ -431,7 +431,7 @@ namespace ME.BECS.Trees {
         }
 
         [BurstCompile]
-        private struct AssignHashJob : IJobParallelForDefer {
+        private partial struct AssignHashJob : IJobParallelForDefer {
 
             [NativeDisableUnsafePtrRestriction]
             public GridSearch<T>* tree;
@@ -455,7 +455,7 @@ namespace ME.BECS.Trees {
 
 
         [BurstCompile]
-        private struct MemsetCellStartJob : IJobParallelForDefer {
+        private partial struct MemsetCellStartJob : IJobParallelForDefer {
 
             [NativeDisableUnsafePtrRestriction]
             public GridSearch<T>* tree;
@@ -470,7 +470,7 @@ namespace ME.BECS.Trees {
         }
 
         [BurstCompile]
-        private struct SortCellJob : IJob {
+        private partial struct SortCellJob : IJob {
 
             [NativeDisableUnsafePtrRestriction]
             public GridSearch<T>* tree;
@@ -745,7 +745,7 @@ namespace ME.BECS.Trees {
 
         //--------- Fast sort stuff
         [BurstCompile]
-        private struct PopulateEntryJob : IJobParallelForDefer {
+        private partial struct PopulateEntryJob : IJobParallelForDefer {
 
             [NativeDisableParallelForRestriction]
             public NativeList<SortEntry> entries;
@@ -759,7 +759,7 @@ namespace ME.BECS.Trees {
         }
 
         [BurstCompile]
-        private struct DePopulateEntryJob : IJobParallelForDefer {
+        private partial struct DePopulateEntryJob : IJobParallelForDefer {
 
             [NativeDisableUnsafePtrRestriction]
             public GridSearch<T>* tree;
@@ -819,7 +819,7 @@ namespace ME.BECS.Trees {
 
     }
 
-    public static class MultithreadedSort {
+    public static partial class MultithreadedSort {
 
         // Use quicksort when sub-array length is less than or equal than this value
         public const int QUICKSORT_THRESHOLD_LENGTH = 400;
@@ -876,7 +876,7 @@ namespace ME.BECS.Trees {
         }
 
         [BurstCompile]
-        public struct Merge<T> : IJob where T : unmanaged, System.IComparable<T> {
+        public partial struct Merge<T> : IJob where T : unmanaged, System.IComparable<T> {
 
             [NativeDisableContainerSafetyRestriction]
             public NativeArray<T> array;
@@ -933,7 +933,7 @@ namespace ME.BECS.Trees {
         }
 
         [BurstCompile]
-        public struct QuicksortJob<T> : IJob where T : unmanaged, System.IComparable<T> {
+        public partial struct QuicksortJob<T> : IJob where T : unmanaged, System.IComparable<T> {
 
             [NativeDisableContainerSafetyRestriction]
             public NativeArray<T> array;

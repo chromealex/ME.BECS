@@ -52,9 +52,11 @@ namespace ME.BECS.Editor {
             var catalog = assemblies[0].GetType("ME.BECS.SourceGenerated.ConfigCollectionsInputs", false);
             if (catalog == null) return false;
             var records = GetInputRecords(assemblies[0]);
-            if (records.Count(row => row.Length == 4 && row[0] == profile && row[1] == "config-collection-callback-schema" && row[2] == "0" && row[3] == "djE=") != 1) return false;
+            var schemas = records.Where(row => row.Length == 4 && row[0] == profile && row[1] == "config-collection-callback-schema" && row[2] == "0").ToArray();
+            if (schemas.Length != 1 || (schemas[0][3] != "djE=" && schemas[0][3] != "djI=")) return false;
+            var compilerFields = schemas[0][3] == "djI=";
             var identity = Convert.ToBase64String(Encoding.UTF8.GetBytes(component.AssemblyQualifiedName));
-            var selected = records.Where(row => row.Length == 5 && row[0] == profile && row[1] == "config-collection-callback" && row[3] == identity).ToArray();
+            var selected = records.Where(row => row.Length == (compilerFields ? 4 : 5) && row[0] == profile && row[1] == "config-collection-callback" && row[3] == identity).ToArray();
             if (selected.Length != 1 || !int.TryParse(selected[0][2], System.Globalization.NumberStyles.None,
                 System.Globalization.CultureInfo.InvariantCulture, out var ordinal) ||
                 selected[0][2] != ordinal.ToString(System.Globalization.CultureInfo.InvariantCulture)) return false;
@@ -63,7 +65,13 @@ namespace ME.BECS.Editor {
                 new[] { typeof(UnsafeEntityConfig).MakeByRefType(), typeof(void).MakePointerType(), typeof(Ent).MakeByRefType() });
             if (initialize == null || initialize.ReturnType != typeof(void) || callback == null || callback.IsGenericMethod || callback.ReturnType != typeof(void)) return false;
             string[] actual;
-            try { actual = Encoding.UTF8.GetString(Convert.FromBase64String(selected[0][4])).Split(','); }
+            try {
+                if (compilerFields) {
+                    var getter = FindMethod(catalog, "GetFields_" + selected[0][2], Type.EmptyTypes);
+                    if (getter == null || getter.ReturnType != typeof(string[])) return false;
+                    actual = (string[])getter.Invoke(null, null);
+                } else actual = Encoding.UTF8.GetString(Convert.FromBase64String(selected[0][4])).Split(',');
+            }
             catch (FormatException) { reason = "invalid collection field encoding"; return false; }
             var expected = Aspects.EntityConfigCodeGenerator.GetCollectionFields(component).Select(field => field.Name);
             if (!expected.SequenceEqual(actual, StringComparer.Ordinal)) { reason = "collection field order mismatch"; return false; }
@@ -83,12 +91,24 @@ namespace ME.BECS.Editor {
             var catalog = assemblies[0].GetType("ME.BECS.SourceGenerated.ConfigCollectionCounts", false);
             if (catalog == null) return false;
             var records = GetInputRecords(assemblies[0]);
-            if (records.Count(r => r.Length == 4 && r[0] == profile && r[1] == "config-collection-count-schema" && r[2] == "0" && r[3] == "djE=") != 1) return false;
+            var schemas = records.Where(r => r.Length == 4 && r[0] == profile && r[1] == "config-collection-count-schema" && r[2] == "0").ToArray();
+            if (schemas.Length != 1 || (schemas[0][3] != "djE=" && schemas[0][3] != "djI=")) return false;
             var identity = Convert.ToBase64String(Encoding.UTF8.GetBytes(component.AssemblyQualifiedName));
-            var selected = records.Where(r => r.Length == 5 && r[0] == profile && r[1] == "config-collection-count" && r[3] == identity).ToArray();
-            if (selected.Length != 1 || !uint.TryParse(selected[0][4], System.Globalization.NumberStyles.None,
-                System.Globalization.CultureInfo.InvariantCulture, out var count) || count == 0 ||
-                selected[0][4] != count.ToString(System.Globalization.CultureInfo.InvariantCulture)) return false;
+            uint count;
+            if (schemas[0][3] == "djI=") {
+                var selected = records.Where(r => (r.Length == 4 || r.Length == 5) && r[0] == profile && r[1] == "config-collection-callback" && r[3] == identity).ToArray();
+                if (selected.Length != 1) return false;
+                var callbacks = assemblies[0].GetType("ME.BECS.SourceGenerated.ConfigCollectionsInputs", false);
+                if (callbacks == null) return false;
+                var getter = FindMethod(callbacks, "GetCount_" + selected[0][2], Type.EmptyTypes);
+                if (getter == null || getter.ReturnType != typeof(uint)) return false;
+                count = (uint)getter.Invoke(null, null);
+            } else {
+                var selected = records.Where(r => r.Length == 5 && r[0] == profile && r[1] == "config-collection-count" && r[3] == identity).ToArray();
+                if (selected.Length != 1 || !uint.TryParse(selected[0][4], System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture, out count) || count == 0 ||
+                    selected[0][4] != count.ToString(System.Globalization.CultureInfo.InvariantCulture)) return false;
+            }
             if (count != Aspects.EntityConfigCodeGenerator.GetCollectionsCount(component)) { reason = "collection count mismatch"; return false; }
             var initialize = FindMethod(catalog, "Initialize", Type.EmptyTypes);
             if (initialize == null || initialize.ReturnType != typeof(void)) return false;
@@ -116,9 +136,11 @@ namespace ME.BECS.Editor {
             var catalog = assemblies[0].GetType("ME.BECS.SourceGenerated.ConfigMaskInputs", false);
             if (catalog == null) return false;
             var records = GetInputRecords(assemblies[0]);
-            if (records.Count(r => r.Length == 4 && r[0] == profile && r[1] == "config-mask-schema" && r[2] == "0" && r[3] == "djE=") != 1) return false;
+            var schemas = records.Where(r => r.Length == 4 && r[0] == profile && r[1] == "config-mask-schema" && r[2] == "0").ToArray();
+            if (schemas.Length != 1 || (schemas[0][3] != "djE=" && schemas[0][3] != "djI=")) return false;
+            var compilerFields = schemas[0][3] == "djI=";
             var identity = Convert.ToBase64String(Encoding.UTF8.GetBytes(component.AssemblyQualifiedName));
-            var selected = records.Where(r => r.Length == 5 && r[0] == profile && r[1] == "config-mask-registration" && r[3] == identity).ToArray();
+            var selected = records.Where(r => r.Length == (compilerFields ? 4 : 5) && r[0] == profile && r[1] == "config-mask-registration" && r[3] == identity).ToArray();
             if (selected.Length != 1 || !int.TryParse(selected[0][2], System.Globalization.NumberStyles.None,
                 System.Globalization.CultureInfo.InvariantCulture, out var ordinal) ||
                 selected[0][2] != ordinal.ToString(System.Globalization.CultureInfo.InvariantCulture)) return false;
@@ -129,7 +151,13 @@ namespace ME.BECS.Editor {
             if (register == null || register.ReturnType != typeof(void) || callback == null || callback.IsGenericMethod || callback.ReturnType != typeof(void)) return false;
             var expected = component.GetFields(BindingFlags.Instance | BindingFlags.Public).Select(f => f.Name).ToArray();
             string[] actual;
-            try { actual = Encoding.UTF8.GetString(Convert.FromBase64String(selected[0][4])).Split(','); }
+            try {
+                if (compilerFields) {
+                    var getter = FindMethod(catalog, "GetFields_" + selected[0][2], Type.EmptyTypes);
+                    if (getter == null || getter.ReturnType != typeof(string[])) return false;
+                    actual = (string[])getter.Invoke(null, null);
+                } else actual = Encoding.UTF8.GetString(Convert.FromBase64String(selected[0][4])).Split(',');
+            }
             catch (FormatException) { reason = "invalid field encoding"; return false; }
             if (!expected.SequenceEqual(actual, StringComparer.Ordinal)) {
                 reason = "field order mismatch";
@@ -418,35 +446,6 @@ namespace ME.BECS.Editor {
             return true;
         }
 
-        internal static bool TryGetSystemLifecycleAot(Type system, string phase, out string call) {
-            return TryGetSystemAotMethod(system, phase, true, out call);
-        }
-
-        internal static bool TryGetSystemPointerAot(Type system, string phase, string kind, out string call) {
-            return TryGetSystemAotMethod(system, kind + phase, false, out call);
-        }
-
-        private static bool TryGetSystemAotMethod(Type system, string phase, bool withContext, out string call) {
-            call = null;
-            if (!system.IsVisible || system.ContainsGenericParameters || !typeof(ISystem).IsAssignableFrom(system)) return false;
-            var definition = system.IsGenericType ? system.GetGenericTypeDefinition() : system;
-            var catalog = GetCatalog(system.Assembly, true);
-            if (catalog == null) return false;
-            var name = "Aot" + phase + "_" + Encode(definition.FullName);
-            var method = FindMethod(catalog, name);
-            if (method == null || method.ReturnType != typeof(void)) return false;
-            var arguments = system.IsGenericType ? system.GetGenericArguments() : Type.EmptyTypes;
-            if (arguments.Length > 0) {
-                if (!method.IsGenericMethodDefinition || method.GetGenericArguments().Length != arguments.Length) return false;
-                try { method = method.MakeGenericMethod(arguments); }
-                catch (ArgumentException) { return false; }
-            } else if (method.IsGenericMethod) return false;
-            var parameters = method.GetParameters();
-            if (withContext ? parameters.Length != 1 || parameters[0].ParameterType != typeof(SystemContext).MakeByRefType() : parameters.Length != 0) return false;
-            var suffix = arguments.Length == 0 ? "" : "<" + string.Join(", ", arguments.Select(a => EditorUtils.GetTypeName(a))) + ">";
-            call = "global::" + catalog.FullName + "." + name + suffix + (withContext ? "(ref nullContext);" : "();");
-            return true;
-        }
 
         internal static bool TryGetAot(Type component, string phase, out string call) {
             call = null;

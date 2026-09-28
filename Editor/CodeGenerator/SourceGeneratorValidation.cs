@@ -137,6 +137,7 @@ namespace ME.BECS.Editor {
                 var expandedSystems = new List<Type>(used.systems);
                 try {
                     CodeGenerator.PatchSystemsList(expandedSystems);
+                    var selectedSystemAot = CompareSystemAotPlan(editor, expandedSystems, report, issues);
                     var closedGenericSystems = expandedSystems.Where(t => t.IsGenericType && !t.ContainsGenericParameters).ToArray();
                     var supportedGenericSystems = 0;
                     foreach (var type in closedGenericSystems) {
@@ -148,23 +149,16 @@ namespace ME.BECS.Editor {
                     var contracts = new[] { typeof(IAwake), typeof(IStart), typeof(IUpdate), typeof(IDestroy), typeof(IDrawGizmos) };
                     var lifecycleTotal = 0;
                     var lifecycleGenerated = 0;
-                    var pointerTotal = 0;
-                    var pointerGenerated = 0;
-                    foreach (var type in expandedSystems.Where(t => t.IsVisible && !t.ContainsGenericParameters)) {
+                    foreach (var type in expandedSystems.Where(t => t.IsValueType && t.IsVisible && !t.ContainsGenericParameters &&
+                                 EditorUtils.IsValidTypeForAssembly(editor, t, destroyAssemblies, true))) {
                         for (var phase = 0; phase < phases.Length; ++phase) {
                             if (!contracts[phase].IsAssignableFrom(type)) continue;
                             ++lifecycleTotal;
-                            if (SourceGeneratorBridge.TryGetSystemLifecycleAot(type, phases[phase], out _)) ++lifecycleGenerated;
-                            else unsupported.Add("Lifecycle AOT uses legacy: " + Name(type) + ".On" + phases[phase]);
-                            foreach (var kind in new[] { "Burst", "NoBurst", "Factory" }) {
-                                ++pointerTotal;
-                                if (SourceGeneratorBridge.TryGetSystemPointerAot(type, phases[phase], kind, out _)) ++pointerGenerated;
-                                else unsupported.Add("Pointer AOT wrapper unavailable: " + Name(type) + "." + kind + phases[phase]);
-                            }
+                            if (selectedSystemAot.Contains(type)) ++lifecycleGenerated;
+                            else unsupported.Add("Lifecycle AOT unavailable: " + Name(type) + ".On" + phases[phase]);
                         }
                     }
                     report.AppendLine($"Direct lifecycle AOT calls: generated={lifecycleGenerated}, total={lifecycleTotal} (methods NOT invoked)");
-                    report.AppendLine($"Pointer AOT wrappers available: generated={pointerGenerated}, total={pointerTotal} (availability only, NOT Burst execution/stripping validation)");
                 } catch (Exception exception) {
                     issues.Add("Legacy generic system expansion failed: " + exception.GetBaseException().Message);
                 }
@@ -290,6 +284,65 @@ namespace ME.BECS.Editor {
             if (!visited.Add(type)) return true;
             return type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                 .All(field => IsUnmanaged(field.FieldType, visited));
+        }
+
+        private static HashSet<Type> CompareSystemAotPlan(bool editor, List<Type> expanded, StringBuilder report, List<string> issues) {
+            var selected = new HashSet<Type>();
+            var name = "ME.BECS.Gen." + (editor ? "Editor" : "Runtime");
+            var owners = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => !assembly.IsDynamic && assembly.GetName().Name == name).ToArray();
+            if (owners.Length != 1) {
+                issues.Add("System AOT plan requires one loaded " + name + " assembly; found " + owners.Length);
+                return selected;
+            }
+            var actual = owners[0].GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .Where(attribute => attribute.Key == "ME.BECS.SystemAotPlan.v1").Select(attribute => attribute.Value).ToArray();
+            var aotRoot = owners[0].GetType(editor ? "ME.BECS.Editor.AOTBurstHelper" : "ME.BECS.AOTBurstHelper", false);
+            var sourceOwnedRoot = aotRoot != null && Attribute.IsDefined(aotRoot, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute));
+            report.AppendLine("AOT bootstrap root: source-owned=" + sourceOwnedRoot + " (method NOT invoked)");
+            if (!sourceOwnedRoot) issues.Add("AOT bootstrap still uses the old template or is missing in " + name + "; regenerate bootstrap");
+            var assemblyInfo = EditorUtils.GetAssembliesInfo();
+            var expected = new List<string>();
+            var pointerTotal = 0;
+            var pointerSelected = 0;
+            int CountBits(int mask) {
+                var count = 0;
+                for (; mask != 0; mask &= mask - 1) ++count;
+                return count;
+            }
+            var phases = new[] { "Awake", "Start", "Update", "Destroy", "DrawGizmos" };
+            var contracts = new[] { typeof(IAwake), typeof(IStart), typeof(IUpdate), typeof(IDestroy), typeof(IDrawGizmos) };
+            foreach (var type in expanded.Where(type => type.IsValueType && type.IsVisible &&
+                         EditorUtils.IsValidTypeForAssembly(editor, type, assemblyInfo, true))) {
+                var present = 0;
+                var factory = 0;
+                for (var i = 0; i < phases.Length; ++i) {
+                    if (!contracts[i].IsAssignableFrom(type)) continue;
+                    present |= 1 << i;
+                    var method = SourceGeneratorScheduledJobsValidation.GetLifecycleMethod(type, "On" + phases[i]);
+                    if (method == null) {
+                        issues.Add("System AOT interface implementation unavailable: " + Name(type) + " / " + phases[i]);
+                        continue;
+                    }
+                    if (!Attribute.IsDefined(method, typeof(WithoutBurstAttribute))) factory |= 1 << i;
+                }
+                var burst = Attribute.IsDefined(type, typeof(Unity.Burst.BurstCompileAttribute)) ? factory : 0;
+                var row = type.AssemblyQualifiedName + "\n" + present.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\n" +
+                    burst.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\n" + factory.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                expected.Add(row);
+                var pointers = CountBits(present) + CountBits(burst) + CountBits(factory);
+                pointerTotal += pointers;
+                if (actual.Count(value => value == row) == 1) {
+                    selected.Add(type);
+                    pointerSelected += pointers;
+                } else issues.Add("System AOT selection missing/changed: " + Name(type));
+            }
+            var same = expected.SequenceEqual(actual, StringComparer.Ordinal);
+            if (!same) issues.Add("System AOT manifest selection/order differs in " + name);
+            report.AppendLine("System AOT plan: matching=" + selected.Count + ", selected=" + expected.Count + ", compiled=" + actual.Length +
+                ", order equal=" + same + " (reflection interface map vs source plan; AOT methods NOT invoked, stripping NOT validated)");
+            report.AppendLine("Selected pointer AOT references: generated=" + pointerSelected + ", expected=" + pointerTotal +
+                " (Burst/NoBurst/Factory selection, not merely wrapper availability)");
+            return selected;
         }
 
         private static string Name(Type type) => type.FullName + " [" + type.Assembly.GetName().Name + "]";

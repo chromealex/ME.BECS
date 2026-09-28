@@ -5,8 +5,8 @@ using ME.BECS.Jobs;
 using static ME.BECS.Cuts;
 
 namespace ME.BECS.Tests {
-    public unsafe class Tests_JobEntityLimits {
-        public struct RepeatedCreationJob : IJobForComponents<TestComponent> {
+    public unsafe partial class Tests_JobEntityLimits {
+        public partial struct RepeatedCreationJob : IJobForComponents<TestComponent> {
             private static void Create(in JobInfo info) => Ent.New(in info);
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent data) {
@@ -31,7 +31,7 @@ namespace ME.BECS.Tests {
         }
 
         [EntitiesJobMaxCount(3)]
-        public struct MixedLoopCreationJob : IJobForComponents<TestComponent> {
+        public partial struct MixedLoopCreationJob : IJobForComponents<TestComponent> {
             private static void Create(in JobInfo info) => Ent.New(in info);
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent data) {
@@ -109,7 +109,7 @@ namespace ME.BECS.Tests {
 
         [EntitiesJobMaxCount(3)]
         [Unity.Burst.BurstCompile]
-        public struct BoundedCreationJob : IJobForComponents<TestComponent> {
+        public partial struct BoundedCreationJob : IJobForComponents<TestComponent> {
             [Unity.Collections.NativeDisableParallelForRestrictionAttribute]
             public Unity.Collections.NativeArray<uint> ids;
 

@@ -108,7 +108,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        private struct SetWorldStateJob : IJobSingle {
+        private partial struct SetWorldStateJob : IJobSingle {
 
             public World world;
             public uint deltaTimeMs;
@@ -126,7 +126,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        private struct NextTickJob : IJobSingle {
+        private partial struct NextTickJob : IJobSingle {
 
             public safe_ptr<State> state;
             
@@ -137,7 +137,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        private struct BurstModeJob : IJobSingle {
+        private partial struct BurstModeJob : IJobSingle {
 
             public safe_ptr<State> state;
             public bool mode;

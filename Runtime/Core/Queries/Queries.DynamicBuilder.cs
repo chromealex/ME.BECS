@@ -188,7 +188,7 @@ namespace ME.BECS {
     }
 
     [BURST]
-    public unsafe ref struct QueryBuilder {
+    public unsafe ref partial struct QueryBuilder {
         
         internal safe_ptr<CommandBuffer> commandBuffer;
         internal safe_ptr<QueryData> queryData;
@@ -207,7 +207,7 @@ namespace ME.BECS {
         public ushort WorldId => this.commandBuffer.ptr->worldId;
 
         [BURST]
-        private struct DisposeJob : IJob {
+        private partial struct DisposeJob : IJob {
 
             public safe_ptr<QueryData> queryData;
             public safe_ptr<CommandBuffer> commandBuffer;
@@ -414,18 +414,18 @@ namespace ME.BECS {
             return this;
         }
         
-        private struct Job : IJobCommandBuffer {
+        private partial struct Job : IJobCommandBuffer {
             public CallbackBurst functionPointer;
             public void Execute(in CommandBufferJob commandBuffer) => this.functionPointer.Invoke(in commandBuffer);
         }
 
         [BURST]
-        private struct JobBurst : IJobCommandBuffer {
+        private partial struct JobBurst : IJobCommandBuffer {
             public CallbackBurst functionPointer;
             public void Execute(in CommandBufferJob commandBuffer) => this.functionPointer.Invoke(in commandBuffer);
         }
 
-        private struct JobParallelFor : IJobParallelForCommandBuffer {
+        private partial struct JobParallelFor : IJobParallelForCommandBuffer {
             public CallbackBurst functionPointer;
             public void Execute(in CommandBufferJobParallel commandBuffer) {
                 var buffer = new CommandBufferJob(commandBuffer.entId, commandBuffer.entGen, commandBuffer.buffer);
@@ -434,7 +434,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        private struct JobParallelForBurst : IJobParallelForCommandBuffer {
+        private partial struct JobParallelForBurst : IJobParallelForCommandBuffer {
             public CallbackBurst functionPointer;
             public void Execute(in CommandBufferJobParallel commandBuffer) {
                 var buffer = new CommandBufferJob(commandBuffer.entId, commandBuffer.entGen, commandBuffer.buffer);
@@ -605,7 +605,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        public struct OnDemandJob : IJob {
+        public partial struct OnDemandJob : IJob {
 
             internal NativeReference<OnDemandArray.Data> handle;
             public safe_ptr<CommandBuffer> commandBuffer;
@@ -625,7 +625,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        public struct OnDemandCountJob : IJob {
+        public partial struct OnDemandCountJob : IJob {
 
             internal NativeReference<OnDemandCount.Data> handle;
             public safe_ptr<CommandBuffer> commandBuffer;
@@ -840,7 +840,7 @@ namespace ME.BECS {
         
         #if !ENABLE_BECS_FLAT_QUERIES
         [BURST]
-        private struct FromQueryDataJob : IJob {
+        private partial struct FromQueryDataJob : IJob {
 
             public safe_ptr<State> state;
             public safe_ptr<Queries.QueryDataStatic> queryDataStatic;
@@ -874,7 +874,7 @@ namespace ME.BECS {
         #endif
 
         [BURST]
-        public struct FillTrueBitsJob : IJobParallelForDefer {
+        public partial struct FillTrueBitsJob : IJobParallelForDefer {
 
             public safe_ptr<QueryData> queryData;
             public NativeParallelList<uint> list;
@@ -887,7 +887,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        public struct FillArchetypesJob : IJob {
+        public partial struct FillArchetypesJob : IJob {
 
             public safe_ptr<QueryData> queryData;
             public ME.BECS.NativeCollections.NativeParallelList<uint> list;
@@ -902,7 +902,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        public struct SetEntitiesJob : IJob {
+        public partial struct SetEntitiesJob : IJob {
 
             #if ENABLE_BECS_FLAT_QUERIES
             private struct BitWords {

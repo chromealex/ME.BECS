@@ -14,7 +14,7 @@ namespace ME.BECS {
     public partial struct OneShotTasks {
 
         [BURST]
-        private struct ResolveTasksParallelJob : IJobParallelFor {
+        private partial struct ResolveTasksParallelJob : IJobParallelFor {
 
             public safe_ptr<State> state;
             public OneShotType type;

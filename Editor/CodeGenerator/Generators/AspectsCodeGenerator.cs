@@ -44,17 +44,15 @@ namespace ME.BECS.Editor.Aspects {
 
                 if (this.IsValidTypeForAssembly(aspect, true) == false) continue;
 
-                if (SourceGeneratorBridge.TryGetAspectConstruction(aspect, out _, out var constructionComponents)) {
-                    references.Add(aspect);
-                    references.AddRange(constructionComponents);
-                    continue;
-                }
-
+                references.Add(aspect);
+                // Collect assembly dependencies only. Constructor availability is checked
+                // by the compiler against the newly compiled catalog, not the loaded DLL.
                 var fields = aspect.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
                 foreach (var field in fields) {
                     var fieldType = field.FieldType;
                     if (typeof(IAspectData).IsAssignableFrom(fieldType) == true) {
-                        throw new System.InvalidOperationException("Generated aspect constructor unavailable: " + aspect.AssemblyQualifiedName);
+                        references.Add(fieldType);
+                        if (fieldType.IsGenericType) references.AddRange(fieldType.GenericTypeArguments);
                     }
                 }
                 

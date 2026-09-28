@@ -12,7 +12,7 @@ namespace ME.BECS {
     using static Cuts;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
-    public readonly unsafe struct UnsafeEntityConfig : IIsCreated {
+    public readonly unsafe partial struct UnsafeEntityConfig : IIsCreated {
 
         public static class GenericCache {
 
@@ -895,7 +895,7 @@ namespace ME.BECS {
             
         }
 
-        private struct ConfigDisposeJob : Unity.Jobs.IJob {
+        private partial struct ConfigDisposeJob : Unity.Jobs.IJob {
 
             public UnsafeEntityConfig config;
             public void Execute() {

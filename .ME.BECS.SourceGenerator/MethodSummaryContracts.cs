@@ -26,7 +26,7 @@ internal static class MethodSummaryContracts {
         System.Collections.Generic.Dictionary<INamedTypeSymbol, int?> refModes) {
         if (symbol is IMethodSymbol scalar && IsScalarComparison(scalar)) rows.Append("\t!scalar-comparison");
         if (symbol is IMethodSymbol intrinsic && (IsObjectConstructor(intrinsic) || IsAddressIntrinsic(intrinsic, compilation) ||
-            IsBurstHint(intrinsic, compilation))) rows.Append("\t!ecs-leaf");
+            IsBurstHint(intrinsic, compilation) || IsMathematicsValueOperation(intrinsic, compilation))) rows.Append("\t!ecs-leaf");
         if (Has(symbol, "ME.BECS.DisableContainerSafetyRestrictionAttribute")) rows.Append("\t!disable-safety");
         if (Has(symbol, "ME.BECS.CodeGeneratorIgnoreAttribute")) rows.Append("\t!ignore");
         if (symbol is IMethodSymbol weighted && SymbolEqualityComparer.Default.Equals(weighted.ContainingAssembly,
@@ -79,6 +79,49 @@ internal static class MethodSummaryContracts {
                 compilation.GetTypeByMetadataName("Unity.Burst.CompilerServices.Hint"))) return false;
         return (method.Name is "Likely" or "Unlikely" && method.ReturnType.SpecialType == SpecialType.System_Boolean) ||
                (method.Name == "Assume" && method.ReturnsVoid);
+    }
+
+    private static bool IsMathematicsValueOperation(IMethodSymbol method, Compilation compilation) {
+        // Audited value-only operations. No blanket exemption for math, vectors, constructors,
+        // pointers or arbitrary Unity APIs. Argument expressions retain their own call edges.
+        if (method.DeclaringSyntaxReferences.Length != 0 || method.ContainingAssembly.Name != "Unity.Mathematics" ||
+            method.MethodKind != MethodKind.Ordinary || !method.IsStatic || method.Arity != 0 ||
+            method.ReturnsByRef || method.ReturnsByRefReadonly || method.Parameters.Any(static parameter => parameter.RefKind != RefKind.None) ||
+            !SymbolEqualityComparer.Default.Equals(method.ContainingType, compilation.GetTypeByMetadataName("Unity.Mathematics.math"))) return false;
+        (SpecialType Scalar, int Width) Shape(ITypeSymbol type) {
+            if (type.SpecialType is SpecialType.System_Boolean or SpecialType.System_Int32 or SpecialType.System_UInt32 or
+                SpecialType.System_Int64 or SpecialType.System_UInt64 or SpecialType.System_Single or SpecialType.System_Double)
+                return (type.SpecialType, 1);
+            if (type is not INamedTypeSymbol named || named.Arity != 0 || !named.IsUnmanagedType ||
+                !SymbolEqualityComparer.Default.Equals(type.ContainingAssembly, method.ContainingAssembly)) return default;
+            var name = named.Name;
+            if (name.Length < 4 || name[name.Length - 1] < '2' || name[name.Length - 1] > '4' ||
+                !SymbolEqualityComparer.Default.Equals(named, compilation.GetTypeByMetadataName("Unity.Mathematics." + name))) return default;
+            var scalar = name.Substring(0, name.Length - 1) switch {
+                "bool" => SpecialType.System_Boolean, "int" => SpecialType.System_Int32,
+                "uint" => SpecialType.System_UInt32, "float" => SpecialType.System_Single,
+                "double" => SpecialType.System_Double, _ => SpecialType.None,
+            };
+            return scalar == SpecialType.None ? default : (scalar, name[name.Length - 1] - '0');
+        }
+        var result = Shape(method.ReturnType);
+        if (result.Width == 0 || method.Parameters.Any(parameter => Shape(parameter.Type).Width == 0)) return false;
+        bool SameOperands(int count) => method.Parameters.Length == count &&
+            method.Parameters.All(parameter => SymbolEqualityComparer.Default.Equals(parameter.Type, method.ReturnType));
+        if (method.Name is "all" or "any")
+            return method.Parameters.Length == 1 && result.Scalar == SpecialType.System_Boolean && result.Width == 1;
+        if (method.Name == "select") {
+            if (method.Parameters.Length != 3 || !method.Parameters.Take(2).All(parameter =>
+                    SymbolEqualityComparer.Default.Equals(parameter.Type, method.ReturnType))) return false;
+            var mask = Shape(method.Parameters[2].Type);
+            return mask.Scalar == SpecialType.System_Boolean && (mask.Width == 1 || mask.Width == result.Width);
+        }
+        if (result.Scalar == SpecialType.System_Boolean) return false;
+        return method.Name switch {
+            "min" or "max" => SameOperands(2), "abs" => SameOperands(1), "clamp" => SameOperands(3),
+            "saturate" => result.Scalar is SpecialType.System_Single or SpecialType.System_Double && SameOperands(1),
+            _ => false,
+        };
     }
 
     private static bool IsAddressIntrinsic(IMethodSymbol method, Compilation compilation) {

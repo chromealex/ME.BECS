@@ -3,8 +3,8 @@ namespace ME.BECS.Editor {
     using System;
     using System.IO;
 
-    internal static class SourceGeneratorReport {
-        internal static void Publish(string name, string totals, string details) {
+    public static class SourceGeneratorReport {
+        public static void Publish(string name, string totals, string details) {
             // Unity truncates long Console messages. Store the full report outside Assets;
             // writing diagnostics must not trigger asset import or another compilation.
             var directory = Path.GetFullPath(Path.Combine(UnityEngine.Application.dataPath, "../Temp/ME.BECS.SourceGenerator"));

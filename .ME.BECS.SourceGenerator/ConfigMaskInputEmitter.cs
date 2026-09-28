@@ -11,14 +11,16 @@ internal sealed class ConfigMaskInputEmitter {
     private readonly IFieldSymbol[] fields;
     private ConfigMaskInputEmitter(INamedTypeSymbol type, IFieldSymbol[] fields) { this.type = type; this.fields = fields; }
 
-    internal static bool TryCreate(INamedTypeSymbol? type, string orderedFields, Compilation compilation, out ConfigMaskInputEmitter? entry) {
+    internal static bool TryCreate(INamedTypeSymbol? type, string? orderedFields, Compilation compilation, out ConfigMaskInputEmitter? entry) {
         entry = null;
         var contract = compilation.GetTypeByMetadataName("ME.BECS.IConfigComponent");
         if (type == null || !type.IsUnmanagedType || type.IsRefLikeType || MethodSummaryType.From(type).IsOpen ||
             !compilation.IsSymbolAccessibleWithin(type, compilation.Assembly) || contract == null ||
             !type.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, contract))) return false;
         var fields = type.GetMembers().OfType<IFieldSymbol>().Where(static field => !field.IsStatic && field.DeclaredAccessibility == Accessibility.Public).ToArray();
-        var names = orderedFields.Split(',');
+        // Metadata declaration order matches the reflection field order used by
+        // serialized config masks. Never alphabetize these bit positions.
+        var names = orderedFields == null ? fields.Select(field => field.Name).ToArray() : orderedFields.Split(',');
         if (fields.Length < 2 || names.Length != fields.Length || names.Distinct(System.StringComparer.Ordinal).Count() != names.Length ||
             fields.Any(static field => field.IsReadOnly || field.IsFixedSizeBuffer || field.IsImplicitlyDeclared)) return false;
         var ordered = new IFieldSymbol[names.Length];
@@ -42,6 +44,10 @@ internal sealed class ConfigMaskInputEmitter {
         for (var index = 0; index < entries.Count; ++index) {
             var entry = entries[index];
             var name = entry.type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            source.Append("public static string[] GetFields_").Append(index.ToString(CultureInfo.InvariantCulture))
+                .Append("() => new string[] { ")
+                .Append(string.Join(",", entry.fields.Select(field => Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(field.Name, true))))
+                .Append(" };\n");
             source.Append("[global::Unity.Burst.BurstCompile]\n[global::AOT.MonoPInvokeCallback(typeof(global::ME.BECS.UnsafeEntityConfig.MethodMaskCallerDelegate))]\n")
                 .Append("public static void Apply_").Append(index.ToString(CultureInfo.InvariantCulture))
                 .Append("(in global::ME.BECS.UnsafeEntityConfig config, void* componentPtr, void* configComponent, void* maskPtr, in global::ME.BECS.Ent ent) {\n")

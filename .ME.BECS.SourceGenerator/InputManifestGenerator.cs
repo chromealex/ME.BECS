@@ -16,6 +16,8 @@ namespace ME.BECS.SourceGenerator;
 public sealed class InputManifestGenerator : IIncrementalGenerator {
     private static readonly DiagnosticDescriptor Invalid = new DiagnosticDescriptor("BECSG100",
         "Invalid BECS input manifest", "{0}", "ME.BECS", DiagnosticSeverity.Error, true);
+    private static readonly DiagnosticDescriptor StaleInjectionPlan = new DiagnosticDescriptor("BECSG101",
+        "Graph injection inputs require regeneration", "{0}", "ME.BECS", DiagnosticSeverity.Warning, true);
 
     public void Initialize(IncrementalGeneratorInitializationContext context) {
         var manifests = context.AdditionalTextsProvider.Where(static file => file.Path.EndsWith(".becs-inputs", StringComparison.OrdinalIgnoreCase))
@@ -44,7 +46,7 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                         "Incomplete or altered manifest: " + file.Path + ". Regenerate type inputs using the current Editor exporter."));
                     return;
                 }
-                var kinds = new HashSet<string>(new[] { "system", "system-registration", "component", "component-group", "job", "entity", "entity-registration", "aspect", "aspect-registration", "aspect-construction", "destroy-schema", "destroy-registration", "config-mask-schema", "config-collection-count-schema", "config-collection-callback-schema" }, StringComparer.Ordinal);
+                var kinds = new HashSet<string>(new[] { "system", "system-registration", "component", "component-group", "job", "entity", "entity-registration", "aspect", "aspect-registration", "aspect-construction", "aspect-construction-auto", "destroy-schema", "destroy-registration", "config-mask-schema", "config-collection-count-schema", "config-collection-callback-schema" }, StringComparer.Ordinal);
                 var next = new Dictionary<string, int>(StringComparer.Ordinal);
                 var unique = new HashSet<string>(StringComparer.Ordinal);
                 var records = new List<string>();
@@ -53,7 +55,10 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                 var destroyRegistrations = new List<INamedTypeSymbol>();
                 var destroySchema = false;
                 var maskSchema = false;
+                var compilerMaskFields = false;
                 var collectionCountSchema = false;
+                var compilerCollectionCounts = false;
+                var compilerCollectionCallbacks = false;
                 var collectionCallbackSchema = false;
                 var collectionCallbackTypes = new List<INamedTypeSymbol>();
                 var collectionCallbackBodies = new List<string>();
@@ -74,9 +79,18 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                 var graphTopologies = new Dictionary<int, GraphTopologyInput>();
                 var graphSlots = new Dictionary<int, List<(INamedTypeSymbol Type, bool UseDefault, uint SourceId, int NodeIndex)>>();
                 var resolver = new InputManifestTypes(input.Right, output.CancellationToken);
+                var viewTracker = new ViewTrackerInputEmitter();
                 for (var i = 1; i < footerIndex; ++i) {
                     output.CancellationToken.ThrowIfCancellationRequested();
                     var fields = lines[i].Split('\t');
+                    if (ViewTrackerInputEmitter.IsRecord(fields[0])) {
+                        if (!viewTracker.Read(fields, resolver, input.Right, out var viewError)) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, viewError + " at " + file.Path + ":" + (i + 1)));
+                            return;
+                        }
+                        records.Add(header[2] + "\t" + lines[i]);
+                        continue;
+                    }
                     var componentRecord = fields[0] == "component-registration";
                     var groupRecord = fields[0] == "group-registration";
                     var injectionRecord = fields[0] == "system-injection";
@@ -102,10 +116,13 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                         fields[3] == graphId.ToString(CultureInfo.InvariantCulture) : collectionCountRecord
                         ? fields.Length == 4 && uint.TryParse(fields[3], NumberStyles.None, CultureInfo.InvariantCulture, out collectionCount) &&
                             collectionCount > 0 && fields[3] == collectionCount.ToString(CultureInfo.InvariantCulture) : componentRecord
-                        ? fields.Length == 4 && int.TryParse(fields[3], NumberStyles.None, CultureInfo.InvariantCulture, out componentFlags) &&
+                        ? fields.Length == 3 || fields.Length == 4 && int.TryParse(fields[3], NumberStyles.None, CultureInfo.InvariantCulture, out componentFlags) &&
                             componentFlags >= 0 && componentFlags <= 63 && fields[3] == componentFlags.ToString(CultureInfo.InvariantCulture) &&
                             (componentFlags & 5) != 5 && ((componentFlags & 16) == 0 || (componentFlags & 8) != 0)
-                        : groupRecord || injectionRecord || deltaRecord || maskRecord || collectionCallbackRecord ? fields.Length == 4 : graphRecord
+                        : collectionCallbackRecord ? fields.Length == (compilerCollectionCallbacks ? 3 : 4)
+                        : maskRecord ? fields.Length == (compilerMaskFields ? 3 : 4)
+                        : groupRecord ? fields.Length == 3 || fields.Length == 4
+                        : injectionRecord || deltaRecord ? fields.Length == 4 : graphRecord
                             ? fields.Length == 5 && header[2] == "runtime" && int.TryParse(fields[4], NumberStyles.None,
                                 CultureInfo.InvariantCulture, out graphCapacity) && graphCapacity >= 0 &&
                                 fields[4] == graphCapacity.ToString(CultureInfo.InvariantCulture) && int.TryParse(fields[3], NumberStyles.AllowLeadingSign,
@@ -127,7 +144,7 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                     if (valid) {
                         try {
                             type = Decode(fields[2]);
-                            if (groupRecord || injectionRecord || deltaRecord || maskRecord || collectionCallbackRecord) {
+                            if ((groupRecord && fields.Length == 4) || injectionRecord || deltaRecord || (maskRecord && !compilerMaskFields) || (collectionCallbackRecord && !compilerCollectionCallbacks)) {
                                 groupIdentity = Decode(fields[3]);
                                 valid = groupIdentity.Length > 0 && !groupIdentity.Any(char.IsControl);
                             }
@@ -147,18 +164,21 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                     if (!valid) { output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid or duplicate record at " + file.Path + ":" + (i + 1))); return; }
                     records.Add(header[2] + "\t" + lines[i]);
                     if (fields[0] == "config-collection-callback-schema") {
-                        if (type != "v1" || collectionCallbackSchema) { output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid collection callback schema")); return; }
+                        if ((type != "v1" && type != "v2") || collectionCallbackSchema) { output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid collection callback schema")); return; }
                         collectionCallbackSchema = true;
+                        compilerCollectionCallbacks = type == "v2";
                         continue;
                     }
                     if (fields[0] == "config-collection-count-schema") {
-                        if (type != "v1" || collectionCountSchema) { output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid collection count schema")); return; }
+                        if ((type != "v1" && type != "v2") || collectionCountSchema) { output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid collection count schema")); return; }
                         collectionCountSchema = true;
+                        compilerCollectionCounts = type == "v2";
                         continue;
                     }
                     if (fields[0] == "config-mask-schema") {
-                        if (type != "v1" || maskSchema) { output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid config mask schema")); return; }
+                        if ((type != "v1" && type != "v2") || maskSchema) { output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid config mask schema")); return; }
                         maskSchema = true;
+                        compilerMaskFields = type == "v2";
                         continue;
                     }
                     if (fields[0] == "destroy-schema") {
@@ -204,7 +224,8 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                     }
                     var symbol = resolver.ResolveDefinition(type, out var resolutionGap);
                     if (collectionCallbackRecord) {
-                        var body = ConfigCollectionsInputEmitter.Describe(symbol, input.Right, groupIdentity.Split(','), fields[1]);
+                        var body = ConfigCollectionsInputEmitter.Describe(symbol, input.Right,
+                            compilerCollectionCallbacks ? null : groupIdentity.Split(','), fields[1]);
                         if (body == null) {
                             output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid config collection fields/construction contract: " + type));
                             return;
@@ -216,15 +237,14 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                         if (symbol == null || !symbol.IsUnmanagedType || symbol.IsRefLikeType || MethodSummaryType.From(symbol).IsOpen ||
                             !input.Right.IsSymbolAccessibleWithin(symbol, input.Right.Assembly) ||
                             !symbol.AllInterfaces.Any(static contract => contract.ToDisplayString() is "ME.BECS.IConfigComponent" or "ME.BECS.IConfigComponentStatic" or "ME.BECS.IConfigComponentShared") ||
-                            symbol.GetMembers().OfType<IFieldSymbol>().Count(static field => !field.IsStatic && field.DeclaredAccessibility == Accessibility.Public &&
-                                field.Type.AllInterfaces.Any(static contract => contract.ToDisplayString() == "ME.BECS.IUnmanagedList")) != collectionCount) {
+                            ConfigCollectionsInputEmitter.GetCollectionCount(symbol) != collectionCount) {
                             output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid config collection count: " + type));
                             return;
                         }
                         collectionCounts.Add((symbol, collectionCount));
                     }
                     if (maskRecord) {
-                        if (!ConfigMaskInputEmitter.TryCreate(symbol, groupIdentity, input.Right, out var maskEntry)) {
+                        if (!ConfigMaskInputEmitter.TryCreate(symbol, compilerMaskFields ? null : groupIdentity, input.Right, out var maskEntry)) {
                             output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid config mask type/field order: " + type));
                             return;
                         }
@@ -234,7 +254,10 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                         var plan = graphSlots.TryGetValue(graphId, out var jobSlots)
                             ? GraphJobPatchPlan.Create(input.Right, symbol, type, groupIdentity, jobSlots.Select(static s => s.Type).ToArray()) : null;
                         if (plan == null) {
-                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid graph job patch: " + lines[i]));
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None,
+                                "Invalid graph injection patch for " + type + " in graph " + graphId.ToString(CultureInfo.InvariantCulture) +
+                                ". Check field/target layout and private-field setters in the referenced assembly. " +
+                                "Jobs/systems with private injected fields and their containing types must be partial; regenerate inputs after compilation/reload."));
                             return;
                         }
                         if (graphInjectionRecord) {
@@ -298,7 +321,20 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                         systemInjections.Add((ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(type + "\n" + groupIdentity), symbol, field, data.TypeArguments[0]));
                     }
                     if (groupRecord) {
-                        var group = resolver.ResolveDefinition(groupIdentity, out var groupGap);
+                        INamedTypeSymbol? group;
+                        string? groupGap = null;
+                        if (fields.Length == 3) {
+                            var groupAttribute = input.Right.GetTypeByMetadataName("ME.BECS.ComponentGroupAttribute");
+                            var attributes = symbol?.GetAttributes().Where(attribute =>
+                                SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, groupAttribute)).ToArray();
+                            group = null;
+                            if (attributes?.Length == 1 && attributes[0].ConstructorArguments.Length == 1) {
+                                group = attributes[0].ConstructorArguments[0].Value as INamedTypeSymbol;
+                                foreach (var argument in attributes[0].NamedArguments)
+                                    if (argument.Key == "groupType") group = argument.Value.Value as INamedTypeSymbol;
+                            }
+                            if (group == null) groupGap = "Exactly one ComponentGroupAttribute with a named group type is required";
+                        } else group = resolver.ResolveDefinition(groupIdentity, out groupGap);
                         var contract = input.Right.GetTypeByMetadataName("ME.BECS.IComponentBase");
                         if (symbol == null || !symbol.IsUnmanagedType || MethodSummaryType.From(symbol).IsOpen ||
                             !input.Right.IsSymbolAccessibleWithin(symbol, input.Right.Assembly) || contract == null ||
@@ -319,6 +355,12 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                             output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid component registration: " + type));
                             return;
                         }
+                        if (fields.Length == 3) componentFlags = ComponentRegistrationFlags.Get(symbol);
+                        if ((componentFlags & 1) == 0 && ComponentRegistrationFlags.HasInvalidDefault(symbol)) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None,
+                                "Invalid component Default property: " + type + ". Expected a public static getter returning the component type."));
+                            return;
+                        }
                         foreach (var phase in new[] { (Flag: 2, Contract: "ME.BECS.IConfigComponentStatic"),
                                      (Flag: 8, Contract: "ME.BECS.IComponentShared"), (Flag: 32, Contract: "ME.BECS.IConfigInitialize") }) {
                             var phaseContract = input.Right.GetTypeByMetadataName(phase.Contract);
@@ -331,7 +373,13 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                         }
                         componentRegistrations.Add((type, symbol, componentFlags));
                     }
-                    if (fields[0] == "aspect-construction") {
+                    if (fields[0] == "aspect-construction" || fields[0] == "aspect-construction-auto") {
+                        if (symbol == null || !aspectRegistrations.Any(a => SymbolEqualityComparer.Default.Equals(a.Type, symbol))) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Aspect construction requires preceding registration: " + type));
+                            return;
+                        }
+                        if (fields[0] == "aspect-construction-auto" && !symbol.GetMembers().OfType<IFieldSymbol>().Any(field =>
+                                !field.IsStatic && field.Type.AllInterfaces.Any(contract => contract.ToDisplayString() == "ME.BECS.IAspectData"))) continue;
                         var catalog = symbol?.ContainingAssembly.GetTypeByMetadataName("ME.BECS.SourceGenerated.Catalog_" +
                             ME.BECS.CodeGeneration.SourceGeneratorNames.Encode(symbol.ContainingAssembly.Name));
                         var constructorName = "ConstructAspect_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Encode(
@@ -407,9 +455,25 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                     resolutions.Add(header[2] + "\t" + fields[0] + "\t" + fields[1] + "\t" +
                         (symbol == null ? "unresolved\t" + resolutionGap : "resolved\t" + symbol.GetDocumentationCommentId() + "\t" + MethodSummaryType.From(symbol).Encode()));
                 }
+                if (next.ContainsKey("aspect-construction") && next.ContainsKey("aspect-construction-auto")) {
+                    output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None,
+                        "Cannot mix Editor-selected and compiler-selected aspect constructors. Regenerate type inputs."));
+                    return;
+                }
                 if (!destroySchema || !maskSchema || !collectionCountSchema || !collectionCallbackSchema) {
                     output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Missing destroy/config registration schema. Regenerate type inputs with the current Editor exporter."));
                     return;
+                }
+                if (compilerCollectionCounts) {
+                    if (collectionCounts.Count != 0) {
+                        output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None,
+                            "Collection count schema v2 does not accept Editor-computed counts. Regenerate type inputs."));
+                        return;
+                    }
+                    // Callback contracts were validated above. Use the same compiler symbols,
+                    // so allocation counts cannot lag behind the fields compiled into callbacks.
+                    foreach (var component in collectionCallbackTypes)
+                        collectionCounts.Add((component, ConfigCollectionsInputEmitter.GetCollectionCount(component)));
                 }
                 if (!collectionCounts.Select(static entry => entry.Type).SequenceEqual(collectionCallbackTypes, SymbolEqualityComparer.Default)) {
                     output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Collection count and callback selections differ. Regenerate type inputs."));
@@ -425,7 +489,14 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                         return;
                     }
                 }
+                var systemAot = SystemAotInputEmitter.Create(input.Right, systemRegistrations, out var aotError);
+                if (systemAot == null) {
+                    output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, aotError));
+                    return;
+                }
                 var source = new StringBuilder("// <auto-generated/>\n");
+                source.Append(systemAot.Metadata);
+                viewTracker.AppendMetadata(source);
                 var lifecyclePhases = new[] { "Awake", "Start", "Update", "Destroy", "DrawGizmos" };
                 var lifecyclePlans = new Dictionary<(int Graph, string Phase), GraphLifecyclePlan>();
                 var flatQueries = input.Right.SyntaxTrees.Any(tree => tree.Options is Microsoft.CodeAnalysis.CSharp.CSharpParseOptions options &&
@@ -452,10 +523,14 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                 }
                 foreach (var graph in graphRegistrations) {
                     if (!graphApply.ContainsKey(graph.Id)) {
-                        output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None,
-                            "Missing source injection plan for registered graph " + graph.Id.ToString(CultureInfo.InvariantCulture) +
-                            ". Export Injection Coverage, resolve unsupported fields/jobs, and regenerate inputs."));
-                        return;
+                        // Old exporters omitted plans based on setters in the loaded DLL.
+                        // Let Editor reload corrected source, but never run an incomplete graph
+                        // or allow it into a player. Regeneration must replace this stale input.
+                        var editorCompilation = input.Right.SyntaxTrees.Any(tree => tree.Options is CSharpParseOptions options &&
+                            options.PreprocessorSymbolNames.Contains("UNITY_EDITOR"));
+                        output.ReportDiagnostic(Diagnostic.Create(editorCompilation ? StaleInjectionPlan : Invalid, Location.None,
+                            MissingInjectionMessage(graph.Id)));
+                        if (!editorCompilation) return;
                     }
                     foreach (var phase in lifecyclePhases) {
                         if (!lifecyclePlans.ContainsKey((graph.Id, phase))) {
@@ -471,6 +546,9 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                     source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.GraphDependencyOrder.v2\", ")
                         .Append(SymbolDisplay.FormatLiteral(topology.Key.ToString(CultureInfo.InvariantCulture) + "\n" + GraphDependencyOrder.Analyze(topology.Value), true))
                         .Append(")]\n");
+                foreach (var component in componentRegistrations)
+                    source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.ComponentFlags.v1\", ")
+                        .Append(SymbolDisplay.FormatLiteral(component.Identity + "\n" + component.Flags.ToString(CultureInfo.InvariantCulture), true)).Append(")]\n");
                 foreach (var record in records)
                     source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.TypeInput.v1\", ")
                         .Append(SymbolDisplay.FormatLiteral(record, true)).Append(")]\n");
@@ -581,7 +659,7 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                         .Append(storage).Append(" = global::Unity.Collections.CollectionHelper.CreateNativeArray<global::System.IntPtr>(")
                         .Append(graph.Capacity.ToString(CultureInfo.InvariantCulture)).Append(", allocator);\n}\n")
                         .Append("[global::AOT.MonoPInvokeCallback(typeof(global::ME.BECS.SystemsStatic.InitializeGraph))]\npublic static void GraphInitialize_")
-                        .Append(suffix).Append("() {\nvar allocator = (global::Unity.Collections.AllocatorManager.AllocatorHandle)global::ME.BECS.Constants.ALLOCATOR_DOMAIN;\n")
+                        .Append(suffix).Append("() {\nValidateInjectionPlan();\nvar allocator = (global::Unity.Collections.AllocatorManager.AllocatorHandle)global::ME.BECS.Constants.ALLOCATOR_DOMAIN;\n")
                         .Append("ResetStorage(allocator);\n");
                     var slots = graphSlots[graph.Id];
                     for (var slotIndex = 0; slotIndex < slots.Count; ++slotIndex) {
@@ -598,6 +676,10 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                             .Append(storage).Append('[').Append(indexText).Append("] = (global::System.IntPtr)item; }\n");
                     }
                     source.Append("ApplyInjections();\n}\n");
+                    source.Append("private static void ValidateInjectionPlan() {");
+                    if (!graphApply.ContainsKey(graph.Id)) source.Append("throw new global::System.InvalidOperationException(")
+                        .Append(SymbolDisplay.FormatLiteral(MissingInjectionMessage(graph.Id), true)).Append(");");
+                    source.Append("}\n");
                     if (graphJobs.TryGetValue(graph.Id, out var patches))
                         foreach (var patch in patches) patch.Append(source, storage);
                     if (graphInjections.TryGetValue(graph.Id, out var assignments))
@@ -607,6 +689,8 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                         foreach (var action in actions) source.Append(action[0] == 's' ? "InjectSystem_" : action[0] == 'j' ? "RegisterJob_" : "global::ME.BECS.SourceGenerated.GenericJobDeltaInputs.Register_")
                             .Append(action.Substring(2)).Append("();\n");
                         source.Append("}\n");
+                    } else {
+                        source.Append("private static void ApplyInjections() => ValidateInjectionPlan();\n");
                     }
                     source
                         .Append("[global::AOT.MonoPInvokeCallback(typeof(global::ME.BECS.SystemsStatic.GetSystem))]\npublic static void GraphGetSystem_")
@@ -660,7 +744,18 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                     source.Append("ComponentInputs.RegisterStatic_").Append(ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(registration.Identity)).Append("();\n");
                 foreach (var registration in componentRegistrations.Where(item => (item.Flags & 32) != 0))
                     source.Append("ComponentInputs.RegisterConfig_").Append(ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(registration.Identity)).Append("();\n");
+                source.Append("}\n[global::UnityEngine.Scripting.PreserveAttribute] public static void AotComponents() {\n");
+                foreach (var registration in componentRegistrations)
+                    source.Append("ComponentInputs.Aot_").Append(ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(registration.Identity)).Append("();\n");
+                foreach (var registration in componentRegistrations.Where(item => (item.Flags & 8) != 0))
+                    source.Append("ComponentInputs.AotShared_").Append(ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(registration.Identity)).Append("();\n");
+                foreach (var registration in componentRegistrations.Where(item => (item.Flags & 2) != 0))
+                    source.Append("ComponentInputs.AotStatic_").Append(ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(registration.Identity)).Append("();\n");
+                foreach (var registration in componentRegistrations.Where(item => (item.Flags & 32) != 0))
+                    source.Append("ComponentInputs.AotConfig_").Append(ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(registration.Identity)).Append("();\n");
                 source.Append("} } }\n");
+                source.Append(systemAot.Body);
+                viewTracker.Append(source);
                 source.Append("namespace ME.BECS.SourceGenerated { internal static class ComponentInputs {\n");
                 foreach (var registration in componentRegistrations) {
                     var name = registration.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
@@ -700,7 +795,11 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                         .Append(registration.Component.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
                         .Append(">.ApplyGroup(typeof(")
                         .Append(registration.Group.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append("));\n");
-                source.Append("} } }\n");
+                source.Append("}\npublic static global::System.Type[] GetComponents() => new global::System.Type[] { ")
+                    .Append(string.Join(",", groupRegistrations.Select(registration => "typeof(" + registration.Component.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) + ")")))
+                    .Append(" };\npublic static global::System.Type[] GetGroups() => new global::System.Type[] { ")
+                    .Append(string.Join(",", groupRegistrations.Select(registration => "typeof(" + registration.Group.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) + ")")))
+                    .Append(" };\n} }\n");
                 source.Append("namespace ME.BECS.SourceGenerated { internal static class AspectInputs { public static void Initialize() {\n");
                 foreach (var registration in aspectRegistrations) {
                     source.Append("global::ME.BECS.AspectTypeInfo<")
@@ -723,6 +822,11 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
 
     internal static string DeltaSetterName(IFieldSymbol field) =>
         "__BecsInjectDelta_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(field.Name);
+
+    private static string MissingInjectionMessage(int graphId) =>
+        "Missing source injection plan for registered graph " + graphId.ToString(CultureInfo.InvariantCulture) +
+        ". The input manifest is stale or injection fields are unsupported. After Editor compilation/reload, regenerate codegen inputs. " +
+        "Graph initialization is disabled until its complete injection plan is exported. Comparison reports describe loaded assemblies, not pending source edits.";
 
     internal static bool HasDeltaSetter(INamedTypeSymbol owner, IFieldSymbol field, Compilation compilation) {
         var marker = compilation.GetTypeByMetadataName("System.Runtime.CompilerServices.CompilerGeneratedAttribute");

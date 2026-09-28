@@ -25,9 +25,9 @@ namespace ME.BECS.Views {
     using static CutsPool;
     
     [BURST]
-    public unsafe struct Jobs {
+    public unsafe partial struct Jobs {
 
-        public struct ApplyStateParallelJob<TEntityView> : IJobParallelForDefer where TEntityView : IView {
+        public partial struct ApplyStateParallelJob<TEntityView> : IJobParallelForDefer where TEntityView : IView {
 
             public safe_ptr<ViewsModuleData> data;
             public MemoryAllocator allocator;
@@ -48,7 +48,7 @@ namespace ME.BECS.Views {
 
         }
 
-        public struct UpdateParallelJob<TEntityView> : IJobParallelForDefer where TEntityView : IView {
+        public partial struct UpdateParallelJob<TEntityView> : IJobParallelForDefer where TEntityView : IView {
 
             public safe_ptr<ViewsModuleData> data;
             public MemoryAllocator allocator;
@@ -69,7 +69,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
-        public struct JobSpawnViews : IJobSingle {
+        public partial struct JobSpawnViews : IJobSingle {
 
             private struct SpawnCandidate : System.IComparable<SpawnCandidate> {
 
@@ -184,7 +184,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
-        public struct JobDespawnViews : IJobSingle {
+        public partial struct JobDespawnViews : IJobSingle {
 
             public World viewsWorld;
             public safe_ptr<ViewsModuleData> data;
@@ -260,7 +260,7 @@ namespace ME.BECS.Views {
         }
         
         [BURST]
-        public struct JobUpdateTransforms : IJobParallelForTransform {
+        public partial struct JobUpdateTransforms : IJobParallelForTransform {
 
             public UnsafeList<ViewsModuleData.EntityData> renderingOnSceneEnts;
             public bbool useUnityHierarchy;
@@ -306,7 +306,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
-        public struct PrepareInterpolationFactorJob : IJob {
+        public partial struct PrepareInterpolationFactorJob : IJob {
 
             public safe_ptr<ViewsModuleData> data;
             public safe_ptr<State> beginFrameState;
@@ -327,7 +327,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
-        public struct JobUpdateTransformsInterpolationPrepare : IJobParallelFor {
+        public partial struct JobUpdateTransformsInterpolationPrepare : IJobParallelFor {
 
             [ReadOnly]
             public UnsafeList<ViewsModuleData.EntityData> renderingOnSceneEnts;
@@ -401,7 +401,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
-        public struct JobUpdateTransformsInterpolationNoHierarchyPrepare : IJobParallelFor {
+        public partial struct JobUpdateTransformsInterpolationNoHierarchyPrepare : IJobParallelFor {
 
             [ReadOnly]
             public UnsafeList<ViewsModuleData.EntityData> renderingOnSceneEnts;
@@ -447,7 +447,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
-        public struct JobUpdateTransformsNetworkInterpolation : IJobParallelForTransform {
+        public partial struct JobUpdateTransformsNetworkInterpolation : IJobParallelForTransform {
 
             public float dtMs;
             [ReadOnly]
@@ -485,7 +485,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
-        public struct JobUpdateTransformsInterpolation : IJobParallelForTransform {
+        public partial struct JobUpdateTransformsInterpolation : IJobParallelForTransform {
 
             [ReadOnly]
             public NativeArray<InterpolationTempData> results;
@@ -506,7 +506,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
-        public struct JobAssignViews : IJobForComponents<AssignViewComponent> {
+        public partial struct JobAssignViews : IJobForComponents<AssignViewComponent> {
 
             public World viewsWorld;
             public safe_ptr<ViewsModuleData> viewsModuleData;
@@ -575,7 +575,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
-        public struct JobRemoveFromScene : IJobForComponents<ViewComponent> {
+        public partial struct JobRemoveFromScene : IJobForComponents<ViewComponent> {
 
             public safe_ptr<ViewsModuleData> viewsModuleData;
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toRemove;
@@ -608,7 +608,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
-        public struct JobRemoveEntitiesFromScene : IJobParallelFor {
+        public partial struct JobRemoveEntitiesFromScene : IJobParallelFor {
 
             public World world;
             public safe_ptr<ViewsModuleData> viewsModuleData;
@@ -637,7 +637,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
-        public struct JobAddToScene : IJobForComponents<IsViewRequested> {
+        public partial struct JobAddToScene : IJobForComponents<IsViewRequested> {
 
             public safe_ptr<State> state;
             public safe_ptr<ViewsModuleData> viewsModuleData;
@@ -684,7 +684,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
-        public struct CompleteJob : IJob {
+        public partial struct CompleteJob : IJob {
 
             public safe_ptr<ViewsModuleData> viewsModuleData;
             public WorldMode mode;
@@ -708,7 +708,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
-        public struct PrepareJob : IJob {
+        public partial struct PrepareJob : IJob {
 
             public World connectedWorld;
             public safe_ptr<State> state;
@@ -746,7 +746,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
-        public struct PrepareCullingJob : IJob {
+        public partial struct PrepareCullingJob : IJob {
 
             public safe_ptr<ViewsModuleData> viewsModuleData;
 
@@ -757,7 +757,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
-        public struct UpdateCullingJob : IJobParallelForDefer {
+        public partial struct UpdateCullingJob : IJobParallelForDefer {
 
             public safe_ptr<State> state;
             public safe_ptr<ViewsModuleData> viewsModuleData;

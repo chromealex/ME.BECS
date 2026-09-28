@@ -4,6 +4,7 @@ namespace ME.BECS.Editor {
     using System.Collections.Generic;
     using System.Globalization;
     using System.IO;
+    using System.Linq;
     using System.Text;
 
     public static class SourceGeneratorInputManifest {
@@ -32,7 +33,8 @@ namespace ME.BECS.Editor {
             } catch (Exception exception) { UnityEngine.Debug.LogException(exception); }
         }
 
-        internal static string Serialize(string targetAssembly, bool editor, Systems.SystemDependenciesCodeGenerator.UsedObjects used, bool registerGraphReferences = false) {
+        internal static string Serialize(string targetAssembly, bool editor, Systems.SystemDependenciesCodeGenerator.UsedObjects used, bool registerGraphReferences = false,
+            IEnumerable<CustomCodeGenerator> addonFeeders = null) {
             if (string.IsNullOrWhiteSpace(targetAssembly)) throw new ArgumentException("Target assembly is required.", nameof(targetAssembly));
             var result = new StringBuilder("ME.BECS.TypeInputs.v3\t").Append(Encode(targetAssembly))
                 .Append('\t').Append(editor ? "editor" : "runtime").Append('\n');
@@ -56,48 +58,31 @@ namespace ME.BECS.Editor {
             var componentOrdinal = 0;
             foreach (var component in used.components) {
                 if (!component.IsValueType || !EditorUtils.IsValidTypeForAssembly(editor, component, assemblies, true)) continue;
-                var tag = CodeGenerator.IsTagType(component);
-                var shared = typeof(IComponentShared).IsAssignableFrom(component);
-                var flags = (tag ? 1 : 0) | (CodeGenerator.IsStaticType(component) ? 2 : 0) |
-                    (!tag && component.GetProperty("Default", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public) != null ? 4 : 0) |
-                    (shared ? 8 : 0) | (shared && CodeGenerator.HasComponentCustomSharedHash(component) ? 16 : 0) |
-                    (typeof(IConfigInitialize).IsAssignableFrom(component) ? 32 : 0);
                 result.Append("component-registration\t").Append((componentOrdinal++).ToString(CultureInfo.InvariantCulture))
-                    .Append('\t').Append(Encode(component.AssemblyQualifiedName)).Append('\t')
-                    .Append(flags.ToString(CultureInfo.InvariantCulture)).Append('\n');
+                    .Append('\t').Append(Encode(component.AssemblyQualifiedName)).Append('\n');
             }
             Append(result, "component-group", used.componentsGroup);
             result.Append("destroy-schema\t0\t").Append(Encode("v1")).Append('\n');
             Append(result, "destroy-registration", ComponentDestroyCodeGenerator.GetSelectedComponents(editor, assemblies));
-            result.Append("config-mask-schema\t0\t").Append(Encode("v1")).Append('\n');
+            result.Append("config-mask-schema\t0\t").Append(Encode("v2")).Append('\n');
             var maskOrdinal = 0;
-            result.Append("config-collection-count-schema\t0\t").Append(Encode("v1")).Append('\n');
-            result.Append("config-collection-callback-schema\t0\t").Append(Encode("v1")).Append('\n');
+            result.Append("config-collection-count-schema\t0\t").Append(Encode("v2")).Append('\n');
+            result.Append("config-collection-callback-schema\t0\t").Append(Encode("v2")).Append('\n');
             var collectionCountOrdinal = 0;
             foreach (var component in Aspects.EntityConfigCodeGenerator.GetCollectionComponents(editor, assemblies)) {
                 var ordinal = (collectionCountOrdinal++).ToString(CultureInfo.InvariantCulture);
-                result.Append("config-collection-count\t").Append(ordinal)
-                    .Append('\t').Append(Encode(component.AssemblyQualifiedName)).Append('\t')
-                    .Append(Aspects.EntityConfigCodeGenerator.GetCollectionsCount(component).ToString(CultureInfo.InvariantCulture)).Append('\n');
-                var collectionFields = Aspects.EntityConfigCodeGenerator.GetCollectionFields(component);
                 result.Append("config-collection-callback\t").Append(ordinal)
-                    .Append('\t').Append(Encode(component.AssemblyQualifiedName)).Append('\t')
-                    .Append(Encode(string.Join(",", System.Array.ConvertAll(collectionFields, field => field.Name)))).Append('\n');
+                    .Append('\t').Append(Encode(component.AssemblyQualifiedName)).Append('\n');
             }
             foreach (var component in Aspects.EntityConfigCodeGenerator.GetMaskComponents(editor, assemblies)) {
-                var fields = component.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
                 result.Append("config-mask-registration\t").Append((maskOrdinal++).ToString(CultureInfo.InvariantCulture))
-                    .Append('\t').Append(Encode(component.AssemblyQualifiedName)).Append('\t')
-                    .Append(Encode(string.Join(",", System.Array.ConvertAll(fields, field => field.Name)))).Append('\n');
+                    .Append('\t').Append(Encode(component.AssemblyQualifiedName)).Append('\n');
             }
             var groupOrdinal = 0;
             foreach (var component in used.componentsGroup) {
                 if (!EditorUtils.IsValidTypeForAssembly(editor, component, assemblies, true)) continue;
-                var attribute = (ComponentGroupAttribute)Attribute.GetCustomAttribute(component, typeof(ComponentGroupAttribute));
-                if (attribute?.groupType == null) throw new InvalidOperationException("Missing component group: " + component.AssemblyQualifiedName);
                 result.Append("group-registration\t").Append((groupOrdinal++).ToString(CultureInfo.InvariantCulture))
-                    .Append('\t').Append(Encode(component.AssemblyQualifiedName)).Append('\t')
-                    .Append(Encode(attribute.groupType.AssemblyQualifiedName)).Append('\n');
+                    .Append('\t').Append(Encode(component.AssemblyQualifiedName)).Append('\n');
             }
             Append(result, "job", used.jobTypes);
             Append(result, "entity", used.entityTypes);
@@ -112,28 +97,8 @@ namespace ME.BECS.Editor {
             var selectedAspects = new List<Type>(used.aspects);
             selectedAspects.RemoveAll(type => !type.IsValueType || !type.IsVisible ||
                 !EditorUtils.IsValidTypeForAssembly(editor, type, assemblies, true));
-            var constructedAspects = new List<Type>();
-            foreach (var aspect in selectedAspects) {
-                var hasQuery = false;
-                var hasConstruction = false;
-                foreach (var field in aspect.GetFields(System.Reflection.BindingFlags.Instance |
-                             System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)) {
-                    if (!typeof(IAspectData).IsAssignableFrom(field.FieldType)) continue;
-                    hasConstruction = true;
-                    if (Attribute.IsDefined(field, typeof(QueryWithAttribute))) hasQuery = true;
-                }
-                // The bridge compares the generated metadata getter against reflection field order;
-                // it does not invoke initialization or access runtime component IDs.
-                if (hasQuery && !SourceGeneratorBridge.TryGetAspectQuery(aspect, out _, out _))
-                    throw new InvalidOperationException("Aspect query catalog is unavailable or differs in field order: " + aspect.AssemblyQualifiedName);
-                if (hasConstruction) {
-                    if (!SourceGeneratorBridge.TryGetAspectConstruction(aspect, out _, out _, out var reason))
-                        throw new InvalidOperationException("Aspect construction catalog is incompatible: " + aspect.AssemblyQualifiedName + "; " + reason);
-                    constructedAspects.Add(aspect);
-                }
-            }
             Append(result, "aspect-registration", selectedAspects);
-            Append(result, "aspect-construction", constructedAspects);
+            Append(result, "aspect-construction-auto", selectedAspects);
             if (!editor) {
                 var graphOrdinal = 0;
                 var slotOrdinal = 0;
@@ -161,7 +126,7 @@ namespace ME.BECS.Editor {
                     var orderedJobs = new List<Type>(scheduledJobs);
                     orderedJobs.Sort((left, right) => StringComparer.Ordinal.Compare(left.AssemblyQualifiedName, right.AssemblyQualifiedName));
                     foreach (var job in orderedJobs) {
-                        if (!TryGetDeltaTimeFields(job, out var deltaFields) || !deltaJobs.Add(job)) continue;
+                        if (!TryGetDeltaTimeFields(job, out var deltaFields, requireCompiledSetters: false) || !deltaJobs.Add(job)) continue;
                         result.Append("job-delta-registration\t").Append((deltaJobs.Count - 1).ToString(CultureInfo.InvariantCulture))
                             .Append('\t').Append(Encode(job.AssemblyQualifiedName)).Append('\t').Append(Encode(string.Join(",", deltaFields))).Append('\n');
                     }
@@ -192,23 +157,32 @@ namespace ME.BECS.Editor {
                             .Append((item.useDefault ? 0 : item.nodeIndex).ToString(CultureInfo.InvariantCulture)).Append('\n');
                     }
                     foreach (var job in orderedJobs) {
-                        if (!TryGetGraphJobFields(job, layout, out var patchFields)) continue;
+                        if (!TryGetGraphJobFields(job, layout, out var patchFields, requireCompiledSetters: false)) continue;
                         result.Append("graph-job\t").Append((graphJobOrdinal++).ToString(CultureInfo.InvariantCulture))
                             .Append('\t').Append(Encode(job.AssemblyQualifiedName)).Append('\t').Append(id.ToString(CultureInfo.InvariantCulture))
                             .Append('\t').Append(Encode(string.Join(",", patchFields))).Append('\n');
                     }
                     var injectionOwners = new HashSet<Type>();
                     foreach (var item in layout) {
-                        if (!injectionOwners.Add(item.type) || !TryGetGraphSystemFields(item.type, layout, out var patchFields)) continue;
+                        if (!injectionOwners.Add(item.type) || !TryGetGraphSystemFields(item.type, layout, out var patchFields, requireCompiledSetters: false)) continue;
                         result.Append("graph-system-injection\t").Append((graphInjectionOrdinal++).ToString(CultureInfo.InvariantCulture))
                             .Append('\t').Append(Encode(item.type.AssemblyQualifiedName)).Append('\t').Append(id.ToString(CultureInfo.InvariantCulture))
                             .Append('\t').Append(Encode(string.Join(",", patchFields))).Append('\n');
                     }
-                    if (TryGetGraphApplyPlan(graph, out var actions, layout, analyzedGraphSystems))
+                    if (TryGetGraphApplyPlan(graph, out var actions, layout, analyzedGraphSystems, requireCompiledSetters: false))
                         result.Append("graph-apply\t").Append((graphApplyOrdinal++).ToString(CultureInfo.InvariantCulture))
                             .Append('\t').Append(Encode("apply")).Append('\t').Append(id.ToString(CultureInfo.InvariantCulture))
                             .Append('\t').Append(Encode(string.Join(",", actions))).Append('\n');
                 }
+            }
+            addonFeeders ??= UnityEditor.TypeCache.GetTypesDerivedFrom<CustomCodeGenerator>()
+                .Where(type => !type.IsAbstract && !type.ContainsGenericParameters)
+                .OrderBy(type => type.FullName, StringComparer.Ordinal)
+                .Select(type => (CustomCodeGenerator)Activator.CreateInstance(type));
+            foreach (var feeder in addonFeeders) {
+                feeder.editorAssembly = editor;
+                feeder.asms = assemblies;
+                feeder.AppendSourceGeneratorInputs(result);
             }
             var payload = result.ToString();
             var recordCount = 0;
@@ -218,7 +192,7 @@ namespace ME.BECS.Editor {
         }
 
         public static bool TryGetGraphApplyPlan(ME.BECS.FeaturesGraph.SystemsGraph graph, out string[] actions,
-            List<GraphSystemInput> layout = null, Dictionary<Type, HashSet<Type>> discovered = null) {
+            List<GraphSystemInput> layout = null, Dictionary<Type, HashSet<Type>> discovered = null, bool requireCompiledSetters = true) {
             actions = null;
             layout ??= GetGraphSystems(graph);
             discovered ??= new Dictionary<Type, HashSet<Type>>();
@@ -230,7 +204,7 @@ namespace ME.BECS.Editor {
                 var hasInjection = false;
                 foreach (var field in item.type.GetFields(flags)) hasInjection |= typeof(IInject).IsAssignableFrom(field.FieldType);
                 if (hasInjection) {
-                    if (!TryGetGraphSystemFields(item.type, layout, out _)) return false;
+                    if (!TryGetGraphSystemFields(item.type, layout, out _, requireCompiledSetters)) return false;
                     result.Add("s:" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(item.type.AssemblyQualifiedName));
                 }
                 if (!discovered.TryGetValue(item.type, out var jobs)) {
@@ -245,7 +219,7 @@ namespace ME.BECS.Editor {
                     hasInjection = false;
                     foreach (var field in job.GetFields(flags)) hasInjection |= typeof(IInject).IsAssignableFrom(field.FieldType) || Attribute.IsDefined(field, typeof(InjectDeltaTimeAttribute));
                     if (!hasInjection) continue;
-                    var kind = TryGetGraphJobFields(job, layout, out _) ? "j:" : TryGetDeltaTimeFields(job, out _) ? "d:" : null;
+                    var kind = TryGetGraphJobFields(job, layout, out _, requireCompiledSetters) ? "j:" : TryGetDeltaTimeFields(job, out _, requireCompiledSetters) ? "d:" : null;
                     if (kind == null) return false;
                     result.Add(kind + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(job.AssemblyQualifiedName));
                 }
@@ -254,15 +228,15 @@ namespace ME.BECS.Editor {
             return true;
         }
 
-        public static bool TryGetGraphSystemFields(Type system, List<GraphSystemInput> layout, out string[] plan) {
+        public static bool TryGetGraphSystemFields(Type system, List<GraphSystemInput> layout, out string[] plan, bool requireCompiledSetters = true) {
             plan = null;
             if (!typeof(ISystem).IsAssignableFrom(system)) return false;
             foreach (var field in system.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic))
                 if (Attribute.IsDefined(field, typeof(InjectDeltaTimeAttribute))) return false;
-            return TryGetGraphJobFields(system, layout, out plan);
+            return TryGetGraphJobFields(system, layout, out plan, requireCompiledSetters);
         }
 
-        public static bool TryGetGraphJobFields(Type job, List<GraphSystemInput> layout, out string[] plan) {
+        public static bool TryGetGraphJobFields(Type job, List<GraphSystemInput> layout, out string[] plan, bool requireCompiledSetters = true) {
             plan = null;
             if (!job.IsVisible || job.ContainsGenericParameters) return false;
             var fields = new List<string>();
@@ -273,7 +247,7 @@ namespace ME.BECS.Editor {
                 var delta = Attribute.IsDefined(field, typeof(InjectDeltaTimeAttribute));
                 if (!injected && !delta) continue;
                 if (field.IsInitOnly || (injected && delta)) return false;
-                if (!field.IsPublic && (injected ? !TryGetPartialInjectionMethod(field, out _) : !TryGetPartialDeltaTimeMethod(field, out _))) return false;
+                if (requireCompiledSetters && !field.IsPublic && (injected ? !TryGetPartialInjectionMethod(field, out _) : !TryGetPartialDeltaTimeMethod(field, out _))) return false;
                 if (injected) {
                     if (!field.FieldType.IsGenericType || field.FieldType.GetGenericTypeDefinition() != typeof(InjectSystem<>)) return false;
                     var target = field.FieldType.GenericTypeArguments[0];
@@ -291,14 +265,14 @@ namespace ME.BECS.Editor {
             return true;
         }
 
-        public static bool TryGetDeltaTimeFields(Type job, out string[] names) {
+        public static bool TryGetDeltaTimeFields(Type job, out string[] names, bool requireCompiledSetters = true) {
             names = null;
             if (!job.IsVisible || job.ContainsGenericParameters) return false;
             var fields = new List<string>();
             foreach (var field in job.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)) {
                 if (field.FieldType == typeof(bool) || typeof(IInject).IsAssignableFrom(field.FieldType)) return false;
                 if (!Attribute.IsDefined(field, typeof(InjectDeltaTimeAttribute))) continue;
-                if ((!field.IsPublic && !TryGetPartialDeltaTimeMethod(field, out _)) || field.IsInitOnly ||
+                if ((requireCompiledSetters && !field.IsPublic && !TryGetPartialDeltaTimeMethod(field, out _)) || field.IsInitOnly ||
                     (field.FieldType != typeof(uint) && field.FieldType != typeof(float) && field.FieldType != typeof(sfloat))) return false;
                 fields.Add(field.Name);
             }

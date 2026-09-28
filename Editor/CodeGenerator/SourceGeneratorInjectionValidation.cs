@@ -15,6 +15,9 @@ namespace ME.BECS.Editor {
                 return;
             }
             var details = new StringBuilder();
+            details.AppendLine("Snapshot UTC: " + DateTime.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture));
+            details.AppendLine("Reflection over currently loaded assemblies; pending source edits are visible only after successful compilation and domain reload.");
+            var reportedAssemblies = new HashSet<Assembly>();
             var discovered = new Dictionary<Type, HashSet<Type>>();
             var graphs = 0;
             var systemSelected = 0;
@@ -34,6 +37,8 @@ namespace ME.BECS.Editor {
                     var jobs = new HashSet<Type>();
                     details.AppendLine("Graph: " + path);
                     foreach (var system in graphTypes.OrderBy(t => t.AssemblyQualifiedName, StringComparer.Ordinal)) {
+                        if (reportedAssemblies.Add(system.Assembly))
+                            details.AppendLine("  loaded assembly " + system.Assembly.GetName().Name + " MVID=" + system.Module.ModuleVersionId);
                         var fields = system.GetFields(Fields);
                         var hasBool = fields.Any(f => f.FieldType == typeof(bool));
                         foreach (var field in fields.Where(f => typeof(IInject).IsAssignableFrom(f.FieldType))) {

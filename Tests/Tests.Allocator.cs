@@ -5,7 +5,7 @@ using static ME.BECS.Cuts;
 
 namespace ME.BECS.Tests {
 
-    public class Tests_Allocator {
+    public partial class Tests_Allocator {
 
         private ME.BECS.MemoryAllocator allocator;
         
@@ -345,7 +345,7 @@ namespace ME.BECS.Tests {
             newAllocator.Dispose();
         }
 
-        public unsafe struct JobAlloc : Unity.Jobs.IJobParallelFor {
+        public unsafe partial struct JobAlloc : Unity.Jobs.IJobParallelFor {
 
             [Unity.Collections.NativeDisableParallelForRestrictionAttribute]
             public safe_ptr<ME.BECS.MemoryAllocator> allocator;
@@ -358,7 +358,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public unsafe struct JobFree : Unity.Jobs.IJobParallelFor {
+        public unsafe partial struct JobFree : Unity.Jobs.IJobParallelFor {
 
             [Unity.Collections.NativeDisableParallelForRestrictionAttribute]
             public safe_ptr<ME.BECS.MemoryAllocator> allocator;

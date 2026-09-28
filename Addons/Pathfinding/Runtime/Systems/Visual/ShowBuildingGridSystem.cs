@@ -110,7 +110,7 @@ namespace ME.BECS.Pathfinding {
 
         }
 
-        public struct ApplyTextureJob : ME.BECS.Jobs.IJobMainThread {
+        public partial struct ApplyTextureJob : ME.BECS.Jobs.IJobMainThread {
 
             public ClassPtr<UnityEngine.Texture2D> texture;
 
