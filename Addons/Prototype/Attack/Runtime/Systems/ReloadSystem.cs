@@ -25,10 +25,18 @@ namespace ME.BECS.Attack {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect) {
 
                 aspect.componentRuntimeReload.reloadTimer += this.dt;
-                if (aspect.readComponentRuntimeReload.reloadTimer >= aspect.component.reloadTime) {
+                if (aspect.readComponentRuntimeReload.reloadTimer >= aspect.readComponent.reloadTime) {
 
                     aspect.IsReloaded = true;
 
+                }
+
+                if (aspect.componentRuntimeFire.fireTimer >= aspect.readComponent.attackTime) {
+                    // Finish fire timer
+                    aspect.componentRuntimeFire.fireTimer += this.dt;
+                    if (aspect.readComponentRuntimeFire.fireTimer >= aspect.readComponent.fireTime) {
+                        aspect.CanFire = false;
+                    }
                 }
 
             }

@@ -49,13 +49,12 @@ namespace ME.BECS.Attack {
                         if (aspect.componentRuntimeFire.targets.IsCreated == true) aspect.componentRuntimeFire.targets.Dispose();
                     }
                 }
-                
+
                 aspect.componentRuntimeFire.fireTimer += this.dt;
                 if (aspect.readComponentRuntimeFire.fireTimer >= aspect.readComponent.fireTime) {
 
                     // time to attack is up
                     // fire - reset target and reload
-                    aspect.IsReloaded = false;
                     aspect.CanFire = false;
 
                 }
