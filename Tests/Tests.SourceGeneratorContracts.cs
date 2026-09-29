@@ -16,6 +16,52 @@ namespace ME.BECS.Tests {
         public struct AotMarker : IAotMarker { }
 
         public struct CompilerTag : IComponent { }
+        public struct CompilerPrivateData : IComponent {
+            private int value;
+            public int Read() => this.value;
+            public void Write(int input) => this.value = input;
+        }
+        public struct CompilerAutoPropertyData : IComponent {
+            public int Value { get; set; }
+        }
+        public struct CompilerNativeBool : IComponent { public bool value; }
+        public partial struct NativeBoolSizeJob : ME.BECS.Jobs.IJobForComponents<CompilerNativeBool> {
+            public void Execute(in JobInfo info, in Ent ent, ref CompilerNativeBool component) { component.value = true; }
+        }
+
+        [Test]
+        public void NativeBoolLayoutDoesNotBlockSourceSizeSelection() {
+            var job = typeof(NativeBoolSizeJob);
+            var summaries = job.Assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .Where(attribute => attribute.Key == "ME.BECS.JobSafety.v1" && attribute.Value != null &&
+                    attribute.Value.StartsWith(job.FullName + "\n", StringComparison.Ordinal)).ToArray();
+            Assert.AreEqual(1, summaries.Length);
+            var validator = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.SourceGeneratorSafetyValidation", true)
+                .GetMethod("ValidateSizeInitializer", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.IsNotNull(validator);
+            var report = new System.Text.StringBuilder();
+            var args = new object[] { job, summaries[0].Value.Split('\n'), new[] { typeof(CompilerNativeBool) }, report, null };
+            Assert.AreEqual(1, (int)validator.Invoke(null, args), report.ToString());
+            Assert.IsNotNull(args[4]);
+            // Compare a native bool size; never invoke the returned initializer.
+        }
+
+        [TestCase(typeof(CompilerTag), 1u)]
+        [TestCase(typeof(CompilerPrivateData), 4u)]
+        [TestCase(typeof(CompilerAutoPropertyData), 4u)]
+        [TestCase(typeof(CompilerSizedEmpty), 8u)]
+        [TestCase(typeof(CompilerNativeBool), 1u)]
+        public void CompilerComponentSizesUseNativeLayout(Type component, uint expected) {
+            var names = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.CodeGeneration.SourceGeneratorNames", true);
+            var hash = names.GetMethod("Hash", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.IsNotNull(hash);
+            var key = (string)hash.Invoke(null, new object[] { component.AssemblyQualifiedName });
+            var catalog = Assembly.Load("ME.BECS.Gen.Editor").GetType("ME.BECS.SourceGenerated.ComponentInputs", true);
+            var size = catalog.GetMethod("Size_" + key, BindingFlags.Public | BindingFlags.Static);
+            Assert.IsNotNull(size, "Regenerate Editor inputs before checking component sizes");
+            Assert.AreEqual(expected, (uint)size.Invoke(null, null), component.FullName);
+            // A bool occupies one byte in native ECS storage; marshaling size is not the contract.
+        }
         public class CompilerGenericGroup<T> { }
         [ComponentGroup(typeof(CompilerGenericGroup<>))]
         public struct CompilerGrouped : IComponent { }
@@ -55,6 +101,8 @@ namespace ME.BECS.Tests {
         }
 
         [TestCase(typeof(CompilerTag), 1)]
+        [TestCase(typeof(CompilerPrivateData), 0)]
+        [TestCase(typeof(CompilerAutoPropertyData), 0)]
         [TestCase(typeof(CompilerSizedEmpty), 0)]
         [TestCase(typeof(CompilerDefault), 4)]
         [TestCase(typeof(CompilerDefaultSharedHash), 8)]
@@ -98,6 +146,33 @@ namespace ME.BECS.Tests {
                 .Select(attribute => attribute.Value.Split('\n')).ToArray();
             Assert.AreEqual(1, rows.Length, "Regenerate Editor inputs before checking AOT selection metadata");
             CollectionAssert.AreEqual(new[] { system.AssemblyQualifiedName, present.ToString(), burst.ToString(), factory.ToString() }, rows[0]);
+        }
+
+        [Test]
+        public void CompilerEntityIdsMatchOrderedRegistrationsWithoutBootstrap() {
+            var assembly = Assembly.Load("ME.BECS.Gen.Editor");
+            var catalog = assembly.GetType("ME.BECS.SourceGenerated.EntityInputs", true);
+            var records = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1" && attribute.Value != null)
+                .Select(attribute => attribute.Value.Split('\t'))
+                .Where(row => row.Length == 4 && row[1] == "entity-registration").ToArray();
+            Assert.IsNotEmpty(records);
+            var groupCount = catalog.GetField("GroupCount", BindingFlags.Public | BindingFlags.Static);
+            Assert.IsNotNull(groupCount);
+            Assert.IsTrue(groupCount.IsLiteral);
+            Assert.AreEqual((uint)records.Length, groupCount.GetRawConstantValue());
+            var names = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.CodeGeneration.SourceGeneratorNames", true);
+            var hash = names.GetMethod("Hash", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.IsNotNull(hash);
+            for (var index = 0; index < records.Length; ++index) {
+                var entity = Type.GetType(System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(records[index][3])), true);
+                var identity = entity.Assembly.FullName + "\tT:" + entity.FullName.Replace('+', '.');
+                var key = (string)hash.Invoke(null, new object[] { identity });
+                var field = catalog.GetField("Id_" + key, BindingFlags.Public | BindingFlags.Static);
+                Assert.IsNotNull(field, identity);
+                Assert.IsTrue(field.IsLiteral, identity);
+                Assert.AreEqual((uint)index, field.GetRawConstantValue(), identity);
+            }
         }
 
         [Test]
@@ -217,6 +292,34 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void SafetyCatalogParserRejectsMalformedCompleteDependenciesWithoutIL() {
+            var job = typeof(SafetyCatalogJob);
+            var entries = job.Assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .Where(attribute => attribute.Key == "ME.BECS.JobSafety.v1" && attribute.Value != null &&
+                    attribute.Value.StartsWith(job.FullName + "\n", StringComparison.Ordinal)).ToArray();
+            Assert.AreEqual(1, entries.Length);
+            var rows = entries[0].Value.Split('\n');
+            var parser = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.SourceGeneratorJobSafety", true)
+                .GetMethod("TryParse", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.IsNotNull(parser);
+            var args = new object[] { job, rows, null };
+            Assert.IsTrue((bool)parser.Invoke(null, args));
+            Assert.IsNotNull(args[2]);
+            var broken = (string[])rows.Clone();
+            var dependency = Array.FindIndex(broken, row => row.StartsWith("D\t", StringComparison.Ordinal));
+            Assert.GreaterOrEqual(dependency, 0);
+            var fields = broken[dependency].Split('\t');
+            fields[3] = "99";
+            broken[dependency] = string.Join("\t", fields);
+            args = new object[] { job, broken, null };
+            Assert.IsFalse((bool)parser.Invoke(null, args));
+            Assert.IsNull(args[2], "Rejected metadata must not expose partial dependencies");
+            args = new object[] { job, rows.Concat(new[] { "unknown\tcontract" }).ToArray(), null };
+            Assert.IsFalse((bool)parser.Invoke(null, args));
+            Assert.IsNull(args[2]);
+        }
+
+        [Test]
         public void CompleteSafetySummaryExportsTypedComponentCatalog() {
             var summaries = typeof(SafetyCatalogJob).Assembly
                 .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
@@ -309,7 +412,7 @@ namespace ME.BECS.Tests {
 
         public static float MathematicsVectors(Unity.Mathematics.float3 a, Unity.Mathematics.float3 b, Unity.Mathematics.bool3 mask) {
             var value = Unity.Mathematics.math.select(Unity.Mathematics.math.min(a, b), Unity.Mathematics.math.max(a, b), mask);
-            return Unity.Mathematics.math.dot(value, a);
+            return Unity.Mathematics.math.dot(value, a) + Unity.Mathematics.math.csum(value);
         }
 
         [Test]
@@ -322,14 +425,90 @@ namespace ME.BECS.Tests {
             Assert.AreEqual(1, entries.Length);
             var calls = entries[0].Value.Split('\n').Skip(4).Select(row => row.Split('\t'))
                 .Where(row => row.Length >= 5 && row[0] == "call" && row[3].StartsWith("M:Unity.Mathematics.math.", StringComparison.Ordinal)).ToArray();
-            Assert.AreEqual(4, calls.Length);
+            Assert.AreEqual(5, calls.Length);
             foreach (var call in calls) {
-                if (call[3].StartsWith("M:Unity.Mathematics.math.dot(", StringComparison.Ordinal)) Assert.That(call, Does.Not.Contain("!ecs-leaf"));
+                if (call[3].StartsWith("M:Unity.Mathematics.math.csum(", StringComparison.Ordinal)) Assert.That(call, Does.Not.Contain("!ecs-leaf"));
                 else Assert.That(call, Does.Contain("!ecs-leaf"));
             }
         }
 
         private static bool Likely(bool condition) => condition;
+
+        public struct UserVector {
+            public float value;
+            public UserVector(float input) { this.value = input; }
+            public static UserVector operator +(UserVector left, UserVector right) => new UserVector(left.value + right.value);
+        }
+
+        public static Unity.Mathematics.float3 FloatVectorArithmetic(Unity.Mathematics.float3 a, Unity.Mathematics.float3 b, UserVector user) {
+            var custom = user + user;
+            return -(a + b * ScalarArgument()) / (a - b) + custom.value;
+        }
+
+        [Test]
+        public void FloatVectorArithmeticContractsKeepUserOperatorsAndArguments() {
+            const string prefix = "M:ME.BECS.Tests.Tests_SourceGeneratorContracts.FloatVectorArithmetic(";
+            var entries = typeof(Tests_SourceGeneratorContracts).Assembly
+                .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .Where(attribute => attribute.Key == "ME.BECS.MethodSummary.v2" && attribute.Value != null &&
+                    attribute.Value.StartsWith(prefix, StringComparison.Ordinal)).ToArray();
+            Assert.AreEqual(1, entries.Length);
+            var operations = entries[0].Value.Split('\n').Skip(4).Select(row => row.Split('\t'))
+                .Where(row => row.Length >= 5 && (row[0] == "call" || row[0] == "operator")).ToArray();
+            var vectors = operations.Where(row => row[3].StartsWith("M:Unity.Mathematics.float3.op_", StringComparison.Ordinal)).ToArray();
+            Assert.AreEqual(6, vectors.Length);
+            foreach (var operation in vectors) Assert.That(operation, Does.Contain("!ecs-leaf"));
+            Assert.That(operations.Single(row => row[3].Contains("UserVector.op_Addition")), Does.Not.Contain("!ecs-leaf"));
+            Assert.That(operations.Single(row => row[3].EndsWith(".ScalarArgument", StringComparison.Ordinal)), Does.Not.Contain("!ecs-leaf"));
+        }
+
+        public static Unity.Mathematics.float4 FloatVectorConstruction() {
+            var pair = new Unity.Mathematics.float2(ScalarArgument(), 2f);
+            var triple = new Unity.Mathematics.float3(pair, 3f);
+            var copy = new Unity.Mathematics.float3(triple);
+            var user = new UserVector(4f);
+            return new Unity.Mathematics.float4(copy, user.value);
+        }
+
+        [Test]
+        public void FloatVectorConstructorContractsDoNotHideUserCode() {
+            const string prefix = "M:ME.BECS.Tests.Tests_SourceGeneratorContracts.FloatVectorConstruction\n";
+            var entries = typeof(Tests_SourceGeneratorContracts).Assembly
+                .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .Where(attribute => attribute.Key == "ME.BECS.MethodSummary.v2" && attribute.Value != null &&
+                    attribute.Value.StartsWith(prefix, StringComparison.Ordinal)).ToArray();
+            Assert.AreEqual(1, entries.Length);
+            var calls = entries[0].Value.Split('\n').Skip(4).Select(row => row.Split('\t'))
+                .Where(row => row.Length >= 5 && (row[0] == "call" || row[0] == "new")).ToArray();
+            var vectors = calls.Where(row => row[3].StartsWith("M:Unity.Mathematics.float", StringComparison.Ordinal)).ToArray();
+            Assert.AreEqual(4, vectors.Length);
+            foreach (var call in vectors) Assert.That(call, Does.Contain("!ecs-leaf"));
+            Assert.That(calls.Single(row => row[3].EndsWith(".ScalarArgument", StringComparison.Ordinal)), Does.Not.Contain("!ecs-leaf"));
+            Assert.That(calls.Single(row => row[3].Contains("UserVector.#ctor")), Does.Not.Contain("!ecs-leaf"));
+        }
+
+        public static double MathematicsDistances(Unity.Mathematics.float3 a, Unity.Mathematics.float3 b, double scalar) {
+            return Unity.Mathematics.math.lengthsq(a) + Unity.Mathematics.math.distance(a, b) +
+                Unity.Mathematics.math.sqrt(ScalarArgument()) + Unity.Mathematics.math.sqrt(scalar) +
+                Unity.Mathematics.math.dot(a, b);
+        }
+
+        [Test]
+        public void DistanceContractsKeepArgumentAnalysis() {
+            const string prefix = "M:ME.BECS.Tests.Tests_SourceGeneratorContracts.MathematicsDistances(";
+            var entries = typeof(Tests_SourceGeneratorContracts).Assembly
+                .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .Where(attribute => attribute.Key == "ME.BECS.MethodSummary.v2" && attribute.Value != null &&
+                    attribute.Value.StartsWith(prefix, StringComparison.Ordinal)).ToArray();
+            Assert.AreEqual(1, entries.Length);
+            var calls = entries[0].Value.Split('\n').Skip(4).Select(row => row.Split('\t'))
+                .Where(row => row.Length >= 5 && row[0] == "call").ToArray();
+            var mathematics = calls.Where(row => row[3].StartsWith("M:Unity.Mathematics.math.", StringComparison.Ordinal)).ToArray();
+            Assert.AreEqual(5, mathematics.Length);
+            foreach (var call in mathematics) Assert.That(call, Does.Contain("!ecs-leaf"));
+            var helper = calls.Single(row => row[3] == "M:ME.BECS.Tests.Tests_SourceGeneratorContracts.ScalarArgument");
+            Assert.That(helper, Does.Not.Contain("!ecs-leaf"));
+        }
 
         public static bool Hints() {
             var likely = Unity.Burst.CompilerServices.Hint.Likely(Condition());

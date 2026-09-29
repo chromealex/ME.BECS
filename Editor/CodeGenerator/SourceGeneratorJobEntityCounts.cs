@@ -77,6 +77,7 @@ namespace ME.BECS.Editor {
             var limitSeen = false;
             string[] initializer = null;
             var arguments = new List<uint>();
+            var compilerArguments = new List<string>();
             var seen = new HashSet<uint>();
             string previous = null;
             reason = "invalid count/limit/initializer records or unresolved entity group";
@@ -91,7 +92,11 @@ namespace ME.BECS.Editor {
                     var identity = fields[1] + "\n" + fields[2];
                     if (previous != null && StringComparer.Ordinal.Compare(previous, identity) >= 0) return false;
                     previous = identity;
-                    if (inline > 0u || (maximum > 0u && loop > 0u)) arguments.Add(group);
+                    if (inline > 0u || (maximum > 0u && loop > 0u)) {
+                        arguments.Add(group);
+                        compilerArguments.Add("global::ME.BECS.SourceGenerated.EntityInputs.Id_" +
+                            ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(fields[1] + "\t" + fields[2]));
+                    }
                 } else if (fields[0] == "I") {
                     if (initializer != null || fields.Length != 5 || fields[3] != "Apply" || fields[4] != "v3") return false;
                     initializer = fields;
@@ -114,7 +119,7 @@ namespace ME.BECS.Editor {
             try { method.MakeGenericMethod(job); }
             catch (ArgumentException) { return false; }
             call = "global::" + expected + ".Apply<" + EditorUtils.GetTypeName(job) + ">(" +
-                string.Join(", ", new[] { groupCount }.Concat(arguments).Select(value => value.ToString(CultureInfo.InvariantCulture) + "u")) + ");";
+                string.Join(", ", new[] { "global::ME.BECS.SourceGenerated.EntityInputs.GroupCount" }.Concat(compilerArguments)) + ");";
             reason = null;
             return true;
         }

@@ -36,6 +36,12 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                 catch (FormatException) { output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid assembly encoding in " + file.Path)); continue; }
                 if (target != input.Right.AssemblyName) continue;
                 if (selected != null) { output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Multiple manifests target " + target)); return; }
+                // Classification and injection planning inspect private instance fields
+                // in referenced component/aspect assemblies. Default public-only metadata
+                // import is insufficient. This is a generator-local compilation view;
+                // normal accessibility checks below still govern emitted source access.
+                if (input.Right.Options.MetadataImportOptions != MetadataImportOptions.All)
+                    input.Right = input.Right.WithOptions(input.Right.Options.WithMetadataImportOptions(MetadataImportOptions.All));
                 var footerIndex = lines.Length - 2;
                 var footer = footerIndex >= 1 ? lines[footerIndex].Split('\t') : Array.Empty<string>();
                 var payload = footerIndex >= 1 ? string.Join("\n", lines.Take(footerIndex)) + "\n" : "";
@@ -567,8 +573,15 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                     source.Append("global::ME.BECS.StaticTypes<").Append(entry.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
                         .Append(">.SetCollectionsCount(").Append(entry.Count.ToString(CultureInfo.InvariantCulture)).Append("u);\n");
                 source.Append("} } }\n");
-                source.Append("namespace ME.BECS.SourceGenerated { internal static class EntityInputs { public static void Initialize() {\n")
-                    .Append("global::ME.BECS.EntityTypes.Init();\n");
+                source.Append("namespace ME.BECS.SourceGenerated { internal static class EntityInputs {\npublic const uint GroupCount = ")
+                    .Append(entityRegistrations.Count.ToString(CultureInfo.InvariantCulture)).Append("u;\n");
+                for (var entityId = 0; entityId < entityRegistrations.Count; ++entityId) {
+                    var entity = entityRegistrations[entityId];
+                    var identity = entity.ContainingAssembly.Identity + "\t" + entity.GetDocumentationCommentId();
+                    source.Append("public const uint Id_").Append(ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(identity))
+                        .Append(" = ").Append(entityId.ToString(CultureInfo.InvariantCulture)).Append("u;\n");
+                }
+                source.Append("public static void Initialize() {\nglobal::ME.BECS.EntityTypes.Init();\n");
                 for (var entityId = 0; entityId < entityRegistrations.Count; ++entityId)
                     source.Append("global::ME.BECS.EntityTypes.Register<")
                         .Append(entityRegistrations[entityId].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
@@ -760,6 +773,9 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                 foreach (var registration in componentRegistrations) {
                     var name = registration.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                     var key = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(registration.Identity);
+                    source.Append("public static uint Size_").Append(key)
+                        .Append("() => (uint)global::Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<")
+                        .Append(name).Append(">();\n");
                     source.Append("public static void Register_").Append(key).Append("() { global::ME.BECS.StaticTypes<")
                         .Append(name).Append(">.Validate(isTag: ").Append((registration.Flags & 1) != 0 ? "true" : "false")
                         .Append(", isStatic: ").Append((registration.Flags & 2) != 0 ? "true" : "false").Append(");\n");

@@ -26,6 +26,8 @@ namespace ME.BECS.Editor {
             if (this.TryRead(job, out var rows)) {
                 var status = Validate(job, rows, legacy, out var source);
                 if (status == 0) throw Difference(job);
+                if (status < 0) throw new InvalidOperationException("Invalid complete source safety catalog for " + job.AssemblyQualifiedName +
+                    ". Recompile its source catalog and export Compare Job Safety; refusing silent fallback for corrupt complete metadata.");
                 if (status == 1) result = source;
             }
             this.selected.Add(job, new HashSet<TypeInfo>(result));
@@ -34,14 +36,20 @@ namespace ME.BECS.Editor {
 
         // Shared by production and the read-only report: -1 unavailable, 0 differs, 1 selected.
         internal static int Validate(Type job, string[] rows, HashSet<TypeInfo> legacy, out HashSet<TypeInfo> source) {
-            source = null;
-            if (rows == null || rows.Length < 3 || rows[0] != (job.IsGenericType ? job.AssemblyQualifiedName : job.FullName) ||
-                !rows[1].StartsWith("M:", StringComparison.Ordinal) || rows[2] != "0" || !TryGetTypes(rows, out var sourceTypes)) return -1;
+            if (!TryParse(job, rows, out source)) return -1;
             var normalized = new HashSet<TypeInfo>(legacy);
             Jobs.JobsEarlyInitCodeGenerator.UpdateDeps(normalized);
+            var expected = new HashSet<string>(normalized.Select(Record), StringComparer.Ordinal);
+            return expected.SetEquals(source.Select(Record)) ? 1 : 0;
+        }
+
+        // Compiler catalog validation without running IL analysis or mutating runtime state.
+        internal static bool TryParse(Type job, string[] rows, out HashSet<TypeInfo> source) {
+            source = null;
+            if (rows == null || rows.Length < 3 || rows[0] != (job.IsGenericType ? job.AssemblyQualifiedName : job.FullName) ||
+                !rows[1].StartsWith("M:", StringComparison.Ordinal) || rows[2] != "0" || !TryGetTypes(rows, out var sourceTypes)) return false;
             var identities = sourceTypes
                 .GroupBy(Identity).ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.Ordinal);
-            var expected = new HashSet<string>(normalized.Select(Record), StringComparer.Ordinal);
             var actual = new HashSet<string>(StringComparer.Ordinal);
             source = new HashSet<TypeInfo>();
             var valid = true;
@@ -62,14 +70,17 @@ namespace ME.BECS.Editor {
                     valid = false;
                     break;
                 }
-                if (!identities.TryGetValue(fields[1] + "\t" + fields[2], out var types) || types.Length != 1)
-                    return -1;
+                if (!identities.TryGetValue(fields[1] + "\t" + fields[2], out var types) || types.Length != 1) {
+                    source = null;
+                    return false;
+                }
                 if (!source.Add(new TypeInfo { type = types[0], op = (RefOp)mode, isArg = fields[4] == "1" })) {
                     valid = false;
                     break;
                 }
             }
-            return !valid ? -1 : expected.SetEquals(actual) ? 1 : 0;
+            if (!valid) source = null;
+            return valid;
         }
 
         private static InvalidOperationException Difference(Type job) => new InvalidOperationException(

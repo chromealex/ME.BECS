@@ -26,7 +26,8 @@ internal static class MethodSummaryContracts {
         System.Collections.Generic.Dictionary<INamedTypeSymbol, int?> refModes) {
         if (symbol is IMethodSymbol scalar && IsScalarComparison(scalar)) rows.Append("\t!scalar-comparison");
         if (symbol is IMethodSymbol intrinsic && (IsObjectConstructor(intrinsic) || IsAddressIntrinsic(intrinsic, compilation) ||
-            IsBurstHint(intrinsic, compilation) || IsMathematicsValueOperation(intrinsic, compilation))) rows.Append("\t!ecs-leaf");
+            IsBurstHint(intrinsic, compilation) || IsMathematicsValueOperation(intrinsic, compilation) ||
+            IsFloatVectorConstructor(intrinsic, compilation) || IsFloatVectorArithmetic(intrinsic, compilation))) rows.Append("\t!ecs-leaf");
         if (Has(symbol, "ME.BECS.DisableContainerSafetyRestrictionAttribute")) rows.Append("\t!disable-safety");
         if (Has(symbol, "ME.BECS.CodeGeneratorIgnoreAttribute")) rows.Append("\t!ignore");
         if (symbol is IMethodSymbol weighted && SymbolEqualityComparer.Default.Equals(weighted.ContainingAssembly,
@@ -67,6 +68,43 @@ internal static class MethodSummaryContracts {
         method.ContainingType.SpecialType == SpecialType.System_Object &&
         method.MethodKind == MethodKind.Constructor && !method.IsStatic &&
         method.Parameters.Length == 0 && method.DeclaringSyntaxReferences.Length == 0;
+
+    private static bool IsFloatVectorConstructor(IMethodSymbol method, Compilation compilation) {
+        // Audited Unity.Mathematics float2/3/4 constructors only copy float lanes.
+        // Conversion constructors, matrices, user structs and implicit operators are
+        // separate contracts. Caller argument expressions remain ordinary call edges.
+        if (method.MethodKind != MethodKind.Constructor || method.IsStatic || method.DeclaringSyntaxReferences.Length != 0 ||
+            method.ContainingAssembly.Name != "Unity.Mathematics" || method.Parameters.Length == 0 ||
+            method.Parameters.Any(parameter => parameter.RefKind != RefKind.None)) return false;
+        int Width(ITypeSymbol type) {
+            if (type.SpecialType == SpecialType.System_Single) return 1;
+            for (var width = 2; width <= 4; ++width)
+                if (SymbolEqualityComparer.Default.Equals(type, compilation.GetTypeByMetadataName("Unity.Mathematics.float" + width))) return width;
+            return 0;
+        }
+        var target = Width(method.ContainingType);
+        if (target < 2) return false;
+        var arguments = method.Parameters.Select(parameter => Width(parameter.Type)).ToArray();
+        return arguments.All(width => width > 0) &&
+            ((arguments.Length == 1 && arguments[0] == 1) || arguments.Sum() == target);
+    }
+
+    private static bool IsFloatVectorArithmetic(IMethodSymbol method, Compilation compilation) {
+        if (method.MethodKind != MethodKind.UserDefinedOperator || !method.IsStatic || method.Arity != 0 ||
+            method.DeclaringSyntaxReferences.Length != 0 || method.ContainingAssembly.Name != "Unity.Mathematics" ||
+            method.ReturnsByRef || method.ReturnsByRefReadonly ||
+            !SymbolEqualityComparer.Default.Equals(method.ReturnType, method.ContainingType) ||
+            method.Parameters.Any(parameter => parameter.RefKind != RefKind.None)) return false;
+        var vector = method.ContainingType;
+        if (!Enumerable.Range(2, 3).Any(width => SymbolEqualityComparer.Default.Equals(vector,
+                compilation.GetTypeByMetadataName("Unity.Mathematics.float" + width)))) return false;
+        bool Vector(ITypeSymbol type) => SymbolEqualityComparer.Default.Equals(type, vector);
+        if (method.Name is "op_UnaryNegation" or "op_UnaryPlus")
+            return method.Parameters.Length == 1 && Vector(method.Parameters[0].Type);
+        return method.Name is "op_Addition" or "op_Subtraction" or "op_Multiply" or "op_Division" &&
+            method.Parameters.Length == 2 && method.Parameters.Any(parameter => Vector(parameter.Type)) &&
+            method.Parameters.All(parameter => Vector(parameter.Type) || parameter.Type.SpecialType == SpecialType.System_Single);
+    }
 
     private static bool IsBurstHint(IMethodSymbol method, Compilation compilation) {
         // These exact Burst intrinsics only hint at branch probability/assumptions.
@@ -117,9 +155,19 @@ internal static class MethodSummaryContracts {
             return mask.Scalar == SpecialType.System_Boolean && (mask.Width == 1 || mask.Width == result.Width);
         }
         if (result.Scalar == SpecialType.System_Boolean) return false;
+        if (method.Name is "dot" or "lengthsq" or "distance") {
+            var count = method.Name == "lengthsq" ? 1 : 2;
+            if (method.Parameters.Length != count || result.Width != 1) return false;
+            var operand = Shape(method.Parameters[0].Type);
+            if (operand.Scalar != result.Scalar || !method.Parameters.All(parameter =>
+                    SymbolEqualityComparer.Default.Equals(parameter.Type, method.Parameters[0].Type))) return false;
+            return method.Name == "dot"
+                ? result.Scalar is SpecialType.System_Int32 or SpecialType.System_UInt32 or SpecialType.System_Single or SpecialType.System_Double
+                : result.Scalar is SpecialType.System_Single or SpecialType.System_Double;
+        }
         return method.Name switch {
             "min" or "max" => SameOperands(2), "abs" => SameOperands(1), "clamp" => SameOperands(3),
-            "saturate" => result.Scalar is SpecialType.System_Single or SpecialType.System_Double && SameOperands(1),
+            "saturate" or "sqrt" => result.Scalar is SpecialType.System_Single or SpecialType.System_Double && SameOperands(1),
             _ => false,
         };
     }

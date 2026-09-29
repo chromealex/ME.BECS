@@ -18,7 +18,6 @@ namespace ME.BECS.Editor.Jobs {
         };
         private readonly SourceGeneratorJobWeights sourceWeights = new SourceGeneratorJobWeights();
         private readonly SourceGeneratorJobEntityCounts sourceEntityCounts = new SourceGeneratorJobEntityCounts();
-        private readonly SourceGeneratorJobSizes sourceSizes = new SourceGeneratorJobSizes();
         private readonly SourceGeneratorJobSafety sourceSafety = new SourceGeneratorJobSafety();
         private readonly System.Collections.Generic.Dictionary<System.Type, uint> selectedWeights = new System.Collections.Generic.Dictionary<System.Type, uint>();
 
@@ -193,9 +192,16 @@ namespace ME.BECS.Editor.Jobs {
                 }
                 content.Add($"JobStaticInfo<{jobTypeFullName}>.loopCount = {entsInfo.brCount}u;");
                 if (reservations != null) {
-                    content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = _makeArray<uint>({reservations.Length}u, Allocator.Domain);");
+                    var groups = EntityTypeCodeGenerator.GetAllTypes(this, out var groupCount);
+                    if (reservations.Length != groupCount)
+                        throw new System.InvalidOperationException("Entity reservation groups changed during export: " + jobType.FullName);
+                    content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = _makeArray<uint>(global::ME.BECS.SourceGenerated.EntityInputs.GroupCount, Allocator.Domain);");
                     for (uint i = 0u; i < reservations.Length; ++i) {
-                        if (reservations[i] > 0) content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount[{i}u] = {reservations[i]}u;");
+                        if (reservations[i] == 0) continue;
+                        var entity = groups[i].Item1;
+                        var identity = entity.Assembly.FullName + "\tT:" + entity.FullName.Replace('+', '.');
+                        var id = "global::ME.BECS.SourceGenerated.EntityInputs.Id_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(identity);
+                        content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount[{id}] = {reservations[i]}u;");
                     }
                 } else {
                     content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = default;");
@@ -206,15 +212,13 @@ namespace ME.BECS.Editor.Jobs {
             var sizeComponents = typeInfos.Select(item => item.type)
                 .Where(type => typeof(IComponent).IsAssignableFrom(type)).Distinct().ToArray();
             content.Add(this.WeightInitialization(jobType));
-            if (this.sourceSizes.TrySelect(jobType, sizeComponents, out var sizeInitializer))
-                content.Add(sizeInitializer);
-            else {
-                var maxStructSize = 0u;
-                foreach (var component in sizeComponents) {
-                    var size = (uint)System.Runtime.InteropServices.Marshal.SizeOf(component);
-                    if (size > maxStructSize) maxStructSize = size;
-                }
-                content.Add($"JobStaticInfo<{jobTypeFullName}>.maxStructSize = {maxStructSize}u;");
+            // Safety selection already owns the component set. Native layout is
+            // compiler-owned for both complete summaries and transitional IL sets.
+            content.Add($"JobStaticInfo<{jobTypeFullName}>.maxStructSize = 0u;");
+            foreach (var component in sizeComponents) {
+                var size = "global::ME.BECS.SourceGenerated.ComponentInputs.Size_" +
+                    ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(component.AssemblyQualifiedName) + "()";
+                content.Add($"JobStaticInfo<{jobTypeFullName}>.maxStructSize = global::Unity.Mathematics.math.max(JobStaticInfo<{jobTypeFullName}>.maxStructSize, {size});");
             }
 
             var result = content.ToArray();
