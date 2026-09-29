@@ -1,5 +1,31 @@
 # ME.BECS source-generator migration: first stage
 
+## Required gate before removing Code Generator/Run
+
+Graph editing must continue to regenerate graph code without the legacy Run menu.
+Source generators do not observe Unity graph assets by themselves: the Editor must
+export refreshed graph inputs and let Unity recompile the consumer assembly.
+Do not remove the menu or the graph window's Compile action until its replacement
+has been implemented and verified in Unity.
+
+The replacement must cover saved topology/system changes, system configuration,
+enable/disable and parallel-mode changes, nested graph edits (including affected
+parents), Undo/Redo followed by save, and asset import/move/delete. It must retain
+graph IDs, coalesce repeated edits, write only changed inputs, defer work during
+compilation/import, and avoid a refresh/recompile loop. Cosmetic changes should
+not rebuild an unchanged semantic plan. Play/player builds must not silently use
+a stale graph plan after failed input generation.
+
+Current integration points: `FeaturesGraphEditorWindow` saves separately from its
+Compile button (`CodeGenerator.RegenerateBurstAOT`); `OnGraphChanged` marks topology
+changes dirty. `SystemsGraphPostProcessor` maintains graph IDs, not compilation.
+Preserve a visible retry/error path when replacing these hooks. Verification must
+include changing an inner graph and seeing the owning root's generated lifecycle
+and injection plans change, without invoking the removed legacy Run command.
+
+The historical status notes below describe earlier migration stages, not proof
+that the complete migration or this graph-editing gate has passed.
+
 Status: prototype DLL built in Release and copied to `../SourceGenerator` with RoslynAnalyzer import metadata.
 Unity loading has not been verified. The existing generator remains authoritative for discovery and ordering.
 The editor bootstrap emitter now uses individual generated registration methods when available and compatible,

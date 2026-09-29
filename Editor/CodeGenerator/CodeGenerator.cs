@@ -451,15 +451,20 @@ namespace ME.BECS.Editor {
         }
 
         public static void RegenerateBurstAOT(bool forced = false, bool cleanCache = false) {
+            TryRegenerateBurstAOT(forced, cleanCache);
+        }
+
+        // Reports export completion only, not the result of Unity's later compilation.
+        public static bool TryRegenerateBurstAOT(bool forced = false, bool cleanCache = false) {
             
             // Skip if project creation is in progress
-            if (UnityEditor.EditorPrefs.HasKey("ME.BECS.Editor.AwaitPackageImportData") == true) return;
+            if (UnityEditor.EditorPrefs.HasKey("ME.BECS.Editor.AwaitPackageImportData") == true) return false;
 
-            if (CodeGeneratorMenu.IsEnabledAuto == false && forced == false) return;
+            if (CodeGeneratorMenu.IsEnabledAuto == false && forced == false) return false;
 
             if (UnityEngine.Application.isBatchMode == true) {
                 Logger.Editor.Warning($"[ ME.BECS ] CodeGen won't run in batchmode. Ensure it was properly generated (or stored in the repo) before the build");
-                return;
+                return false;
             }
 
             Logger.Editor.Log($"[ ME.BECS ] Regenerating assemblies {(forced == true ? "(forced)" : "")}");
@@ -471,15 +476,16 @@ namespace ME.BECS.Editor {
             UnityEditor.EditorPrefs.SetInt("ME.BECS.CodeGenerator.TempError", UnityEditor.EditorPrefs.GetInt("ME.BECS.CodeGenerator.TempError", 0) + 1);
 
             var list = EditorUtils.GetAssembliesInfo();
+            var exported = true;
             {
                 var dir = $"Assets/{ECS}.Gen/Runtime";
-                Build(list, dir);
+                exported &= Build(list, dir);
             }
             {
                 var dir = $"Assets/{ECS}.Gen/Editor";
-                Build(list, dir, editorAssembly: true);
+                exported &= Build(list, dir, editorAssembly: true);
             }
-
+            return exported;
         }
 
         private static void CleanCache() {
@@ -534,7 +540,7 @@ namespace ME.BECS.Editor {
 
         public const string PROGRESS_BAR_CAPTION = "[ ME.BECS ] CodeGenerator";
 
-        private static void Build(System.Collections.Generic.List<AssemblyInfo> asms, string dir, bool editorAssembly = false) {
+        private static bool Build(System.Collections.Generic.List<AssemblyInfo> asms, string dir, bool editorAssembly = false) {
             using var sourceGeneratorLookup = SourceGeneratorBridge.BeginLookupScope();
             using var timings = new CodeGeneratorTimings(editorAssembly);
 
@@ -562,6 +568,7 @@ namespace ME.BECS.Editor {
             var componentTypes = new System.Collections.Generic.List<System.Type>();
             var inputManifestPath = $"{dir}/{ECS}.{postfix}.becs-inputs";
             var inputManifestReady = false;
+            var exportSucceeded = false;
             try {
                 var path = @$"{dir}/{ECS}.Gen.cs";
                 var filesPath = @$"{dir}/{ECS}.Files";
@@ -774,6 +781,7 @@ namespace ME.BECS.Editor {
                     System.IO.Directory.Delete(filesPath, true);
                 }
                 timings.Mark("format / write / import output");
+                exportSucceeded = true;
             } catch (System.Exception ex) {
                 timings.Mark("interrupted stage (see exception)");
                 UnityEngine.Debug.LogException(ex);
@@ -852,6 +860,7 @@ namespace ME.BECS.Editor {
                 }
             }
 
+            return exportSucceeded;
         }
 
         public static void PatchSystemsList(System.Collections.Generic.List<System.Type> types) {

@@ -79,8 +79,19 @@ namespace ME.BECS.Editor.FeaturesGraph {
             }
             {
                 this.compileButton = new UnityEditor.UIElements.ToolbarButton(() => {
-                    this.SetCompileDirty(false);
-                    CodeGenerator.RegenerateBurstAOT();
+                    this.SetCompileDirty(true);
+                    if (UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating) {
+                        this.ShowNotification(new GUIContent("Wait for compilation/import, then retry"), 3f);
+                        return;
+                    }
+                    this.graphView.SaveGraphToDisk();
+                    if (CodeGenerator.TryRegenerateBurstAOT(forced: true)) {
+                        this.SetCompileDirty(false);
+                        this.hasUnsavedChanges = false;
+                        this.ShowNotification(new GUIContent("Graph inputs exported; check Unity compilation"), 3f);
+                    } else {
+                        this.ShowNotification(new GUIContent("Graph export incomplete; see Console"), 3f);
+                    }
                 });
                 this.UpdateCompileButton();
                 toolbar.Add(this.compileButton);
@@ -99,6 +110,8 @@ namespace ME.BECS.Editor.FeaturesGraph {
         }
 
         private void UpdateCompileButton() {
+            // Undo/property notifications can arrive while the view is being rebuilt.
+            if (this.compileButton == null || this.gradientAnimated == null) return;
             if (this.isCompileDirty == true) {
                 this.compileButton.text = "Compile Graphs*";
                 this.gradientAnimated.ThinkStart();
@@ -155,6 +168,10 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
             UnityEditor.Selection.selectionChanged -= this.OnSelectionChanged;
             UnityEditor.Selection.selectionChanged += this.OnSelectionChanged;
+            this.rootVisualElement.UnregisterCallback<UnityEditor.UIElements.SerializedPropertyChangeEvent>(this.OnGraphPropertyChanged);
+            this.rootVisualElement.RegisterCallback<UnityEditor.UIElements.SerializedPropertyChangeEvent>(this.OnGraphPropertyChanged);
+            UnityEditor.Undo.undoRedoPerformed -= this.OnGraphUndoRedo;
+            UnityEditor.Undo.undoRedoPerformed += this.OnGraphUndoRedo;
             
             if (this.graphView is FeaturesGraphView view) view.UpdateEnableState();
             
@@ -164,6 +181,8 @@ namespace ME.BECS.Editor.FeaturesGraph {
             
             ME.BECS.Editor.Extensions.SubclassSelector.SubclassSelectorDrawer.onOpen -= this.OnOpen;
             UnityEditor.Selection.selectionChanged -= this.OnSelectionChanged;
+            this.rootVisualElement.UnregisterCallback<UnityEditor.UIElements.SerializedPropertyChangeEvent>(this.OnGraphPropertyChanged);
+            UnityEditor.Undo.undoRedoPerformed -= this.OnGraphUndoRedo;
             if (this.graph != null) { 
                 this.graph.onGraphChanges -= this.OnGraphChanged;
             }
@@ -212,9 +231,27 @@ namespace ME.BECS.Editor.FeaturesGraph {
             this.hasUnsavedChanges = true;
             this.UpdateToolbar();
 
-            if (obj.addedEdge != null || obj.removedEdge != null || obj.addedNode != null || obj.removedNode != null) {
+            if (obj.addedEdge != null || obj.removedEdge != null || obj.addedNode != null || obj.removedNode != null || obj.nodeChanged != null) {
                 this.SetCompileDirty(true);
             }
+        }
+
+        private void OnGraphPropertyChanged(UnityEditor.UIElements.SerializedPropertyChangeEvent evt) {
+            // Property drawers do not all call BaseGraph.NotifyNodeChanged. Listen to
+            // the bound graph, not preferences/other inspectors or viewport movement.
+            if (this.graph == null || evt.changedProperty == null ||
+                evt.changedProperty.serializedObject.targetObject != this.graph) return;
+            this.hasUnsavedChanges = true;
+            this.SetCompileDirty(true);
+        }
+
+        private void OnGraphUndoRedo() {
+            if (this.graph == null) return;
+            // Unity's undoRedoPerformed does not identify affected objects. Mark the
+            // open graph conservatively; do not export or compile from this callback.
+            // A future input-content comparison will suppress unchanged graph exports.
+            this.hasUnsavedChanges = true;
+            this.SetCompileDirty(true);
         }
 
         private void UpdateToolbar() {

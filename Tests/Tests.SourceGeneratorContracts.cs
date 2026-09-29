@@ -292,6 +292,27 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void SafetyBlockerImpactCountsDistinctJobsDeterministically() {
+            var validator = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.SourceGeneratorSafetyValidation", true);
+            var add = validator.GetMethod("AddBlocker", BindingFlags.NonPublic | BindingFlags.Static);
+            var format = validator.GetMethod("FormatBlockerImpact", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.IsNotNull(add);
+            Assert.IsNotNull(format);
+            var map = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.HashSet<string>>(StringComparer.Ordinal);
+            add.Invoke(null, new object[] { map, "MissingSummary: B", "Job2" });
+            add.Invoke(null, new object[] { map, "MissingSummary: B", "Job2" });
+            add.Invoke(null, new object[] { map, "MissingSummary: A", "Job1" });
+            add.Invoke(null, new object[] { map, "MissingSummary: A", "Job2" });
+            var text = (string)format.Invoke(null, new object[] { map });
+            StringAssert.Contains("MissingSummary: jobs=2", text);
+            StringAssert.Contains("jobs=2 MissingSummary: A", text);
+            StringAssert.Contains("jobs=1 MissingSummary: B", text);
+            Assert.Less(text.IndexOf("jobs=2 MissingSummary: A", StringComparison.Ordinal),
+                text.IndexOf("jobs=1 MissingSummary: B", StringComparison.Ordinal));
+            StringAssert.Contains("example: Job1", text);
+        }
+
+        [Test]
         public void SafetyCatalogParserRejectsMalformedCompleteDependenciesWithoutIL() {
             var job = typeof(SafetyCatalogJob);
             var entries = job.Assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()

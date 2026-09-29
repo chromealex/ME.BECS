@@ -146,6 +146,29 @@ namespace ME.BECS.Editor {
             return result.ToString();
         }
 
+        // Change detection only, not a replacement for the complete compiler inputs.
+        // Include nested graph values, but exclude viewport/node positions and cached
+        // sync analysis (the compiler recomputes synchronization from topology).
+        public static string GetCompilationFingerprint(SystemsGraph root) {
+            var content = new StringBuilder("ME.BECS.GraphCompilationFingerprint.v1\n");
+            using (var reader = new System.IO.StringReader(Serialize(root))) {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                    if (!line.StartsWith("sync\t", StringComparison.Ordinal)) content.AppendLine(line);
+            }
+            void AppendValues(SystemsGraph graph) {
+                content.Append("name\t").Append(Encode(graph.name)).Append('\n');
+                foreach (var node in graph.nodes) {
+                    if (node is FeaturesGraph.Nodes.SystemNode systemNode)
+                        content.Append("value\t").Append(Encode(systemNode.system == null ? "" : UnityEngine.JsonUtility.ToJson(systemNode.system))).Append('\n');
+                    if (node is FeaturesGraph.Nodes.GraphNode nested) AppendValues(nested.graphValue);
+                }
+            }
+            // Serialize already rejects missing and recursive nested graphs.
+            AppendValues(root);
+            return ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(content.ToString());
+        }
+
         private static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
         private static string Encode(string value) => Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
     }
