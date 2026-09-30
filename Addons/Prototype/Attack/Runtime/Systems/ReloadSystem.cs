@@ -31,7 +31,7 @@ namespace ME.BECS.Attack {
 
                 }
 
-                if (aspect.componentRuntimeFire.fireTimer >= aspect.readComponent.attackTime) {
+                if (aspect.componentRuntimeFire.fireTimer > 0 && aspect.componentRuntimeFire.fireTimer >= aspect.readComponent.attackTime) {
                     // Finish fire timer
                     aspect.componentRuntimeFire.fireTimer += this.dt;
                     if (aspect.readComponentRuntimeFire.fireTimer >= aspect.readComponent.fireTime) {
