@@ -42,7 +42,7 @@ namespace ME.BECS.Perks {
             [INLINE(256)]
             public void Execute(in JobInfo jobInfo, in Ent ent, ref PerkAspect perkAspect, ref T perk) {
                 var unit = ent.ReadParent();
-                perk.Run(in perkAspect, in unit, this.dt);
+                perk.Run(in jobInfo, in perkAspect, in unit, this.dt);
             }
         }
         
@@ -63,7 +63,7 @@ namespace ME.BECS.Perks {
             [INLINE(256)]
             public void Execute(in JobInfo jobInfo, in Ent ent, ref PerkAspect perkAspect, ref T perk) {
                 var unit = ent.ReadParent();
-                perk.Run(in perkAspect, in unit, this.dt);
+                perk.Run(in jobInfo, in perkAspect, in unit, this.dt);
             }
         }
         
