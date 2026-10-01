@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: DefaultEndGraph
   m_EditorClassIdentifier: 
   id: 30
-  builtInGraph: 0
+  builtInGraph: 1
   isInnerGraph: 1
   serializedNodes: []
   nodes:
