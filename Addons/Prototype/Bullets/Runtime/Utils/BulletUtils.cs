@@ -21,7 +21,24 @@ namespace ME.BECS.Bullets {
     
     public static class BulletUtils {
 
-        
+        [INLINE(256)]
+        public static tfloat CalculateDamageFactor(tfloat hitRangeSqr, float2 bulletPosition, float2 unitPosition, tfloat unitRadius) {
+            var dist = math.distance(bulletPosition, unitPosition) - unitRadius;
+            if (dist > 0) {
+                dist *= dist;
+            }
+            return math.clamp(dist / hitRangeSqr, 0, 1);
+        }
+
+        [INLINE(256)]
+        public static tfloat CalculateDamageFactor(tfloat hitRangeSqr, float3 bulletPosition, float3 unitPosition, tfloat unitRadius) {
+            var dist = math.distance(bulletPosition, unitPosition) - unitRadius;
+            if (dist > 0) {
+                dist *= dist;
+            }
+            return math.clamp(dist / hitRangeSqr, 0, 1);
+        }
+
         [INLINE(256)]
         public static uint CalculateDamage(uint minDamage, uint maxDamage, tfloat hitRangeSqr, float2 bulletPosition, float2 unitPosition, tfloat unitRadius) {
             var damageMin = minDamage;
@@ -29,12 +46,7 @@ namespace ME.BECS.Bullets {
             if (damageMin == damageMax) {
                 return damageMax;
             }
-
-            var dist = math.distance(bulletPosition, unitPosition) - unitRadius;
-            if (dist > 0) {
-                dist *= dist;
-            }
-            return (uint)math.lerp(damageMax, damageMin, math.clamp(dist / hitRangeSqr, 0, 1));
+            return (uint)math.lerp(damageMax, damageMin, CalculateDamageFactor(hitRangeSqr, bulletPosition, unitPosition, unitRadius));
         }
 
         [INLINE(256)]
@@ -45,11 +57,7 @@ namespace ME.BECS.Bullets {
                 return damageMax;
             }
 
-            var dist = math.distance(bulletPosition, unitPosition) - unitRadius;
-            if (dist > 0) {
-                dist *= dist;
-            }
-            return (uint)math.lerp(damageMax, damageMin, math.clamp(dist / hitRangeSqr, 0, 1));
+            return (uint)math.lerp(damageMax, damageMin, CalculateDamageFactor(hitRangeSqr, bulletPosition, unitPosition, unitRadius));
         }
 
         [INLINE(256)]
