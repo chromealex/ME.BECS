@@ -29,7 +29,7 @@ namespace ME.BECS.Perks {
     public interface IPerkComponent : IConfigComponent {
 
         [INLINE(256)]
-        void Run(in PerkAspect perk, in Ent target, uint dt);
+        void Run(in JobInfo jobInfo, in PerkAspect perk, in Ent target, uint dt);
 
     }
 
@@ -68,7 +68,7 @@ namespace ME.BECS.Perks {
 
     public struct DefaultParallelPerkComponent : IPerkParallelComponent {
         
-        public void Run(in PerkAspect perk, in Ent target, uint dt) {
+        public void Run(in JobInfo jobInfo, in PerkAspect perk, in Ent target, uint dt) {
             throw new System.NotImplementedException();
         }
 
@@ -76,7 +76,7 @@ namespace ME.BECS.Perks {
 
     public struct DefaultPerkComponent : IPerkComponent {
         
-        public void Run(in PerkAspect perk, in Ent target, uint dt) {
+        public void Run(in JobInfo jobInfo, in PerkAspect perk, in Ent target, uint dt) {
             throw new System.NotImplementedException();
         }
 

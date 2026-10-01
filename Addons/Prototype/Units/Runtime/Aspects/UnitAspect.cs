@@ -195,7 +195,7 @@ namespace ME.BECS.Units {
             var placements = Ent.New<PlacementsEntityType>(JobInfo.Create(this.ent.worldId), "Placements");
             PlayerUtils.SetOwner(placements, this.readOwner.GetAspect<PlayerAspect>());
             var tr = placements.Set<TransformAspect>();
-            tr.IsStaticLocal = true;
+            // tr.IsStaticLocal = true;
             placements.SetParent(this.ent);
             return placements;
         }
