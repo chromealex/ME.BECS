@@ -48,10 +48,12 @@ namespace ME.BECS.Attack {
 
                 var speedFactor = sensor.rotationSpeed;
                 if (attack.target.IsAlive() == true) {
-                    var lookDir = attack.target.GetAspect<TransformAspect>().GetWorldMatrixPosition() - transformAspect.GetWorldMatrixPosition();
+                    var targetPos = ME.BECS.Units.UnitUtils.GetTargetBulletPosition(in ent, attack.target);
+                    var lookDir = targetPos - transformAspect.GetWorldMatrixPosition();
                     transformAspect.rotation = quaternionext.RotateTowards(transformAspect.rotation, quaternion.LookRotationSafe(lookDir, sensor.upNormal), this.dt * speedFactor);
                 } else if (attack.targets.Count > 0u) {
-                    var lookDir = attack.targets[0u].GetAspect<TransformAspect>().GetWorldMatrixPosition() - transformAspect.GetWorldMatrixPosition();
+                    var targetPos = ME.BECS.Units.UnitUtils.GetTargetBulletPosition(in ent, attack.targets[0u]);
+                    var lookDir = targetPos - transformAspect.GetWorldMatrixPosition();
                     transformAspect.rotation = quaternionext.RotateTowards(transformAspect.rotation, quaternion.LookRotationSafe(lookDir, sensor.upNormal), this.dt * speedFactor);
                 } else {
                     if (sensor.persistentRotationSpeed > 0f) {
