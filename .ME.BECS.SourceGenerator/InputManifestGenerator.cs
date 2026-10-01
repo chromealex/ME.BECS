@@ -56,6 +56,9 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                 var next = new Dictionary<string, int>(StringComparer.Ordinal);
                 var unique = new HashSet<string>(StringComparer.Ordinal);
                 var records = new List<string>();
+                var bootstrapFeeders = new List<string>();
+                var bootstrapKinds = new List<string>();
+                var registrationKinds = new List<string>();
                 var resolutions = new List<string>();
                 var entityRegistrations = new List<INamedTypeSymbol>();
                 var destroyRegistrations = new List<INamedTypeSymbol>();
@@ -86,9 +89,103 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                 var graphSlots = new Dictionary<int, List<(INamedTypeSymbol Type, bool UseDefault, uint SourceId, int NodeIndex)>>();
                 var resolver = new InputManifestTypes(input.Right, output.CancellationToken);
                 var viewTracker = new ViewTrackerInputEmitter();
+                var debugPlans = new List<DebugJobInputPlan>();
+                var jobWeights = new JobWeightInputEmitter();
+                var jobEntityInitializers = new JobEntityInputEmitter();
+                var jobBootstrap = new JobBootstrapInputEmitter();
+                var systemDependencies = new SystemDependencyInputEmitter();
+                var debugSchema = false;
                 for (var i = 1; i < footerIndex; ++i) {
                     output.CancellationToken.ThrowIfCancellationRequested();
                     var fields = lines[i].Split('\t');
+                    if (fields[0] == "system-dependencies-schema" || fields[0] == "system-dependencies") {
+                        if (header[2] != "editor" || !systemDependencies.Read(fields, resolver, input.Right)) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid system dependency plan at " + file.Path + ":" + (i + 1)));
+                            return;
+                        }
+                        records.Add(header[2] + "\t" + lines[i]);
+                        continue;
+                    }
+                    if (fields[0] == "job-early-init-schema" || fields[0] == "job-early-init") {
+                        if (!jobBootstrap.Read(fields, resolver, input.Right)) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid job EarlyInit plan at " + file.Path + ":" + (i + 1)));
+                            return;
+                        }
+                        records.Add(header[2] + "\t" + lines[i]);
+                        continue;
+                    }
+                    if (fields[0] == "job-entity-fallback") {
+                        if (!jobEntityInitializers.ReadFallback(fields, resolver, input.Right)) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid job entity fallback at " + file.Path + ":" + (i + 1)));
+                            return;
+                        }
+                        records.Add(header[2] + "\t" + lines[i]);
+                        continue;
+                    }
+                    if (fields[0] == "job-entity-initializer") {
+                        if (!jobEntityInitializers.Read(fields, resolver, input.Right)) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid job entity initializer at " + file.Path + ":" + (i + 1)));
+                            return;
+                        }
+                        records.Add(header[2] + "\t" + lines[i]);
+                        continue;
+                    }
+                    if (fields[0] == "job-weight") {
+                        if (!jobWeights.Read(fields, resolver, input.Right, out var weightError)) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, weightError + " at " + file.Path + ":" + (i + 1)));
+                            return;
+                        }
+                        records.Add(header[2] + "\t" + lines[i]);
+                        continue;
+                    }
+                    if (fields[0] == "job-debug-schema") {
+                        if (debugSchema || fields.Length != 3 || fields[1] != "0" || fields[2] != "djE=") {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid debug job schema at " + file.Path + ":" + (i + 1)));
+                            return;
+                        }
+                        debugSchema = true;
+                        records.Add(header[2] + "\t" + lines[i]);
+                        continue;
+                    }
+                    if (fields[0] == "job-debug") {
+                        string debugPayload;
+                        try { debugPayload = fields.Length == 3 ? Decode(fields[2]) : ""; }
+                        catch (FormatException) { debugPayload = ""; }
+                        if (fields.Length != 3 || fields[1] != debugPlans.Count.ToString(CultureInfo.InvariantCulture) ||
+                            !DebugJobInputPlan.TryRead(debugPayload, resolver, input.Right, out var debugPlan, out _)) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Invalid debug job plan at " + file.Path + ":" + (i + 1)));
+                            return;
+                        }
+                        if (debugPlans.Any(plan => SymbolEqualityComparer.Default.Equals(plan.Job, debugPlan.Job) &&
+                            SymbolEqualityComparer.Default.Equals(plan.Contract, debugPlan.Contract))) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Duplicate debug job plan at " + file.Path + ":" + (i + 1)));
+                            return;
+                        }
+                        debugPlans.Add(debugPlan);
+                        records.Add(header[2] + "\t" + lines[i]);
+                        continue;
+                    }
+                    if (fields[0] == "bootstrap-feeder") {
+                        string identity;
+                        try { identity = fields.Length >= 3 && fields.Length <= 5 ? Decode(fields[2]) : ""; }
+                        catch (FormatException) { identity = ""; }
+                        var kind = fields.Length >= 4 ? fields[3] : "legacy";
+                        var registrationKind = fields.Length == 5 ? fields[4] : "legacy";
+                        if (fields.Length < 3 || fields.Length > 5 || (registrationKind != "legacy" && BootstrapRegistrationBody(registrationKind) == null) ||
+                            (kind != "legacy" && kind != "none" && BootstrapInitializationTarget(kind) == null) || fields[1] != bootstrapFeeders.Count.ToString(CultureInfo.InvariantCulture) ||
+                            string.IsNullOrWhiteSpace(identity) || bootstrapFeeders.Contains(identity, StringComparer.Ordinal)) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None,
+                                "Invalid or duplicate bootstrap feeder at " + file.Path + ":" + (i + 1)));
+                            return;
+                        }
+                        // Editor-only feeder identities are transport data, not runtime
+                        // type references. Preserve their order without loading/resolving them.
+                        bootstrapFeeders.Add(identity);
+                        bootstrapKinds.Add(kind);
+                        registrationKinds.Add(registrationKind);
+                        records.Add(header[2] + "\t" + lines[i]);
+                        continue;
+                    }
                     if (ViewTrackerInputEmitter.IsRecord(fields[0])) {
                         if (!viewTracker.Read(fields, resolver, input.Right, out var viewError)) {
                             output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, viewError + " at " + file.Path + ":" + (i + 1)));
@@ -563,6 +660,113 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
                 foreach (var resolution in resolutions)
                     source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.TypeInputResolution.v1\", ")
                         .Append(SymbolDisplay.FormatLiteral(resolution, true)).Append(")]\n");
+                var bootstrapNamespace = header[2] == "editor" ? "ME.BECS.Editor" : "ME.BECS";
+                var dependencyOwner = input.Right.Assembly.GetTypeByMetadataName("ME.BECS.Editor.StaticMethods");
+                if (header[2] == "editor" && dependencyOwner?.GetMembers("SourceSystemDependenciesV1").Length > 0) {
+                    if (!systemDependencies.HasSchema || dependencyOwner.GetMembers("InitializeSystemDependenciesInfo").Length != 0) {
+                        output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Missing system dependency schema or mixed dependency templates. Regenerate bootstrap and inputs together."));
+                        return;
+                    }
+                    systemDependencies.Append(source);
+                }
+                if (bootstrapKinds.Contains("jobs") && !jobBootstrap.HasSchema) {
+                    output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Missing ordered job EarlyInit schema. Regenerate bootstrap and inputs together."));
+                    return;
+                }
+                if (jobBootstrap.HasSchema && !debugSchema) {
+                    output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Ordered job EarlyInit requires the debug/layout schema, including when collection checks are disabled."));
+                    return;
+                }
+                if (!jobBootstrap.Append(source, bootstrapNamespace, debugPlans, jobWeights, jobEntityInitializers, out var bootstrapJobError)) {
+                    output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, bootstrapJobError));
+                    return;
+                }
+                var bootstrapType = input.Right.Assembly.GetTypeByMetadataName(bootstrapNamespace + ".StaticTypesInitializer");
+                if (bootstrapType?.GetMembers("SourceBootstrapPlanV1").OfType<IMethodSymbol>().Any() == true) {
+                    if (bootstrapFeeders.Count == 0 || bootstrapType.GetMembers("RegisterAdditionalTypes").Length != 0) {
+                        output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Missing bootstrap feeder plan or mixed bootstrap templates. Regenerate active inputs."));
+                        return;
+                    }
+                    var hooks = bootstrapFeeders.Select(identity => "InitializeFeeder_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(identity)).ToArray();
+                    for (var hookIndex = 0; hookIndex < hooks.Length; ++hookIndex) {
+                        var hook = hooks[hookIndex];
+                        if (bootstrapKinds[hookIndex] != "legacy") {
+                            if (bootstrapType.GetMembers(hook).Length != 0) {
+                                output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Compiler-owned bootstrap hook is still exported: " + hook + ". Regenerate bootstrap."));
+                                return;
+                            }
+                            continue;
+                        }
+                        if (!bootstrapType.GetMembers(hook).OfType<IMethodSymbol>().Any(method => method.IsStatic && method.ReturnsVoid && method.Parameters.Length == 0 && method.Arity == 0)) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Missing bootstrap feeder hook " + hook + ". Regenerate active inputs and bootstrap together."));
+                            return;
+                        }
+                    }
+                    source.Append("namespace ").Append(bootstrapNamespace).Append(" { public static unsafe partial class StaticTypesInitializer {\n")
+                        .Append("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\nprivate static void RegisterAdditionalTypes() {\n");
+                    foreach (var hook in hooks) source.Append(hook).Append("();\n");
+                    source.Append("}\n");
+                    for (var hookIndex = 0; hookIndex < hooks.Length; ++hookIndex) {
+                        if (bootstrapKinds[hookIndex] == "none") {
+                            source.Append("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\nprivate static void ")
+                                .Append(hooks[hookIndex]).Append("() { }\n");
+                            continue;
+                        }
+                        var initializationTarget = BootstrapInitializationTarget(bootstrapKinds[hookIndex]);
+                        if (initializationTarget == null) continue;
+                        source.Append("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\nprivate static void ")
+                            .Append(hooks[hookIndex]).Append("() { global::ME.BECS.SourceGenerated.")
+                            .Append(initializationTarget).Append(".Initialize(); }\n");
+                    }
+                    source.Append("} }\n");
+                }
+                var registrationType = input.Right.Assembly.GetTypeByMetadataName(bootstrapNamespace + ".StaticMethods");
+                if (registrationType?.GetMembers("SourceRegistrationPlanV1").OfType<IMethodSymbol>().Any() == true) {
+                    if (bootstrapFeeders.Count == 0 || registrationType.GetMembers("RegisterGeneratedMethods").Length != 0) {
+                        output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Missing feeder registration plan or mixed bootstrap templates. Regenerate active inputs."));
+                        return;
+                    }
+                    var hooks = bootstrapFeeders.Select(identity => "RegisterFeeder_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(identity)).ToArray();
+                    for (var index = 0; index < hooks.Length; ++index) {
+                        var hook = hooks[index];
+                        if (registrationKinds[index] != "legacy") {
+                            if (registrationType.GetMembers(hook).Length != 0) {
+                                output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Compiler-owned registration hook is still exported: " + hook + ". Regenerate bootstrap."));
+                                return;
+                            }
+                            continue;
+                        }
+                        if (!registrationType.GetMembers(hook).OfType<IMethodSymbol>().Any(method => method.IsStatic && method.ReturnsVoid && method.Parameters.Length == 0 && method.Arity == 0)) {
+                            output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Missing feeder registration hook " + hook + ". Regenerate bootstrap and inputs together."));
+                            return;
+                        }
+                    }
+                    source.Append("namespace ").Append(bootstrapNamespace).Append(" { public static unsafe partial class StaticMethods {\n")
+                        .Append("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\nprivate static void RegisterGeneratedMethods() {\n");
+                    foreach (var hook in hooks) source.Append(hook).Append("();\n");
+                    source.Append("}\n");
+                    for (var index = 0; index < hooks.Length; ++index) {
+                        var body = BootstrapRegistrationBody(registrationKinds[index]);
+                        if (body == null) continue;
+                        source.Append("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\nprivate static void ")
+                            .Append(hooks[index]).Append("() { ").Append(body).Append(" }\n");
+                    }
+                    source.Append("} }\n");
+                }
+                var debugType = input.Right.Assembly.GetTypeByMetadataName(bootstrapNamespace + ".DebugJobs");
+                if (debugType?.GetMembers("SourceDebugPlanV1").OfType<IMethodSymbol>().Any() == true) {
+                    if (!debugSchema || debugType.GetMembers("InitializeJobsDebug").Length != 0) {
+                        output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, "Missing debug job schema or mixed debug templates. Regenerate bootstrap and inputs together."));
+                        return;
+                    }
+                    DebugJobInputEmitter.Append(source, bootstrapNamespace, debugPlans);
+                }
+                JobLayoutInputEmitter.Append(source, input.Right, debugPlans);
+                jobWeights.Append(source);
+                if (!jobEntityInitializers.Append(source, entityRegistrations, out var entityInitializerError)) {
+                    output.ReportDiagnostic(Diagnostic.Create(Invalid, Location.None, entityInitializerError));
+                    return;
+                }
                 DestroyInputEmitter.Append(source, destroyRegistrations);
                 DestroyInputEmitter.EmitCatalog(output, input.Right, destroyRegistrations);
                 ConfigMaskInputEmitter.Append(source, maskRegistrations);
@@ -853,6 +1057,23 @@ public sealed class InputManifestGenerator : IIncrementalGenerator {
             method.Parameters[1].RefKind == RefKind.None && method.Parameters[1].Type.SpecialType == SpecialType.System_UInt16 &&
             method.GetAttributes().Any(attribute => SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, marker)));
     }
+
+    private static string? BootstrapRegistrationBody(string kind) => kind switch {
+        "none" => "",
+        "aspect-construction" => "global::ME.BECS.SourceGenerated.AspectInputs.RegisterConstruction();",
+        "config-callbacks" => "global::ME.BECS.SourceGenerated.ConfigMaskInputs.Initialize(); global::ME.BECS.SourceGenerated.ConfigCollectionsInputs.Initialize();",
+        "destroy-callbacks" => "global::ME.BECS.SourceGenerated.DestroyInputs.Initialize();",
+        _ => null,
+    };
+
+    private static string? BootstrapInitializationTarget(string kind) => kind switch {
+        "aspects" => "AspectInputs",
+        "entities" => "EntityInputs",
+        "config-counts" => "ConfigCollectionCounts",
+        "views" => "ViewTrackerInputs",
+        "jobs" => "JobBootstrapInputs",
+        _ => null,
+    };
 
     private static string Decode(string value) {
         var bytes = Convert.FromBase64String(value);

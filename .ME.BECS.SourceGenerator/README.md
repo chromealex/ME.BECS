@@ -889,6 +889,17 @@ its consumers. No raw operation sequence is currently treated as a complete exec
    including domain reload, player builds, fixed-point configuration and test-only components.
 5. Only then remove redundant legacy emission and migrate the remaining registration phases.
 
+## Follow-up: unified job API
+
+After the source-generator migration, provide one job interface instead of the
+`IJobForComponents<...>` / `IJobFor2Aspects3Components<...>` family and allow
+`Schedule()` without explicitly listing all job/component/aspect type arguments.
+The generator should infer the required types and access contracts from the job's
+`Execute` signature and emit the scheduling adapters. The exact interface name
+and API shape remain to be designed. Preserve deterministic entity reservations,
+parallel execution semantics, safety checks and Burst/AOT support. This is a
+separate follow-up, not a change to the current public scheduling API.
+
 Runtime initialization attributes and module initializers are intentionally absent: compiler or assembly
 load order must not decide simulation IDs. Unity assets still require an editor-produced manifest;
 Roslyn cannot inspect method bodies from referenced assemblies, so cross-assembly dependency analysis

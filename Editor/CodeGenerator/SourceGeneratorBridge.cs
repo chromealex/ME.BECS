@@ -271,23 +271,30 @@ namespace ME.BECS.Editor {
         }
 
         internal static string ResolveJobEarlyInit(Type job, string legacyCall, out string reason) {
+            var method = ResolveJobEarlyInitMethod(job, legacyCall, out reason);
+            if (method == null) return legacyCall;
+            return "global::" + method.DeclaringType.FullName + "." + method.Name +
+                (method.IsGenericMethod ? "<" + string.Join(", ", method.GetGenericArguments().Select(type => EditorUtils.GetTypeName(type))) + ">" : "") + "();";
+        }
+
+        internal static MethodInfo ResolveJobEarlyInitMethod(Type job, string legacyCall, out string reason) {
             reason = "not an EarlyInit call, non-public job, or open generic job";
-            if (!legacyCall.StartsWith("EarlyInit.", StringComparison.Ordinal) || !job.IsVisible || job.ContainsGenericParameters) return legacyCall;
+            if (!legacyCall.StartsWith("EarlyInit.", StringComparison.Ordinal) || !job.IsVisible || job.ContainsGenericParameters) return null;
             var catalog = job.Assembly.GetType("ME.BECS.SourceGenerated.JobEarlyInit_" + Encode(job.Assembly.GetName().Name), false);
-            if (catalog == null) { reason = "job EarlyInit catalog unavailable"; return legacyCall; }
+            if (catalog == null) { reason = "job EarlyInit catalog unavailable"; return null; }
             if (job.IsGenericType) return ResolveGenericJobEarlyInit(job, catalog, legacyCall, out reason);
             var name = "Init_" + HashEarlyInitCall(legacyCall);
             var method = FindMethod(catalog, name, Type.EmptyTypes);
             reason = method == null ? "wrapper for exact legacy call missing (unsupported signature or spelling mismatch)" : "wrapper return type differs";
-            if (method == null || method.ReturnType != typeof(void) || method.ContainsGenericParameters || !catalog.IsVisible) return legacyCall;
+            if (method == null || method.ReturnType != typeof(void) || method.ContainsGenericParameters || !catalog.IsVisible) return null;
             reason = null;
-            return "global::" + catalog.FullName + "." + name + "();";
+            return method;
         }
 
-        private static string ResolveGenericJobEarlyInit(Type job, Type catalog, string legacyCall, out string reason) {
+        private static MethodInfo ResolveGenericJobEarlyInit(Type job, Type catalog, string legacyCall, out string reason) {
             reason = "invalid legacy EarlyInit call";
             var end = legacyCall.IndexOf('<');
-            if (end < 0) return legacyCall;
+            if (end < 0) return null;
             var earlyMethod = legacyCall.Substring("EarlyInit.".Length, end - "EarlyInit.".Length);
             var key = HashEarlyInitCall(job.GetGenericTypeDefinition().FullName + "|" + earlyMethod);
             var init = FindMethod(catalog, "InitGeneric_" + key, Type.EmptyTypes);
@@ -296,20 +303,19 @@ namespace ME.BECS.Editor {
             reason = "generic wrapper/metadata absent or signature incompatible (unsupported constraints, parameter count, or ambiguous overload)";
             if (init == null || metadata == null || !init.IsGenericMethodDefinition || !metadata.IsGenericMethodDefinition ||
                 init.ReturnType != typeof(void) || metadata.ReturnType != typeof(Type[]) ||
-                init.GetGenericArguments().Length != arguments.Length || metadata.GetGenericArguments().Length != arguments.Length) return legacyCall;
+                init.GetGenericArguments().Length != arguments.Length || metadata.GetGenericArguments().Length != arguments.Length) return null;
             Type[] actual;
             try {
                 init.MakeGenericMethod(arguments);
                 actual = (Type[])metadata.MakeGenericMethod(arguments).Invoke(null, null);
-            } catch (ArgumentException exception) { reason = "generic constraint mismatch: " + exception.Message; return legacyCall; }
-              catch (TargetInvocationException exception) { reason = "metadata failed: " + exception.GetBaseException().Message; return legacyCall; }
-            if (actual == null || actual.Length == 0 || actual[0] != job) { reason = "metadata job type mismatch"; return legacyCall; }
+            } catch (ArgumentException exception) { reason = "generic constraint mismatch: " + exception.Message; return null; }
+              catch (TargetInvocationException exception) { reason = "metadata failed: " + exception.GetBaseException().Message; return null; }
+            if (actual == null || actual.Length == 0 || actual[0] != job) { reason = "metadata job type mismatch"; return null; }
             var expected = "EarlyInit." + earlyMethod + "<" + EditorUtils.GetTypeName(job) +
                 (actual.Length > 1 ? ", " + string.Join(", ", actual.Skip(1).Select(t => EditorUtils.GetDataTypeName(t))) : "") + ">();";
-            if (expected != legacyCall) { reason = "component/aspect arguments differ: expected " + expected + ", legacy " + legacyCall; return legacyCall; }
+            if (expected != legacyCall) { reason = "component/aspect arguments differ: expected " + expected + ", legacy " + legacyCall; return null; }
             reason = null;
-            return "global::" + catalog.FullName + ".InitGeneric_" + key + "<" +
-                string.Join(", ", arguments.Select(t => EditorUtils.GetTypeName(t))) + ">();";
+            return init.MakeGenericMethod(arguments);
         }
 
         internal static bool TryGetGenericComponents(Type definition, Type constraint, out Type[] components) {

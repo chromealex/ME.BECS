@@ -9,6 +9,12 @@ namespace ME.BECS.Editor {
     internal sealed class SourceGeneratorJobWeights {
         private SourceGeneratorClosedJobCatalog closed;
         private readonly Dictionary<Type, string> initializers = new Dictionary<Type, string>();
+        private readonly Dictionary<Type, Type> initializerTypes = new Dictionary<Type, Type>();
+
+        internal bool TryGetInitializerType(Type job, out Type type) {
+            type = null;
+            return this.TryGetComplete(job, out _) && this.initializerTypes.TryGetValue(job, out type);
+        }
 
         internal bool TryGetInitializer(Type job, out string call) {
             call = null;
@@ -58,6 +64,7 @@ namespace ME.BECS.Editor {
                     try { method.MakeGenericMethod(job); }
                     catch (ArgumentException) { return false; }
                     initializer = "global::" + fields[2] + ".Apply<" + EditorUtils.GetTypeName(job) + ">();";
+                    this.initializerTypes[job] = method.DeclaringType;
                     break;
                 }
                 if (initializer == null) return false;

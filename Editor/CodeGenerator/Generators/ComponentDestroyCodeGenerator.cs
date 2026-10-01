@@ -4,6 +4,10 @@ using System.Linq;
 namespace ME.BECS.Editor {
 
     public class ComponentDestroyCodeGenerator : CustomCodeGenerator {
+        public override string SourceRegistrationKind => this.GetType() == typeof(ComponentDestroyCodeGenerator) ? "destroy-callbacks" : null;
+
+        public override void AddSourceGeneratorReferences(System.Collections.Generic.List<System.Type> references) =>
+            references.AddRange(GetSelectedComponents(this.editorAssembly, this.asms));
 
         internal static System.Type[] GetSelectedComponents(bool editor, System.Collections.Generic.List<AssemblyInfo> assemblies) =>
             UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentDestroy>()
@@ -13,7 +17,7 @@ namespace ME.BECS.Editor {
 
         public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
 
-            references.AddRange(GetSelectedComponents(this.editorAssembly, this.asms));
+            this.AddSourceGeneratorReferences(references);
             // Preserve the registry phase position; Roslyn owns callbacks and ordered registration.
             return new System.Collections.Generic.List<CodeGenerator.MethodDefinition> {
                 new CodeGenerator.MethodDefinition { generatedRegistration = "global::ME.BECS.SourceGenerated.DestroyInputs.Initialize();" },

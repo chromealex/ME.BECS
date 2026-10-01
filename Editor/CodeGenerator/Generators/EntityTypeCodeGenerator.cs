@@ -5,6 +5,7 @@ namespace ME.BECS.Editor {
 
     [CodeGeneratorOrder(-100)]
     public class EntityTypeCodeGenerator : CustomCodeGenerator {
+        public override string SourceInitializationKind => this.GetType() == typeof(EntityTypeCodeGenerator) ? "entities" : null;
 
         public static (System.Type, uint)[] GetAllTypes(CustomCodeGenerator codeGenerator, out uint count) {
 

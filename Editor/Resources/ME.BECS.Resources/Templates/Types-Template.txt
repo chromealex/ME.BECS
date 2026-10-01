@@ -10,18 +10,16 @@ namespace ME.BECS {
     using s = System.Collections.Generic;
     
     public static unsafe partial class StaticTypesInitializer {
-        private static void RegisterAdditionalTypes() {
-            {{CONTENT_TYPES}}
-        }
+        private static void SourceBootstrapPlanV1() { }
+        {{CONTENT_TYPES}}
     }
     
     [UnityEngine.Scripting.PreserveAttribute]
     [UnityEngine.DefaultExecutionOrder(-100_000)]
     [BURST]
     public static unsafe partial class StaticMethods {
-        private static void RegisterGeneratedMethods() {
-            {{CUSTOM_METHOD_REGISTRY}}
-        }
+        private static void SourceRegistrationPlanV1() { }
+        {{CUSTOM_METHOD_REGISTRY}}
         {{CUSTOM_METHODS}}
     }
 }

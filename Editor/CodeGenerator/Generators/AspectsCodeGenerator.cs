@@ -4,38 +4,18 @@ namespace ME.BECS.Editor.Aspects {
 
     public class AspectsCodeGenerator : CustomCodeGenerator {
 
+        // Derived custom feeders may override AddInitialization: do not bypass them.
+        public override string SourceInitializationKind => this.GetType() == typeof(AspectsCodeGenerator) ? "aspects" : null;
+        public override string SourceRegistrationKind => this.GetType() == typeof(AspectsCodeGenerator) ? "aspect-construction" : null;
+
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
-            
-            var aspects = this.aspects;
-            foreach (var aspect in aspects) {
-
-                if (aspect.IsValueType == false) continue;
-                if (aspect.IsVisible == false) continue;
-
-                if (this.IsValidTypeForAssembly(aspect, true) == false) continue;
-
-                // Only dependency collection remains here. Registration/query code is compiler-owned.
-                references.Add(aspect);
-                var fields = aspect.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                foreach (var field in fields) {
-                    var fieldType = field.FieldType;
-                    if (typeof(IAspectData).IsAssignableFrom(fieldType) == true &&
-                        field.GetCustomAttribute(typeof(QueryWithAttribute)) != null) {
-                        var gType = fieldType.GenericTypeArguments[0];
-                        if (gType.IsVisible == false) continue;
-                        references.Add(gType);
-                    }
-                }
-
-            }
-            
+            // Dependencies are collected by AddSourceGeneratorReferences before emission.
             dataList.Add("global::ME.BECS.SourceGenerated.AspectInputs.Initialize();");
             
         }
 
-        public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
+        public override void AddSourceGeneratorReferences(System.Collections.Generic.List<System.Type> references) {
 
-            //UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAspect)).OrderBy(x => x.FullName).ToArray()
             var aspects = this.aspects;
             foreach (var aspect in aspects) {
 
@@ -59,6 +39,10 @@ namespace ME.BECS.Editor.Aspects {
                 
             }
             
+        }
+
+        public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
+            this.AddSourceGeneratorReferences(references);
             var def = new CodeGenerator.MethodDefinition() {
                 generatedRegistration = "global::ME.BECS.SourceGenerated.AspectInputs.RegisterConstruction();",
             };

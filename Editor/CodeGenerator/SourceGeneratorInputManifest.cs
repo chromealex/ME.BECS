@@ -8,6 +8,91 @@ namespace ME.BECS.Editor {
     using System.Text;
 
     public static class SourceGeneratorInputManifest {
+        internal static Type[] OrderFeederTypes(IEnumerable<Type> types) => types
+            .Where(type => typeof(CustomCodeGenerator).IsAssignableFrom(type) && !type.IsAbstract && !type.ContainsGenericParameters)
+            // Preserve nullable priority semantics of the existing exporter:
+            // an absent attribute precedes explicit priorities, including negative ones.
+            .OrderBy(type => ((CodeGeneratorOrderAttribute)Attribute.GetCustomAttribute(type, typeof(CodeGeneratorOrderAttribute)))?.order)
+            .ThenBy(type => type.FullName, StringComparer.Ordinal)
+            .ThenBy(type => type.Assembly.FullName, StringComparer.Ordinal).ToArray();
+
+        internal static CustomCodeGenerator[] CreateFeeders() =>
+            OrderFeederTypes(UnityEditor.TypeCache.GetTypesDerivedFrom<CustomCodeGenerator>())
+                .Select(type => (CustomCodeGenerator)Activator.CreateInstance(type)).ToArray();
+
+        internal static Type[] GetInputReferenceTypes(Systems.SystemDependenciesCodeGenerator.UsedObjects used) {
+            var types = new HashSet<Type>();
+            void Add(IEnumerable<Type> source) {
+                if (source == null) throw new InvalidOperationException("Missing source input discovery list.");
+                foreach (var type in source) {
+                    if (type == null) throw new InvalidOperationException("Null source input dependency.");
+                    types.Add(type);
+                }
+            }
+            Add(used.systems);
+            Add(used.components);
+            Add(used.componentsGroup);
+            Add(used.jobTypes);
+            Add(used.entityTypes);
+            Add(used.aspects);
+            // Expansion works on a copy: the discovery order feeds registration IDs.
+            var closedSystems = new List<Type>(used.systems);
+            CodeGenerator.PatchSystemsList(closedSystems);
+            Add(closedSystems);
+            return types.OrderBy(type => type.AssemblyQualifiedName, StringComparer.Ordinal).ToArray();
+        }
+
+        // Shared dependency planning for active inputs and the transitional bootstrap.
+        // Never depend on generating C# text merely to discover assembly references.
+        internal static string[] GetAssemblyReferenceNames(IEnumerable<AssemblyInfo> assemblies,
+            IEnumerable<Type> types, bool editor) {
+            var byName = new Dictionary<string, AssemblyInfo>(StringComparer.Ordinal);
+            foreach (var assembly in assemblies)
+                if (!byName.ContainsKey(assembly.name)) byName.Add(assembly.name, assembly);
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            bool AddAssembly(string name) {
+                if (!editor && byName.TryGetValue(name, out var info) && info.isEditor) return false;
+                return names.Add(name);
+            }
+            var visited = new HashSet<Type>();
+            void AddType(Type type, bool root) {
+                if (type == null) return;
+                if (type.HasElementType) { AddType(type.GetElementType(), root); return; }
+                if (type.IsGenericParameter) return;
+                if (!editor && byName.TryGetValue(type.Assembly.GetName().Name, out var info) && info.isEditor) return;
+                // Framework/precompiled DLL references are not asmdef references.
+                if (root || byName.ContainsKey(type.Assembly.GetName().Name)) AddAssembly(type.Assembly.GetName().Name);
+                // A previously traversed generic argument may later be an explicit
+                // root. Preserve its reference before skipping repeated traversal.
+                if (!visited.Add(type)) return;
+                // A closed system/job may contain a component from a different assembly.
+                if (type.IsGenericType) foreach (var argument in type.GetGenericArguments()) AddType(argument, false);
+            }
+            foreach (var type in types) AddType(type, true);
+            // Retain the existing direct-reference expansion; do not traverse into
+            // unrelated assemblies and accidentally introduce generated assembly cycles.
+            foreach (var name in names.ToArray())
+                if (byName.TryGetValue(name, out var info) && info.references != null)
+                    foreach (var reference in info.references) AddAssembly(reference);
+            return names.OrderBy(name => name, StringComparer.Ordinal).ToArray();
+        }
+
+        // The active feeder and legacy bootstrap must share one discovery snapshot.
+        // Registers graph references and prepares input text; publishing input files
+        // and updating assembly references remain the caller's responsibility.
+        internal static string PrepareActiveInputs(string targetAssembly, bool editor,
+            IEnumerable<CustomCodeGenerator> addonFeeders,
+            out Systems.SystemDependenciesCodeGenerator.UsedObjects used, List<Type> references = null) {
+            Systems.SystemDependenciesCodeGenerator.GetUsedObjects(editor, out used);
+            var feeders = (addonFeeders ?? CreateFeeders()).ToArray();
+            var manifest = Serialize(targetAssembly, editor, used, registerGraphReferences: true, addonFeeders: feeders);
+            if (references != null) {
+                references.AddRange(GetInputReferenceTypes(used));
+                foreach (var feeder in feeders) feeder.AddSourceGeneratorReferences(references);
+            }
+            return manifest;
+        }
+
         [UnityEditor.MenuItem("ME.BECS/Source Generator/Export Editor Type Inputs")]
         private static void ExportEditor() => Export(true);
 
@@ -175,13 +260,19 @@ namespace ME.BECS.Editor {
                             .Append('\t').Append(Encode(string.Join(",", actions))).Append('\n');
                 }
             }
-            addonFeeders ??= UnityEditor.TypeCache.GetTypesDerivedFrom<CustomCodeGenerator>()
-                .Where(type => !type.IsAbstract && !type.ContainsGenericParameters)
-                .OrderBy(type => type.FullName, StringComparer.Ordinal)
-                .Select(type => (CustomCodeGenerator)Activator.CreateInstance(type));
+            addonFeeders ??= CreateFeeders();
+            var feederOrdinal = 0;
             foreach (var feeder in addonFeeders) {
+                result.Append("bootstrap-feeder\t").Append((feederOrdinal++).ToString(CultureInfo.InvariantCulture))
+                    .Append('\t').Append(Encode(feeder.GetType().AssemblyQualifiedName))
+                    .Append('\t').Append(feeder.SourceInitializationKind ?? "legacy")
+                    .Append('\t').Append(feeder.SourceRegistrationKind ?? "legacy").Append('\n');
                 feeder.editorAssembly = editor;
                 feeder.asms = assemblies;
+                feeder.systems = new List<Type>(selectedSystems);
+                feeder.jobTypes = new List<Type>(used.jobTypes);
+                feeder.entityTypes = new List<Type>(used.entityTypes);
+                feeder.aspects = new List<Type>(used.aspects);
                 feeder.AppendSourceGeneratorInputs(result);
             }
             var payload = result.ToString();

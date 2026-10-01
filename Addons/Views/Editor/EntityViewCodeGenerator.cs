@@ -11,6 +11,7 @@ namespace ME.BECS.Editor.Aspects {
 
     // Transitional discovery feeder: IL analysis remains here, C# emission is compiler-owned.
     public class EntityViewCodeGenerator : CustomCodeGenerator {
+        public override string SourceInitializationKind => this.GetType() == typeof(EntityViewCodeGenerator) ? "views" : null;
         private Plan collected;
 
         [UnityEditor.MenuItem("ME.BECS/Source Generator/Compare View Safety")]
@@ -103,10 +104,14 @@ namespace ME.BECS.Editor.Aspects {
             dataList.Add("global::ME.BECS.SourceGenerated.ViewTrackerInputs.Initialize();");
         }
 
-        public override FileContent[] AddFileContent(scg::List<Type> references) {
+        public override void AddSourceGeneratorReferences(scg::List<Type> references) {
             var plan = this.Collect();
             references.AddRange(plan.entries.Select(entry => entry.type));
             references.AddRange(plan.tracked);
+        }
+
+        public override FileContent[] AddFileContent(scg::List<Type> references) {
+            this.AddSourceGeneratorReferences(references);
             // Normal regeneration overwrites the old file; never leave a stale executable body.
             return new[] { new FileContent { filename = "EntityView", content = "// View tracker registration is emitted by the source generator.\n" } };
         }

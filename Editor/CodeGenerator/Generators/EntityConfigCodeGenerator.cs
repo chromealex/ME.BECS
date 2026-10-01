@@ -4,6 +4,13 @@ using System.Reflection;
 namespace ME.BECS.Editor.Aspects {
 
     public class EntityConfigCodeGenerator : CustomCodeGenerator {
+        public override string SourceInitializationKind => this.GetType() == typeof(EntityConfigCodeGenerator) ? "config-counts" : null;
+        public override string SourceRegistrationKind => this.GetType() == typeof(EntityConfigCodeGenerator) ? "config-callbacks" : null;
+
+        public override void AddSourceGeneratorReferences(System.Collections.Generic.List<System.Type> references) {
+            references.AddRange(GetMaskComponents(this.editorAssembly, this.asms));
+            references.AddRange(GetCollectionComponents(this.editorAssembly, this.asms));
+        }
 
         internal static System.Type[] GetMaskComponents(bool editor, System.Collections.Generic.List<AssemblyInfo> assemblies) =>
             UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponent>()
@@ -32,8 +39,7 @@ namespace ME.BECS.Editor.Aspects {
                 .OrderBy(field => field.FieldType.FullName, System.StringComparer.Ordinal).ToArray();
 
         public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
-            references.AddRange(GetMaskComponents(this.editorAssembly, this.asms));
-            references.AddRange(GetCollectionComponents(this.editorAssembly, this.asms));
+            this.AddSourceGeneratorReferences(references);
             return new System.Collections.Generic.List<CodeGenerator.MethodDefinition> {
                 new CodeGenerator.MethodDefinition { generatedRegistration = "global::ME.BECS.SourceGenerated.ConfigMaskInputs.Initialize();" },
                 new CodeGenerator.MethodDefinition { generatedRegistration = "global::ME.BECS.SourceGenerated.ConfigCollectionsInputs.Initialize();" },

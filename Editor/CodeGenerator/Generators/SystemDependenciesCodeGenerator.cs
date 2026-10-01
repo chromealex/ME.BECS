@@ -20,11 +20,67 @@ namespace ME.BECS.Editor.Systems {
 
         }
 
-        public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
-            
+        private readonly System.Collections.Generic.HashSet<System.Type> sourceReferences = new System.Collections.Generic.HashSet<System.Type>();
+
+        public override string AddPublicContent() => this.editorAssembly ? "private static void SourceSystemDependenciesV1() { }" : string.Empty;
+
+        public override void AddSourceGeneratorReferences(System.Collections.Generic.List<System.Type> references) =>
+            references.AddRange(this.sourceReferences.OrderBy(type => type.AssemblyQualifiedName, System.StringComparer.Ordinal));
+
+        public override void AppendSourceGeneratorInputs(System.Text.StringBuilder manifest) {
+            this.sourceReferences.Clear();
+            if (!this.editorAssembly) return;
+            var nodes = new System.Collections.Generic.Dictionary<System.Type, Graph.Node>();
+            var operations = new System.Collections.Generic.Dictionary<System.Type, System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>>();
+            foreach (var candidate in this.systems) {
+                if (!candidate.IsValueType || !candidate.IsVisible) continue;
+                var system = candidate.IsGenericType ? EditorUtils.MakeGenericConstraintType(candidate.GetGenericTypeDefinition()) : candidate;
+                if (nodes.ContainsKey(system)) continue;
+                var ops = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
+                var errors = new System.Collections.Generic.List<MethodInfoDependencies.Error>();
+                var node = new Graph.Node { system = system, dependencies = new System.Collections.Generic.List<System.Type>(),
+                    inputs = new System.Collections.Generic.List<System.Type>(), outputs = new System.Collections.Generic.List<System.Type>(), errors = errors };
+                foreach (var name in new[] { "OnUpdate", "OnAwake", "OnStart", "OnDestroy" }) {
+                    var method = system.GetMethod(name);
+                    if (method == null) continue;
+                    var deps = this.GetDeps(method);
+                    if (deps.ops != null) ops.UnionWith(deps.ops);
+                    if (deps.errors != null) errors.AddRange(deps.errors);
+                    node.dependencies.AddRange(deps.GetDependencies());
+                    node.inputs.AddRange(deps.GetInputs());
+                    node.outputs.AddRange(deps.GetOutputs());
+                }
+                JobsEarlyInitCodeGenerator.UpdateDeps(ops);
+                nodes.Add(system, node);
+                operations.Add(system, ops);
+            }
+            var graph = new Graph(nodes);
+            manifest.Append("system-dependencies-schema\t0\tdjE=\n");
+            var ordinal = 0;
+            System.Type KeyType(System.Type type) => type.IsGenericType ? type.GetGenericTypeDefinition() : type;
+            foreach (var node in graph.nodes.OrderBy(item => item.system.AssemblyQualifiedName, System.StringComparer.Ordinal)) {
+                var owner = KeyType(node.system);
+                this.sourceReferences.Add(owner);
+                var payload = new System.Text.StringBuilder("v1\n").Append(owner.AssemblyQualifiedName);
+                foreach (var op in operations[node.system].OrderBy(item => item.type.AssemblyQualifiedName, System.StringComparer.Ordinal).ThenBy(item => (byte)item.op)) {
+                    this.sourceReferences.Add(op.type);
+                    payload.Append("\nC\t").Append(((byte)op.op).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\t').Append(op.type.AssemblyQualifiedName);
+                }
+                foreach (var dependency in node.dependencies.Select(KeyType).Distinct().OrderBy(type => type.AssemblyQualifiedName, System.StringComparer.Ordinal)) {
+                    this.sourceReferences.Add(dependency);
+                    payload.Append("\nD\t").Append(dependency.AssemblyQualifiedName);
+                }
+                foreach (var error in node.errors) {
+                    payload.Append("\nE\t").Append(((int)error.code).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\t')
+                        .Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(error.GetDisplayMessage())));
+                }
+                manifest.Append("system-dependencies\t").Append((ordinal++).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\t')
+                    .Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(payload.ToString()))).Append('\n');
+            }
         }
 
-        public override string AddPublicContent() {
+        // Comparison oracle only. Production exports typed records above.
+        private string GenerateLegacyPublicContent() {
 
             if (this.editorAssembly == false) return string.Empty;
             
@@ -385,6 +441,11 @@ namespace ME.BECS.Editor.Systems {
                 public string message;
                 
                 public string AsString() {
+                    var msg = this.GetDisplayMessage();
+                    return $"errors.Add(new Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error() {{ code = Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error.Code.{this.code}, message = \"{msg}\" }});";
+                }
+
+                public string GetDisplayMessage() {
                     string msg = string.Empty;
                     if (this.code == Code.MethodCallRequired) {
                         msg = $"Method {this.callerMethodInfo.Name} requires a context.dependsOn.Complete() before accessing components.";
@@ -392,7 +453,7 @@ namespace ME.BECS.Editor.Systems {
                         msg = $"Method {this.callerMethodInfo.Name} doesn't require context.dependsOn.Complete() call.";
                     }
 
-                    return $"errors.Add(new Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error() {{ code = Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error.Code.{this.code}, message = \"{msg}\" }});";
+                    return msg;
                 }
 
                 public bool Equals(Error other) {

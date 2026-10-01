@@ -49,6 +49,24 @@ namespace ME.BECS.Editor.FeaturesGraph {
         }
         
         public System.Collections.Generic.List<BreadcrumbItem> breadcrumbs = new System.Collections.Generic.List<BreadcrumbItem>();
+        private BaseGraph fingerprintGraph;
+        private string graphFingerprint;
+
+        private bool RefreshCompilationFingerprint() {
+            var previousGraph = this.fingerprintGraph;
+            var previous = this.graphFingerprint;
+            this.fingerprintGraph = this.graph;
+            this.graphFingerprint = null;
+            if (this.graph is not ME.BECS.FeaturesGraph.SystemsGraph systemsGraph) return true;
+            try {
+                this.graphFingerprint = SourceGeneratorGraphTopology.GetCompilationFingerprint(systemsGraph);
+            } catch (System.Exception) {
+                // An incomplete graph during editing must remain dirty. The exporter
+                // reports the actual error; never treat a failed snapshot as unchanged.
+                return true;
+            }
+            return previousGraph != this.graph || previous == null || previous != this.graphFingerprint;
+        }
 
         protected override VisualElement CreateRootElement() {
             
@@ -62,6 +80,8 @@ namespace ME.BECS.Editor.FeaturesGraph {
                 var saveButton = new UnityEditor.UIElements.ToolbarButton(() => {
                     this.gradientAnimated.ThinkOnce();
                     this.graphView.SaveGraphToDisk();
+                    UnityEditor.AssetDatabase.SaveAssetIfDirty(this.graph);
+                    GraphInputRefresh.Request();
                     this.hasUnsavedChanges = false;
                     this.ShowNotification(new GUIContent("Graph Saved"), 1f);
                     this.UpdateToolbar();
@@ -85,6 +105,8 @@ namespace ME.BECS.Editor.FeaturesGraph {
                         return;
                     }
                     this.graphView.SaveGraphToDisk();
+                    UnityEditor.AssetDatabase.SaveAssetIfDirty(this.graph);
+                    GraphInputRefresh.MarkExportStarted();
                     if (CodeGenerator.TryRegenerateBurstAOT(forced: true)) {
                         this.SetCompileDirty(false);
                         this.hasUnsavedChanges = false;
@@ -222,6 +244,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
             this.graphView = null;
             this.rootView.Clear();
             this.InitializeGraph(this.graph);
+            this.RefreshCompilationFingerprint();
             
         }
 
@@ -232,6 +255,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
             this.UpdateToolbar();
 
             if (obj.addedEdge != null || obj.removedEdge != null || obj.addedNode != null || obj.removedNode != null || obj.nodeChanged != null) {
+                this.RefreshCompilationFingerprint();
                 this.SetCompileDirty(true);
             }
         }
@@ -242,14 +266,15 @@ namespace ME.BECS.Editor.FeaturesGraph {
             if (this.graph == null || evt.changedProperty == null ||
                 evt.changedProperty.serializedObject.targetObject != this.graph) return;
             this.hasUnsavedChanges = true;
+            this.RefreshCompilationFingerprint();
             this.SetCompileDirty(true);
         }
 
         private void OnGraphUndoRedo() {
             if (this.graph == null) return;
-            // Unity's undoRedoPerformed does not identify affected objects. Mark the
-            // open graph conservatively; do not export or compile from this callback.
-            // A future input-content comparison will suppress unchanged graph exports.
+            // Unity also sends this for unrelated assets and layout-only changes.
+            // Nested graph values participate in the snapshot; no export in this callback.
+            if (!this.RefreshCompilationFingerprint()) return;
             this.hasUnsavedChanges = true;
             this.SetCompileDirty(true);
         }
@@ -415,6 +440,119 @@ namespace ME.BECS.Editor.FeaturesGraph {
             
         }
 
+    }
+
+    // Transitional scheduler: keep graph saves functional while the remaining
+    // bootstrap payloads migrate. Replace the export backend, not the save contract.
+    [UnityEditor.InitializeOnLoad]
+    internal static class GraphInputRefresh {
+        private const string PendingKey = "ME.BECS.GraphInputs.Pending";
+        private const string FingerprintKey = "ME.BECS.GraphInputs.ExportedFingerprint";
+        private const string FailedKey = "ME.BECS.GraphInputs.ExportIncomplete";
+        private static double due;
+        private static bool exporting;
+
+        internal static bool HasUnfinishedExport => exporting ||
+            UnityEditor.SessionState.GetBool(PendingKey, false) || UnityEditor.SessionState.GetBool(FailedKey, false);
+
+        static GraphInputRefresh() {
+            UnityEditor.EditorApplication.update += Update;
+            UnityEditor.EditorApplication.playModeStateChanged += OnPlayModeChanged;
+            CodeGenerator.ExportCompleted += OnExportCompleted;
+        }
+
+        private static void OnExportCompleted(bool successful) {
+            MarkExportStarted();
+            if (successful) RecordSuccessfulExport();
+        }
+
+        private static void OnPlayModeChanged(UnityEditor.PlayModeStateChange state) {
+            if (state != UnityEditor.PlayModeStateChange.ExitingEditMode) return;
+            if (!HasUnfinishedExport) return;
+            UnityEditor.EditorApplication.isPlaying = false;
+            UnityEngine.Debug.LogWarning("[ME.BECS] Graph inputs are pending or their export failed. Wait for export/compilation, or retry Compile in the graph window, before entering Play Mode.");
+        }
+
+        internal static void MarkExportStarted() => UnityEditor.SessionState.SetBool(FailedKey, true);
+
+        internal static void Request() {
+            UnityEditor.SessionState.SetBool(PendingKey, true);
+            due = UnityEditor.EditorApplication.timeSinceStartup + 0.5d;
+        }
+
+        private static string Fingerprint() => SourceGeneratorGraphTopology.GetProjectCompilationFingerprint();
+
+        internal static void RecordSuccessfulExport() {
+            UnityEditor.SessionState.SetString(FingerprintKey, Fingerprint());
+            UnityEditor.SessionState.SetBool(PendingKey, false);
+            UnityEditor.SessionState.SetBool(FailedKey, false);
+        }
+
+        private static void Update() {
+            if (exporting || !UnityEditor.SessionState.GetBool(PendingKey, false) ||
+                UnityEditor.EditorApplication.timeSinceStartup < due || UnityEditor.EditorApplication.isCompiling ||
+                UnityEditor.EditorApplication.isUpdating || UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode ||
+                UnityEngine.Application.isBatchMode || UnityEditor.EditorPrefs.HasKey("ME.BECS.Editor.AwaitPackageImportData")) return;
+            // A failed export is retried on the next change/manual compile, not every
+            // editor frame. Requests raised during export remain coalesced.
+            UnityEditor.SessionState.SetBool(PendingKey, false);
+            exporting = true;
+            try {
+                var fingerprint = Fingerprint();
+                // A failed export may have published some files. Even reverting the
+                // graph to the old fingerprint requires a complete successful export.
+                if (!UnityEditor.SessionState.GetBool(FailedKey, false) && fingerprint == UnityEditor.SessionState.GetString(FingerprintKey, "")) return;
+                MarkExportStarted();
+                if (!CodeGenerator.TryRegenerateBurstAOT(forced: true))
+                    UnityEngine.Debug.LogError("[ME.BECS] Graph input export did not complete. Retry graph compilation before running the simulation.");
+            } catch (System.Exception exception) {
+                MarkExportStarted();
+                UnityEngine.Debug.LogException(exception);
+            } finally { exporting = false; }
+        }
+    }
+
+    internal sealed class GraphInputRefreshPostprocessor : UnityEditor.AssetPostprocessor {
+        private static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom) {
+            foreach (var paths in new[] { imported, moved }) {
+                foreach (var path in paths) {
+                    if (path.StartsWith("Assets/ME.BECS.Gen/", System.StringComparison.Ordinal)) continue;
+                    if (!path.EndsWith(".asset", System.StringComparison.OrdinalIgnoreCase)) continue;
+                    if (UnityEditor.AssetDatabase.GetMainAssetTypeAtPath(path) == typeof(ME.BECS.FeaturesGraph.SystemsGraph)) {
+                        GraphInputRefresh.Request();
+                        return;
+                    }
+                }
+            }
+            // Deleted assets can no longer be resolved to a type. The fingerprint
+            // comparison suppresses exports when the deletion did not affect graphs.
+            foreach (var path in deleted)
+                if (path.EndsWith(".asset", System.StringComparison.OrdinalIgnoreCase)) { GraphInputRefresh.Request(); return; }
+        }
+    }
+
+    internal sealed class GraphInputSaveProcessor : UnityEditor.AssetModificationProcessor {
+        private static string[] OnWillSaveAssets(string[] paths) {
+            foreach (var path in paths) {
+                if (path.StartsWith("Assets/ME.BECS.Gen/", System.StringComparison.Ordinal) ||
+                    !path.EndsWith(".asset", System.StringComparison.OrdinalIgnoreCase)) continue;
+                if (UnityEditor.AssetDatabase.GetMainAssetTypeAtPath(path) != typeof(ME.BECS.FeaturesGraph.SystemsGraph)) continue;
+                GraphInputRefresh.Request();
+                break;
+            }
+            return paths;
+        }
+    }
+
+    internal sealed class GraphInputBuildGuard : UnityEditor.Build.IPreprocessBuildWithReport {
+        public int callbackOrder => int.MinValue;
+
+        public void OnPreprocessBuild(UnityEditor.Build.Reporting.BuildReport report) {
+            // Do not start imports/compilation from a player build callback. This
+            // guards known pending/failed exports, not cross-session input freshness.
+            if (GraphInputRefresh.HasUnfinishedExport)
+                throw new UnityEditor.Build.BuildFailedException("[ME.BECS] Graph input export is pending or failed. Complete graph compilation in the Editor before building the player.");
+        }
     }
 
 }

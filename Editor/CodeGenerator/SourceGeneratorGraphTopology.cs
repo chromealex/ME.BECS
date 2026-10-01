@@ -149,13 +149,32 @@ namespace ME.BECS.Editor {
         // Change detection only, not a replacement for the complete compiler inputs.
         // Include nested graph values, but exclude viewport/node positions and cached
         // sync analysis (the compiler recomputes synchronization from topology).
+        public static string GetProjectCompilationFingerprint() {
+            var guids = UnityEditor.AssetDatabase.FindAssets("t:SystemsGraph");
+            Array.Sort(guids, StringComparer.Ordinal);
+            var content = new StringBuilder();
+            foreach (var guid in guids) {
+                var graph = UnityEditor.AssetDatabase.LoadAssetAtPath<SystemsGraph>(
+                    UnityEditor.AssetDatabase.GUIDToAssetPath(guid));
+                if (graph == null) throw new InvalidOperationException("Missing systems graph: " + guid);
+                if (graph.isInnerGraph) continue;
+                content.Append(guid).Append('\t').Append(GetCompilationFingerprint(graph)).Append('\n');
+            }
+            return ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(content.ToString());
+        }
+
         public static string GetCompilationFingerprint(SystemsGraph root) {
             var content = new StringBuilder("ME.BECS.GraphCompilationFingerprint.v1\n");
             using (var reader = new System.IO.StringReader(Serialize(root))) {
                 string line;
                 while ((line = reader.ReadLine()) != null)
-                    if (!line.StartsWith("sync\t", StringComparison.Ordinal)) content.AppendLine(line);
+                    if (!line.StartsWith("sync\t", StringComparison.Ordinal)) content.Append(line).Append('\n');
             }
+            // Slot counts alone cannot detect replacing a closed generic variant
+            // with another variant while retaining the same number of systems.
+            foreach (var system in SourceGeneratorInputManifest.GetGraphSystems(root))
+                content.Append("system\t").Append(Encode(system.type.AssemblyQualifiedName))
+                    .Append('\t').Append(system.useDefault ? "1" : "0").Append('\n');
             void AppendValues(SystemsGraph graph) {
                 content.Append("name\t").Append(Encode(graph.name)).Append('\n');
                 foreach (var node in graph.nodes) {

@@ -10,11 +10,15 @@ namespace ME.BECS.Editor {
         private readonly Dictionary<Assembly, Dictionary<string, string[]>> ordinary = new Dictionary<Assembly, Dictionary<string, string[]>>();
         private Dictionary<string, uint> groups;
         private uint groupCount;
+        internal sealed class InitializerPlan {
+            internal Type initializer;
+            internal string[] groupKeys;
+        }
 
         // Run-local consumer. v3 counts each call site and retains inline/loop contexts.
         // Legacy's visited-method deduplication is not an allocation correctness oracle.
-        internal bool TrySelect(Type job, CustomCodeGenerator generator, out string call) {
-            call = null;
+        internal bool TrySelectPlan(Type job, CustomCodeGenerator generator, out InitializerPlan plan) {
+            plan = null;
             string[] rows;
             if (job.ContainsGenericParameters) return false;
             if (job.IsGenericType) {
@@ -38,9 +42,7 @@ namespace ME.BECS.Editor {
                 var selected = EntityTypeCodeGenerator.GetAllTypes(generator, out this.groupCount);
                 this.groups = selected.ToDictionary(entry => entry.Item1.Assembly.FullName + "\tT:" + entry.Item1.FullName.Replace('+', '.'), entry => entry.Item2);
             }
-            if (!TryGetInitializer(job, rows, this.groups, this.groupCount, out var selectedCall, out _)) return false;
-            call = selectedCall;
-            return true;
+            return TryGetPlan(job, rows, this.groups, this.groupCount, out plan, out _);
         }
 
         internal static bool MatchesLegacy(string[] validatedRows, IReadOnlyDictionary<string, uint> groups, uint groupCount,
@@ -69,6 +71,17 @@ namespace ME.BECS.Editor {
         internal static bool TryGetInitializer(Type job, string[] rows, IReadOnlyDictionary<string, uint> groups,
             uint groupCount, out string call, out string reason) {
             call = null;
+            if (!TryGetPlan(job, rows, groups, groupCount, out var plan, out reason)) return false;
+            // Diagnostic compatibility only; production exports a typed plan.
+            call = "global::" + plan.initializer.FullName + ".Apply<" + EditorUtils.GetTypeName(job) + ">(" +
+                string.Join(", ", new[] { "global::ME.BECS.SourceGenerated.EntityInputs.GroupCount" }.Concat(plan.groupKeys.Select(key =>
+                    "global::ME.BECS.SourceGenerated.EntityInputs.Id_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(key)))) + ");";
+            return true;
+        }
+
+        private static bool TryGetPlan(Type job, string[] rows, IReadOnlyDictionary<string, uint> groups,
+            uint groupCount, out InitializerPlan plan, out string reason) {
+            plan = null;
             reason = "entity-count summary is incomplete or belongs to a different job";
             if (job.ContainsGenericParameters || !job.IsVisible || rows == null || rows.Length < 3 ||
                 rows[0] != (job.IsGenericType ? job.AssemblyQualifiedName : job.FullName) ||
@@ -77,7 +90,7 @@ namespace ME.BECS.Editor {
             var limitSeen = false;
             string[] initializer = null;
             var arguments = new List<uint>();
-            var compilerArguments = new List<string>();
+            var groupKeys = new List<string>();
             var seen = new HashSet<uint>();
             string previous = null;
             reason = "invalid count/limit/initializer records or unresolved entity group";
@@ -94,8 +107,7 @@ namespace ME.BECS.Editor {
                     previous = identity;
                     if (inline > 0u || (maximum > 0u && loop > 0u)) {
                         arguments.Add(group);
-                        compilerArguments.Add("global::ME.BECS.SourceGenerated.EntityInputs.Id_" +
-                            ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(fields[1] + "\t" + fields[2]));
+                        groupKeys.Add(fields[1] + "\t" + fields[2]);
                     }
                 } else if (fields[0] == "I") {
                     if (initializer != null || fields.Length != 5 || fields[3] != "Apply" || fields[4] != "v3") return false;
@@ -118,8 +130,7 @@ namespace ME.BECS.Editor {
                 method.GetParameters().Length != arguments.Count + 1 || method.GetParameters().Any(parameter => parameter.ParameterType != typeof(uint))) return false;
             try { method.MakeGenericMethod(job); }
             catch (ArgumentException) { return false; }
-            call = "global::" + expected + ".Apply<" + EditorUtils.GetTypeName(job) + ">(" +
-                string.Join(", ", new[] { "global::ME.BECS.SourceGenerated.EntityInputs.GroupCount" }.Concat(compilerArguments)) + ");";
+            plan = new InitializerPlan { initializer = type, groupKeys = groupKeys.ToArray() };
             reason = null;
             return true;
         }

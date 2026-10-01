@@ -8,6 +8,7 @@ using ME.BECS.Editor.Systems;
 namespace ME.BECS.Editor.Jobs {
     
     public class JobsEarlyInitCodeGenerator : CustomCodeGenerator {
+        public override string SourceInitializationKind => this.GetType() == typeof(JobsEarlyInitCodeGenerator) ? "jobs" : null;
 
         private System.Collections.Generic.List<(System.Type job, string call)> earlyInitDiagnostics;
         private MethodInfo[] earlyInitMethods;
@@ -21,11 +22,6 @@ namespace ME.BECS.Editor.Jobs {
         private readonly SourceGeneratorJobSafety sourceSafety = new SourceGeneratorJobSafety();
         private readonly System.Collections.Generic.Dictionary<System.Type, uint> selectedWeights = new System.Collections.Generic.Dictionary<System.Type, uint>();
 
-        // Only one generation pass may reuse these statements: their dependencies include
-        // called methods, component layouts, entity-group ordering and source catalogs.
-        private readonly System.Collections.Generic.Dictionary<System.Type, string[]> jobInitializations =
-            new System.Collections.Generic.Dictionary<System.Type, string[]>();
-
         private uint SelectWeight(System.Type jobType) {
             if (this.selectedWeights.TryGetValue(jobType, out var weight)) return weight;
             weight = this.sourceWeights.TryGetComplete(jobType, out var sourceWeight)
@@ -34,15 +30,12 @@ namespace ME.BECS.Editor.Jobs {
             return weight;
         }
 
-        private string WeightInitialization(System.Type jobType) => this.sourceWeights.TryGetInitializer(jobType, out var call)
-            ? call : $"JobStaticInfo<{EditorUtils.GetTypeName(jobType)}>.opsWeight = {this.SelectWeight(jobType)}u;";
-
         internal static string CompareEarlyInit(System.Collections.Generic.List<System.Type> jobs, bool editor, out int unavailable) {
             return CompareEarlyInit(jobs, editor, out unavailable, out _);
         }
 
         private static string CompareEarlyInit(System.Collections.Generic.List<System.Type> jobs, bool editor, out int unavailable,
-            out System.Collections.Generic.List<(System.Type job, string call)> initialization) {
+            out System.Collections.Generic.List<(System.Type job, MethodInfo method)> initialization) {
             unavailable = 0;
             var generator = new JobsEarlyInitCodeGenerator {
                 jobTypes = jobs, editorAssembly = editor, asms = EditorUtils.GetAssembliesInfo(),
@@ -87,8 +80,8 @@ namespace ME.BECS.Editor.Jobs {
         }
 
         private void CompareEarlyInitOrder(System.Text.StringBuilder report, ref int unavailable,
-            out System.Collections.Generic.List<(System.Type job, string call)> initialization) {
-            initialization = new System.Collections.Generic.List<(System.Type job, string call)>();
+            out System.Collections.Generic.List<(System.Type job, MethodInfo method)> initialization) {
+            initialization = new System.Collections.Generic.List<(System.Type job, MethodInfo method)>();
             var contracts = EarlyInitContracts;
             var source = new System.Collections.Generic.List<(System.Type job, string call)>();
             var plans = new System.Collections.Generic.Dictionary<System.Type, System.Collections.Generic.KeyValuePair<int, string>[]>();
@@ -110,12 +103,12 @@ namespace ME.BECS.Editor.Jobs {
                         report.AppendLine("EarlyInit ambiguous source phase " + phase + ": " + job.AssemblyQualifiedName);
                         continue;
                     }
-                    string generated = null;
+                    MethodInfo generated = null;
                     if (candidates.Length == 1) {
                         var call = candidates[0].Value;
                         source.Add((job, call));
-                        generated = SourceGeneratorBridge.ResolveJobEarlyInit(job, call, out var reason);
-                        if (generated == call) {
+                        generated = SourceGeneratorBridge.ResolveJobEarlyInitMethod(job, call, out var reason);
+                        if (generated == null) {
                             ++incomplete;
                             report.AppendLine("EarlyInit ordered wrapper unavailable: " + job.AssemblyQualifiedName + " — " + reason);
                             continue;
@@ -172,58 +165,6 @@ namespace ME.BECS.Editor.Jobs {
                 return $"{this.type} {this.op} {this.isArg}";
             }
 
-        }
-
-        private string[] GetJobInitialization(System.Type jobType) {
-            if (this.jobInitializations.TryGetValue(jobType, out var cached)) return cached;
-            var content = new System.Collections.Generic.List<string>();
-            var jobTypeFullName = EditorUtils.GetTypeName(jobType);
-            if (this.sourceEntityCounts.TrySelect(jobType, this, out var countInitializer)) {
-                content.Add(countInitializer);
-            } else {
-                var entsInfo = GetJobEntInfo(jobType, this);
-                var maximum = jobType.GetCustomAttribute<EntitiesJobMaxCountAttribute>()?.count ?? 0u;
-                content.Add($"JobStaticInfo<{jobTypeFullName}>.entitiesMaxCount = {maximum}u;");
-                uint[] reservations = entsInfo.count?.Select(count => (uint)count).ToArray();
-                if (maximum > 0u && entsInfo.brCount > 0) {
-                    reservations ??= new uint[entsInfo.loopGroups.Length];
-                    for (var group = 0; group < reservations.Length; ++group)
-                        if (entsInfo.loopGroups[group]) reservations[group] = maximum;
-                }
-                content.Add($"JobStaticInfo<{jobTypeFullName}>.loopCount = {entsInfo.brCount}u;");
-                if (reservations != null) {
-                    var groups = EntityTypeCodeGenerator.GetAllTypes(this, out var groupCount);
-                    if (reservations.Length != groupCount)
-                        throw new System.InvalidOperationException("Entity reservation groups changed during export: " + jobType.FullName);
-                    content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = _makeArray<uint>(global::ME.BECS.SourceGenerated.EntityInputs.GroupCount, Allocator.Domain);");
-                    for (uint i = 0u; i < reservations.Length; ++i) {
-                        if (reservations[i] == 0) continue;
-                        var entity = groups[i].Item1;
-                        var identity = entity.Assembly.FullName + "\tT:" + entity.FullName.Replace('+', '.');
-                        var id = "global::ME.BECS.SourceGenerated.EntityInputs.Id_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(identity);
-                        content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount[{id}] = {reservations[i]}u;");
-                    }
-                } else {
-                    content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = default;");
-                }
-            }
-
-            var typeInfos = this.sourceSafety.Select(jobType);
-            var sizeComponents = typeInfos.Select(item => item.type)
-                .Where(type => typeof(IComponent).IsAssignableFrom(type)).Distinct().ToArray();
-            content.Add(this.WeightInitialization(jobType));
-            // Safety selection already owns the component set. Native layout is
-            // compiler-owned for both complete summaries and transitional IL sets.
-            content.Add($"JobStaticInfo<{jobTypeFullName}>.maxStructSize = 0u;");
-            foreach (var component in sizeComponents) {
-                var size = "global::ME.BECS.SourceGenerated.ComponentInputs.Size_" +
-                    ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(component.AssemblyQualifiedName) + "()";
-                content.Add($"JobStaticInfo<{jobTypeFullName}>.maxStructSize = global::Unity.Mathematics.math.max(JobStaticInfo<{jobTypeFullName}>.maxStructSize, {size});");
-            }
-
-            var result = content.ToArray();
-            this.jobInitializations.Add(jobType, result);
-            return result;
         }
 
         // Migration oracle only; production consumes the source selection catalog below.
@@ -325,8 +266,33 @@ namespace ME.BECS.Editor.Jobs {
         }
 
         private System.Collections.Generic.List<System.Type> references;
+        private readonly System.Collections.Generic.HashSet<System.Type> debugInputReferences = new System.Collections.Generic.HashSet<System.Type>();
+
+        public override void AddSourceGeneratorReferences(System.Collections.Generic.List<System.Type> references) {
+            // PrepareActiveInputs serializes the plans before collecting references.
+            // Reuse that exact dependency snapshot, including transitive safety types
+            // that need not occur in the job's public signature. Do not re-run analysis.
+            var selected = new System.Collections.Generic.HashSet<System.Type>(this.debugInputReferences);
+            foreach (var contract in EarlyInitContracts.Distinct()) {
+                foreach (var job in this.SelectEarlyInitJobs(contract)) {
+                    if (!job.IsValueType || !job.IsVisible || !this.IsValidTypeForAssembly(job)) continue;
+                    selected.Add(job);
+                }
+            }
+            references.AddRange(selected.OrderBy(type => type.AssemblyQualifiedName, System.StringComparer.Ordinal));
+        }
         
         public override FileContent[] AddFileContent(System.Collections.Generic.List<System.Type> references) {
+            return new[] {
+                new FileContent { filename = "Debug.Cache", content = "public unsafe partial class DebugJobs { private static void SourceDebugPlanV1() { } }" },
+                new FileContent { filename = "Debug.Func", content = "// Debug callbacks are emitted by the source generator." },
+                new FileContent { filename = "Debug.Struct", content = "// Debug layouts are emitted by the source generator." },
+                new FileContent { filename = "Debug.UnsafeStruct", content = "// Unsafe debug layouts are emitted by the source generator." },
+            };
+        }
+
+        // Retained as a comparison oracle during the transition, not called by export.
+        private FileContent[] GenerateLegacyDebugFiles(System.Collections.Generic.List<System.Type> references) {
 
             this.references = references;
             
@@ -348,18 +314,17 @@ namespace ME.BECS.Editor.Jobs {
             var funcBuilder = new System.Text.StringBuilder();
             var structBuilder = new System.Text.StringBuilder();
             var structUnsafeBuilder = new System.Text.StringBuilder();
-            var uniqueId = 0;
             cacheBuilder.AppendLine($"#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
             structBuilder.AppendLine($"#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
             structUnsafeBuilder.AppendLine($"#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
             funcBuilder.AppendLine($"#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
             funcBuilder.AppendLine($"public static void InitializeJobsDebug() {{");
-            this.AddJobs<IJobParallelForComponentsBase, IComponentBase, TNull>(ref uniqueId, cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
-            this.AddJobs<IJobForComponentsBase, IComponentBase, TNull>(ref uniqueId, cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Components);
-            this.AddJobs<IJobParallelForAspectsBase, TNull, IAspect>(ref uniqueId, cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
-            this.AddJobs<IJobForAspectsBase, TNull, IAspect>(ref uniqueId, cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
-            this.AddJobs<IJobForAspectsComponentsBase, IComponentBase, IAspect>(ref uniqueId, cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Combined);
-            this.AddJobs<IJobParallelForAspectsComponentsBase, IComponentBase, IAspect>(ref uniqueId, cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Combined);
+            this.AddJobs<IJobParallelForComponentsBase, IComponentBase, TNull>(cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
+            this.AddJobs<IJobForComponentsBase, IComponentBase, TNull>(cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Components);
+            this.AddJobs<IJobParallelForAspectsBase, TNull, IAspect>(cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
+            this.AddJobs<IJobForAspectsBase, TNull, IAspect>(cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
+            this.AddJobs<IJobForAspectsComponentsBase, IComponentBase, IAspect>(cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Combined);
+            this.AddJobs<IJobParallelForAspectsComponentsBase, IComponentBase, IAspect>(cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Combined);
             funcBuilder.AppendLine($"}}");
             funcBuilder.AppendLine($"#endif");
             structBuilder.AppendLine($"#endif");
@@ -388,68 +353,177 @@ namespace ME.BECS.Editor.Jobs {
             public string structUnsafeBuilder;
 
         }
+
+        internal static System.Type GetDebugWorkInterface(System.Type job, System.Type contract) {
+            var candidates = job.GetInterfaces().Where(type => type.IsGenericType && contract.IsAssignableFrom(type) &&
+                type.Assembly == typeof(IJobForComponentsBase).Assembly).ToArray();
+            if (candidates.Length > 1)
+                throw new System.InvalidOperationException("Ambiguous debug job contract " + contract.FullName + " on " + job.FullName);
+            return candidates.Length == 1 ? candidates[0] : null;
+        }
         
-        private void AddJobs<TJobBase, T0, T1>(ref int uniqueId, System.Text.StringBuilder cacheBuilder, System.Text.StringBuilder funcBuilder, System.Text.StringBuilder structBuilder, System.Text.StringBuilder structUnsafeBuilder, JobType genType) {
+        internal static string GetDebugWrapperName(System.Type job, System.Type contract) => "JobDebugData_" +
+            ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(job.AssemblyQualifiedName + "\n" + contract.AssemblyQualifiedName);
+
+        internal static string GetDebugSafetyFieldName(System.Type component) => "safety_" +
+            ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(component.AssemblyQualifiedName);
+
+        private sealed class DebugWrapperPlan {
+            public System.Type job;
+            public System.Type contract;
+            public System.Type workInterface;
+            public System.Type[] components;
+            public System.Type[] aspects;
+            public TypeInfo[] safety;
+            public bool hasTypedArguments;
+        }
+
+        public override void AppendSourceGeneratorInputs(System.Text.StringBuilder manifest) {
+            this.debugInputReferences.Clear();
+            var comparison = CompareEarlyInit(this.jobTypes, this.editorAssembly, out var issues, out var initialization);
+            if (issues != 0) throw new System.InvalidOperationException("Source EarlyInit preflight failed:\n" + comparison);
+            manifest.Append("job-early-init-schema\t0\tdjE=\n");
+            for (var index = 0; index < initialization.Count; ++index) {
+                var entry = initialization[index];
+                var method = entry.method;
+                var payload = new System.Text.StringBuilder("v1\n").Append(entry.job.AssemblyQualifiedName).Append('\n')
+                    .Append(method?.DeclaringType.AssemblyQualifiedName ?? "").Append('\n').Append(method?.Name ?? "");
+                this.debugInputReferences.Add(entry.job);
+                if (method != null) {
+                    this.debugInputReferences.Add(method.DeclaringType);
+                    if (method.IsGenericMethod) foreach (var argument in method.GetGenericArguments()) {
+                        this.debugInputReferences.Add(argument);
+                        payload.Append('\n').Append(argument.AssemblyQualifiedName);
+                    }
+                }
+                manifest.Append("job-early-init\t").Append(index.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\t')
+                    .Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(payload.ToString()))).Append('\n');
+            }
+            manifest.Append("job-debug-schema\t0\tdjE=\n");
+            var contracts = new[] { typeof(IJobParallelForComponentsBase), typeof(IJobForComponentsBase),
+                typeof(IJobParallelForAspectsBase), typeof(IJobForAspectsBase),
+                typeof(IJobForAspectsComponentsBase), typeof(IJobParallelForAspectsComponentsBase) };
+            var ordinal = 0;
+            var weightJobs = new System.Collections.Generic.HashSet<System.Type>();
+            var entityInitializerOrdinal = 0;
+            var entityFallbackOrdinal = 0;
+            foreach (var contract in contracts) {
+                var componentsOnly = contract == typeof(IJobParallelForComponentsBase) || contract == typeof(IJobForComponentsBase);
+                var aspectsOnly = contract == typeof(IJobParallelForAspectsBase) || contract == typeof(IJobForAspectsBase);
+                foreach (var job in this.SelectEarlyInitJobs(contract).Distinct()) {
+                    if (!job.IsValueType || !job.IsVisible || !this.IsValidTypeForAssembly(job)) continue;
+                    var plan = this.CreateDebugWrapperPlan(job, contract, aspectsOnly ? typeof(TNull) : typeof(IComponentBase),
+                        componentsOnly ? typeof(TNull) : typeof(IAspect));
+                    this.debugInputReferences.Add(plan.job);
+                    this.debugInputReferences.Add(plan.contract);
+                    if (plan.workInterface != null) this.debugInputReferences.Add(plan.workInterface);
+                    foreach (var component in plan.components) this.debugInputReferences.Add(component);
+                    foreach (var aspect in plan.aspects) this.debugInputReferences.Add(aspect);
+                    foreach (var dependency in plan.safety) this.debugInputReferences.Add(dependency.type);
+                    var payload = new System.Text.StringBuilder("v1\n").Append(job.AssemblyQualifiedName).Append('\n')
+                        .Append(contract.AssemblyQualifiedName).Append('\n').Append(plan.workInterface?.AssemblyQualifiedName ?? "")
+                        .Append('\n').Append(plan.hasTypedArguments ? "1" : "0");
+                    foreach (var component in plan.components) payload.Append("\nC\t").Append(component.AssemblyQualifiedName);
+                    foreach (var aspect in plan.aspects) payload.Append("\nA\t").Append(aspect.AssemblyQualifiedName);
+                    foreach (var dependency in plan.safety)
+                        payload.Append("\nS\t").Append(dependency.op).Append('\t').Append(dependency.type.AssemblyQualifiedName);
+                    manifest.Append("job-debug\t").Append((ordinal++).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\t')
+                        .Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(payload.ToString()))).Append('\n');
+                    if (weightJobs.Add(job)) {
+                        if (this.sourceEntityCounts.TrySelectPlan(job, this, out var entityPlan)) {
+                            this.debugInputReferences.Add(entityPlan.initializer);
+                            var entityPayload = "v1\n" + job.AssemblyQualifiedName + "\n" + entityPlan.initializer.AssemblyQualifiedName +
+                                string.Concat(entityPlan.groupKeys.Select(key => "\n" + key));
+                            manifest.Append("job-entity-initializer\t").Append((entityInitializerOrdinal++).ToString(System.Globalization.CultureInfo.InvariantCulture))
+                                .Append('\t').Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(entityPayload))).Append('\n');
+                        } else {
+                            var entityPayload = this.GetEntityFallbackPayload(job);
+                            manifest.Append("job-entity-fallback\t").Append((entityFallbackOrdinal++).ToString(System.Globalization.CultureInfo.InvariantCulture))
+                                .Append('\t').Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(entityPayload))).Append('\n');
+                        }
+                        var hasInitializer = this.sourceWeights.TryGetInitializerType(job, out var initializerType);
+                        if (hasInitializer) this.debugInputReferences.Add(initializerType);
+                        manifest.Append("job-weight\t").Append((weightJobs.Count - 1).ToString(System.Globalization.CultureInfo.InvariantCulture))
+                            .Append('\t').Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(job.AssemblyQualifiedName)))
+                            .Append('\t').Append(hasInitializer ? "source" : "value").Append('\t')
+                            .Append(hasInitializer ? System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(initializerType.AssemblyQualifiedName)) :
+                                this.SelectWeight(job).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\n');
+                    }
+                }
+            }
+        }
+
+        private string GetEntityFallbackPayload(System.Type job) {
+            var info = GetJobEntInfo(job, this);
+            if (info.brCount < 0) throw new System.InvalidOperationException("Negative entity loop count: " + job.FullName);
+            var maximum = job.GetCustomAttribute<EntitiesJobMaxCountAttribute>()?.count ?? 0u;
+            var reservations = info.count?.Select(count => checked((uint)count)).ToArray();
+            if (maximum > 0u && info.brCount > 0) {
+                reservations ??= new uint[info.loopGroups.Length];
+                for (var index = 0; index < reservations.Length; ++index)
+                    if (info.loopGroups[index]) reservations[index] = maximum;
+            }
+            var format = System.Globalization.CultureInfo.InvariantCulture;
+            var payload = new System.Text.StringBuilder("v1\n").Append(job.AssemblyQualifiedName).Append('\n')
+                .Append(maximum.ToString(format)).Append('\n').Append(info.brCount.ToString(format)).Append('\n')
+                .Append(reservations == null ? "0" : "1");
+            if (reservations != null) {
+                var groups = EntityTypeCodeGenerator.GetAllTypes(this, out var groupCount);
+                if (reservations.Length != groupCount)
+                    throw new System.InvalidOperationException("Entity reservation groups changed during export: " + job.FullName);
+                for (var index = 0; index < reservations.Length; ++index) {
+                    if (reservations[index] == 0u) continue;
+                    var entity = groups[index].Item1;
+                    payload.Append('\n').Append(entity.Assembly.FullName).Append("\tT:").Append(entity.FullName.Replace('+', '.'))
+                        .Append('\t').Append(reservations[index].ToString(format));
+                }
+            }
+            return payload.ToString();
+        }
+
+        private DebugWrapperPlan CreateDebugWrapperPlan(System.Type job, System.Type contract,
+            System.Type componentContract, System.Type aspectContract) {
+            var workInterface = GetDebugWorkInterface(job, contract);
+            var arguments = workInterface?.GenericTypeArguments ?? System.Type.EmptyTypes;
+            var components = arguments.Where(type => componentContract.IsAssignableFrom(type) && this.IsValidTypeForAssembly(type)).ToArray();
+            var aspects = arguments.Where(type => aspectContract.IsAssignableFrom(type) && this.IsValidTypeForAssembly(type)).ToArray();
+            var safety = this.sourceSafety.Select(job);
+            UpdateDeps(safety);
+            return new DebugWrapperPlan {
+                job = job, contract = contract, workInterface = workInterface,
+                components = components, aspects = aspects,
+                hasTypedArguments = workInterface != null && components.Length + aspects.Length == arguments.Length,
+                safety = safety.OrderBy(item => item.type.FullName, System.StringComparer.Ordinal)
+                    .ThenBy(item => item.type.Assembly.FullName, System.StringComparer.Ordinal).ToArray(),
+            };
+        }
+
+        private void AddJobs<TJobBase, T0, T1>(System.Text.StringBuilder cacheBuilder, System.Text.StringBuilder funcBuilder, System.Text.StringBuilder structBuilder, System.Text.StringBuilder structUnsafeBuilder, JobType genType) {
             
-            this.cache.SetKey(typeof(TJobBase).Name);
-            var jobsComponents = this.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
-            CodeGenerator.PatchSystemsList(jobsComponents);
+            // Wrapper layout includes transitive safety dependencies. A persisted
+            // fragment keyed by the job type can outlive changes in called helpers.
+            // Re-select from the run-local source/IL snapshot on every export.
+            var jobsComponents = this.SelectEarlyInitJobs(typeof(TJobBase));
             foreach (var jobType in jobsComponents) {
                 if (jobType.IsValueType == false) continue;
                 if (jobType.IsVisible == false) continue;
                 if (this.IsValidTypeForAssembly(jobType) == false) continue;
                 this.references.Add(jobType);
-                if (this.cache.TryGetValue<Item>(jobType, out var item) == true) {
-                    cacheBuilder.AppendLine(item.cacheBuilder);
-                    funcBuilder.AppendLine(item.funcBuilder);
-                    structBuilder.AppendLine(item.structBuilder);
-                    structUnsafeBuilder.AppendLine(item.structUnsafeBuilder);
-                    ++uniqueId;
-                    continue;
-                }
 
-                if (jobType.IsGenericType == true && jobType.DeclaringType != null && jobType.DeclaringType.IsGenericType == true) {
-                } else if (jobType.IsGenericType == true) {
-                    throw new System.Exception($"Generic jobs are not supported: {jobType.FullName}.");
-                }
+                if (jobType.ContainsGenericParameters)
+                    throw new System.InvalidOperationException($"Debug job requires a closed specialization: {jobType.FullName}.");
                 
                 var tempCacheBuilder = new System.Text.StringBuilder();
                 var tempFuncBuilder = new System.Text.StringBuilder();
                 var tempStructBuilder = new System.Text.StringBuilder();
                 var tempStructUnsafeBuilder = new System.Text.StringBuilder();
                 
-                var jobTypeFullName = EditorUtils.GetTypeName(jobType);
-                var aspects = new System.Collections.Generic.List<string>();
-                var components = new System.Collections.Generic.List<string>();
-                //var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
-                //var componentsType = new System.Collections.Generic.HashSet<System.Type>();
-                var interfaces = jobType.GetInterfaces();
-                System.Type workInterface = null;
-                foreach (var i in interfaces) {
-                    if (i.IsGenericType == true) {
-                        foreach (var type in i.GenericTypeArguments) {
-                            if (typeof(T0).IsAssignableFrom(type) == true) {
-                                if (this.IsValidTypeForAssembly(type) == false) continue;
-                                components.Add(EditorUtils.GetDataTypeName(type));
-                                //componentsType.Add(type);
-                            }
-
-                            if (typeof(T1).IsAssignableFrom(type) == true) {
-                                if (this.IsValidTypeForAssembly(type) == false) continue;
-                                aspects.Add(EditorUtils.GetDataTypeName(type));
-                                //aspectsType.Add(type);
-                            }
-                        }
-
-                        workInterface = i;
-                        break;
-                    }
-                }
-
-                var uniqueTypes = this.sourceSafety.Select(jobType);
+                var jobTypeFullName = SourceGeneratorInputManifest.GetClosedTypeName(jobType);
+                var plan = this.CreateDebugWrapperPlan(jobType, typeof(TJobBase), typeof(T0), typeof(T1));
+                var aspects = plan.aspects.Select(SourceGeneratorInputManifest.GetClosedTypeName).ToArray();
+                var components = plan.components.Select(SourceGeneratorInputManifest.GetClosedTypeName).ToArray();
                 
-                ++uniqueId;
-                var structName = $"JobDebugData{uniqueId}";
+                var structName = GetDebugWrapperName(jobType, typeof(TJobBase));
 
                 tempCacheBuilder.AppendLine($"private struct Cache{structName} {{");
                 tempCacheBuilder.AppendLine($"public static readonly SharedStatic<System.IntPtr> cache = SharedStatic<System.IntPtr>.GetOrCreate<Cache{structName}>();");
@@ -482,7 +556,7 @@ namespace ME.BECS.Editor.Jobs {
                 tempStructUnsafeBuilder.AppendLine($"public JobInfo jobInfo;");
                 tempStructUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
                 tempStructUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
-                if (workInterface != null && (components.Count + aspects.Count) == workInterface.GenericTypeArguments.Length) {
+                if (plan.hasTypedArguments) {
 
                     {
                         var i = 0u;
@@ -506,17 +580,14 @@ namespace ME.BECS.Editor.Jobs {
                     }
 
                     {
-                        UpdateDeps(uniqueTypes);
-
                         var i = 0u;
-                        var uniqueTypesSorted = uniqueTypes.ToList().OrderBy(x => x.type.FullName);
-                        foreach (var typeInfo in uniqueTypesSorted) {
-                            var type = EditorUtils.GetDataTypeName(typeInfo.type);
+                        foreach (var typeInfo in plan.safety) {
+                            var type = SourceGeneratorInputManifest.GetClosedTypeName(typeInfo.type);
                             var RWRO = string.Empty;
                             if (typeInfo.op == RefOp.ReadOnly) RWRO = "RO";
                             if (typeInfo.op == RefOp.WriteOnly) RWRO = "WO";
                             if (typeInfo.op == RefOp.ReadWrite) RWRO = "RW";
-                            var fieldName = EditorUtils.GetCodeName(type);
+                            var fieldName = GetDebugSafetyFieldName(typeInfo.type);
                             tempFuncBuilder.AppendLine($"data->{fieldName} = new SafetyComponentContainer{RWRO}<{type}>(buffer->state, buffer->worldId);");
                             tempStructBuilder.AppendLine($"public SafetyComponentContainer{RWRO}<{type}> {fieldName};");
                             tempStructUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public SafetyComponentContainer{RWRO}<{type}> {fieldName};");
@@ -543,7 +614,6 @@ namespace ME.BECS.Editor.Jobs {
                 funcBuilder.AppendLine(data.funcBuilder);
                 structBuilder.AppendLine(data.structBuilder);
                 structUnsafeBuilder.AppendLine(data.structUnsafeBuilder);
-                this.cache.Add(jobType, data);
                 
             }
             
@@ -923,21 +993,13 @@ namespace ME.BECS.Editor.Jobs {
             }
         }
 
-        private void GenerateJobsDebug(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
-            dataList.Add("#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
-            dataList.Add("DebugJobs.InitializeJobsDebug();");
-            dataList.Add("#endif");
-        }
         
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
 
             if (this.earlyInitDiagnostics == null) {
-                // Until the legacy oracle is retired, every export must prove full selection/order
-                // parity for the current assemblies. A mismatch is not permission to fall back.
-                var comparison = CompareEarlyInit(this.jobTypes, this.editorAssembly, out var issues, out var initialization);
-                if (issues != 0) throw new System.InvalidOperationException("Source EarlyInit preflight failed:\n" + comparison);
-                this.GenerateJobsDebug(dataList, references);
-                this.AddSourceEarlyInit(dataList, initialization);
+                // Custom derived feeders retain this compatibility entry point. Built-in
+                // bootstrap dispatch and the complete ordered body are compiler-owned.
+                dataList.Add("global::ME.BECS.SourceGenerated.JobBootstrapInputs.Initialize();");
                 return;
             }
             this.CollectLegacyEarlyInit<IJobForComponentsBase, TNull, TNull>("DoComponents");
@@ -950,15 +1012,6 @@ namespace ME.BECS.Editor.Jobs {
             
         }
 
-        private void AddSourceEarlyInit(System.Collections.Generic.List<string> dataList,
-            System.Collections.Generic.List<(System.Type job, string call)> initialization) {
-            // Emit exactly the snapshot verified by preflight; do not rediscover, reselect or
-            // invoke argument getters between comparison and emission.
-            foreach (var entry in initialization) {
-                dataList.AddRange(this.GetJobInitialization(entry.job));
-                if (entry.call != null) dataList.Add(entry.call);
-            }
-        }
 
     }
 
