@@ -109,7 +109,13 @@ namespace ME.BECS {
             
             if (this.properties.viewsGameObjects == true) this.viewsGameObjects = UnsafeViewsModule<EntityView>.Create(GAMEOBJECT_PROVIDER_ID, ref world, new EntityViewProvider(), this.worldProperties.stateProperties.EntitiesCapacity, this.properties);
             if (this.properties.viewsDrawMeshes == true) this.viewsDrawMeshes = UnsafeViewsModule<EntityView>.Create(DRAW_MESH_PROVIDER_ID, ref world, new DrawMeshProvider(), this.worldProperties.stateProperties.EntitiesCapacity, this.properties);
-            if (this.properties.viewsParticles == true) this.viewsParticles = UnsafeViewsModule<EntityView>.Create(PARTICLES_PROVIDER_ID, ref world, new ParticlesProvider(), this.worldProperties.stateProperties.EntitiesCapacity, this.properties);
+            if (this.properties.viewsParticles == true) {
+                // Particle effects are batched into shared ParticleSystems. Deferring their view
+                // requests can let short-lived effect entities expire before they are rendered.
+                var particlesProperties = this.properties;
+                particlesProperties.spawnLimitPerFrame = 0u;
+                this.viewsParticles = UnsafeViewsModule<EntityView>.Create(PARTICLES_PROVIDER_ID, ref world, new ParticlesProvider(), this.worldProperties.stateProperties.EntitiesCapacity, particlesProperties);
+            }
             this.isActive = true;
 
         }
