@@ -7,6 +7,7 @@
         "Unity.Burst",
         "Unity.Collections",
         "ME.BECS.Features.Editor",
+        "ME.BECS.Features",
         "ME.BECS.Network"
     ],
     "includePlatforms": [

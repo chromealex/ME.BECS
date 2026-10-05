@@ -155,7 +155,8 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                             var container = new VisualElement();
                             container.AddToClassList("errors");
                             foreach (var err in errors) {
-                                var lbl = new Label($"<color=red>\u26a0</color> {err.message}");
+                                var lbl = new Label($"<color=#E8B04A>\u26a0</color> {err.GetDisplayMessage()}");
+                                lbl.tooltip = "Static analysis hint, not a required code change. Check synchronization in context before adding or removing Complete().";
                                 container.Add(lbl);
                             }
 

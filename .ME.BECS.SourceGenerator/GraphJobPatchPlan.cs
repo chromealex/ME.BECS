@@ -10,6 +10,7 @@ namespace ME.BECS.SourceGenerator;
 internal sealed class GraphJobPatchPlan {
     internal INamedTypeSymbol Job = null!;
     internal string Key = "";
+    internal string Identity = "";
     internal readonly List<(IFieldSymbol Field, int Slot)> Fields = new();
 
     internal static GraphJobPatchPlan? Create(Compilation compilation, INamedTypeSymbol? job, string identity,
@@ -24,7 +25,7 @@ internal sealed class GraphJobPatchPlan {
         if (fields.Any(static f => f.Type.SpecialType == SpecialType.System_Boolean)) return null;
         bool IsDelta(IFieldSymbol f) => f.GetAttributes().Any(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, delta));
         bool IsInject(IFieldSymbol f) => f.Type.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, inject));
-        var result = new GraphJobPatchPlan { Job = job, Key = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(identity) };
+        var result = new GraphJobPatchPlan { Job = job, Identity = identity, Key = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(identity) };
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var hasSystem = false;
         foreach (var entry in plan.Split(',')) {
@@ -52,6 +53,80 @@ internal sealed class GraphJobPatchPlan {
         }
         return hasSystem && fields.Count(f => IsDelta(f) || IsInject(f)) == result.Fields.Count ? result : null;
     }
+
+    internal static GraphJobPatchPlan? CreateSystem(Compilation compilation, INamedTypeSymbol? system, string identity,
+        IReadOnlyList<INamedTypeSymbol> slots, out string error) => CreateSelected(compilation, system, identity, slots, true, out error);
+
+    internal static GraphJobPatchPlan? CreateJob(Compilation compilation, INamedTypeSymbol? job, string identity,
+        IReadOnlyList<INamedTypeSymbol> slots, out string error) => CreateSelected(compilation, job, identity, slots, false, out error);
+
+    private static GraphJobPatchPlan? CreateSelected(Compilation compilation, INamedTypeSymbol? owner, string identity,
+        IReadOnlyList<INamedTypeSymbol> slots, bool system, out string error) {
+        error = "invalid/inaccessible or open injection owner";
+        var contract = compilation.GetTypeByMetadataName("ME.BECS.ISystem");
+        if (owner == null || owner.TypeKind != TypeKind.Struct || owner.IsRefLikeType || MethodSummaryType.From(owner).IsOpen) return null;
+        if (system && (!owner.IsUnmanagedType || !compilation.IsSymbolAccessibleWithin(owner, compilation.Assembly) ||
+            contract == null || !owner.AllInterfaces.Contains(contract, SymbolEqualityComparer.Default))) return null;
+        var inject = compilation.GetTypeByMetadataName("ME.BECS.IInject");
+        var wrapper = compilation.GetTypeByMetadataName("ME.BECS.InjectSystem`1");
+        var delta = compilation.GetTypeByMetadataName("ME.BECS.InjectDeltaTimeAttribute");
+        var softFloat = compilation.GetTypeByMetadataName("sfloat");
+        var fields = owner.GetMembers().OfType<IFieldSymbol>().Where(static field => !field.IsStatic).ToArray();
+        bool IsDelta(IFieldSymbol field) => field.GetAttributes().Any(attribute => SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, delta));
+        bool IsInject(IFieldSymbol field) => field.Type.AllInterfaces.Contains(inject, SymbolEqualityComparer.Default);
+        if (system && fields.Any(IsDelta)) {
+            error = "InjectDeltaTime is supported on jobs, not system fields";
+            return null;
+        }
+        var injected = fields.Where(field => IsInject(field) || IsDelta(field)).ToArray();
+        var result = new GraphJobPatchPlan { Job = owner, Identity = identity, Key = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(identity) };
+        // Empty jobs need no emitted type reference (including private helper jobs).
+        if (injected.Length != 0 && (!owner.IsUnmanagedType || !compilation.IsSymbolAccessibleWithin(owner, compilation.Assembly))) return null;
+        // Bool-only owners need no patch and must not acquire a new layout guard.
+        if (injected.Length != 0 && fields.Any(static field => field.Type.SpecialType == SpecialType.System_Boolean)) {
+            error = "bool layout guard blocks injection";
+            return null;
+        }
+        foreach (var field in injected) {
+            error = "unsupported injected field " + field.Name;
+            if (field.IsReadOnly || field.IsImplicitlyDeclared) return null;
+            if (IsDelta(field)) {
+                if (IsInject(field) || (field.Type.SpecialType != SpecialType.System_UInt32 &&
+                    field.Type.SpecialType != SpecialType.System_Single && !SymbolEqualityComparer.Default.Equals(field.Type, softFloat))) return null;
+                if (field.DeclaredAccessibility != Accessibility.Public && !InputManifestGenerator.HasDeltaSetter(owner, field, compilation)) {
+                    error = "partial delta-time setter unavailable for " + field.Name;
+                    return null;
+                }
+                result.Fields.Add((field, -1));
+                continue;
+            }
+            if (field.Type is not INamedTypeSymbol data ||
+                !SymbolEqualityComparer.Default.Equals(data.OriginalDefinition, wrapper) || data.TypeArguments.Length != 1) return null;
+            if (field.DeclaredAccessibility != Accessibility.Public && !HasInjectionSetter(owner, field, compilation)) {
+                error = "partial injection setter unavailable for " + field.Name;
+                return null;
+            }
+            var slot = -1;
+            for (var index = 0; index < slots.Count; ++index)
+                if (SymbolEqualityComparer.Default.Equals(slots[index], data.TypeArguments[0])) { slot = index; break; }
+            if (slot < 0) {
+                error = "target system absent from graph for " + field.Name + ": " + data.TypeArguments[0].ToDisplayString();
+                return null;
+            }
+            result.Fields.Add((field, slot));
+        }
+        error = "";
+        return result;
+    }
+
+    internal string DescribeSystem(int graph, int slot) => "v1\n" + graph.ToString(CultureInfo.InvariantCulture) + "\n" +
+        this.Identity + "\n" + slot.ToString(CultureInfo.InvariantCulture) + "\n" +
+        string.Join(",", this.Fields.Select(static item => item.Field.Name + ":" + item.Slot.ToString(CultureInfo.InvariantCulture)));
+
+    internal bool HasSystem => this.Fields.Any(static item => item.Slot >= 0);
+    internal string DescribeJob(int graph) => "v1\n" + graph.ToString(CultureInfo.InvariantCulture) + "\n" + this.Identity + "\n" +
+        (this.Fields.Count == 0 ? "none" : this.HasSystem ? "graph" : "delta") + "\n" +
+        string.Join(",", this.Fields.Select(static item => item.Field.Name + ":" + (item.Slot < 0 ? "d" : item.Slot.ToString(CultureInfo.InvariantCulture))));
 
     private static string InjectionSetterName(IFieldSymbol field) =>
         "__BecsInject_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(field.Name);

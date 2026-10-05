@@ -39,7 +39,7 @@ namespace ME.BECS {
         [HIDE_CALLSTACK]
         public static void THROW_ENT_NEW() {
             
-            throw new System.Exception("AsParallel cannot create entities in a loop without [EntitiesJobMaxCount(number)] on the job. Specify a positive maximum total number of Ent.New calls per Execute (including calls outside loops and all entity groups), and pass in jobInfo to Ent.New.");
+            throw new System.Exception("AsParallel cannot create entities in a loop, recursion or a potentially repeating exception filter without [EntitiesJobMaxCount(number)] on the job. Specify a positive maximum total number of Ent.New calls per Execute (including calls outside repeating regions and all entity groups), and pass in jobInfo to Ent.New.");
             
         }
 

@@ -8,6 +8,10 @@ namespace ME.BECS.SourceGenerator;
 
 internal static class DestroyInputEmitter {
     internal static void EmitCatalog(SourceProductionContext output, Compilation compilation, IReadOnlyList<INamedTypeSymbol> components) {
+        // Only the optional comparison catalog analyzes callback bodies. Runtime
+        // callback registration/wrappers in Append are always emitted.
+        if (!SourceAnalysisOptions.Enabled(compilation)) return;
+        DestroyRegistryAudit.Emit(output, compilation, components);
         var catalog = MethodSummaryGraph.LoadCatalog(output, compilation, System.Array.Empty<string>());
         var rows = new StringBuilder();
         var safetyMetadata = new StringBuilder();
@@ -88,21 +92,47 @@ internal static class DestroyInputEmitter {
             Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(payload, true) + ")]\n" + safetyMetadata, Encoding.UTF8));
     }
 
-    internal static void Append(StringBuilder source, IReadOnlyList<INamedTypeSymbol> components) {
-        source.Append("namespace ME.BECS.SourceGenerated { [global::Unity.Burst.BurstCompile] internal static unsafe class DestroyInputs {\n")
-            .Append("public static void Initialize() {\n");
-        for (var index = 0; index < components.Count; ++index)
-            source.Append("global::ME.BECS.WorldStaticCallbacks.RegisterAutoDestroyCallback<")
-                .Append(components[index].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append(">(Destroy_")
-                .Append(index.ToString(CultureInfo.InvariantCulture)).Append(");\n");
-        source.Append("}\n[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]\n")
+    internal static void Append(StringBuilder source, IReadOnlyList<INamedTypeSymbol> components, DestroyRegistrationOwners owners, bool editor, string target) {
+        var profile = editor ? "true" : "false";
+        source.Append("namespace ME.BECS.SourceGenerated { ");
+        if (!owners.Distributed) source.Append("[global::Unity.Burst.BurstCompile] ");
+        source.Append("internal static unsafe class DestroyInputs {\npublic static void Initialize() => global::ME.BECS.BootstrapRuntime.RegisterInstalledDestroyCallbacks(editor: ")
+            .Append(profile).Append(");\n");
+        if (!owners.Distributed) {
+            // Old snapshots can reload once to publish owner-local inputs. Active
+            // distributed selections emit neither typed bodies nor delegates here.
+            AppendInvoker(source);
+            for (var index = 0; index < components.Count; ++index) {
+                var key = index.ToString(CultureInfo.InvariantCulture);
+                AppendRegistration(source, components[index], key, "");
+                AppendCallback(source, components[index], key);
+            }
+        }
+        source.Append("} }\n");
+        if (owners.Distributed) source.Append("namespace ME.BECS.SourceGenerated { internal static class BootstrapDestroySelection { public static void Publish() => ")
+            .Append("global::ME.BECS.BootstrapRuntime.ExpectDestroyPlan(")
+            .Append(Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(owners.Plan, true)).Append(", ")
+            .Append(owners.Count.ToString(CultureInfo.InvariantCulture)).Append(", editor: ").Append(profile).Append("); } }\n");
+        else {
+            var plan = new BootstrapTypePlanEmitter();
+            for (var index = 0; index < components.Count; ++index)
+                plan.Add(target, "global::ME.BECS.SourceGenerated.DestroyInputs.Register_" + index.ToString(CultureInfo.InvariantCulture));
+            plan.Append(source, editor, kind: "Destroy");
+        }
+    }
+
+    internal static void AppendRegistration(StringBuilder source, INamedTypeSymbol component, string key, string callbackOwner) =>
+        source.Append("public static void Register_").Append(key).Append("() => global::ME.BECS.WorldStaticCallbacks.RegisterAutoDestroyCallback<")
+            .Append(component.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append(">(").Append(callbackOwner).Append("Destroy_").Append(key).Append(");\n");
+
+    internal static void AppendInvoker(StringBuilder source) =>
+        source.Append("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]\n")
             .Append("private static void Invoke<T>(in global::ME.BECS.Ent ent, byte* comp) where T : unmanaged, global::ME.BECS.IComponentDestroy {\n")
             .Append("if (comp == null) { var value = default(T); value.Destroy(in ent); } else { ref T value = ref *(T*)comp; value.Destroy(in ent); }\n}\n");
-        for (var index = 0; index < components.Count; ++index)
-            source.Append("[global::Unity.Burst.BurstCompile]\n[global::AOT.MonoPInvokeCallback(typeof(global::ME.BECS.AutoDestroyRegistry.DestroyDelegate))]\n")
-                .Append("public static void Destroy_").Append(index.ToString(CultureInfo.InvariantCulture))
-                .Append("(in global::ME.BECS.Ent ent, byte* comp) => Invoke<")
-                .Append(components[index].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append(">(in ent, comp);\n");
-        source.Append("} }\n");
-    }
+
+    internal static void AppendCallback(StringBuilder source, INamedTypeSymbol component, string key) =>
+        source.Append("[global::Unity.Burst.BurstCompile]\n[global::AOT.MonoPInvokeCallback(typeof(global::ME.BECS.AutoDestroyRegistry.DestroyDelegate))]\n")
+            .Append("[global::UnityEngine.Scripting.Preserve]\npublic static void Destroy_").Append(key)
+            .Append("(in global::ME.BECS.Ent ent, byte* comp) => Invoke<")
+            .Append(component.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append(">(in ent, comp);\n");
 }

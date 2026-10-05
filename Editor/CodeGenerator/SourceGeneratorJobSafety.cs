@@ -8,33 +8,85 @@ namespace ME.BECS.Editor {
 
     // One export pass only. Callers mutate sets while combining system dependencies.
     internal sealed class SourceGeneratorJobSafety {
-        private readonly Dictionary<Type, HashSet<TypeInfo>> selected = new Dictionary<Type, HashSet<TypeInfo>>();
+        internal enum SourceStatus { Missing, Incomplete, Complete, Invalid }
+
+        private readonly Dictionary<Type, (HashSet<TypeInfo> dependencies, bool source)> selected = new Dictionary<Type, (HashSet<TypeInfo>, bool)>();
+        private readonly Dictionary<Type, HashSet<TypeInfo>> exportedIL = new Dictionary<Type, HashSet<TypeInfo>>();
         private readonly Dictionary<Assembly, Dictionary<string, string[]>> catalogs = new Dictionary<Assembly, Dictionary<string, string[]>>();
+        private readonly Func<Type, HashSet<TypeInfo>> legacy;
         private SourceGeneratorClosedJobCatalog closed;
         private readonly object selectionLock = new object();
 
-        internal HashSet<TypeInfo> Select(Type job) {
-            // SystemDependenciesCodeGenerator shares this run-local consumer across workers.
-            // Protect the complete lazy-selection transaction, including the closed catalog.
-            lock (this.selectionLock) return this.SelectLocked(job);
+        internal SourceGeneratorJobSafety() : this(job => Jobs.JobsEarlyInitCodeGenerator.GetJobTypesInfo(job)) { }
+
+        internal SourceGeneratorJobSafety(Func<Type, HashSet<TypeInfo>> legacy) {
+            this.legacy = legacy ?? throw new ArgumentNullException(nameof(legacy));
         }
 
-        private HashSet<TypeInfo> SelectLocked(Type job) {
-            if (this.selected.TryGetValue(job, out var cached)) return new HashSet<TypeInfo>(cached);
-            var legacy = Jobs.JobsEarlyInitCodeGenerator.GetJobTypesInfo(job);
-            var result = legacy;
-            if (this.TryRead(job, out var rows)) {
-                var status = Validate(job, rows, legacy, out var source);
-                if (status == 0) throw Difference(job);
-                if (status < 0) throw new InvalidOperationException("Invalid complete source safety catalog for " + job.AssemblyQualifiedName +
-                    ". Recompile its source catalog and export Compare Job Safety; refusing silent fallback for corrupt complete metadata.");
-                if (status == 1) result = source;
+        internal HashSet<TypeInfo> Select(Type job) {
+            // Source-first comparison/testing path only. Production callers use
+            // SelectForExport and do not consult these catalogs.
+            // Protect the complete lazy-selection transaction, including the closed
+            // catalog, if a run-local consumer is shared by concurrent callers.
+            lock (this.selectionLock) return this.SelectLocked(job, out _);
+        }
+
+        internal HashSet<TypeInfo> SelectForExport(Type job, out bool sourceSelected) {
+            // Production uses the freshly compiled IL. Source summaries are an
+            // independent diagnostic oracle, not a gate or fallback for export.
+            lock (this.selectionLock) {
+                sourceSelected = false;
+                if (!this.exportedIL.TryGetValue(job, out var dependencies)) {
+                    var analyzed = this.legacy(job) ?? throw new InvalidOperationException("IL safety analysis returned no result for " + job);
+                    dependencies = new HashSet<TypeInfo>(analyzed);
+                    Jobs.JobsEarlyInitCodeGenerator.UpdateDeps(dependencies);
+                    this.exportedIL.Add(job, dependencies);
+                }
+                return new HashSet<TypeInfo>(dependencies);
             }
-            this.selected.Add(job, new HashSet<TypeInfo>(result));
+        }
+
+        private HashSet<TypeInfo> SelectLocked(Type job, out bool sourceSelected) {
+            if (this.selected.TryGetValue(job, out var cached)) {
+                sourceSelected = cached.source;
+                return new HashSet<TypeInfo>(cached.dependencies);
+            }
+            var status = this.ReadSourceLocked(job, out _, out var source, out var reason);
+            if (status == SourceStatus.Invalid) throw new InvalidOperationException("Invalid source safety catalog for " + job.AssemblyQualifiedName +
+                ": " + reason + ". Recompile its source catalog and export Compare Job Safety; refusing silent fallback for corrupt metadata.");
+            // Retain the source-first oracle for migration/regression diagnostics.
+            // It is deliberately isolated from the production IL export cache.
+            sourceSelected = status == SourceStatus.Complete;
+            var result = sourceSelected ? source : this.legacy(job);
+            this.selected.Add(job, (new HashSet<TypeInfo>(result), sourceSelected));
             return new HashSet<TypeInfo>(result);
         }
 
-        // Shared by production and the read-only report: -1 unavailable, 0 differs, 1 selected.
+        internal SourceStatus ReadSource(Type job, out string[] rows, out HashSet<TypeInfo> source, out string reason) {
+            lock (this.selectionLock) {
+                var status = this.ReadSourceLocked(job, out rows, out source, out reason);
+                if (rows != null) rows = (string[])rows.Clone();
+                return status;
+            }
+        }
+
+        private SourceStatus ReadSourceLocked(Type job, out string[] rows, out HashSet<TypeInfo> source, out string reason) {
+            rows = null;
+            source = null;
+            try {
+                var status = this.ReadRows(job, out rows, out reason);
+                if (status != SourceStatus.Complete) return status;
+                if (TryParse(job, rows, out source)) return SourceStatus.Complete;
+                reason = "Complete catalog has invalid typed dependencies, identity or records";
+            } catch (Exception exception) {
+                source = null;
+                reason = "Source safety catalog inspection failed: " + exception.GetBaseException().Message;
+            }
+            return SourceStatus.Invalid;
+        }
+
+        // Parity oracle for explicit job/view reports only. Production
+        // selection does not call this: -1 unavailable, 0 differs, 1 normalized parity.
         internal static int Validate(Type job, string[] rows, HashSet<TypeInfo> legacy, out HashSet<TypeInfo> source) {
             if (!TryParse(job, rows, out source)) return -1;
             var normalized = new HashSet<TypeInfo>(legacy);
@@ -46,7 +98,7 @@ namespace ME.BECS.Editor {
         // Compiler catalog validation without running IL analysis or mutating runtime state.
         internal static bool TryParse(Type job, string[] rows, out HashSet<TypeInfo> source) {
             source = null;
-            if (rows == null || rows.Length < 3 || rows[0] != (job.IsGenericType ? job.AssemblyQualifiedName : job.FullName) ||
+            if (job == null || job.ContainsGenericParameters || rows == null || rows.Length < 3 || rows.Any(row => row == null) || rows[0] != (job.IsGenericType ? job.AssemblyQualifiedName : job.FullName) ||
                 !rows[1].StartsWith("M:", StringComparison.Ordinal) || rows[2] != "0" || !TryGetTypes(rows, out var sourceTypes)) return false;
             var identities = sourceTypes
                 .GroupBy(Identity).ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.Ordinal);
@@ -83,10 +135,6 @@ namespace ME.BECS.Editor {
             return valid;
         }
 
-        private static InvalidOperationException Difference(Type job) => new InvalidOperationException(
-            "Complete source safety dependencies differ from legacy for " + job.AssemblyQualifiedName +
-            ". Run Compare Job Safety before changing dependency scheduling.");
-
         private static string Identity(Type type) => type.Assembly.FullName + "\tT:" + type.FullName.Replace('+', '.');
         private static string Record(TypeInfo item) => Identity(item.type) + "\t" +
             ((int)item.op).ToString(CultureInfo.InvariantCulture) + "\t" + (item.isArg ? "1" : "0");
@@ -120,29 +168,58 @@ namespace ME.BECS.Editor {
             return true;
         }
 
-        private bool TryRead(Type job, out string[] rows) {
+        private SourceStatus ReadRows(Type job, out string[] rows, out string reason) {
             rows = null;
-            if (job.ContainsGenericParameters) return false;
+            reason = null;
+            if (job == null || !job.IsValueType || job.ContainsGenericParameters) {
+                reason = "Safety selection requires a closed job value type";
+                return SourceStatus.Invalid;
+            }
             if (job.IsGenericType) {
                 this.closed ??= new SourceGeneratorClosedJobCatalog();
-                if (!this.closed.TryGet(job, "JobSafety", out rows)) return false;
+                if (!this.closed.TryGet(job, "JobSafety", out rows)) {
+                    var ambiguous = this.closed.IsAmbiguous(job, "JobSafety");
+                    reason = ambiguous ? "Conflicting closed-job safety catalogs" : "Missing closed-job safety catalog";
+                    return ambiguous ? SourceStatus.Invalid : SourceStatus.Missing;
+                }
             } else {
                 if (!this.catalogs.TryGetValue(job.Assembly, out var catalog)) {
                     catalog = new Dictionary<string, string[]>(StringComparer.Ordinal);
                     foreach (AssemblyMetadataAttribute attribute in job.Assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false)) {
                         if (attribute.Key != "ME.BECS.JobSafety.v1") continue;
                         var entry = attribute.Value?.Split('\n');
-                        if (entry == null || entry.Length < 3 || string.IsNullOrEmpty(entry[0])) continue;
+                        if (entry == null || entry.Length == 0 || string.IsNullOrEmpty(entry[0])) continue;
                         if (catalog.ContainsKey(entry[0])) catalog[entry[0]] = null;
                         else catalog.Add(entry[0], entry);
                     }
                     this.catalogs.Add(job.Assembly, catalog);
                 }
-                if (!catalog.TryGetValue(job.FullName, out rows)) return false;
+                if (!catalog.TryGetValue(job.FullName, out rows)) {
+                    reason = "Missing job safety catalog";
+                    return SourceStatus.Missing;
+                }
             }
-            return rows != null && rows.Length >= 3 && rows[0] == (job.IsGenericType ? job.AssemblyQualifiedName : job.FullName) &&
-                rows[1].StartsWith("M:", StringComparison.Ordinal) && rows[2] == "0" &&
-                !rows.Skip(3).Any(row => row.StartsWith("G\t", StringComparison.Ordinal));
+            return ClassifyRows(job, rows, out reason);
+        }
+
+        internal static SourceStatus ClassifyRows(Type job, string[] rows, out string reason) {
+            reason = "Malformed or duplicate source safety header";
+            if (job == null || rows == null || rows.Length < 3 || rows.Any(row => row == null) || rows[0] != (job.IsGenericType ? job.AssemblyQualifiedName : job.FullName) ||
+                !rows[1].StartsWith("M:", StringComparison.Ordinal) ||
+                !uint.TryParse(rows[2], NumberStyles.None, CultureInfo.InvariantCulture, out var gaps) ||
+                rows[2] != gaps.ToString(CultureInfo.InvariantCulture)) return SourceStatus.Invalid;
+            var gapRows = rows.Skip(3).Where(row => row.StartsWith("G\t", StringComparison.Ordinal)).ToArray();
+            if ((gaps == 0) != (gapRows.Length == 0) || gapRows.Any(row => row.Length == 2)) {
+                reason = "Contradictory source safety coverage";
+                return SourceStatus.Invalid;
+            }
+            if (gaps != 0) {
+                reason = "Incomplete source safety coverage (gaps=" + gaps + "): " +
+                    string.Join("; ", gapRows.Take(4).Select(row => row.Substring(2)));
+                return SourceStatus.Incomplete;
+            }
+            reason = null;
+            return SourceStatus.Complete;
         }
     }
 }

@@ -9,12 +9,14 @@ using Microsoft.CodeAnalysis.Text;
 namespace ME.BECS.SourceGenerator;
 
 internal static class ViewSafetySummary {
-    internal const string MetadataKey = "ME.BECS.ViewSafety.v1";
+    // v2 binds actual virtual/interface callback slots, not same-named user methods.
+    internal const string MetadataKey = "ME.BECS.ViewSafety.v2";
+    internal const string DispatchMetadataKey = "ME.BECS.ViewCallbackDispatch.v1";
 
     internal static void Emit(SourceProductionContext output, Compilation compilation,
         IReadOnlyDictionary<(string Assembly, string Id), MethodSummaryGraph.Summary> methods,
         ISet<(string Assembly, string Id)> conflicts) {
-        var view = compilation.GetTypeByMetadataName("ME.BECS.Views.IView");
+        var view = compilation.GetTypeByMetadataName("ME.BECS.Views.EntityView");
         var module = compilation.GetTypeByMetadataName("ME.BECS.Views.IViewModule");
         if (view == null && module == null) return;
         IEnumerable<INamedTypeSymbol> Types(INamespaceOrTypeSymbol owner) {
@@ -39,24 +41,32 @@ internal static class ViewSafetySummary {
         }
         foreach (var type in Types(compilation.Assembly.GlobalNamespace).OrderBy(static t => t.ToDisplayString(), StringComparer.Ordinal)) {
             if (type.IsAbstract || MethodSummaryType.From(type).IsOpen ||
-                !type.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, view) || SymbolEqualityComparer.Default.Equals(i, module))) continue;
+                (!IsView(type, view) && !type.AllInterfaces.Contains(module, SymbolEqualityComparer.Default))) continue;
             var name = string.Join("+", MethodSummaryType.TypeOwners(type).Select(static owner => owner.MetadataName));
             if (!type.ContainingNamespace.IsGlobalNamespace) name = type.ContainingNamespace.ToDisplayString() + "." + name;
-            foreach (var phase in new[] { "ApplyState", "ApplyStateParallel" }) {
+            // A view may also be used as an IViewModule. These roles can dispatch to
+            // different bodies, so their catalogs must not alias by owner and phase alone.
+            var phases = IsView(type, view) && type.AllInterfaces.Contains(module, SymbolEqualityComparer.Default)
+                ? new[] { "ApplyState", "ApplyStateParallel", "module:ApplyState", "module:ApplyStateParallel" }
+                : new[] { "ApplyState", "ApplyStateParallel" };
+            foreach (var phase in phases) {
                 output.CancellationToken.ThrowIfCancellationRequested();
-                // Match the most-derived named implementation. Do not union hidden base
-                // implementations: base calls, when executed, are already summary edges.
-                IMethodSymbol[] candidates = Array.Empty<IMethodSymbol>();
-                for (var owner = type; owner != null && candidates.Length == 0; owner = owner.BaseType)
-                    candidates = owner.GetMembers(phase).OfType<IMethodSymbol>().Where(static method => !method.IsStatic && method.MethodKind == MethodKind.Ordinary).ToArray();
+                var candidates = Callbacks(type, phase, view, compilation);
                 if (candidates.Length == 0) continue; // No callback, same as the discovery feeder.
                 string payload;
                 var method = candidates[0];
                 var id = MethodSummaryIdentity.Get(method);
                 var assembly = method.ContainingAssembly.Identity.ToString();
+                if (candidates.Length == 1 && method.Arity == 0 && !method.IsAbstract && id != null && !MethodSummaryType.From(method.ContainingType).IsOpen) {
+                    // Preserve the source virtual/interface dispatch before Unity
+                    // introduces metadata-only in/modreq forwarding methods.
+                    var dispatch = string.Join("\n", "v1", name, phase, MethodSummaryType.From(method.ContainingType).Encode(), assembly, id);
+                    source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"").Append(DispatchMetadataKey).Append("\", ")
+                        .Append(SymbolDisplay.FormatLiteral(dispatch, true)).Append(")]\n");
+                }
                 if (candidates.Length != 1 || method.Arity != 0 || method.IsAbstract || id == null ||
                     !methods.TryGetValue((assembly, id), out var summary)) {
-                    payload = name + "\n" + (id ?? "") + "\n1\nG\tViewCallbackUnavailableOrAmbiguous";
+                    payload = name + "\n" + (id ?? "M:unavailable") + "\n1\nG\tViewCallbackUnavailableOrAmbiguous";
                 } else {
                     var root = new MethodSummaryGraph.Summary {
                         Id = summary.Id, Environment = summary.Environment, Unresolved = summary.Unresolved,
@@ -74,5 +84,41 @@ internal static class ViewSafetySummary {
             }
         }
         if (count != 0) output.AddSource("ME.BECS.ViewSafety.g.cs", SourceText.From(source.ToString(), Encoding.UTF8));
+    }
+
+    internal static bool IsView(INamedTypeSymbol type, INamedTypeSymbol? view) {
+        for (var owner = type; owner != null; owner = owner.BaseType)
+            if (SymbolEqualityComparer.Default.Equals(owner, view)) return true;
+        return false;
+    }
+
+    private static IMethodSymbol[] Callbacks(INamedTypeSymbol type, string phase, INamedTypeSymbol? view, Compilation compilation) {
+        var moduleRole = phase.StartsWith("module:", StringComparison.Ordinal);
+        if (moduleRole) phase = phase.Substring(7);
+        if (!moduleRole && IsView(type, view)) {
+            var slots = view!.GetMembers(phase).OfType<IMethodSymbol>().Where(static method => !method.IsStatic && method.IsVirtual).ToArray();
+            if (slots.Length != 1) return Array.Empty<IMethodSymbol>();
+            return new[] { MostDerived(type, slots[0]) };
+        }
+        var contract = compilation.GetTypeByMetadataName("ME.BECS.Views.IView" + phase);
+        if (contract == null || !type.AllInterfaces.Contains(contract, SymbolEqualityComparer.Default)) return Array.Empty<IMethodSymbol>();
+        return contract.GetMembers(phase).Select(type.FindImplementationForInterfaceMember).OfType<IMethodSymbol>()
+            .Select(method => MostDerived(type, method)).ToArray();
+    }
+
+    internal static IMethodSymbol MostDerived(INamedTypeSymbol type, IMethodSymbol slot) {
+        // Roslyn's interface map can return the inherited implementation rather than
+        // its override on this concrete owner. Resolve that virtual slot, not a new method.
+        if (!slot.IsVirtual && !slot.IsOverride && !slot.IsAbstract) return slot;
+        IMethodSymbol Definition(IMethodSymbol method) {
+            while (method.OverriddenMethod != null) method = method.OverriddenMethod;
+            return method.OriginalDefinition;
+        }
+        var definition = Definition(slot);
+        for (var owner = type; owner != null; owner = owner.BaseType) {
+            foreach (var method in owner.GetMembers(slot.Name).OfType<IMethodSymbol>())
+                if (SymbolEqualityComparer.Default.Equals(Definition(method), definition)) return method;
+        }
+        return slot;
     }
 }

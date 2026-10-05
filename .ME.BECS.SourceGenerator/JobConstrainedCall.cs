@@ -11,8 +11,13 @@ internal static class JobConstrainedCall {
         IReadOnlyDictionary<(string Assembly, string Id), MethodSummaryGraph.Summary> methods,
         ISet<(string Assembly, string Id)> conflicts) {
         if (row.Length < 5) { gaps.Add("MalformedConstrainedOperation"); return row; }
+        string[] Finish(string[] operation) => NativeHashMapGrowthSummaries.Resolve(
+            BclFormattingContracts.Resolve(operation, compilation, bindings, gaps), compilation, bindings, gaps, methods, conflicts);
+        row = GenericConstructionContracts.Resolve(row, compilation, bindings, gaps);
+        row = ImplicitFormattingContracts.Resolve(row, compilation, bindings, gaps, methods, conflicts);
+        row = NativeHashKeyCall.Resolve(row, compilation, bindings, gaps);
         var token = MethodSummaryContracts.Value(row, "constrained");
-        if (token == null) return row;
+        if (token == null) return Finish(row);
         var receiverDescription = "invalid type expression";
         if (MethodSummaryType.TryDecode(token, out var expression)) {
             var concrete = expression!.Substitute(bindings);
@@ -52,7 +57,12 @@ internal static class JobConstrainedCall {
                             }
                             if (MethodSummaryContracts.IsScalarComparison(implementation))
                                 result = result.Concat(new[] { "!scalar-comparison" }).ToArray();
-                            return result;
+                            if (ExternalValueContracts.IsLeaf(implementation, compilation) || BclFormattingContracts.IsLeaf(implementation, compilation))
+                                result = result.Concat(new[] { "!ecs-leaf" }).ToArray();
+                            var enumeration = new System.Text.StringBuilder();
+                            NativeMapEnumerationContracts.Append(enumeration, implementation, compilation);
+                            if (enumeration.Length != 0) result = result.Concat(enumeration.ToString().Split('\t').Skip(1)).ToArray();
+                            return Finish(result);
                         }
                     }
                 }

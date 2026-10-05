@@ -5,7 +5,7 @@ namespace ME.BECS.Editor {
 
     [CodeGeneratorOrder(-100)]
     public class EntityTypeCodeGenerator : CustomCodeGenerator {
-        public override string SourceInitializationKind => this.GetType() == typeof(EntityTypeCodeGenerator) ? "entities" : null;
+        public override string SourceInitializationKind => this.GetType() == typeof(EntityTypeCodeGenerator) ? "entities" : base.SourceInitializationKind;
 
         public static (System.Type, uint)[] GetAllTypes(CustomCodeGenerator codeGenerator, out uint count) {
 
@@ -27,14 +27,6 @@ namespace ME.BECS.Editor {
 
         }
         
-        public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
-
-            // The compiler owns registration statements and IDs from the ordered manifest.
-            // Keep this call in the existing initialization slot; missing inputs fail compilation.
-            dataList.Add("global::ME.BECS.SourceGenerated.EntityInputs.Initialize();");
-            
-        }
-
     }
 
 }

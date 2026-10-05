@@ -4,8 +4,8 @@ using System.Reflection;
 namespace ME.BECS.Editor.Aspects {
 
     public class EntityConfigCodeGenerator : CustomCodeGenerator {
-        public override string SourceInitializationKind => this.GetType() == typeof(EntityConfigCodeGenerator) ? "config-counts" : null;
-        public override string SourceRegistrationKind => this.GetType() == typeof(EntityConfigCodeGenerator) ? "config-callbacks" : null;
+        public override string SourceInitializationKind => this.GetType() == typeof(EntityConfigCodeGenerator) ? "config-counts" : base.SourceInitializationKind;
+        public override string SourceRegistrationKind => this.GetType() == typeof(EntityConfigCodeGenerator) ? "config-callbacks" : base.SourceRegistrationKind;
 
         public override void AddSourceGeneratorReferences(System.Collections.Generic.List<System.Type> references) {
             references.AddRange(GetMaskComponents(this.editorAssembly, this.asms));
@@ -15,14 +15,9 @@ namespace ME.BECS.Editor.Aspects {
         internal static System.Type[] GetMaskComponents(bool editor, System.Collections.Generic.List<AssemblyInfo> assemblies) =>
             UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponent>()
                 .Where(type => type.IsValueType && EditorUtils.IsValidTypeForAssembly(editor, type, assemblies) &&
-                    type.GetFields(BindingFlags.Instance | BindingFlags.Public).Length > 1)
+                    type.GetFields(BindingFlags.Instance | BindingFlags.Public).Length > 0)
                 .OrderBy(type => type.FullName, System.StringComparer.Ordinal)
                 .ThenBy(type => type.Assembly.FullName, System.StringComparer.Ordinal).ToArray();
-
-        public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
-            references.AddRange(GetCollectionComponents(this.editorAssembly, this.asms));
-            dataList.Add("global::ME.BECS.SourceGenerated.ConfigCollectionCounts.Initialize();");
-        }
 
         internal static System.Type[] GetCollectionComponents(bool editor, System.Collections.Generic.List<AssemblyInfo> assemblies) {
             System.Collections.Generic.IEnumerable<System.Type> Ordered(System.Type contract) =>
@@ -37,14 +32,6 @@ namespace ME.BECS.Editor.Aspects {
             component.GetFields(BindingFlags.Instance | BindingFlags.Public)
                 .Where(field => typeof(IUnmanagedList).IsAssignableFrom(field.FieldType))
                 .OrderBy(field => field.FieldType.FullName, System.StringComparer.Ordinal).ToArray();
-
-        public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
-            this.AddSourceGeneratorReferences(references);
-            return new System.Collections.Generic.List<CodeGenerator.MethodDefinition> {
-                new CodeGenerator.MethodDefinition { generatedRegistration = "global::ME.BECS.SourceGenerated.ConfigMaskInputs.Initialize();" },
-                new CodeGenerator.MethodDefinition { generatedRegistration = "global::ME.BECS.SourceGenerated.ConfigCollectionsInputs.Initialize();" },
-            };
-        }
 
         internal static uint GetCollectionsCount(System.Type componentType) {
             var count = 0u;

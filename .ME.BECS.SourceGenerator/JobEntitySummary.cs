@@ -55,6 +55,11 @@ internal static class JobEntitySummary {
             if (conflicts.Contains(key)) { gaps.Add("ConflictingSummary: " + id); return; }
             if (!methods.TryGetValue(key, out var method)) { gaps.Add("MissingSummary: " + targetAssembly + " | " + id); return; }
             if (method.Flags.Contains("ME.BECS.CodeGeneratorIgnoreAttribute")) return;
+            if (!method.Flags.Contains(DestroyDispatchContracts.Schema)) gaps.Add("MissingDestroyContracts: " + id);
+            if (!method.Flags.Contains(ImplicitFormattingContracts.Schema)) gaps.Add("MissingImplicitFormattingContracts: " + id);
+            if (!method.Flags.Contains(GenericConstructionContracts.Schema)) gaps.Add("MissingGenericConstructionContracts: " + id);
+            if (MethodSummaryContracts.IsConstructor(id) && !method.Flags.Contains(MethodSummaryContracts.ConstructorSchema))
+                gaps.Add("MissingConstructorContract: " + id);
             if (arguments.Any(static a => a.IsOpen)) gaps.Add("UnboundTypeParameter: " + id);
             var context = string.Join(";", arguments.Select(static a => a.Encode()));
             contextSize += context.Length;
@@ -70,7 +75,16 @@ internal static class JobEntitySummary {
             if (method.Environment.Length != arguments.Length) { gaps.Add("GenericArityMismatch: " + id); return; }
             var environment = new Dictionary<string, MethodSummaryType>(StringComparer.Ordinal);
             for (var i = 0; i < arguments.Length; ++i) environment[method.Environment[i].Identity] = arguments[i];
-            foreach (var unresolved in method.Unresolved) gaps.Add(unresolved + ": " + id);
+            var filterContracts = method.Flags.Where(flag => flag.StartsWith("filter-count-schema=", StringComparison.Ordinal)).ToArray();
+            var hasFilterCounts = filterContracts.Length == 1 && filterContracts[0] == MethodSummaryControlFlow.FilterCountsSchema &&
+                !method.Flags.Any(flag => flag.StartsWith("exception-count-schema=", StringComparison.Ordinal) ||
+                    flag.StartsWith("finally-count-schema=", StringComparison.Ordinal));
+            if (filterContracts.Length != 0 && !hasFilterCounts) gaps.Add("UnsupportedFilterCountContract: " + id);
+            foreach (var unresolved in method.Unresolved) {
+                if (unresolved == "ExceptionControlFlow" && (method.Flags.Contains(MethodSummaryControlFlow.FinallyCountsSchema) ||
+                    method.Flags.Contains(MethodSummaryControlFlow.ExceptionCountsSchema) || hasFilterCounts)) continue;
+                gaps.Add(unresolved + ": " + id);
+            }
             var before = new Dictionary<string, (int Inline, int Loop)>(counts, StringComparer.Ordinal);
             active.Add(instance);
                 foreach (var rawOperation in method.Operations) {
@@ -80,13 +94,21 @@ internal static class JobEntitySummary {
                 if (operation.Length < 5 || !int.TryParse(operation[1], NumberStyles.None, CultureInfo.InvariantCulture, out var loopDepth)) {
                     gaps.Add("MalformedOperation: " + id); continue;
                 }
-                if (operation[0] == "field" || operation[0] == "parameter-override" || MethodSummaryContracts.Has(operation, "ignore")) continue;
+                if (operation[0] == "field" || operation[0] == "parameter-override") continue;
+                var destroyed = DestroyDispatchContracts.Component(operation, compilation, environment, decode, gaps);
+                if (MethodSummaryContracts.Has(operation, "ignore")) {
+                    if (destroyed != null) {
+                        var target = DestroyDispatchContracts.DefaultTarget(destroyed, compilation, methods, conflicts, gaps);
+                        if (target.HasValue) Visit(target.Value.Assembly, target.Value.Id, target.Value.Arguments, inLoop || loopDepth > 0, depth + 1);
+                    }
+                    continue;
+                }
                 if (operation[0] == "method-ref") { gaps.Add("DeferredInvocation: " + operation[3]); continue; }
                 // A constructor is an executed call, not an analysis gap merely because
                 // legacy IL traversal omitted it. Require a summary with initializer coverage.
                 if (operation[0] == "new" &&
                     (!methods.TryGetValue((operation[2], operation[3]), out var constructor) ||
-                     !constructor.Flags.Contains("constructor-schema=1")))
+                     !constructor.Flags.Contains(MethodSummaryContracts.ConstructorSchema)))
                     gaps.Add("MissingConstructorContract: " + operation[3]);
                 var receiver = decode(operation[4])?.Substitute(environment);
                 if (receiver == null || receiver.Kind != 'n' || receiver.IsUnsupported) { gaps.Add("UnsupportedReceiver: " + operation[3]); continue; }
@@ -106,7 +128,11 @@ internal static class JobEntitySummary {
                     // This is the allocation contract; do not count its implementation as a second creation.
                     continue;
                 }
+                var optionalGetter = MethodSummaryContracts.Has(operation, AllocatorMethodSummaries.OptionalGetter);
+                var beforeGetter = optionalGetter ? counts.Sum(entry => (long)entry.Value.Inline + entry.Value.Loop) : 0L;
                 Visit(operation[2], operation[3], targetArguments.ToArray(), loop, depth + 1);
+                if (optionalGetter && counts.Sum(entry => (long)entry.Value.Inline + entry.Value.Loop) != beforeGetter)
+                    gaps.Add("AllocatorGetterCreationMultiplicity: " + operation[3]);
             }
             active.Remove(instance);
             var contributionCounts = new Dictionary<string, (int Inline, int Loop)>(StringComparer.Ordinal);

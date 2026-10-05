@@ -7,6 +7,18 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace ME.BECS.SourceGenerator;
 
 internal static class MethodSummaryContracts {
+    // Implicit component parameter accesses augment the body, explicit attributes override it.
+    internal const string SafetySchema = "safety-schema=3";
+    internal const string SchedulingSchema = "schedule-schema=4";
+    internal const string SystemAccessSchema = "system-access-schema=2";
+    // v2 includes event initializers and does not certify opaque type initialization.
+    internal const string ConstructorSchema = "constructor-schema=2";
+    internal static bool IsConstructor(string id) => id.EndsWith(".#ctor", StringComparison.Ordinal) ||
+        id.IndexOf(".#ctor(", StringComparison.Ordinal) >= 0;
+    private static readonly string[] UnitySchedulingOwners = {
+        "Unity.Jobs.IJobExtensions", "Unity.Jobs.IJobParallelForExtensions", "Unity.Jobs.IJobForExtensions",
+        "Unity.Jobs.IJobParallelForBatchExtensions", "Unity.Jobs.IJobParallelForDeferExtensions",
+    };
     internal static int ArgumentEnd(string[] operation) {
         for (var i = 5; i < operation.Length; ++i) if (operation[i].StartsWith("!", StringComparison.Ordinal)) return i;
         return operation.Length;
@@ -22,10 +34,58 @@ internal static class MethodSummaryContracts {
 
     internal static bool Has(ISymbol symbol, string attribute) => symbol.GetAttributes().Any(a => a.AttributeClass?.ToDisplayString() == attribute);
 
+    internal static string? Operation(string kind, int loopDepth, ISymbol symbol, Compilation compilation,
+        System.Collections.Generic.Dictionary<INamedTypeSymbol, int?> refModes, ITypeSymbol? constrainedReceiver = null) {
+        if (symbol is IMethodSymbol { ReducedFrom: { } reduced } method)
+            symbol = reduced.Arity == method.TypeArguments.Length && reduced.Arity != 0
+                ? reduced.ConstructedFrom.Construct(method.TypeArguments.ToArray()) : reduced;
+        var id = MethodSummaryIdentity.Get(symbol);
+        if (id == null) return null;
+        var row = new StringBuilder(kind).Append('\t').Append(loopDepth).Append('\t').Append(symbol.ContainingAssembly.Identity)
+            .Append('\t').Append(id).Append('\t').Append(MethodSummaryType.From(symbol.ContainingType).Encode());
+        if (symbol is IMethodSymbol callable)
+            foreach (var owner in MethodSummaryType.MethodOwners(callable))
+                foreach (var argument in owner.TypeArguments) row.Append('\t').Append(MethodSummaryType.From(argument).Encode());
+        Append(row, symbol, compilation, refModes);
+        if (constrainedReceiver != null) row.Append("\t!constrained=").Append(MethodSummaryType.From(constrainedReceiver).Encode());
+        return row.ToString();
+    }
+
+    internal static bool IsComponentType(ITypeSymbol type, Compilation compilation) {
+        var contract = compilation.GetTypeByMetadataName("ME.BECS.IComponentBase");
+        return contract != null && HasInterface(type, candidate => SymbolEqualityComparer.Default.Equals(candidate, contract));
+    }
+
+    private static bool HasInterface(ITypeSymbol type, Func<INamedTypeSymbol, bool> matches) {
+        var pending = new System.Collections.Generic.Stack<ITypeSymbol>();
+        var visited = new System.Collections.Generic.HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+        pending.Push(type);
+        while (pending.Count > 0) {
+            var candidate = pending.Pop();
+            if (!visited.Add(candidate)) continue;
+            if ((candidate is INamedTypeSymbol named && named.TypeKind == TypeKind.Interface && matches(named)) ||
+                candidate.AllInterfaces.Any(matches)) return true;
+            // AllInterfaces on a type parameter does not include its constraints.
+            // Follow T : U as well as T : IComponent-derived interfaces; guard invalid cycles.
+            if (candidate is ITypeParameterSymbol parameter)
+                foreach (var constraint in parameter.ConstraintTypes) pending.Push(constraint);
+        }
+        return false;
+    }
+
     internal static void Append(StringBuilder rows, ISymbol symbol, Compilation compilation,
         System.Collections.Generic.Dictionary<INamedTypeSymbol, int?> refModes) {
+        if (symbol is IMethodSymbol destroy) DestroyDispatchContracts.Append(rows, destroy, compilation);
+        if (symbol is IMethodSymbol usage) RuntimeTypeUsage.Append(rows, usage, compilation);
+        if (symbol is IMethodSymbol memory) UnityMemoryContracts.Append(rows, memory, compilation);
+        if (symbol is IMethodSymbol container) UnityContainerContracts.Append(rows, container, compilation);
+        if (symbol is IMethodSymbol enumeration) NativeMapEnumerationContracts.Append(rows, enumeration, compilation);
+        if (symbol is IMethodSymbol storage) BurstStorageContracts.Append(rows, storage, compilation);
+        if (symbol is IMethodSymbol formatting) BclFormattingContracts.Append(rows, formatting, compilation);
+        if (symbol is IMethodSymbol control && JobControlContracts.Classify(control, compilation) is string controlKind)
+            rows.Append("\t!job-control=").Append(controlKind);
         if (symbol is IMethodSymbol scalar && IsScalarComparison(scalar)) rows.Append("\t!scalar-comparison");
-        if (symbol is IMethodSymbol intrinsic && (IsObjectConstructor(intrinsic) || IsAddressIntrinsic(intrinsic, compilation) ||
+        if (symbol is IMethodSymbol intrinsic && (ExternalValueContracts.IsLeaf(intrinsic, compilation) || IsObjectConstructor(intrinsic) || IsSwitchFailureConstructor(intrinsic, compilation) || IsAddressIntrinsic(intrinsic, compilation) ||
             IsBurstHint(intrinsic, compilation) || IsMathematicsValueOperation(intrinsic, compilation) ||
             IsFloatVectorConstructor(intrinsic, compilation) || IsFloatVectorArithmetic(intrinsic, compilation))) rows.Append("\t!ecs-leaf");
         if (Has(symbol, "ME.BECS.DisableContainerSafetyRestrictionAttribute")) rows.Append("\t!disable-safety");
@@ -36,11 +96,19 @@ internal static class MethodSummaryContracts {
             if (weight != 0) rows.Append("\t!weight=").Append(weight.ToString(System.Globalization.CultureInfo.InvariantCulture));
         }
         if (symbol is IMethodSymbol method && method.Arity != 0) {
-            if (method.Name is "Schedule" or "ScheduleSingleWithInject" or "ScheduleSingleWithInjectByRef" &&
-                SymbolEqualityComparer.Default.Equals(method.ReturnType, compilation.GetTypeByMetadataName("Unity.Jobs.JobHandle")) &&
-                method.TypeArguments[0].AllInterfaces.Any(i => i.Name.StartsWith("IJob", StringComparison.Ordinal) &&
-                    (i.ContainingNamespace.ToDisplayString() == "Unity.Jobs" || i.ContainingNamespace.ToDisplayString() == "ME.BECS.Jobs")))
+            SystemQueryFilterContracts.Append(rows, method, compilation);
+            if (method.Name == "GetSystemPtr" && method.Arity == 1 &&
+                SymbolEqualityComparer.Default.Equals(method.ContainingType, compilation.GetTypeByMetadataName("ME.BECS.SystemsWorldExt")) &&
+                method.ReturnType is IPointerTypeSymbol pointer && SymbolEqualityComparer.Default.Equals(pointer.PointedAtType, method.TypeArguments[0]))
+                rows.Append("\t!system-access=").Append(MethodSummaryType.From(method.TypeArguments[0]).Encode());
+            if (IsSchedulingMethod(method, compilation))
+            {
                 rows.Append("\t!scheduled-job=").Append(MethodSummaryType.From(method.TypeArguments[0]).Encode());
+                // Only exact Unity scheduling terminals defer Execute. User wrappers
+                // called Schedule can perform direct ECS work and must still be traversed.
+                if (IsUnitySchedulingOwner(method.ContainingType, compilation))
+                    rows.Append("\t!deferred-job-call");
+            }
             var safety = method.GetAttributes().FirstOrDefault(static a => a.AttributeClass?.ToDisplayString() == "ME.BECS.SafetyCheckAttribute");
             if (safety != null) {
                 object? mode = safety.ConstructorArguments.Length == 1 ? safety.ConstructorArguments[0].Value : null;
@@ -64,10 +132,40 @@ internal static class MethodSummaryContracts {
         }
     }
 
+    internal static bool IsSchedulingMethod(IMethodSymbol method, Compilation compilation) =>
+        method.Arity != 0 && method.Name is "Schedule" or "ScheduleByRef" or "ScheduleParallel" or "ScheduleParallelByRef" or
+            "ScheduleBatch" or "ScheduleBatchByRef" or "ScheduleSingleWithInject" or "ScheduleSingleWithInjectByRef" &&
+        IsSchedulingOwner(method.ContainingType, compilation) &&
+        SymbolEqualityComparer.Default.Equals(method.ReturnType, compilation.GetTypeByMetadataName("Unity.Jobs.JobHandle")) &&
+        HasInterface(method.TypeArguments[0], static i => i.Name.StartsWith("IJob", StringComparison.Ordinal) &&
+            (i.ContainingNamespace.ToDisplayString() == "Unity.Jobs" || i.ContainingNamespace.ToDisplayString() == "ME.BECS.Jobs"));
+
+    private static bool IsSchedulingOwner(INamedTypeSymbol owner, Compilation compilation) {
+        var ns = owner.ContainingNamespace.ToDisplayString();
+        // Engine entry points include query builders and generated job extensions.
+        // A matching namespace in a game assembly is not sufficient.
+        if ((ns == "ME.BECS" || ns == "ME.BECS.Jobs") &&
+            SymbolEqualityComparer.Default.Equals(owner.ContainingAssembly, compilation.GetTypeByMetadataName("ME.BECS.Ent")?.ContainingAssembly)) return true;
+        return IsUnitySchedulingOwner(owner, compilation);
+    }
+
+    private static bool IsUnitySchedulingOwner(INamedTypeSymbol owner, Compilation compilation) =>
+        UnitySchedulingOwners.Any(name => SymbolEqualityComparer.Default.Equals(owner, compilation.GetTypeByMetadataName(name)));
+
     private static bool IsObjectConstructor(IMethodSymbol method) =>
         method.ContainingType.SpecialType == SpecialType.System_Object &&
         method.MethodKind == MethodKind.Constructor && !method.IsStatic &&
         method.Parameters.Length == 0 && method.DeclaringSyntaxReferences.Length == 0;
+
+    private static bool IsSwitchFailureConstructor(IMethodSymbol method, Compilation compilation) =>
+        // Roslyn retains this failure path in a switch-expression CFG, including
+        // exhaustive switches. The parameterless BCL exception constructor has no
+        // ECS effects. Do not generalize to user exceptions or object-valued overloads.
+        method.MethodKind == MethodKind.Constructor && !method.IsStatic && method.Parameters.Length == 0 &&
+        method.DeclaringSyntaxReferences.Length == 0 &&
+        SymbolEqualityComparer.Default.Equals(method.ContainingAssembly, compilation.GetSpecialType(SpecialType.System_Object).ContainingAssembly) &&
+        SymbolEqualityComparer.Default.Equals(method.ContainingType,
+            compilation.GetTypeByMetadataName("System.Runtime.CompilerServices.SwitchExpressionException"));
 
     private static bool IsFloatVectorConstructor(IMethodSymbol method, Compilation compilation) {
         // Audited Unity.Mathematics float2/3/4 constructors only copy float lanes.

@@ -310,7 +310,7 @@ namespace ME.BECS {
                     this.offsets[i] = offset;
                     this.typeIds[i] = typeId;
                     if (masks != null) {
-                        this.masks[i] = (masks[i].mask != null && masks[i].mask.Length > 1u) ? new BitArray(ref allocator, masks[i].mask) : default;
+                        this.masks[i] = (masks[i].mask != null && masks[i].mask.Length > 0u) ? new BitArray(ref allocator, masks[i].mask) : default;
                     }
                     offset += elemSize;
                 }
@@ -362,7 +362,7 @@ namespace ME.BECS {
                     var elemSize = StaticTypes.sizes.Get(typeId);
                     var data = elemSize == 0u ? new safe_ptr<byte>() : (this.data + this.offsets[i]);
                     var groupId = StaticTypes.tracker.Get(typeId);
-                    if (this.masks.ptr != null && this.masks[i].Length > 1u) {
+                    if (this.masks.ptr != null && this.masks[i].Length > 0u) {
                         var dataPtr = Components.GetUnknownType(ent.World.state, typeId, groupId, in ent, out var isNew, default);
                         if (isNew == true) {
                             if (StaticTypesAutoDestroy.Is(typeId) == true) {

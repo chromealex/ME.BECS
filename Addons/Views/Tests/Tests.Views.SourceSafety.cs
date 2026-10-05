@@ -4,7 +4,7 @@ using System.Reflection;
 using NUnit.Framework;
 
 namespace ME.BECS.Views.Tests {
-    public class Tests_Views_SourceSafety {
+    public partial class Tests_Views_SourceSafety {
         public struct ComponentA : IComponent { public int value; }
         public struct ComponentB : IComponent { public int value; }
 
@@ -48,26 +48,27 @@ namespace ME.BECS.Views.Tests {
             Assert.IsEmpty(TrackingArguments(typeof(UnrelatedTracking), typeof(IViewTrackIgnore<>)));
         }
 
-        public abstract class GenericModule<T> : IViewModule where T : unmanaged, IComponent {
-            public virtual void ApplyState() { _ = default(Ent).Read<T>(); }
+        public abstract class GenericModule<T> : IViewApplyState where T : unmanaged, IComponent {
+            public virtual void ApplyState(in ViewData viewData) { _ = default(Ent).Read<T>(); }
         }
 
         public sealed class InheritedModule : GenericModule<ComponentA> { }
 
         public sealed class OverrideModule : GenericModule<ComponentA> {
-            public override void ApplyState() { _ = default(Ent).Read<ComponentB>(); }
+            public override void ApplyState(in ViewData viewData) { _ = default(Ent).Read<ComponentB>(); }
         }
 
         public interface IReader { void Read(); }
-        public sealed class UnknownDispatchModule : IViewModule {
+        public sealed class UnknownDispatchModule : IViewApplyState {
             public IReader reader;
-            public void ApplyState() { this.reader.Read(); }
+            public void ApplyState(in ViewData viewData) { this.reader.Read(); }
         }
 
         private static string[] Summary<T>() {
+            global::ME.BECS.Tests.SourceAnalysisTests.Require();
             var prefix = "ApplyState\n" + typeof(T).FullName + "\n";
             var entries = typeof(T).Assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false)
-                .Cast<AssemblyMetadataAttribute>().Where(attribute => attribute.Key == "ME.BECS.ViewSafety.v1" &&
+                .Cast<AssemblyMetadataAttribute>().Where(attribute => attribute.Key == "ME.BECS.ViewSafety.v2" &&
                     attribute.Value != null && attribute.Value.StartsWith(prefix, StringComparison.Ordinal)).ToArray();
             Assert.AreEqual(1, entries.Length, "Expected one source view callback summary");
             return entries[0].Value.Split('\n');

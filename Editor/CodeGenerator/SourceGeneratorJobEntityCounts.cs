@@ -5,44 +5,12 @@ namespace ME.BECS.Editor {
     using System.Linq;
     using System.Reflection;
 
-    internal sealed class SourceGeneratorJobEntityCounts {
-        private SourceGeneratorClosedJobCatalog closed;
-        private readonly Dictionary<Assembly, Dictionary<string, string[]>> ordinary = new Dictionary<Assembly, Dictionary<string, string[]>>();
-        private Dictionary<string, uint> groups;
-        private uint groupCount;
-        internal sealed class InitializerPlan {
+    // Source-count oracle for explicit comparison reports only. Production
+    // reservations are selected from compiled IL by JobsEarlyInitCodeGenerator.
+    internal static class SourceGeneratorJobEntityCounts {
+        private sealed class InitializerPlan {
             internal Type initializer;
             internal string[] groupKeys;
-        }
-
-        // Run-local consumer. v3 counts each call site and retains inline/loop contexts.
-        // Legacy's visited-method deduplication is not an allocation correctness oracle.
-        internal bool TrySelectPlan(Type job, CustomCodeGenerator generator, out InitializerPlan plan) {
-            plan = null;
-            string[] rows;
-            if (job.ContainsGenericParameters) return false;
-            if (job.IsGenericType) {
-                this.closed ??= new SourceGeneratorClosedJobCatalog();
-                if (!this.closed.TryGet(job, "JobEntityCounts", out rows)) return false;
-            } else {
-                if (!this.ordinary.TryGetValue(job.Assembly, out var catalog)) {
-                    catalog = new Dictionary<string, string[]>(StringComparer.Ordinal);
-                    foreach (AssemblyMetadataAttribute attribute in job.Assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false)) {
-                        if (attribute.Key != "ME.BECS.JobEntityCounts.v1") continue;
-                        var entry = attribute.Value?.Split('\n');
-                        if (entry == null || entry.Length < 3 || string.IsNullOrEmpty(entry[0])) continue;
-                        if (catalog.ContainsKey(entry[0])) catalog[entry[0]] = null;
-                        else catalog.Add(entry[0], entry);
-                    }
-                    this.ordinary.Add(job.Assembly, catalog);
-                }
-                if (!catalog.TryGetValue(job.FullName, out rows)) return false;
-            }
-            if (this.groups == null) {
-                var selected = EntityTypeCodeGenerator.GetAllTypes(generator, out this.groupCount);
-                this.groups = selected.ToDictionary(entry => entry.Item1.Assembly.FullName + "\tT:" + entry.Item1.FullName.Replace('+', '.'), entry => entry.Item2);
-            }
-            return TryGetPlan(job, rows, this.groups, this.groupCount, out plan, out _);
         }
 
         internal static bool MatchesLegacy(string[] validatedRows, IReadOnlyDictionary<string, uint> groups, uint groupCount,
@@ -72,7 +40,7 @@ namespace ME.BECS.Editor {
             uint groupCount, out string call, out string reason) {
             call = null;
             if (!TryGetPlan(job, rows, groups, groupCount, out var plan, out reason)) return false;
-            // Diagnostic compatibility only; production exports a typed plan.
+            // Diagnostic compatibility only; production exports IL reservations.
             call = "global::" + plan.initializer.FullName + ".Apply<" + EditorUtils.GetTypeName(job) + ">(" +
                 string.Join(", ", new[] { "global::ME.BECS.SourceGenerated.EntityInputs.GroupCount" }.Concat(plan.groupKeys.Select(key =>
                     "global::ME.BECS.SourceGenerated.EntityInputs.Id_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(key)))) + ");";

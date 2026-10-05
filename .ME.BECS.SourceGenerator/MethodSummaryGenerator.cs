@@ -17,15 +17,16 @@ namespace ME.BECS.SourceGenerator;
 public sealed class MethodSummaryGenerator : IIncrementalGenerator {
     internal const string MetadataKey = "ME.BECS.MethodSummary.v2";
 
-    private static void VisitInstanceInitializers(IMethodSymbol constructor, Compilation compilation,
+    private static bool VisitInstanceInitializers(IMethodSymbol constructor, Compilation compilation,
         SummaryWalker target, System.Threading.CancellationToken cancellation) {
         // Initializers execute before the base call and body, only in the terminal
         // constructor of a this(...) chain. Preserve compilation/declaration order.
+        if (constructor.ContainingType.StaticConstructors.Length != 0) target.Unresolved.Add("ConstructorTypeInitializer");
         var trees = compilation.SyntaxTrees.Select((tree, index) => (tree, index))
             .ToDictionary(static pair => pair.tree, static pair => pair.index);
         var initializers = constructor.ContainingType.GetMembers()
             .Where(static member => !member.IsStatic && !member.IsImplicitlyDeclared &&
-                member is IFieldSymbol or IPropertySymbol)
+                member is IFieldSymbol or IPropertySymbol or IEventSymbol)
             .SelectMany(static member => member.DeclaringSyntaxReferences)
             .Select(reference => reference.GetSyntax(cancellation))
             .Select(static declaration => declaration switch {
@@ -34,25 +35,32 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
                 _ => null,
             }).Where(static initializer => initializer != null)
             .OrderBy(initializer => trees[initializer!.SyntaxTree]).ThenBy(static initializer => initializer!.SpanStart);
+        var complete = true;
         foreach (var initializer in initializers) {
             cancellation.ThrowIfCancellationRequested();
             var model = compilation.GetSemanticModel(initializer!.SyntaxTree);
             var value = model.GetOperation(initializer, cancellation) ?? model.GetOperation(initializer.Value, cancellation);
-            if (value == null) { target.Unresolved.Add("ConstructorInitializerOperationUnavailable"); continue; }
-            var walker = new SummaryWalker(model, cancellation);
-            if (!MethodSummaryControlFlow.Visit(value, walker.VisitBlockOperation, walker.Unresolved, cancellation, walker.BeginBlock)) {
+            if (value == null) { target.Unresolved.Add("ConstructorInitializerOperationUnavailable"); complete = false; continue; }
+            var walker = new SummaryWalker(model, cancellation, constructor);
+            if (!MethodSummaryControlFlow.Visit(value, walker.VisitBlockOperation, walker.Unresolved, cancellation, out var exceptionCounts, out var filterCounts, walker.BeginBlock, walker.AnalyzeGraph)) {
+                complete = false;
                 walker.Unresolved.Add("InitializerControlFlowUnavailable");
                 walker.Visit(value);
             }
             target.Rows.Append(walker.Rows);
             target.Unresolved.UnionWith(walker.Unresolved);
+            target.ExceptionCounts &= exceptionCounts;
+            target.FilterCounts |= filterCounts;
+            if (walker.Graph != null) target.Initializers.Add((walker.Graph, walker.IsOmittedOperation));
         }
+        return complete;
     }
 
     public void Initialize(IncrementalGeneratorInitializationContext context) {
         var summaries = context.SyntaxProvider.CreateSyntaxProvider(
-            static (node, _) => node is BaseMethodDeclarationSyntax or AccessorDeclarationSyntax or LocalFunctionStatementSyntax or AnonymousFunctionExpressionSyntax ||
-                node is PropertyDeclarationSyntax { ExpressionBody: not null } or IndexerDeclarationSyntax { ExpressionBody: not null },
+            static (node, _) => SourceAnalysisOptions.Enabled(node.SyntaxTree.Options) &&
+                (node is BaseMethodDeclarationSyntax or AccessorDeclarationSyntax or LocalFunctionStatementSyntax or AnonymousFunctionExpressionSyntax ||
+                 node is PropertyDeclarationSyntax { ExpressionBody: not null } or IndexerDeclarationSyntax { ExpressionBody: not null }),
             static (syntax, cancellation) => {
                 // Other project assemblies that do not use BECS need no analysis metadata.
                 if (syntax.SemanticModel.Compilation.GetTypeByMetadataName("ME.BECS.Ent") == null) return null;
@@ -74,40 +82,71 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
                 if (operation == null && !autoAccessor) return null;
                 var id = MethodSummaryIdentity.Get(symbol);
                 if (id == null) return null;
-                var walker = new SummaryWalker(syntax.SemanticModel, cancellation);
+                var walker = new SummaryWalker(syntax.SemanticModel, cancellation, symbol);
                 foreach (var parameter in symbol.Parameters) {
                     var mode = MethodSummaryContracts.Has(parameter, "ME.BECS.RWAttribute") ? 2 :
                         MethodSummaryContracts.Has(parameter, "ME.BECS.WOAttribute") ? 1 : MethodSummaryContracts.Has(parameter, "ME.BECS.ROAttribute") ? 0 : -1;
+                    var implicitAccess = mode < 0;
+                    // Component arguments are accesses even without an explicit override.
+                    if (mode < 0 && parameter.RefKind != RefKind.None &&
+                        MethodSummaryContracts.IsComponentType(parameter.Type, syntax.SemanticModel.Compilation))
+                        mode = parameter.RefKind == RefKind.In ? 0 : 2;
                     if (mode < 0) continue;
                     if (parameter.RefKind == RefKind.None) walker.Unresolved.Add("NonRefParameterOverride");
                     walker.Rows.Append("parameter-override\t0\t").Append(symbol.ContainingAssembly.Identity).Append('\t').Append(id).Append('\t')
                         .Append(MethodSummaryType.From(symbol.ContainingType).Encode()).Append('\t').Append(MethodSummaryType.From(parameter.Type).Encode())
-                        .Append("\t!mode=").Append(mode).Append('\n');
+                        .Append("\t!mode=").Append(mode).Append(implicitAccess ? "\t!implicit" : "").Append('\n');
                 }
+                var hasInitializerControlFlow = true;
                 if (symbol.MethodKind == MethodKind.Constructor &&
                     syntax.Node is ConstructorDeclarationSyntax constructorSyntax &&
                     constructorSyntax.Initializer?.ThisOrBaseKeyword.IsKind(SyntaxKind.ThisKeyword) != true)
-                    VisitInstanceInitializers(symbol, syntax.SemanticModel.Compilation, walker, cancellation);
-                var hasControlFlow = MethodSummaryControlFlow.Visit(operation, walker.VisitBlockOperation, walker.Unresolved, cancellation, walker.BeginBlock);
+                    hasInitializerControlFlow = VisitInstanceInitializers(symbol, syntax.SemanticModel.Compilation, walker, cancellation);
+                var hasControlFlow = MethodSummaryControlFlow.Visit(operation, walker.VisitBlockOperation, walker.Unresolved, cancellation, out var exceptionCounts, out var filterCounts, walker.BeginBlock, walker.AnalyzeGraph);
+                walker.ExceptionCounts &= exceptionCounts;
+                walker.FilterCounts |= filterCounts;
                 if (!hasControlFlow) {
                     if (!autoAccessor) walker.Unresolved.Add("SyntaxOnlyControlFlow");
                     if (operation is IAnonymousFunctionOperation anonymous) walker.Visit(anonymous.Body);
                     else if (operation is ILocalFunctionOperation local) walker.Visit(local.Body);
                     else walker.Visit(operation);
                 }
+                if (symbol.MethodKind == MethodKind.Constructor)
+                    walker.Synchronization = hasControlFlow && hasInitializerControlFlow
+                        ? walker.ConstructorFlow() : MethodSynchronizationFlow.Unavailable("ConstructorControlFlowUnavailable");
                 if (autoAccessor) {
                     var backingField = symbol.ContainingType.GetMembers().OfType<IFieldSymbol>()
                         .FirstOrDefault(f => SymbolEqualityComparer.Default.Equals(f.AssociatedSymbol, symbol.AssociatedSymbol));
                     if (backingField == null) walker.Unresolved.Add("AutoAccessorBackingField");
-                    else walker.Member("field", backingField);
+                    else {
+                        walker.Member("field", backingField);
+                        walker.Synchronization = new MethodSynchronizationFlow(syntax.SemanticModel.Compilation, symbol,
+                            cancellation, _ => false, new Dictionary<INamedTypeSymbol, int?>(SymbolEqualityComparer.Default)).BuildAutoAccessor(backingField);
+                    }
                 }
                 var flags = string.Join(",", symbol.GetAttributes().Select(static a => a.AttributeClass?.ToDisplayString())
                     .Where(static n => n is "ME.BECS.CodeGeneratorIgnoreAttribute" or "ME.BECS.CodeGeneratorIgnoreVisitedAttribute" or
                         "ME.BECS.DisableContainerSafetyRestrictionAttribute" or "Unity.Collections.LowLevel.Unsafe.DisableContainerSafetyRestrictionAttribute")
                     .OrderBy(static n => n, StringComparer.Ordinal));
-                flags += (flags.Length == 0 ? "" : ",") + "safety-schema=1";
+                flags += (flags.Length == 0 ? "" : ",") + MethodSummaryContracts.SafetySchema;
+                flags += "," + JobControlContracts.Schema;
+                flags += "," + DestroyDispatchContracts.Schema;
+                flags += "," + ImplicitFormattingContracts.Schema;
+                flags += "," + GenericConstructionContracts.Schema;
+                flags += BuiltinAllocatorProof.MethodFlag(symbol, syntax.SemanticModel.Compilation);
+                flags += ContainerBorrowProof.MethodFlag(symbol, syntax.SemanticModel.Compilation, cancellation);
+                flags += "," + ContainerAllocatorBindings.Schema;
+                if (hasControlFlow && hasInitializerControlFlow) flags += "," + MethodSummaryControlFlow.EffectUnionSchema;
+                if (hasControlFlow && hasInitializerControlFlow && walker.ExceptionCounts) flags += "," +
+                    (walker.FilterCounts ? MethodSummaryControlFlow.FilterCountsSchema : MethodSummaryControlFlow.ExceptionCountsSchema);
                 flags += ",weight-schema=1";
-                flags += ",schedule-schema=1";
+                flags += "," + MethodSummaryContracts.SchedulingSchema;
+                flags += "," + MethodSummaryContracts.SystemAccessSchema;
+                flags += "," + SystemQueryFilterContracts.Schema;
+                flags += "," + QueryScheduleModeFlow.Schema;
+                flags += "," + QuerySchedulingContracts.Schema;
+                flags += "," + RuntimeTypeUsage.Schema;
+                flags += "," + walker.Synchronization;
                 flags += MethodSummaryInterfaceMap.Flags(symbol);
                 if (symbol.Arity == 0 && !symbol.IsStatic) {
                     var destroyContract = syntax.SemanticModel.Compilation.GetTypeByMetadataName("ME.BECS.IComponentDestroy");
@@ -117,7 +156,7 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
                         flags += ",destroy-owner=" + MethodSummaryType.From(symbol.ContainingType).Encode();
                 }
                 if (symbol.MethodKind == MethodKind.Constructor) {
-                    flags += ",constructor-schema=1";
+                    flags += "," + MethodSummaryContracts.ConstructorSchema;
                 }
                 if (IsSystemLifecycle(symbol, syntax.SemanticModel.Compilation)) {
                     var owners = string.Join("+", MethodSummaryType.TypeOwners(symbol.ContainingType).Select(static t => t.MetadataName));
@@ -145,7 +184,7 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
                     string.Join("\t", MethodSummaryType.Environment(symbol).Select(static t => t.Encode())) + "\n" + walker.Rows;
             }).Where(static s => s != null).Collect();
         var implicitConstructors = context.SyntaxProvider.CreateSyntaxProvider(
-            static (node, _) => node is ClassDeclarationSyntax,
+            static (node, _) => SourceAnalysisOptions.Enabled(node.SyntaxTree.Options) && node is ClassDeclarationSyntax,
             static (syntax, cancellation) => {
                 if (syntax.SemanticModel.Compilation.GetTypeByMetadataName("ME.BECS.Ent") == null ||
                     syntax.SemanticModel.GetDeclaredSymbol(syntax.Node, cancellation) is not INamedTypeSymbol type || type.IsStatic)
@@ -159,22 +198,30 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
                 if (constructor == null) return null;
                 var id = MethodSummaryIdentity.Get(constructor);
                 if (id == null) return null;
-                var walker = new SummaryWalker(syntax.SemanticModel, cancellation);
-                VisitInstanceInitializers(constructor, syntax.SemanticModel.Compilation, walker, cancellation);
+                var walker = new SummaryWalker(syntax.SemanticModel, cancellation, constructor);
+                var hasInitializerControlFlow = VisitInstanceInitializers(constructor, syntax.SemanticModel.Compilation, walker, cancellation);
+                IMethodSymbol? baseConstructor = null;
                 // System.Object's parameterless constructor has no user code or ECS effects.
                 // Every other base constructor remains an ordinary transitive call.
                 if (type.BaseType is { SpecialType: not SpecialType.System_Object } baseType) {
-                    var baseConstructor = baseType.InstanceConstructors.FirstOrDefault(static method => method.Parameters.Length == 0);
+                    baseConstructor = baseType.InstanceConstructors.FirstOrDefault(static method => method.Parameters.Length == 0);
                     if (baseConstructor == null) walker.Unresolved.Add("ImplicitBaseConstructorUnavailable");
                     else walker.Member("call", baseConstructor);
                 }
-                return id + "\nsafety-schema=1,weight-schema=1,schedule-schema=1,constructor-schema=1\n" +
+                var synchronization = hasInitializerControlFlow && !walker.Unresolved.Contains("ImplicitBaseConstructorUnavailable")
+                    ? walker.ConstructorFlow(baseConstructor) : MethodSynchronizationFlow.Unavailable("ConstructorControlFlowUnavailable");
+                return id + "\n" + MethodSummaryContracts.SafetySchema + "," + DestroyDispatchContracts.Schema + "," + ImplicitFormattingContracts.Schema + "," + GenericConstructionContracts.Schema +
+                    (hasInitializerControlFlow ? "," + MethodSummaryControlFlow.EffectUnionSchema : "") +
+                    (hasInitializerControlFlow && walker.ExceptionCounts ? "," +
+                        (walker.FilterCounts ? MethodSummaryControlFlow.FilterCountsSchema : MethodSummaryControlFlow.ExceptionCountsSchema) : "") +
+                    ",weight-schema=1," + ContainerAllocatorBindings.Schema + "," + JobControlContracts.Schema + "," + MethodSummaryContracts.SchedulingSchema + "," + MethodSummaryContracts.SystemAccessSchema + "," + SystemQueryFilterContracts.Schema + "," + QueryScheduleModeFlow.Schema + "," + QuerySchedulingContracts.Schema + "," + RuntimeTypeUsage.Schema + "," + synchronization + "," + MethodSummaryContracts.ConstructorSchema + "\n" +
                     string.Join(",", walker.Unresolved.OrderBy(static gap => gap, StringComparer.Ordinal)) + "\n" +
                     string.Join("\t", MethodSummaryType.Environment(constructor).Select(static argument => argument.Encode())) + "\n" + walker.Rows;
             }).Where(static summary => summary != null).Collect();
         var allSummaries = summaries.Combine(implicitConstructors).Select(static (pair, _) => pair.Left.AddRange(pair.Right));
-        context.RegisterSourceOutput(allSummaries.Combine(context.CompilationProvider), static (output, input) => {
-            var rows = input.Left.Where(static s => s != null).Select(static s => s!).Distinct(StringComparer.Ordinal).OrderBy(static s => s, StringComparer.Ordinal).ToArray();
+        context.RegisterSourceOutput(allSummaries.Combine(DestroyRegistryAccessGenerator.Collect(context)).Combine(context.CompilationProvider), static (output, input) => {
+            if (!SourceAnalysisOptions.Enabled(input.Right)) return;
+            var rows = input.Left.Left.Where(static s => s != null).Select(static s => s!).Distinct(StringComparer.Ordinal).OrderBy(static s => s, StringComparer.Ordinal).ToArray();
             // A component-only asmdef can specialize imported generic jobs without any local methods.
             if (input.Right.GetTypeByMetadataName("ME.BECS.Ent") == null) return;
             // Attribute data is available through IAssemblySymbol.GetAttributes in downstream asmdefs.
@@ -188,7 +235,7 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
                 }
                 output.AddSource("ME.BECS.MethodSummaries." + (start / chunkSize) + ".g.cs", SourceText.From(source.ToString(), Encoding.UTF8));
             }
-            MethodSummaryGraph.EmitCoverage(output, input.Right, rows);
+            MethodSummaryGraph.EmitCoverage(output, input.Right, rows, input.Left.Right.Where(static row => row != null).Select(static row => row!).ToArray());
         });
     }
 
@@ -219,8 +266,32 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
 
     private sealed class SummaryWalker : OperationWalker {
         private readonly SemanticModel semanticModel;
+        private readonly IMethodSymbol method;
         private readonly Dictionary<CaptureId, IMethodSymbol> blockDelegates = new Dictionary<CaptureId, IMethodSymbol>();
         internal void BeginBlock() => this.blockDelegates.Clear();
+        private Dictionary<IInvocationOperation, string> queryModes = new Dictionary<IInvocationOperation, string>();
+        private LocalContainerAllocatorProof? localContainers;
+        internal string Synchronization = MethodSynchronizationFlow.Unavailable("ControlFlowUnavailable");
+        internal ControlFlowGraph? Graph;
+        internal bool ExceptionCounts = true;
+        internal bool FilterCounts;
+        internal readonly List<(ControlFlowGraph Graph, Func<IOperation, bool> Omitted)> Initializers = new();
+        internal string ConstructorFlow(IMethodSymbol? implicitBase = null) => new MethodSynchronizationFlow(
+            this.semanticModel.Compilation, this.method, this.cancellation, this.IsOmittedOperation, this.refModes)
+            .BuildConstructor(this.Initializers, this.Graph, implicitBase);
+        internal void AnalyzeGraph(ControlFlowGraph graph) {
+            this.Graph = graph;
+            this.localContainers = new LocalContainerAllocatorProof(graph.OriginalOperation, this.semanticModel.Compilation, this.cancellation, this.IsOmittedOperation);
+            this.queryModes = new QueryScheduleModeFlow(this.semanticModel.Compilation, this.method, this.cancellation, this.IsOmittedOperation).Analyze(graph);
+            // Constructor CFGs do not contain field/property initializers. Never certify
+            // a partial constructor until its ordered initializer graphs are composed.
+            this.Synchronization = this.method.MethodKind is MethodKind.Constructor or MethodKind.StaticConstructor
+                ? MethodSynchronizationFlow.Unavailable("ConstructorFlow")
+                : new MethodSynchronizationFlow(this.semanticModel.Compilation, this.method, this.cancellation,
+                    this.IsOmittedOperation, this.refModes).Build(graph);
+        }
+        internal bool IsOmittedOperation(IOperation operation) => operation.Syntax.AncestorsAndSelf()
+            .OfType<InvocationExpressionSyntax>().Any(this.IsOmittedConditionalCall);
         private readonly Dictionary<SyntaxNode, bool> omittedConditionalCalls = new Dictionary<SyntaxNode, bool>();
         private readonly Dictionary<INamedTypeSymbol, int?> refModes = new Dictionary<INamedTypeSymbol, int?>(SymbolEqualityComparer.Default);
         private readonly System.Threading.CancellationToken cancellation;
@@ -228,8 +299,9 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
         internal readonly StringBuilder Rows = new StringBuilder();
         internal readonly HashSet<string> Unresolved = new HashSet<string>(StringComparer.Ordinal);
 
-        internal SummaryWalker(SemanticModel semanticModel, System.Threading.CancellationToken cancellation) {
+        internal SummaryWalker(SemanticModel semanticModel, System.Threading.CancellationToken cancellation, IMethodSymbol method) {
             this.semanticModel = semanticModel;
+            this.method = method;
             this.cancellation = cancellation;
         }
 
@@ -244,9 +316,7 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
             if (operation == null) return;
             // CFG lowering can lift argument evaluation into separate blocks. Filtering only
             // VisitInvocation would retain side effects of arguments to an omitted call.
-            foreach (var invocation in operation.Syntax.AncestorsAndSelf().OfType<InvocationExpressionSyntax>()) {
-                if (this.IsOmittedConditionalCall(invocation)) return;
-            }
+            if (this.IsOmittedOperation(operation)) return;
             if (operation is IFlowAnonymousFunctionOperation anonymous) {
                 this.Member("method-ref", anonymous.Symbol);
                 this.Unresolved.Add("DelegateBinding");
@@ -364,14 +434,22 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
                 return;
             }
             base.VisitInvocation(operation); // Receiver and arguments execute before the call.
+            this.queryModes.TryGetValue(operation, out var queryMode);
+            if (queryMode == null && MethodSummaryContracts.IsSchedulingMethod(operation.TargetMethod, this.semanticModel.Compilation))
+                queryMode = "\t!schedule-readonly=?";
+            queryMode += UnityAllocationContracts.Invocation(operation, this.semanticModel.Compilation);
+            queryMode += BurstStorageContracts.Invocation(operation, this.semanticModel.Compilation);
+            queryMode += BclFormattingContracts.Invocation(operation, this.semanticModel.Compilation);
+            queryMode += this.localContainers?.Contract(operation.TargetMethod, operation.Instance);
+            queryMode += this.localContainers?.Arguments(operation);
             if (operation.TargetMethod.ContainingType.TypeKind == TypeKind.Interface &&
                 ReceiverType(operation.Instance) is ITypeSymbol receiver && receiver.IsValueType) {
-                this.Member("call", operation.TargetMethod, receiver);
+                this.Member("call", operation.TargetMethod, receiver, queryMode);
                 return;
             }
             if (operation.IsVirtual && NeedsVirtualResolution(operation.TargetMethod)) this.Unresolved.Add("VirtualDispatch");
             if (operation.TargetMethod.MethodKind == MethodKind.DelegateInvoke) this.Unresolved.Add("DelegateInvoke");
-            this.Method("call", operation.TargetMethod);
+            this.Method("call", operation.TargetMethod, queryMode);
         }
 
         public override void VisitFlowCapture(IFlowCaptureOperation operation) {
@@ -405,6 +483,12 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
             return false;
         }
 
+        public override void VisitTypeParameterObjectCreation(ITypeParameterObjectCreationOperation operation) {
+            if (operation.Type == null) this.Unresolved.Add("MissingGenericConstructionType");
+            else this.Rows.Append(GenericConstructionContracts.Operation(operation.Type, this.loopDepth)).Append('\n');
+            base.VisitTypeParameterObjectCreation(operation);
+        }
+
         public override void VisitObjectCreation(IObjectCreationOperation operation) {
             // Object initializers execute after the constructor, unlike a default postorder walk.
             foreach (var argument in operation.Arguments) this.Visit(argument);
@@ -412,7 +496,7 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
             // not a callable body. Explicit constructors still require full analysis.
             if (operation.Constructor != null && !(operation.Constructor.IsImplicitlyDeclared &&
                 operation.Constructor.ContainingType.IsValueType && operation.Constructor.Parameters.Length == 0))
-                this.Method("new", operation.Constructor);
+                this.Method("new", operation.Constructor, UnityContainerContracts.CreationContract(operation, this.semanticModel.Compilation));
             this.Visit(operation.Initializer);
         }
 
@@ -430,6 +514,10 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
 
         private void Accessor(IMethodSymbol? method, IOperation? instance = null) {
             if (method == null) { this.Unresolved.Add("MissingAccessor"); return; }
+            if (ExternalValueContracts.IsTypeOfMetadata(method, instance, this.semanticModel.Compilation)) {
+                this.Method("call", method, "\t!ecs-leaf\t!typeof-metadata");
+                return;
+            }
             var receiver = ReceiverType(instance);
             if (method.ContainingType.TypeKind == TypeKind.Interface &&
                 receiver != null && receiver.IsValueType) {
@@ -439,7 +527,7 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
             // Unlike a virtual access through this/a variable, an explicit base access
             // invokes this exact accessor even when the property can be overridden.
             if (instance?.Syntax is not BaseExpressionSyntax && NeedsVirtualResolution(method)) this.Unresolved.Add("VirtualDispatch");
-            this.Method("call", method);
+            this.Method("call", method, this.localContainers?.Contract(method, instance));
         }
 
         private static bool NeedsVirtualResolution(IMethodSymbol method) => method.IsAbstract ||
@@ -504,6 +592,25 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
         public override void VisitBinaryOperator(IBinaryOperation operation) {
             base.VisitBinaryOperator(operation);
             if (operation.OperatorMethod != null) this.Method("operator", operation.OperatorMethod);
+            else if (operation.Type?.SpecialType == SpecialType.System_String) {
+                this.Formatting(operation.LeftOperand, false);
+                this.Formatting(operation.RightOperand, false);
+            }
+        }
+
+        public override void VisitInterpolation(IInterpolationOperation operation) {
+            base.VisitInterpolation(operation); // Preserve expression/alignment/format argument effects.
+            var mode = ImplicitFormattingContracts.InterpolationMode(operation, this.semanticModel);
+            if (mode == "deferred") return;
+            if (mode != "format") { this.Unresolved.Add("ImplicitFormatting: unknown interpolation lowering"); return; }
+            this.Formatting(operation.Expression, true);
+        }
+
+        private void Formatting(IOperation value, bool interpolation) {
+            if (ImplicitFormattingContracts.IsText(value)) return;
+            var row = ImplicitFormattingContracts.Operation(value, interpolation, this.loopDepth);
+            if (row == null) this.Unresolved.Add("ImplicitFormatting: missing receiver");
+            else this.Rows.Append(row).Append('\n');
         }
 
         public override void VisitUnaryOperator(IUnaryOperation operation) {
@@ -523,6 +630,7 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
             this.Visit(operation.Value);
             if (operation.OperatorMethod != null) this.Method("operator", operation.OperatorMethod);
             if (operation.OutConversion.MethodSymbol != null) this.Method("conversion", operation.OutConversion.MethodSymbol);
+            if (operation.OperatorMethod == null && operation.Type?.SpecialType == SpecialType.System_String) this.Formatting(operation.Value, false);
             if (HasSetterTarget(operation.Target)) this.Accessor(((IPropertyReferenceOperation)operation.Target).Property.SetMethod, ((IPropertyReferenceOperation)operation.Target).Instance);
         }
 
@@ -541,27 +649,17 @@ public sealed class MethodSummaryGenerator : IIncrementalGenerator {
             this.Unresolved.Add("DelegateBinding");
         }
 
-        private void Method(string kind, IMethodSymbol method) {
+        private void Method(string kind, IMethodSymbol method, string? callSite = null) {
             if (method.ReducedFrom is { } reduced) {
                 method = reduced.Arity == method.TypeArguments.Length && reduced.Arity != 0 ? reduced.ConstructedFrom.Construct(method.TypeArguments.ToArray()) : reduced;
             }
-            this.Member(kind, method);
+            this.Member(kind, method, callSite: callSite);
         }
 
-        internal void Member(string kind, ISymbol symbol, ITypeSymbol? constrainedReceiver = null) {
-            var id = MethodSummaryIdentity.Get(symbol);
-            if (id == null) { this.Unresolved.Add("MemberWithoutId"); return; }
-            this.Rows.Append(kind).Append('\t').Append(this.loopDepth).Append('\t')
-                .Append(symbol.ContainingAssembly.Identity.ToString()).Append('\t').Append(id).Append('\t')
-                .Append(MethodSummaryType.From(symbol.ContainingType).Encode());
-            if (symbol is IMethodSymbol method) {
-                foreach (var owner in MethodSummaryType.MethodOwners(method)) {
-                    foreach (var argument in owner.TypeArguments) this.Rows.Append('\t').Append(MethodSummaryType.From(argument).Encode());
-                }
-            }
-            MethodSummaryContracts.Append(this.Rows, symbol, this.semanticModel.Compilation, this.refModes);
-            if (constrainedReceiver != null) this.Rows.Append("\t!constrained=").Append(MethodSummaryType.From(constrainedReceiver).Encode());
-            this.Rows.Append('\n');
+        internal void Member(string kind, ISymbol symbol, ITypeSymbol? constrainedReceiver = null, string? callSite = null) {
+            var row = MethodSummaryContracts.Operation(kind, this.loopDepth, symbol, this.semanticModel.Compilation, this.refModes, constrainedReceiver);
+            if (row == null) { this.Unresolved.Add("MemberWithoutId"); return; }
+            this.Rows.Append(row).Append(callSite).Append('\n');
         }
     }
 }

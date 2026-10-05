@@ -31,7 +31,8 @@ internal static class ConfigCollectionsInputEmitter {
         return name;
     }
 
-    internal static string? Describe(INamedTypeSymbol? type, Compilation compilation, string[]? order, string key) {
+    internal static string? Describe(INamedTypeSymbol? type, Compilation compilation, string[]? order, string key,
+                                     StringBuilder? registrations = null, string callbackOwner = "") {
         if (type == null || !type.IsUnmanagedType || type.IsRefLikeType || MethodSummaryType.From(type).IsOpen ||
             !compilation.IsSymbolAccessibleWithin(type, compilation.Assembly) ||
             compilation.Options is not CSharpCompilationOptions options || !options.AllowUnsafe ||
@@ -44,14 +45,15 @@ internal static class ConfigCollectionsInputEmitter {
         fields = order.Select(fieldName => fields.Single(field => field.Name == fieldName)).ToArray();
         var name = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var body = new StringBuilder();
-        body.Append("public static string[] GetFields_").Append(key).Append("() => new string[] { ")
+        registrations ??= body;
+        registrations.Append("public static string[] GetFields_").Append(key).Append("() => new string[] { ")
             .Append(string.Join(",", fields.Select(field => SymbolDisplay.FormatLiteral(field.Name, true)))).Append(" };\n");
-        body.Append("public static uint GetCount_").Append(key).Append("() => ")
+        registrations.Append("public static uint GetCount_").Append(key).Append("() => ")
             .Append(fields.Length.ToString(CultureInfo.InvariantCulture)).Append("u;\n");
-        body.Append("private static void Register_").Append(key)
-            .Append("() => global::ME.BECS.WorldStaticCallbacks.RegisterConfigComponentCallback<").Append(name).Append(">(Apply_").Append(key).Append(");\n")
-            .Append("[global::Unity.Burst.BurstCompile]\n[global::AOT.MonoPInvokeCallback(typeof(global::ME.BECS.UnsafeEntityConfig.MethodCallerDelegate))]\n")
-            .Append("public static void Apply_").Append(key)
+        registrations.Append("public static void Register_").Append(key)
+            .Append("() => global::ME.BECS.WorldStaticCallbacks.RegisterConfigComponentCallback<").Append(name).Append(">(").Append(callbackOwner).Append("Apply_").Append(key).Append(");\n");
+        body.Append("[global::Unity.Burst.BurstCompile]\n[global::AOT.MonoPInvokeCallback(typeof(global::ME.BECS.UnsafeEntityConfig.MethodCallerDelegate))]\n")
+            .Append("[global::UnityEngine.Scripting.Preserve]\npublic static void Apply_").Append(key)
             .Append("(in global::ME.BECS.UnsafeEntityConfig config, void* componentPtr, in global::ME.BECS.Ent ent) {\n")
             .Append("var component = (").Append(name).Append("*)componentPtr;\n");
         foreach (var field in fields) {

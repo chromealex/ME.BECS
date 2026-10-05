@@ -7,8 +7,20 @@ namespace ME.BECS.SourceGenerator;
 
 internal sealed class InputManifestTypes {
     private readonly Dictionary<string, IAssemblySymbol> assemblies = new Dictionary<string, IAssemblySymbol>(StringComparer.Ordinal);
+    private CompilerJobSafetyCatalog? jobSafety;
+    private CompilerJobCatalogs? jobCatalogs;
+    private CompilerSystemDependencies? systemDependencies;
+    private CompilerViewSafety? viewSafety;
+    private CompilerScheduledJobs? scheduledJobs;
+    private readonly System.Threading.CancellationToken cancellation;
+    internal CompilerJobCatalogs JobCatalogs => this.jobCatalogs ??= new CompilerJobCatalogs(this.assemblies.Values, this.cancellation);
+    internal CompilerJobSafetyCatalog JobSafety => this.jobSafety ??= new CompilerJobSafetyCatalog(this.JobCatalogs);
+    internal CompilerSystemDependencies SystemDependencies => this.systemDependencies ??= new CompilerSystemDependencies(this.assemblies.Values, this.cancellation);
+    internal CompilerViewSafety ViewSafety => this.viewSafety ??= new CompilerViewSafety(this.assemblies.Values, this.cancellation);
+    internal CompilerScheduledJobs ScheduledJobs => this.scheduledJobs ??= new CompilerScheduledJobs(this.assemblies.Values, this.cancellation);
 
     internal InputManifestTypes(Compilation compilation, System.Threading.CancellationToken cancellation) {
+        this.cancellation = cancellation;
         var pending = new Queue<IAssemblySymbol>();
         pending.Enqueue(compilation.Assembly);
         while (pending.Count != 0) {

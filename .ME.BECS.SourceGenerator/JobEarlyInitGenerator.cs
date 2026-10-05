@@ -26,7 +26,15 @@ public sealed class JobEarlyInitGenerator : IIncrementalGenerator {
             });
     }
 
-    private static string? Describe(INamedTypeSymbol? job, INamedTypeSymbol? earlyInit) {
+    // The publication generator runs in the same compilation and cannot see this
+    // generator's output. Prove the exact wrapper using the same selection logic.
+    internal static bool EmitsWrapper(INamedTypeSymbol job, INamedTypeSymbol? earlyInit, string name) {
+        var found = false;
+        Describe(job.OriginalDefinition, earlyInit, emitted => found |= emitted == name);
+        return found;
+    }
+
+    private static string? Describe(INamedTypeSymbol? job, INamedTypeSymbol? earlyInit, Action<string>? emitted = null) {
         if (job == null || earlyInit == null || !job.IsUnmanagedType || job.IsRefLikeType) return null;
         var owners = new Stack<INamedTypeSymbol>();
         for (var owner = job; owner != null; owner = owner.ContainingType) {
@@ -69,10 +77,12 @@ public sealed class JobEarlyInitGenerator : IIncrementalGenerator {
                 }
                 if (!matches) continue;
                 var names = arguments.Select(static a => a.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).ToArray();
-                // Exact legacy spelling is the compatibility key. Nonmatching spellings simply fall back.
+                // Keep existing wrapper identities stable. Production selects the
+                // wrapper from Selection_*; spelling comparisons are diagnostics only.
                 var legacy = "EarlyInit." + method.Name + "<" + string.Join(", ", names.Select(static n => n.Replace("global::", ""))) + ">();";
                 if (genericParameters.Length == 0) {
                     var key = HashCall(legacy);
+                    emitted?.Invoke("Init_" + key);
                     result.Add("public static void Init_" + key + "() => global::ME.BECS.Jobs.EarlyInit." + method.Name +
                         "<" + string.Join(", ", names) + ">();\n" +
                         "public static global::System.Type[] Args_" + key + "() => new global::System.Type[] {" +
@@ -90,8 +100,12 @@ public sealed class JobEarlyInitGenerator : IIncrementalGenerator {
                 }
             }
         }
-        // Ambiguous EarlyInit overloads keep the legacy path rather than silently choosing one.
-        foreach (var bodies in genericBodies.Values) if (bodies.Count == 1) result.Add(bodies.Single());
+        // Omit ambiguous wrappers so source selection fails rather than choosing
+        // an arbitrary overload. Production has no legacy EarlyInit fallback.
+        foreach (var pair in genericBodies) if (pair.Value.Count == 1) {
+            result.Add(pair.Value.Single());
+            emitted?.Invoke("InitGeneric_" + pair.Key);
+        }
         return result.Count == 0 ? null : string.Join("\n", result.Distinct(StringComparer.Ordinal).OrderBy(static s => s, StringComparer.Ordinal));
     }
 

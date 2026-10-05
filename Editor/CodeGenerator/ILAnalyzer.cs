@@ -33,7 +33,7 @@ namespace ME.BECS.Editor {
 
         public static List<DependencyInfo> AnalyzeMethod(MethodInfo method) {
             var temp = new Dictionary<System.Type, HashSet<AccessType>>();
-            var instructions = method.GetInstructions();
+            var instructions = ILAnalysisSession.Instructions(method);
 
             foreach (var p in method.GetParameters()) {
                 if (p.IsOut && p.ParameterType.IsByRef) {

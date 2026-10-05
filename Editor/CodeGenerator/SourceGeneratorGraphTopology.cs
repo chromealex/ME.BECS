@@ -36,7 +36,7 @@ namespace ME.BECS.Editor {
                 } catch (Exception exception) { ++errors; report.AppendLine("ERROR " + assembly.FullName + ": " + exception.Message); }
             }
             SourceGeneratorReport.Publish("GraphLifecyclePlans", "Compiled phase plans: available=" + available + ", unavailable=" + unavailable +
-                ", errors=" + errors + ". Diagnostic IR only; runtime bodies still use the transitional planner. Zero plans does not prove coverage.", report.ToString());
+                ", errors=" + errors + ". Compiler lifecycle plans used for emitted bodies. Advisory metadata only; does not verify runtime behavior, Burst execution or stripping. Zero plans does not prove coverage.", report.ToString());
         }
 
         [UnityEditor.MenuItem("ME.BECS/Source Generator/Export Graph Topology")]
@@ -60,7 +60,7 @@ namespace ME.BECS.Editor {
                 } catch (Exception exception) { ++errors; report.AppendLine("ERROR " + path + ": " + exception.Message); }
             }
             SourceGeneratorReport.Publish("GraphTopology", "Graph topology snapshots=" + count + ", errors=" + errors +
-                ". Read-only asset snapshot; no sync recalculation, registry or generated output changes. Not yet used for lifecycle emission.", report.ToString());
+                ". Read-only asset snapshot supplied to compiler lifecycle planning; no sync recalculation, registry or generated output changes.", report.ToString());
         }
 
         public static string Serialize(SystemsGraph root) {

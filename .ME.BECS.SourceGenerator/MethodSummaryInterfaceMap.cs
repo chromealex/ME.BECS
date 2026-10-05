@@ -12,7 +12,7 @@ internal static class MethodSummaryInterfaceMap {
     private const string Prefix = "interface-map-v1=";
 
     internal static string Flags(IMethodSymbol method) {
-        if (method.IsStatic || !method.ContainingType.IsValueType) return "";
+        if (method.IsStatic || (!method.ContainingType.IsValueType && !method.ContainingType.IsSealed)) return "";
         var records = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var contract in method.ContainingType.AllInterfaces) {
             foreach (var member in Members(contract)) {

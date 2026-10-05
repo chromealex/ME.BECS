@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 
@@ -9,12 +10,34 @@ internal static class DebugJobInputEmitter {
     private static string TypeName(ITypeSymbol type) => type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
     private static string FieldName(ITypeSymbol type) => "safety_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(TypeName(type));
 
-    internal static void Append(StringBuilder source, string ns, IReadOnlyList<DebugJobInputPlan> plans) {
-        source.Append("\n#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS\nnamespace ").Append(ns).Append(" {\n")
+    internal static void AppendMetadata(StringBuilder source, IReadOnlyList<DebugJobInputPlan> plans) {
+        foreach (var plan in plans) {
+            var payload = "v1\n" + plan.JobIdentity + "\n" + plan.ContractIdentity + "\n" + plan.SafetyOrigin +
+                string.Concat(plan.Safety.Select(dependency => "\nS\t" + dependency.Mode + "\t" + JobSafetySummary.ReflectionIdentity(dependency.Type)));
+            source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.DebugJobSafety.v1\", ")
+                .Append(Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(payload, true)).Append(")]\n");
+        }
+    }
+
+    internal static string InitializerName(DebugJobInputPlan plan) => "Initialize_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(plan.JobIdentity + "\n" + plan.ContractIdentity);
+
+    internal static void AppendAdapter(StringBuilder source, string ns, bool editor) {
+        source.Append("namespace ").Append(ns).Append(" { public unsafe partial class DebugJobs {\n")
+            .Append("#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS\n")
+            .Append("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\npublic static void InitializeJobsDebug() => global::ME.BECS.BootstrapRuntime.InitializeJobDebug(editor: ")
+            .Append(editor ? "true" : "false").Append(");\n#endif\n} }\n");
+    }
+
+    internal static void Append(StringBuilder source, string ns, IReadOnlyList<DebugJobInputPlan> plans, string owner = "DebugJobs", bool individual = false) {
+        // Preserve the public owner even when collection checks are disabled. It
+        // used to be declared by Debug.Cache; now that file is a retirement stub.
+        source.Append("\nnamespace ").Append(ns).Append(" { public unsafe partial class ").Append(owner).Append(" { } }\n")
+            .Append("#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS\nnamespace ").Append(ns).Append(" {\n")
             .Append("using Unity.Burst; using Unity.Collections.LowLevel.Unsafe; using ME.BECS.Jobs; using static ME.BECS.Cuts;\n")
-            .Append("[BurstCompile] public unsafe partial class DebugJobs {\n");
+            .Append("[BurstCompile] public unsafe partial class ").Append(owner).Append(" {\n");
         var initialize = new StringBuilder("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\npublic static void InitializeJobsDebug() {\n");
         foreach (var plan in plans) {
+            if (individual) initialize = new StringBuilder("[global::UnityEngine.Scripting.PreserveAttribute]\n[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\npublic static void " + InitializerName(plan) + "() {\n");
             var name = "JobDebugData_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(plan.JobIdentity + "\n" + plan.ContractIdentity);
             var job = TypeName(plan.Job);
             source.Append("private struct Cache").Append(name).Append(" { public static readonly SharedStatic<global::System.IntPtr> cache = SharedStatic<global::System.IntPtr>.GetOrCreate<Cache")
@@ -56,8 +79,19 @@ internal static class DebugJobInputEmitter {
                     .Append('<').Append(TypeName(dependency.Type)).Append(">(buffer->state, buffer->worldId);\n");
             initialize.Append("return data;\n}\nvar fn = BurstCompiler.CompileFunctionPointer<CompiledJobCallback>(Method);\nCompiledJobs<")
                 .Append(job).Append(">.SetFunction(fn, (unsafeMode) => unsafeMode ? typeof(").Append(name).Append("Unsafe) : typeof(").Append(name).Append("));\n}\n");
+            if (individual) source.Append(initialize).Append("}\n");
         }
-        source.Append(initialize).Append("}\n} }\n#endif\n");
+        if (!individual) source.Append(initialize).Append("}\n");
+        source.Append("} }\n#endif\n");
+        if (individual) {
+            // Publish the same explicit coverage even in unchecked players. The
+            // phase is not executed there, and no debug types/Burst code exist.
+            source.Append("#if !(ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS)\nnamespace ").Append(ns)
+                .Append(" { public unsafe partial class ").Append(owner).Append(" {\n");
+            foreach (var plan in plans) source.Append("[global::UnityEngine.Scripting.PreserveAttribute]\npublic static void ")
+                .Append(InitializerName(plan)).Append("() { }\n");
+            source.Append("} }\n#endif\n");
+        }
     }
 
     private static string Mode(string value) => value switch { "ReadOnly" => "RO", "WriteOnly" => "WO", "ReadWrite" => "RW", _ => throw new System.ArgumentOutOfRangeException(nameof(value)) };

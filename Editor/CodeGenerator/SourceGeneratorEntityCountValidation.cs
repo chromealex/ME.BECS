@@ -14,6 +14,7 @@ namespace ME.BECS.Editor {
 
         [UnityEditor.MenuItem("ME.BECS/Source Generator/Compare Job Entity Counts")]
         private static void Compare() {
+            if (!SourceAnalysisDiagnostics.BeginComparison()) return;
             if (UnityEditor.EditorApplication.isCompiling) {
                 UnityEngine.Debug.LogWarning("[ME.BECS] Wait for compilation before comparing entity counts.");
                 return;
@@ -35,6 +36,8 @@ namespace ME.BECS.Editor {
                 var generatedWeightInitializers = 0;
                 var sourceWeightValues = 0;
                 var legacyWeightFallbacks = 0;
+                var ilWeightsAvailable = 0;
+                var ilWeightsFailed = 0;
                 var report = new StringBuilder("[ME.BECS] Job entity counts and weights: source summaries vs fresh legacy IL analysis\n");
                 var weightsCompared = 0;
                 var weightsMatched = 0;
@@ -49,6 +52,11 @@ namespace ME.BECS.Editor {
                 var countInitializerMatches = 0;
                 foreach (var job in jobs.Distinct().Where(t => t.IsValueType && t.IsVisible && !t.ContainsGenericParameters)
                              .OrderBy(t => t.FullName, StringComparer.Ordinal).ThenBy(t => t.Assembly.FullName, StringComparer.Ordinal)) {
+                    try { Jobs.ILJobWeights.Analyze(job); ++ilWeightsAvailable; }
+                    catch (Exception exception) {
+                        ++ilWeightsFailed;
+                        report.AppendLine("Production IL weight analysis failed for " + job.FullName + ": " + exception.GetBaseException().Message);
+                    }
                     if (weightConsumer.TryGetInitializer(job, out _)) ++generatedWeightInitializers;
                     else if (weightConsumer.TryGetComplete(job, out _)) ++sourceWeightValues;
                     else ++legacyWeightFallbacks;
@@ -130,7 +138,13 @@ namespace ME.BECS.Editor {
                         loops = checked(loops + loop);
                     }
                     if (invalid) { ++unavailable; report.AppendLine("Unresolved count/group mapping: " + job.FullName); continue; }
-                    var legacy = Jobs.JobsEarlyInitCodeGenerator.GetJobEntInfo(job, generator);
+                    Jobs.JobsEarlyInitCodeGenerator.NewEntInfo legacy;
+                    try { legacy = Jobs.JobsEarlyInitCodeGenerator.GetJobEntInfo(job, generator); }
+                    catch (Exception exception) {
+                        ++unavailable;
+                        report.AppendLine("Legacy entity-count analysis failed for " + job.FullName + ": " + exception.GetBaseException().Message);
+                        continue;
+                    }
                     if (hasInitializer) {
                         if (SourceGeneratorJobEntityCounts.MatchesLegacy(summary, keys, groupCount, legacy)) ++countInitializerMatches;
                         else report.AppendLine("Entity-count initializer differs from legacy (including loop-group reservations): " + job.AssemblyQualifiedName);
@@ -158,11 +172,11 @@ namespace ME.BECS.Editor {
                 }
                 report.AppendLine($"Entity counts: compared={compared}, equal={matched}, different={compared - matched}, incomplete={incomplete}, unavailable={unavailable}");
                 report.AppendLine($"Weights: compared={weightsCompared}, equal={weightsMatched}, different={weightsCompared - weightsMatched}, incomplete={weightsIncomplete}, unavailable={weightsUnavailable}");
-                var selection = $"Weight consumer: generated initializer={generatedWeightInitializers}, source value={sourceWeightValues}, legacy fallback={legacyWeightFallbacks} (availability only; methods NOT invoked)";
+                var selection = $"Production IL weights: analyzed={ilWeightsAvailable}, failed={ilWeightsFailed}; source catalog diagnostics only: initializer={generatedWeightInitializers}, value={sourceWeightValues}, unavailable={legacyWeightFallbacks} (jobs and initialization methods NOT invoked)";
                 report.AppendLine(selection);
                 var countSelection = $"Entity-count initializers: available={countInitializers}, matching={countInitializerMatches}, different={countInitializers - countInitializerMatches}, unavailable/incomplete={countInitializerIssues} (group IDs, loop groups and EntitiesJobMaxCount checked; methods NOT invoked)";
                 report.AppendLine(countSelection);
-                report.AppendLine("Read-only: no cache files, registrations or jobs executed. Matching incomplete summaries do NOT establish coverage. Production uses validated zero-gap v3 source count initializers; legacy parity is diagnostic, not a selection gate (legacy deduplicates repeated calls and loop contexts). Unavailable coverage remains legacy. Source weights require unambiguous zero-gap summaries. Legacy analysis here remains independent.");
+                report.AppendLine("Read-only: no cache files, registrations or jobs executed. Matching incomplete summaries do NOT establish coverage. Production entity counts prefer complete fresh IL; unsupported paths still use the transitional source/legacy selection. Weights use the fresh IL static-cost heuristic, never source catalog selection. Legacy/source parity here remains an independent diagnostic, not a production gate or proof of runtime execution cost.");
                 SourceGeneratorReport.Publish("EntityCountsAndWeights",
                     $"Entity counts: compared={compared}, equal={matched}, different={compared - matched}, incomplete={incomplete}, unavailable={unavailable}\n" +
                     $"Weights: compared={weightsCompared}, equal={weightsMatched}, different={weightsCompared - weightsMatched}, incomplete={weightsIncomplete}, unavailable={weightsUnavailable}\n" + selection + "\n" + countSelection, report.ToString());

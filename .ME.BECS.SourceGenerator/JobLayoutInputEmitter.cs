@@ -6,9 +6,9 @@ using Microsoft.CodeAnalysis;
 namespace ME.BECS.SourceGenerator;
 
 internal static class JobLayoutInputEmitter {
-    internal static void Append(StringBuilder source, Compilation compilation, IReadOnlyList<DebugJobInputPlan> plans) {
+    internal static void Append(StringBuilder source, Compilation compilation, IReadOnlyList<DebugJobInputPlan> plans, string suffix = "") {
         var componentContract = compilation.GetTypeByMetadataName("ME.BECS.IComponent");
-        source.Append("\nnamespace ME.BECS.SourceGenerated { internal static class JobLayoutInputs {\n");
+        source.Append("\nnamespace ME.BECS.SourceGenerated { internal static class JobLayoutInputs").Append(suffix).Append(" {\n");
         foreach (var group in plans.GroupBy(plan => plan.Job, SymbolEqualityComparer.Default)) {
             var plan = group.First();
             var job = plan.Job.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);

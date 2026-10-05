@@ -7,11 +7,12 @@ using Microsoft.CodeAnalysis;
 
 namespace ME.BECS.SourceGenerator;
 
-// Preserve the export's selected source initializer (or transitional numeric weight).
-// The manifest never carries executable C#.
+// Explicit IL estimates are authoritative. Old source/legacy records remain
+// readable until their manifests are regenerated; they retain their old selection.
 internal sealed class JobWeightInputEmitter {
     private readonly List<(string Identity, INamedTypeSymbol Job, INamedTypeSymbol? Initializer, uint Weight)> plans = new();
     private readonly HashSet<ITypeSymbol> jobs = new(SymbolEqualityComparer.Default);
+    private readonly HashSet<ITypeSymbol> ilJobs = new(SymbolEqualityComparer.Default);
     internal bool ContainsJob(ITypeSymbol job) => jobs.Contains(job);
     internal int JobCount => jobs.Count;
 
@@ -43,17 +44,36 @@ internal sealed class JobWeightInputEmitter {
             var parameter = method.TypeParameters[0];
             if (!parameter.HasValueTypeConstraint || parameter.HasUnmanagedTypeConstraint ||
                 parameter.ConstraintTypes.Length != 0 || parameter.HasReferenceTypeConstraint) return false;
-        } else if (fields[3] != "value" || !uint.TryParse(fields[4], NumberStyles.None, CultureInfo.InvariantCulture, out weight)) {
+        } else if (fields[3] == "catalog") {
+            if (fields[4] != "v1") return false;
+        } else if ((fields[3] != "value" && fields[3] != "il") || !CompilerJobCatalogs.Number(fields[4], out weight)) {
             return false;
         }
+        if (fields[3] != "il") {
+            var status = CompilerJobStatistics.Weight(job, resolver, compilation, out var selected, out var currentWeight, out error);
+            if (status == CompilerJobCatalogs.Status.Invalid) return false;
+            if (status == CompilerJobCatalogs.Status.Complete) {
+                initializer = selected;
+                weight = currentWeight;
+            } else if (fields[3] == "catalog") return false;
+        } else ilJobs.Add(job);
         jobs.Add(job);
         plans.Add((identity, job, initializer, weight));
         error = "";
         return true;
     }
 
-    internal void Append(StringBuilder source) {
-        source.Append("\nnamespace ME.BECS.SourceGenerated { internal static class JobWeightInputs {\n");
+    internal void AppendMetadata(StringBuilder source) {
+        foreach (var plan in plans) {
+            var payload = "v1\n" + plan.Identity + "\n" + (ilJobs.Contains(plan.Job) ? "il" : plan.Initializer == null ? "legacy" : "source") + "\n" +
+                (plan.Initializer == null ? "" : JobSafetySummary.ReflectionIdentity(plan.Initializer)) + "\n" + plan.Weight.ToString(CultureInfo.InvariantCulture);
+            source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.JobWeightSelection.v1\", ")
+                .Append(Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(payload, true)).Append(")]\n");
+        }
+    }
+
+    internal void Append(StringBuilder source, string suffix = "") {
+        source.Append("\nnamespace ME.BECS.SourceGenerated { internal static class JobWeightInputs").Append(suffix).Append(" {\n");
         foreach (var plan in plans) {
             var job = plan.Job.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             source.Append("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\npublic static void Initialize_")

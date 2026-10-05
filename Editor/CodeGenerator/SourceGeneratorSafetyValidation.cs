@@ -11,6 +11,7 @@ namespace ME.BECS.Editor {
 
         [UnityEditor.MenuItem("ME.BECS/Source Generator/Compare Job Safety")]
         private static void Compare() {
+            if (!SourceAnalysisDiagnostics.BeginComparison()) return;
             if (UnityEditor.EditorApplication.isCompiling) {
                 UnityEngine.Debug.LogWarning("[ME.BECS] Wait for compilation before comparing job safety.");
                 return;
@@ -22,8 +23,8 @@ namespace ME.BECS.Editor {
                 Systems.SystemDependenciesCodeGenerator.GetUsedObjects(true, out var used, useSourceCatalogs: false);
                 var jobs = used.jobTypes.ToList();
                 CodeGenerator.PatchSystemsList(jobs);
-                var catalogs = new Dictionary<Assembly, Dictionary<string, string[]>>();
-                var closedJobs = new SourceGeneratorClosedJobCatalog();
+                var loadedAssemblies = new HashSet<Assembly>();
+                var safetyReader = new SourceGeneratorJobSafety();
                 var report = new StringBuilder("[ME.BECS] Job safety: source summaries vs fresh legacy IL analysis\n");
                 report.AppendLine("Snapshot UTC: " + DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture));
                 var blockers = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
@@ -37,28 +38,31 @@ namespace ME.BECS.Editor {
                 var typedCatalogs = 0;
                 var selectedSafety = 0;
                 var differentSafety = 0;
+                var invalidSafety = 0;
+                var fallbackSafety = 0;
                 var safetyCandidates = 0;
                 foreach (var job in jobs.Distinct().Where(t => t.IsValueType && t.IsVisible && !t.ContainsGenericParameters)
                              .OrderBy(t => t.FullName, StringComparer.Ordinal).ThenBy(t => t.Assembly.FullName, StringComparer.Ordinal)) {
                     ++safetyCandidates;
-                    if (!catalogs.TryGetValue(job.Assembly, out var catalog)) {
+                    if (loadedAssemblies.Add(job.Assembly)) {
                         report.AppendLine("Loaded assembly: " + job.Assembly.FullName + " MVID=" + job.Module.ModuleVersionId);
-                        catalog = new Dictionary<string, string[]>(StringComparer.Ordinal);
-                        foreach (AssemblyMetadataAttribute attribute in job.Assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false)) {
-                            if (attribute.Key != "ME.BECS.JobSafety.v1") continue;
-                            var rows = attribute.Value?.Split('\n');
-                            if (rows == null || rows.Length < 3 || rows[0].Length == 0) continue;
-                            if (catalog.ContainsKey(rows[0])) catalog[rows[0]] = null;
-                            else catalog.Add(rows[0], rows);
-                        }
-                        catalogs.Add(job.Assembly, catalog);
                     }
-                    string[] summary;
-                    if (!(job.IsGenericType ? closedJobs.TryGet(job, "JobSafety", out summary) : catalog.TryGetValue(job.FullName, out summary)) || summary == null) {
+                    var sourceStatus = safetyReader.ReadSource(job, out var summary, out _, out var sourceReason);
+                    if (sourceStatus == SourceGeneratorJobSafety.SourceStatus.Invalid) {
+                        ++invalidSafety;
                         ++unavailable;
-                        AddBlocker(blockers, "MissingSafetySummary", job.AssemblyQualifiedName);
+                        AddBlocker(blockers, "InvalidSafetyCatalog: " + sourceReason, job.AssemblyQualifiedName);
+                        report.AppendLine("Invalid diagnostic source safety (IL export unaffected): " + job.AssemblyQualifiedName + " — " + sourceReason);
                         continue;
                     }
+                    if (sourceStatus == SourceGeneratorJobSafety.SourceStatus.Missing) {
+                        ++fallbackSafety;
+                        ++unavailable;
+                        AddBlocker(blockers, "MissingSafetySummary: " + sourceReason, job.AssemblyQualifiedName);
+                        continue;
+                    }
+                    if (sourceStatus == SourceGeneratorJobSafety.SourceStatus.Complete) { ++typedCatalogs; ++selectedSafety; }
+                    else { ++fallbackSafety; ++incomplete; }
                     foreach (var gap in summary.Skip(3).Where(row => row.StartsWith("G\t", StringComparison.Ordinal)))
                         AddBlocker(blockers, gap.Substring(2), job.AssemblyQualifiedName);
                     if (!int.TryParse(summary[2], NumberStyles.None, CultureInfo.InvariantCulture, out var gaps)) { ++unavailable; continue; }
@@ -75,8 +79,6 @@ namespace ME.BECS.Editor {
                     try {
                         var legacy = Jobs.JobsEarlyInitCodeGenerator.GetJobTypesInfo(job);
                         var selection = SourceGeneratorJobSafety.Validate(job, summary, legacy, out _);
-                        if (selection >= 0) ++typedCatalogs;
-                        if (selection == 1) ++selectedSafety;
                         if (selection == 0) ++differentSafety;
                         if (selection < 0 && gaps == 0)
                             report.AppendLine("Source safety unavailable for complete summary (catalog/identity/records): " + job.AssemblyQualifiedName);
@@ -94,7 +96,6 @@ namespace ME.BECS.Editor {
                     var equal = source.SetEquals(baseline);
                     ++compared;
                     if (equal) ++matched;
-                    if (gaps != 0) ++incomplete;
                     if (equal && gaps == 0) continue;
                     report.AppendLine($"{job.FullName}: {(equal ? "dependencies match" : "DEPENDENCIES DIFFER")}, analysis gaps={gaps}");
                     foreach (var row in source.Except(baseline).OrderBy(s => s, StringComparer.Ordinal)) report.AppendLine("  Source only: " + row.Replace('\t', ' '));
@@ -106,9 +107,9 @@ namespace ME.BECS.Editor {
                 var sizeSummary = $"MaxStructSize: compared={sizeCompared}, equal={sizeEqual}, different={sizeCompared - sizeEqual}, unavailable/incomplete={sizeUnavailable} (diagnostic per-job catalogs vs IL-selected components and native layout on this host; initializer NOT invoked; production uses compiler-owned component size methods for the set selected by safety analysis, without a separate size fallback)";
                 report.AppendLine(sizeSummary);
                 report.AppendLine("Typed source safety catalogs=" + typedCatalogs + " (generated typeof getters read; jobs and initializers NOT invoked)");
-                var safetySelection = $"Safety consumer: source={selectedSafety}, complete differences={differentSafety}, unavailable/fallback candidates={safetyCandidates - selectedSafety - differentSafety} (same validator as production; no jobs or registrations invoked)";
+                var safetySelection = $"Diagnostic safety oracle: source={selectedSafety}, IL fallback={fallbackSafety}, invalid catalogs={invalidSafety}, candidates={safetyCandidates}; complete differences vs IL={differentSafety} (production uses fresh IL; no jobs or registrations invoked)";
                 report.AppendLine(safetySelection);
-                report.AppendLine("Normalized RO/WO/RW and isArg compared. No cache writes, jobs or registrations; legacy IRefOp.Op getters were allowed. Matching incomplete summaries do NOT establish coverage. Production job safety consumers select zero-gap source dependencies after exact normalized parity; incomplete coverage remains legacy and complete differences stop export. Legacy analysis remains the transitional parity oracle, not removed.");
+                report.AppendLine("Normalized RO/WO/RW and isArg compared. No cache writes, jobs or registrations; legacy IRefOp.Op getters were allowed only by this comparison. Matching incomplete summaries do NOT establish coverage. Production exports fresh IL dependencies; missing, incomplete or corrupt source catalogs do not gate that path. IL analysis failures still stop export. Source/IL differences remain diagnostic and require semantic review. View callback coverage is reported separately by Compare View Safety.");
                 SourceGeneratorReport.Publish("Safety",
                     $"Safety: compared={compared}, equal={matched}, different={compared - matched}, incomplete={incomplete}, unavailable={unavailable}\n" + sizeSummary + "\n" + safetySelection, report.ToString());
             } catch (Exception exception) {

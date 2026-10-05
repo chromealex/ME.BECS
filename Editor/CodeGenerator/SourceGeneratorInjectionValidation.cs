@@ -63,8 +63,9 @@ namespace ME.BECS.Editor {
                         var fields = job.GetFields(Fields);
                         var injected = fields.Where(f => typeof(IInject).IsAssignableFrom(f.FieldType) || Attribute.IsDefined(f, typeof(InjectDeltaTimeAttribute))).ToArray();
                         if (injected.Length == 0) continue;
-                        var graphPlan = SourceGeneratorInputManifest.TryGetGraphJobFields(job, layout, out _);
-                        var deltaPlan = !graphPlan && SourceGeneratorInputManifest.TryGetJobDeltaTimeRegistration(job, out _);
+                        var available = CanPatchJob(job, graphTypes, out var usesGraph);
+                        var graphPlan = available && usesGraph;
+                        var deltaPlan = available && !usesGraph;
                         if (graphPlan || deltaPlan) ++jobSelected; else ++jobFallback;
                         details.AppendLine("  job " + job.AssemblyQualifiedName + " — " +
                             (graphPlan ? "source-selected graph callback" : deltaPlan ? "source-selected delta callback" : "fallback/unavailable"));
@@ -85,6 +86,29 @@ namespace ME.BECS.Editor {
                 ", fallback/blocked=" + systemFallback + "; graph/job pairs selected=" + jobSelected + ", fallback/blocked=" + jobFallback +
                 "; graph errors=" + errors + ".\nFresh graph/IL discovery; registry, manifests and generated files NOT read/written. " +
                 "Patch/registration methods NOT invoked. This is NOT generated-code, Burst or runtime validation.", details.ToString());
+        }
+
+        // Independent loaded-assembly diagnostic only. Export never calls this field walker.
+        private static bool CanPatchJob(Type job, HashSet<Type> graphTypes, out bool usesGraph) {
+            usesGraph = false;
+            if (!job.IsVisible || job.ContainsGenericParameters) return false;
+            var count = 0;
+            foreach (var field in job.GetFields(Fields)) {
+                if (field.FieldType == typeof(bool)) return false;
+                var injected = typeof(IInject).IsAssignableFrom(field.FieldType);
+                var delta = Attribute.IsDefined(field, typeof(InjectDeltaTimeAttribute));
+                if (!injected && !delta) continue;
+                if (field.IsInitOnly || (injected && delta)) return false;
+                if (injected) {
+                    if (!field.FieldType.IsGenericType || field.FieldType.GetGenericTypeDefinition() != typeof(InjectSystem<>) ||
+                        !graphTypes.Contains(field.FieldType.GenericTypeArguments[0]) ||
+                        (!field.IsPublic && !SourceGeneratorInputManifest.TryGetPartialInjectionMethod(field, out _))) return false;
+                    usesGraph = true;
+                } else if ((field.FieldType != typeof(uint) && field.FieldType != typeof(float) && field.FieldType != typeof(sfloat)) ||
+                    (!field.IsPublic && !SourceGeneratorInputManifest.TryGetPartialDeltaTimeMethod(field, out _))) return false;
+                ++count;
+            }
+            return count != 0;
         }
     }
 }

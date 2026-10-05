@@ -42,16 +42,24 @@ internal sealed class SystemAotInputEmitter {
                     burst.ToString(CultureInfo.InvariantCulture) + "\n" + factories.ToString(CultureInfo.InvariantCulture), true)).Append(")]\n");
             result.Body.Append("SystemInputs.Register_").Append(ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(registration.Identity)).Append("();\n");
             void Pointers(string kind, int mask) {
-                for (var i = 0; i < phases.Length; ++i)
-                    if ((mask & (1 << i)) != 0) result.Body.Append("global::ME.BECS.SourceGeneratorSystemAot.")
+                for (var i = 0; i < phases.Length; ++i) {
+                    if ((mask & (1 << i)) == 0) continue;
+                    if (GenericSystemGenerator.TryResolve(type, compilation, "Aot" + kind + phases[i], out var target))
+                        result.Body.Append(target).Append("();\n");
+                    else result.Body.Append("global::ME.BECS.SourceGeneratorSystemAot.")
                         .Append(kind).Append(phases[i]).Append('<').Append(name).Append(">();\n");
+                }
             }
             Pointers("Burst", burst);
             Pointers("NoBurst", present);
-            for (var i = 0; i < phases.Length; ++i)
-                if ((present & (1 << i)) != 0) result.Body.Append("{ var system = new ").Append(name)
+            for (var i = 0; i < phases.Length; ++i) {
+                if ((present & (1 << i)) == 0) continue;
+                if (GenericSystemGenerator.TryResolve(type, compilation, "Aot" + phases[i], out var target))
+                    result.Body.Append(target).Append("(ref context);\n");
+                else result.Body.Append("{ var system = new ").Append(name)
                     .Append("(); global::ME.BECS.SourceGeneratorSystemCalls.").Append(phases[i])
                     .Append("(ref system, ref context); }\n");
+            }
             Pointers("Factory", factories);
         }
         result.Body.Append("} } }\n");

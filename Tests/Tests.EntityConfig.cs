@@ -466,7 +466,7 @@ namespace ME.BECS.Tests {
                 config.Apply(ent);
                 Assert.IsTrue(ent.Has<TestConfig1Component>());
                 Assert.IsTrue(ent.Has<TestConfigMaskComponent>());
-                Assert.AreEqual(1, ent.Read<TestConfig1Component>().data);
+                Assert.AreEqual(0, ent.Read<TestConfig1Component>().data);
                 Assert.AreEqual(0, ent.Read<TestConfigMaskComponent>().data1);
                 Assert.AreEqual(2, ent.Read<TestConfigMaskComponent>().data2);
                 Assert.AreEqual(3, ent.Read<TestConfigMaskComponent>().data3);
@@ -474,6 +474,25 @@ namespace ME.BECS.Tests {
             
             UnityEngine.Object.DestroyImmediate(config);
 
+        }
+
+        [TestCase(false, 7)]
+        [TestCase(true, 42)]
+        public void ApplySingleFieldMaskPreservesOrOverridesExistingValue(bool applyField, int expected) {
+            var config = UnityEngine.ScriptableObject.CreateInstance<EntityConfig>();
+            config.data.components = new IConfigComponent[] { new TestConfig1Component { data = 42 } };
+            config.maskable = true;
+            config.data.masks = new[] { new ComponentsStorageBitMask { mask = new[] { applyField } } };
+            ObjectReferenceRegistry.AddRuntimeObject(config);
+            try {
+                using var world = World.Create();
+                var ent = Ent.New();
+                ent.Set(new TestConfig1Component { data = 7 });
+                config.Apply(ent);
+                Assert.AreEqual(expected, ent.Read<TestConfig1Component>().data);
+            } finally {
+                UnityEngine.Object.DestroyImmediate(config);
+            }
         }
 
         [Test]

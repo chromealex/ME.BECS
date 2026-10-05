@@ -14,7 +14,10 @@ namespace ME.BECS.Editor {
                 foreach (AssemblyMetadataAttribute attribute in assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false)) {
                     if (attribute.Key != "ME.BECS.JobEntityCounts.v1" && attribute.Key != "ME.BECS.JobSafety.v1" && attribute.Key != "ME.BECS.JobWeights.v1") continue;
                     var payload = attribute.Value?.Split('\n');
-                    if (payload == null || payload.Length < 3) continue;
+                    if (payload == null || payload.Length == 0 || string.IsNullOrEmpty(payload[0])) continue;
+                    // A truncated safety record is corrupt, not a missing catalog that
+                    // permits silent fallback. Other consumers retain their own schemas.
+                    if (payload.Length < 3 && attribute.Key != "ME.BECS.JobSafety.v1") continue;
                     var key = attribute.Key + "\n" + payload[0];
                     // Never pick a winner based on assembly load order.
                     if (this.rows.TryGetValue(key, out var previous)) {
@@ -26,5 +29,8 @@ namespace ME.BECS.Editor {
 
         internal bool TryGet(Type job, string kind, out string[] summary) =>
             this.rows.TryGetValue("ME.BECS." + kind + ".v1\n" + job.AssemblyQualifiedName, out summary) && summary != null;
+
+        internal bool IsAmbiguous(Type job, string kind) =>
+            this.rows.TryGetValue("ME.BECS." + kind + ".v1\n" + job.AssemblyQualifiedName, out var summary) && summary == null;
     }
 }

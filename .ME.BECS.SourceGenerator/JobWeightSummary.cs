@@ -11,17 +11,29 @@ internal static class JobWeightSummary {
 
     internal static string Analyze(SourceProductionContext output, Compilation compilation, string assembly, MethodSummaryGraph.Summary root,
         IReadOnlyDictionary<(string Assembly, string Id), MethodSummaryGraph.Summary> methods,
-        ISet<(string Assembly, string Id)> conflicts, Func<string, MethodSummaryType?> decode) {
+        ISet<(string Assembly, string Id)> conflicts, Func<string, MethodSummaryType?> decode, bool emitInitializer = true) {
         var gaps = new HashSet<string>(StringComparer.Ordinal);
         var contributions = new SortedDictionary<string, uint>(StringComparer.Ordinal);
         var visited = new HashSet<(string Assembly, string Id, string Context)>();
         var active = new HashSet<(string Assembly, string Id, string Context)>();
+        var weightedMethods = new HashSet<(string Assembly, string Id, string Context)>();
+        var chargedBodies = new HashSet<(string Assembly, string Id, string Context)>();
+        var optionalGetters = new HashSet<(string Assembly, string Id, string Context)>();
+        var calls = new Dictionary<(string Assembly, string Id, string Context), HashSet<(string Assembly, string Id, string Context)>>();
         var baseText = root.Flags.FirstOrDefault(static f => f.StartsWith("weight-base=", StringComparison.Ordinal))?.Substring(12);
         if (!uint.TryParse(baseText, NumberStyles.None, CultureInfo.InvariantCulture, out var weight)) gaps.Add("MissingBaseWeight");
         var rootArguments = root.RootArguments ?? root.Environment;
         if (rootArguments.Any(static a => a.IsOpen)) gaps.Add("OpenGenericRoot");
         var work = 0;
         long contextSize = 0;
+
+        void TrackCall((string Assembly, string Id, string Context) caller, string targetAssembly, string id,
+            MethodSummaryType[] arguments, bool optionalGetter = false) {
+            var target = (targetAssembly, id, string.Join(";", arguments.Select(static argument => argument.Encode())));
+            if (!calls.TryGetValue(caller, out var targets)) calls.Add(caller, targets = new());
+            targets.Add(target);
+            if (optionalGetter) optionalGetters.Add(target);
+        }
 
         void Visit(string targetAssembly, string id, MethodSummaryType[] arguments, int depth) {
             output.CancellationToken.ThrowIfCancellationRequested();
@@ -30,6 +42,11 @@ internal static class JobWeightSummary {
             if (conflicts.Contains(key)) { gaps.Add("ConflictingSummary: " + id); return; }
             if (!methods.TryGetValue(key, out var method)) { gaps.Add("MissingSummary: " + targetAssembly + " | " + id); return; }
             if (method.Flags.Contains("ME.BECS.CodeGeneratorIgnoreAttribute")) return;
+            if (!method.Flags.Contains(DestroyDispatchContracts.Schema)) gaps.Add("MissingDestroyContracts: " + id);
+            if (!method.Flags.Contains(ImplicitFormattingContracts.Schema)) gaps.Add("MissingImplicitFormattingContracts: " + id);
+            if (!method.Flags.Contains(GenericConstructionContracts.Schema)) gaps.Add("MissingGenericConstructionContracts: " + id);
+            if (MethodSummaryContracts.IsConstructor(id) && !method.Flags.Contains(MethodSummaryContracts.ConstructorSchema))
+                gaps.Add("MissingConstructorContract: " + id);
             if (!method.Flags.Contains("weight-schema=1")) gaps.Add("MissingWeightContracts: " + id);
             if (arguments.Any(static a => a.IsOpen)) gaps.Add("UnboundTypeParameter: " + id);
             var context = string.Join(";", arguments.Select(static a => a.Encode()));
@@ -40,10 +57,20 @@ internal static class JobWeightSummary {
             if (!method.Flags.Contains("ME.BECS.CodeGeneratorIgnoreVisitedAttribute")) {
                 if (!visited.Add(instance)) return;
             }
+            // Allocator variants require independent coverage, not an additional
+            // static cost for the same CLR helper body and generic arguments.
+            var chargeBody = method.Flags.Contains("ME.BECS.CodeGeneratorIgnoreVisitedAttribute") ||
+                chargedBodies.Add((targetAssembly, method.AllocatorOrigin ?? id, context));
             if (method.Environment.Length != arguments.Length) { gaps.Add("GenericArityMismatch: " + id); return; }
             var environment = new Dictionary<string, MethodSummaryType>(StringComparer.Ordinal);
             for (var i = 0; i < arguments.Length; ++i) environment[method.Environment[i].Identity] = arguments[i];
-            foreach (var unresolved in method.Unresolved) gaps.Add(unresolved + ": " + id);
+            foreach (var unresolved in method.Unresolved) {
+                // Weight is a static sum of reachable call-site costs, not a
+                // dynamic execution count. The certified effect union includes
+                // finally/catch/filter operations; old producers remain incomplete.
+                if (unresolved == "ExceptionControlFlow" && method.Flags.Contains(MethodSummaryControlFlow.EffectUnionSchema)) continue;
+                gaps.Add(unresolved + ": " + id);
+            }
             active.Add(instance);
                 foreach (var rawOperation in method.Operations) {
                     var operation = JobConstrainedCall.Resolve(rawOperation, compilation, environment, gaps, methods, conflicts);
@@ -58,26 +85,39 @@ internal static class JobWeightSummary {
                 // Legacy counts the instruction even if its callee's body is ignored/visited.
                 var weightText = MethodSummaryContracts.Value(operation, "weight");
                 if (weightText != null) {
-                    if (!uint.TryParse(weightText, NumberStyles.None, CultureInfo.InvariantCulture, out var delta) || delta > uint.MaxValue - weight)
+                    if (!uint.TryParse(weightText, NumberStyles.None, CultureInfo.InvariantCulture, out var delta) || chargeBody && delta > uint.MaxValue - weight)
                         gaps.Add("InvalidOrOverflowingWeight: " + operation[3]);
                     else {
-                        weight += delta;
-                        var declaration = operation[3];
-                        var end = declaration.IndexOf('(');
-                        if (end >= 0) declaration = declaration.Substring(0, end);
-                        var generic = declaration.IndexOf("``", StringComparison.Ordinal);
-                        if (generic >= 0) declaration = declaration.Substring(0, generic);
-                        var name = declaration.StartsWith("M:", StringComparison.Ordinal) ? declaration.Substring(2) : declaration;
-                        contributions.TryGetValue(name, out var previous);
-                        contributions[name] = previous + delta;
+                        if (delta != 0) weightedMethods.Add(instance);
+                        if (chargeBody) {
+                            weight += delta;
+                            var declaration = methods.TryGetValue((operation[2], operation[3]), out var calledBody) ? calledBody.AllocatorOrigin ?? operation[3] : operation[3];
+                            var end = declaration.IndexOf('(');
+                            if (end >= 0) declaration = declaration.Substring(0, end);
+                            var generic = declaration.IndexOf("``", StringComparison.Ordinal);
+                            if (generic >= 0) declaration = declaration.Substring(0, generic);
+                            var name = declaration.StartsWith("M:", StringComparison.Ordinal) ? declaration.Substring(2) : declaration;
+                            contributions.TryGetValue(name, out var previous);
+                            contributions[name] = previous + delta;
+                        }
                     }
                 }
-                if (MethodSummaryContracts.Has(operation, "ignore")) continue;
+                var destroyed = DestroyDispatchContracts.Component(operation, compilation, environment, decode, gaps);
+                if (MethodSummaryContracts.Has(operation, "ignore")) {
+                    if (destroyed != null) {
+                        var target = DestroyDispatchContracts.DefaultTarget(destroyed, compilation, methods, conflicts, gaps);
+                        if (target.HasValue) {
+                            TrackCall(instance, target.Value.Assembly, target.Value.Id, target.Value.Arguments);
+                            Visit(target.Value.Assembly, target.Value.Id, target.Value.Arguments, depth + 1);
+                        }
+                    }
+                    continue;
+                }
                 // A constructor is an executed call, not an analysis gap merely because
                 // legacy IL traversal omitted it. Require a summary with initializer coverage.
                 if (operation[0] == "new" &&
                     (!methods.TryGetValue((operation[2], operation[3]), out var constructor) ||
-                     !constructor.Flags.Contains("constructor-schema=1")))
+                     !constructor.Flags.Contains(MethodSummaryContracts.ConstructorSchema)))
                     gaps.Add("MissingConstructorContract: " + operation[3]);
                 var receiver = decode(operation[4])?.Substitute(environment);
                 if (receiver == null || receiver.Kind != 'n' || receiver.IsUnsupported) { gaps.Add("UnsupportedReceiver: " + operation[3]); continue; }
@@ -89,15 +129,31 @@ internal static class JobWeightSummary {
                     targetArguments.Add(argument);
                 }
                 if (invalid) { gaps.Add("UnsupportedTypeArgument: " + operation[3]); continue; }
-                Visit(operation[2], operation[3], targetArguments.ToArray(), depth + 1);
+                var argumentsForCall = targetArguments.ToArray();
+                TrackCall(instance, operation[2], operation[3], argumentsForCall,
+                    MethodSummaryContracts.Has(operation, AllocatorMethodSummaries.OptionalGetter));
+                Visit(operation[2], operation[3], argumentsForCall, depth + 1);
             }
             active.Remove(instance);
         }
 
         Visit(assembly, root.Id, rootArguments, 0);
+        // Do not infer an effect-free getter from a zero delta after Visit: its
+        // body (or a shared helper) may already be in the weight visitor's cache.
+        // Check reachability independently, without charging any weight twice.
+        var pendingOptional = new Stack<(string Assembly, string Id, string Context)>(optionalGetters);
+        var checkedOptional = new HashSet<(string Assembly, string Id, string Context)>();
+        while (pendingOptional.Count > 0) {
+            output.CancellationToken.ThrowIfCancellationRequested();
+            var target = pendingOptional.Pop();
+            if (!checkedOptional.Add(target)) continue;
+            if (weightedMethods.Contains(target)) gaps.Add("AllocatorGetterWeightMultiplicity: " + target.Id);
+            if (calls.TryGetValue(target, out var targets))
+                foreach (var next in targets) pendingOptional.Push(next);
+        }
         var jobType = root.Flags.FirstOrDefault(static f => f.StartsWith("job-type=", StringComparison.Ordinal))?.Substring(9) ?? "";
         var lines = new List<string> { jobType, root.Id, gaps.Count.ToString(CultureInfo.InvariantCulture), weight.ToString(CultureInfo.InvariantCulture) };
-        if (gaps.Count == 0 && compilation.GetTypeByMetadataName("ME.BECS.JobStaticInfo`1") != null) {
+        if (emitInitializer && gaps.Count == 0 && compilation.GetTypeByMetadataName("ME.BECS.JobStaticInfo`1") != null) {
             var suffix = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(compilation.Assembly.Identity + "\n" + jobType + "\n" + root.Id);
             var className = "JobWeight_" + suffix;
             // No module initializer: the ordered bootstrap chooses when this method runs.

@@ -14,7 +14,8 @@ namespace ME.BECS.Editor {
         private static readonly Dictionary<Assembly, string[][]> metadata = new Dictionary<Assembly, string[][]>();
         private static HashSet<Assembly> assemblySet = new HashSet<Assembly>();
 
-        // Successful lookup never traverses method IL. Failed lookup does not partially mutate output.
+        // Diagnostic source oracle only. Production Collect uses fresh IL even when
+        // this catalog is complete; failed lookup does not partially mutate output.
         public static bool TryCollect(Type system, HashSet<Type> output, out string reason, Type lifecycle = null) {
             lock (gate) {
                 var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a => !a.IsDynamic).ToArray();
@@ -38,9 +39,12 @@ namespace ME.BECS.Editor {
         }
 
         public static void Collect(Type system, HashSet<Type> output, Type lifecycle = null) {
-            if (TryCollect(system, output, out _, lifecycle)) return;
+            if (system == null || system.ContainsGenericParameters)
+                throw new InvalidOperationException("Scheduled-job discovery requires a closed system: " + system);
+            var jobs = new HashSet<Type>();
             foreach (var root in SourceGeneratorScheduledJobsValidation.GetLifecycleMethods(system, lifecycle))
-                SourceGeneratorScheduledJobsValidation.Collect(root, output);
+                SourceGeneratorScheduledJobsValidation.Collect(root, jobs);
+            output.UnionWith(jobs);
         }
 
         private static Entry Read(Type system, Assembly[] assemblies) {

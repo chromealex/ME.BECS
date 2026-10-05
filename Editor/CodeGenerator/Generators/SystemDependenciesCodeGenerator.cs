@@ -6,348 +6,70 @@ using ME.BECS.Editor.Jobs;
 namespace ME.BECS.Editor.Systems {
 
     public class SystemDependenciesCodeGenerator : CustomCodeGenerator {
-        private readonly SourceGeneratorJobSafety sourceSafety = new SourceGeneratorJobSafety();
-
-        private static uint awaitCount;
-        private readonly object lockObj = new object();
-
-        [System.SerializableAttribute]
-        public struct Item {
-
-            public System.Type system;
-            public System.Collections.Generic.Dictionary<System.Type, Graph.Node> nodes;
-            public System.Collections.Generic.List<string> content;
-
-        }
+        public override bool CacheCompiledInputs => this.GetType() == typeof(SystemDependenciesCodeGenerator);
+        private readonly SourceGeneratorSystemDependencies sourceDependencies = new SourceGeneratorSystemDependencies();
 
         private readonly System.Collections.Generic.HashSet<System.Type> sourceReferences = new System.Collections.Generic.HashSet<System.Type>();
-
-        public override string AddPublicContent() => this.editorAssembly ? "private static void SourceSystemDependenciesV1() { }" : string.Empty;
 
         public override void AddSourceGeneratorReferences(System.Collections.Generic.List<System.Type> references) =>
             references.AddRange(this.sourceReferences.OrderBy(type => type.AssemblyQualifiedName, System.StringComparer.Ordinal));
 
+        private sealed class SourcePlan {
+            public System.Type system;
+            public readonly System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo> operations = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
+            public readonly System.Collections.Generic.List<MethodInfoDependencies.Error> errors = new System.Collections.Generic.List<MethodInfoDependencies.Error>();
+        }
+
         public override void AppendSourceGeneratorInputs(System.Text.StringBuilder manifest) {
             this.sourceReferences.Clear();
             if (!this.editorAssembly) return;
-            var nodes = new System.Collections.Generic.Dictionary<System.Type, Graph.Node>();
-            var operations = new System.Collections.Generic.Dictionary<System.Type, System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>>();
+            var plans = new System.Collections.Generic.Dictionary<System.Type, SourcePlan>();
             foreach (var candidate in this.systems) {
                 if (!candidate.IsValueType || !candidate.IsVisible) continue;
-                var system = candidate.IsGenericType ? EditorUtils.MakeGenericConstraintType(candidate.GetGenericTypeDefinition()) : candidate;
-                if (nodes.ContainsKey(system)) continue;
-                var ops = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
-                var errors = new System.Collections.Generic.List<MethodInfoDependencies.Error>();
-                var node = new Graph.Node { system = system, dependencies = new System.Collections.Generic.List<System.Type>(),
-                    inputs = new System.Collections.Generic.List<System.Type>(), outputs = new System.Collections.Generic.List<System.Type>(), errors = errors };
+                // The manifest supplies the fully expanded selection. Choosing an
+                // arbitrary first constraint implementation loses other specializations.
+                var system = candidate;
+                if (system.ContainsGenericParameters)
+                    throw new System.InvalidOperationException("System dependency analysis requires a closed specialization: " + system.AssemblyQualifiedName);
+                if (plans.ContainsKey(system)) continue;
+                CodeGeneratorTimings.Subject(system.FullName);
+                var plan = new SourcePlan { system = system };
                 foreach (var name in new[] { "OnUpdate", "OnAwake", "OnStart", "OnDestroy" }) {
-                    var method = system.GetMethod(name);
+                    var method = SourceGeneratorScheduledJobsValidation.GetLifecycleMethod(system, name);
                     if (method == null) continue;
-                    var deps = this.GetDeps(method);
-                    if (deps.ops != null) ops.UnionWith(deps.ops);
-                    if (deps.errors != null) errors.AddRange(deps.errors);
-                    node.dependencies.AddRange(deps.GetDependencies());
-                    node.inputs.AddRange(deps.GetInputs());
-                    node.outputs.AddRange(deps.GetOutputs());
+                    var deps = this.sourceDependencies.SelectForExport(method, GetLegacyDeps, out _, out _);
+                    if (deps.ops != null) plan.operations.UnionWith(deps.ops);
+                    if (deps.errors != null) plan.errors.AddRange(deps.errors);
                 }
-                JobsEarlyInitCodeGenerator.UpdateDeps(ops);
-                nodes.Add(system, node);
-                operations.Add(system, ops);
+                JobsEarlyInitCodeGenerator.UpdateDeps(plan.operations);
+                plans.Add(system, plan);
+                foreach (var operation in plan.operations) this.sourceReferences.Add(operation.type);
             }
-            var graph = new Graph(nodes);
-            manifest.Append("system-dependencies-schema\t0\tdjE=\n");
+            manifest.Append("system-dependencies-schema\t0\tdjI=\n");
             var ordinal = 0;
-            System.Type KeyType(System.Type type) => type.IsGenericType ? type.GetGenericTypeDefinition() : type;
-            foreach (var node in graph.nodes.OrderBy(item => item.system.AssemblyQualifiedName, System.StringComparer.Ordinal)) {
-                var owner = KeyType(node.system);
+            var exports = plans.Values.Select(node => (owner: node.system, members: new[] { node }))
+                .Concat(plans.Values.Where(node => node.system.IsGenericType).GroupBy(node => node.system.GetGenericTypeDefinition())
+                    .Select(group => (owner: group.Key, members: group.OrderBy(node => node.system.AssemblyQualifiedName, System.StringComparer.Ordinal).ToArray())))
+                .OrderBy(item => item.owner.AssemblyQualifiedName, System.StringComparer.Ordinal);
+            foreach (var entry in exports) {
+                var owner = entry.owner;
                 this.sourceReferences.Add(owner);
-                var payload = new System.Text.StringBuilder("v1\n").Append(owner.AssemblyQualifiedName);
-                foreach (var op in operations[node.system].OrderBy(item => item.type.AssemblyQualifiedName, System.StringComparer.Ordinal).ThenBy(item => (byte)item.op)) {
-                    this.sourceReferences.Add(op.type);
-                    payload.Append("\nC\t").Append(((byte)op.op).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\t').Append(op.type.AssemblyQualifiedName);
-                }
-                foreach (var dependency in node.dependencies.Select(KeyType).Distinct().OrderBy(type => type.AssemblyQualifiedName, System.StringComparer.Ordinal)) {
-                    this.sourceReferences.Add(dependency);
-                    payload.Append("\nD\t").Append(dependency.AssemblyQualifiedName);
-                }
-                foreach (var error in node.errors) {
-                    payload.Append("\nE\t").Append(((int)error.code).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\t')
-                        .Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(error.GetDisplayMessage())));
+                var payload = new System.Text.StringBuilder("v2\n").Append(owner.AssemblyQualifiedName);
+                if (owner.IsGenericTypeDefinition) {
+                    foreach (var member in entry.members) payload.Append("\nM\t").Append(member.system.AssemblyQualifiedName);
+                } else {
+                    var plan = entry.members.Single();
+                    payload.Append("\nS\toperations\til")
+                        .Append("\nS\tsynchronization\til");
+                    foreach (var op in plan.operations.OrderBy(item => item.type.AssemblyQualifiedName, System.StringComparer.Ordinal))
+                        payload.Append("\nC\t").Append(((byte)op.op).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\t').Append(op.type.AssemblyQualifiedName);
+                    foreach (var error in plan.errors.GroupBy(item => (item.code, message: item.GetDisplayMessage())).Select(group => group.First()))
+                        payload.Append("\nE\t").Append(((int)error.code).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\t')
+                            .Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(error.GetDisplayMessage())));
                 }
                 manifest.Append("system-dependencies\t").Append((ordinal++).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\t')
                     .Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(payload.ToString()))).Append('\n');
             }
-        }
-
-        // Comparison oracle only. Production exports typed records above.
-        private string GenerateLegacyPublicContent() {
-
-            if (this.editorAssembly == false) return string.Empty;
-            
-            var allContent = new System.Collections.Generic.List<string>();
-            var allNodes = new System.Collections.Generic.Dictionary<System.Type, Graph.Node>();
-            var tempItems = new System.Collections.Generic.Dictionary<System.Type, Item>();
-            var cacheLoaded = new System.Collections.Generic.HashSet<System.Type>();
-            var workerErrors = new System.Collections.Generic.List<System.Exception>();
-            
-            awaitCount = 0;
-            var systems = this.systems;
-            foreach (var sys in systems) {
-
-                if (sys.IsValueType == false) continue;
-                if (sys.IsVisible == false) continue;
-
-                //UnityEditor.EditorUtility.DisplayProgressBar(CodeGenerator.PROGRESS_BAR_CAPTION, sys.Name, this.awaitCount / (float)systems.Count);
-                
-                //UnityEngine.Debug.Log("Processing: " + sys.FullName);
-
-                var system = sys;
-                if (system.IsGenericType == true) {
-                    system = system.GetGenericTypeDefinition();
-                    system = EditorUtils.MakeGenericConstraintType(system);
-                }
-                if (tempItems.ContainsKey(system) == true) continue;
-                tempItems.Add(system, new Item());
-                
-                JobUtils.Increment(ref awaitCount);
-                 
-                var content = new System.Collections.Generic.List<string>();
-                var nodes = new System.Collections.Generic.Dictionary<System.Type, Graph.Node>();
-                var systemToComponents = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
-                
-                if (this.cache.TryGetValue<Item>(system, out var data) == true) { 
-                    lock (this.lockObj) {
-                        tempItems[system] = data;
-                        cacheLoaded.Add(system);
-                    }
-                    JobUtils.Decrement(ref awaitCount);
-                } else System.Threading.ThreadPool.QueueUserWorkItem((state) => {
-
-                    //UnityEngine.Debug.Log("Processing: " + system.FullName);
-
-                    try {
-                        
-                        content.Add("{");
-                        content.Add($"// system: {system.FullName}");
-                        content.Add("var list = new s::List<ComponentDependencyGraphInfo>();");
-                        content.Add("var errors = new s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>();");
-                        content.Add($"systemDependenciesComponentsGraph.Add(typeof({EditorUtils.GetTypeName(system, showGenericType: false)}), list);");
-                        content.Add($"systemDependenciesGraphErrors.Add(typeof({EditorUtils.GetTypeName(system, showGenericType: false)}), errors);");
-
-                        {
-                            var method = system.GetMethod("OnUpdate");
-                            if (method != null) {
-                                var deps = this.GetDeps(method);
-                                if (deps.ops != null && deps.ops.Count > 0) {
-                                    content.Add($"// |- OnUpdate:");
-                                    foreach (var dep in deps.ops) {
-                                        content.Add($"// |--- {dep.op}: {dep.type.FullName}");
-                                        systemToComponents.Add(dep);
-                                    }
-                                }
-
-                                if (deps.errors != null) {
-                                    foreach (var dep in deps.errors) {
-                                        content.Add($"// {dep.message}");
-                                        content.Add(dep.AsString());
-                                    }
-                                }
-
-                                var node = new Graph.Node() {
-                                    system = system,
-                                    errors = deps.errors,
-                                    dependencies = deps.GetDependencies(),
-                                    inputs = deps.GetInputs(),
-                                    outputs = deps.GetOutputs(),
-                                };
-                                nodes.Add(system, node);
-                            }
-                        }
-
-                        {
-                            var method = system.GetMethod("OnAwake");
-                            if (method != null) {
-                                var deps = this.GetDeps(method);
-                                if (deps.ops != null && deps.ops.Count > 0) {
-                                    content.Add($"// |- OnAwake:");
-                                    foreach (var dep in deps.ops) {
-                                        content.Add($"// |--- {dep.op}: {dep.type.FullName}");
-                                        systemToComponents.Add(dep);
-                                    }
-                                }
-
-                                if (deps.errors != null) {
-                                    foreach (var dep in deps.errors) {
-                                        content.Add($"// {dep.message}");
-                                        content.Add(dep.AsString());
-                                    }
-                                }
-
-                                if (nodes.TryGetValue(system, out var node) == false) {
-                                    node = new Graph.Node() {
-                                        system = system,
-                                        errors = deps.errors,
-                                        dependencies = deps.GetDependencies(),
-                                        inputs = deps.GetInputs(),
-                                        outputs = deps.GetOutputs(),
-                                    };
-                                    nodes.Add(system, node);
-                                } else {
-                                    node.dependencies.AddRange(deps.GetDependencies());
-                                    node.inputs.AddRange(deps.GetInputs());
-                                    node.outputs.AddRange(deps.GetOutputs());
-                                }
-                            }
-                        }
-
-                        {
-                            var method = system.GetMethod("OnStart");
-                            if (method != null) {
-                                var deps = this.GetDeps(method);
-                                if (deps.ops != null && deps.ops.Count > 0) {
-                                    content.Add($"// |- OnStart:");
-                                    foreach (var dep in deps.ops) {
-                                        content.Add($"// |--- {dep.op}: {dep.type.FullName}");
-                                        systemToComponents.Add(dep);
-                                    }
-                                }
-
-                                if (deps.errors != null) {
-                                    foreach (var dep in deps.errors) {
-                                        content.Add($"// {dep.message}");
-                                        content.Add(dep.AsString());
-                                    }
-                                }
-
-                                if (nodes.TryGetValue(system, out var node) == false) {
-                                    node = new Graph.Node() {
-                                        system = system,
-                                        errors = deps.errors,
-                                        dependencies = deps.GetDependencies(),
-                                        inputs = deps.GetInputs(),
-                                        outputs = deps.GetOutputs(),
-                                    };
-                                    nodes.Add(system, node);
-                                } else {
-                                    node.dependencies.AddRange(deps.GetDependencies());
-                                    node.inputs.AddRange(deps.GetInputs());
-                                    node.outputs.AddRange(deps.GetOutputs());
-                                }
-                            }
-                        }
-
-                        {
-                            var method = system.GetMethod("OnDestroy");
-                            if (method != null) {
-                                var deps = this.GetDeps(method);
-                                if (deps.ops != null && deps.ops.Count > 0) {
-                                    content.Add($"// |- OnDestroy:");
-                                    foreach (var dep in deps.ops) {
-                                        content.Add($"// |--- {dep.op}: {dep.type.FullName}");
-                                        systemToComponents.Add(dep);
-                                    }
-                                }
-
-                                if (deps.errors != null) {
-                                    foreach (var dep in deps.errors) {
-                                        content.Add($"// {dep.message}");
-                                        content.Add(dep.AsString());
-                                    }
-                                }
-
-                                if (nodes.TryGetValue(system, out var node) == false) {
-                                    node = new Graph.Node() {
-                                        system = system,
-                                        errors = deps.errors,
-                                        dependencies = deps.GetDependencies(),
-                                        inputs = deps.GetInputs(),
-                                        outputs = deps.GetOutputs(),
-                                    };
-                                    nodes.Add(system, node);
-                                } else {
-                                    node.dependencies.AddRange(deps.GetDependencies());
-                                    node.inputs.AddRange(deps.GetInputs());
-                                    node.outputs.AddRange(deps.GetOutputs());
-                                }
-                            }
-                        }
-
-                        JobsEarlyInitCodeGenerator.UpdateDeps(systemToComponents);
-                        foreach (var item in systemToComponents) {
-                            content.Add($"list.Add(new ComponentDependencyGraphInfo() {{ type = typeof({EditorUtils.GetTypeName(item.type)}), op = {(byte)item.op} }});");
-                        }
-
-                        content.Add("}");
-
-                        {
-                            var item = new Item() {
-                                system = system,
-                                nodes = nodes,
-                                content = content,
-                            };
-                            lock (this.lockObj) tempItems[system] = item;
-                        }
-
-                        //UnityEngine.Debug.Log("Processed: " + system.FullName);
-
-                    } catch (System.Exception ex) {
-                        lock (this.lockObj) workerErrors.Add(new System.InvalidOperationException(
-                            "Failed to generate dependencies for " + system.AssemblyQualifiedName, ex));
-                    } finally {
-                        //UnityEngine.Debug.Log("BREAK: " + system.FullName);
-                        JobUtils.Decrement(ref awaitCount);
-                    }
-
-                });
-
-            }
-
-            while (awaitCount > 0) {
-                UnityEditor.EditorUtility.DisplayProgressBar(CodeGenerator.PROGRESS_BAR_CAPTION, $"Await for Systems Generator ({(systems.Count - awaitCount)} of {systems.Count})", (systems.Count - awaitCount) / (float)systems.Count);
-            }
-            
-            lock (this.lockObj) {
-                if (workerErrors.Count != 0)
-                    throw new System.AggregateException("System dependency export failed; bootstrap was not generated.",
-                        workerErrors.OrderBy(error => error.Message, System.StringComparer.Ordinal));
-            }
-            var selectItems = new System.Collections.Generic.List<Item>();
-            foreach (var kv in tempItems) {
-                selectItems.Add(kv.Value);
-            }
-            var items = selectItems.OrderBy(x => x.system.FullName).ToArray();
-            foreach (var item in items) {
-                foreach (var kv in item.nodes) {
-                    allNodes.Add(kv.Key, kv.Value);
-                }
-                allContent.AddRange(item.content);
-            }
-            
-            {
-                foreach (var item in tempItems) {
-                    if (cacheLoaded.Contains(item.Key) == false) this.cache.Add(item.Key, item.Value);
-                }
-            }
-
-            var graph = new Graph(allNodes);
-            allContent.Add(graph.GetInitializationString());
-            
-            var str = new System.Text.StringBuilder();
-            str.AppendLine("private static s::Dictionary<System.Type, s::HashSet<System.Type>> systemDependenciesGraph;");
-            str.AppendLine("private static s::Dictionary<System.Type, s::List<ComponentDependencyGraphInfo>> systemDependenciesComponentsGraph;");
-            str.AppendLine("private static s::Dictionary<System.Type, s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>> systemDependenciesGraphErrors;");
-            str.AppendLine("public static s::List<ComponentDependencyGraphInfo> GetSystemComponentsDependencies(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesComponentsGraph[type]; }");
-            str.AppendLine("public static s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error> GetSystemDependenciesErrors(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesGraphErrors[type]; }");
-            str.AppendLine("public static s::HashSet<System.Type> GetSystemDependencies(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesGraph[type]; }");
-            str.AppendLine("public static void InitializeSystemDependenciesInfo() {");
-            str.AppendLine("if (systemDependenciesGraph != null) return;");
-            str.AppendLine("systemDependenciesGraph = new s::Dictionary<System.Type, s::HashSet<System.Type>>();");
-            str.AppendLine("systemDependenciesComponentsGraph = new s::Dictionary<System.Type, s::List<ComponentDependencyGraphInfo>>();");
-            str.AppendLine("systemDependenciesGraphErrors = new s::Dictionary<System.Type, s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>>();");
-            str.Append(string.Join("\n", allContent));
-            str.AppendLine("}");
-            return str.ToString();
-            
         }
 
         public class Graph {
@@ -374,26 +96,6 @@ namespace ME.BECS.Editor.Systems {
                     return false;
                 }
 
-                public void GetInitializationString(System.Text.StringBuilder str) {
-                    
-                    str.Append("systemDependenciesGraph.Add(");
-                    {
-                        str.Append("typeof(");
-                        str.Append(EditorUtils.GetTypeName(this.system, showGenericType: false));
-                        str.Append(")");
-                    }
-                    str.Append(",");
-                    if (this.dependencies.Count > 0) {
-                        str.Append("new s::HashSet<System.Type>() {\ntypeof(" +
-                                   string.Join("),\ntypeof(", this.dependencies.Select(x => EditorUtils.GetTypeName(x, showGenericType: false)).Distinct().OrderBy(x => x).ToArray()) +
-                                   ")\n}");
-                    } else {
-                        str.Append("null");
-                    }
-                    str.Append(");");
-                    
-                }
-
             }
 
             public Node[] nodes;
@@ -409,18 +111,6 @@ namespace ME.BECS.Editor.Systems {
                     }
                     node.dependencies = node.dependencies.OrderBy(x => x.FullName).ToList();
                 }
-            }
-
-            public string GetInitializationString() {
-
-                var str = new System.Text.StringBuilder();
-                str.Append("// Nodes:\n");
-                foreach (var node in this.nodes) {
-                    node.GetInitializationString(str);
-                    str.Append('\n');
-                }
-                return str.ToString();
-                
             }
 
         }
@@ -440,24 +130,22 @@ namespace ME.BECS.Editor.Systems {
                 public MethodInfo callerMethodInfo;
                 public string message;
                 
-                public string AsString() {
-                    var msg = this.GetDisplayMessage();
-                    return $"errors.Add(new Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error() {{ code = Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error.Code.{this.code}, message = \"{msg}\" }});";
-                }
-
                 public string GetDisplayMessage() {
+                    if (!string.IsNullOrEmpty(this.message)) return this.message;
                     string msg = string.Empty;
+                    var methodName = this.callerMethodInfo?.Name ?? "<unknown>";
                     if (this.code == Code.MethodCallRequired) {
-                        msg = $"Method {this.callerMethodInfo.Name} requires a context.dependsOn.Complete() before accessing components.";
+                        msg = $"Method {methodName} may access component data while work is still pending. Review synchronization; this advisory analysis may miss existing guarantees.";
                     } else if (this.code == Code.MethodNotRequired) {
-                        msg = $"Method {this.callerMethodInfo.Name} doesn't require context.dependsOn.Complete() call.";
+                        msg = $"Method {methodName} contains a Complete() call with no component access recognized by this analysis. The call may still synchronize other effects.";
                     }
 
                     return msg;
                 }
 
                 public bool Equals(Error other) {
-                    return this.code == other.code && Equals(this.callerMethodInfo, other.callerMethodInfo);
+                    return this.code == other.code && Equals(this.callerMethodInfo, other.callerMethodInfo) &&
+                        System.StringComparer.Ordinal.Equals(this.message, other.message);
                 }
 
                 public override bool Equals(object obj) {
@@ -465,7 +153,7 @@ namespace ME.BECS.Editor.Systems {
                 }
 
                 public override int GetHashCode() {
-                    return System.HashCode.Combine((int)this.code, this.callerMethodInfo);
+                    return System.HashCode.Combine((int)this.code, this.callerMethodInfo, this.message);
                 }
 
             }
@@ -499,7 +187,55 @@ namespace ME.BECS.Editor.Systems {
 
         }
 
-        private MethodInfoDependencies GetDeps(MethodInfo root) {
+        // Comparison runs the production IL operation inventory independently of
+        // diagnostic source catalogs and synchronization selection.
+        internal MethodInfoDependencies GetComparisonDependencies(MethodInfo root) => this.GetLegacyDeps(root);
+
+        internal MethodInfoDependencies GetComparisonAnalysis(MethodInfo root, out string[] unresolvedDispatch) {
+            var diagnostics = new ILDispatchDiagnostics();
+            var result = this.GetLegacyDepsCore(root, diagnostics);
+            unresolvedDispatch = diagnostics.GetIssues();
+            return result;
+        }
+
+        private MethodInfoDependencies GetLegacyDeps(MethodInfo root) {
+            if (root == null) return default;
+            var snapshot = ILAnalysisSession.Get((typeof(MethodInfoDependencies), root), () =>
+                ILPersistentAnalysis.Get("system-dependencies", ILPersistentAnalysis.MethodIdentity(root), () => this.GetLegacyDepsCore(root, null),
+                    EncodeDependencies, DecodeDependencies));
+            return new MethodInfoDependencies(snapshot.ops) {
+                errors = new System.Collections.Generic.List<MethodInfoDependencies.Error>(snapshot.errors),
+            };
+        }
+
+        [System.Serializable] private sealed class DependencyErrorData {
+            public int code;
+            public string message;
+            public bool hasCaller;
+            public ILContentFingerprint.MethodReference caller;
+        }
+        [System.Serializable] private sealed class DependenciesData {
+            public ILSummaryData.Accesses accesses;
+            public DependencyErrorData[] errors;
+        }
+        private static DependenciesData EncodeDependencies(MethodInfoDependencies value) => new DependenciesData {
+            accesses = ILSummaryData.Encode(value.ops), errors = value.errors.Select(error => new DependencyErrorData {
+                code = (int)error.code, message = error.message, hasCaller = error.callerMethodInfo != null,
+                caller = error.callerMethodInfo == null ? null : ILContentFingerprint.MethodReference.From(error.callerMethodInfo),
+            }).ToArray(),
+        };
+        private static MethodInfoDependencies DecodeDependencies(DependenciesData data) {
+            if (data?.errors == null) throw new System.FormatException("Missing cached system dependencies.");
+            var value = new MethodInfoDependencies(ILSummaryData.Decode(data.accesses));
+            foreach (var error in data.errors) value.errors.Add(new MethodInfoDependencies.Error {
+                code = (MethodInfoDependencies.Error.Code)error.code, message = error.message,
+                callerMethodInfo = !error.hasCaller ? null : (ILPersistentAnalysis.ResolveMethod(error.caller) as MethodInfo
+                    ?? throw new System.MissingMethodException("Cached dependency caller no longer exists.")),
+            });
+            return value;
+        }
+
+        private MethodInfoDependencies GetLegacyDepsCore(MethodInfo root, ILDispatchDiagnostics diagnostics) {
 
             if (root == null) return default;
 
@@ -507,27 +243,70 @@ namespace ME.BECS.Editor.Systems {
             
             var completeHandleMethod = typeof(Unity.Jobs.JobHandle).GetMethod(nameof(Unity.Jobs.JobHandle.Complete));
             var getSystemMethod = typeof(SystemsWorldExt).GetMethod(nameof(SystemsWorldExt.GetSystemPtr));
-            var withMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.With));
-            var withAnyMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.WithAny));
-            var withoutMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.Without));
-            var withAspectMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.WithAspect));
-            var asReadonlyMethod = typeof(QueryBuilder).GetMethod(nameof(QueryBuilder.AsReadonly));
+            var presence = new ILQueryPresence();
             
             var uniqueTypes = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
-            var q = new System.Collections.Generic.Queue<System.Reflection.MethodInfo>();
-            q.Enqueue(root);
+            var bodies = new System.Collections.Generic.Dictionary<MethodBase, Instruction[]>();
+            var scheduled = new System.Collections.Generic.List<(MethodBase body, int offset, JobsEarlyInitCodeGenerator.TypeInfo[] accesses)>();
+            var jobAccesses = new System.Collections.Generic.Dictionary<(System.Type job, System.Type contract), JobsEarlyInitCodeGenerator.TypeInfo[]>();
+            var q = new System.Collections.Generic.Queue<(MethodBase method, int depth)>();
             var methodCallRequired = false;
-            var hasDirectComponentChange = false;
             var hasCompleteHandle = false;
             var hasInterestInstructions = false;
-            var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
+            var visited = new System.Collections.Generic.HashSet<MethodBase>();
+            var initializers = new System.Collections.Generic.HashSet<System.Type>();
+            var instructionCount = 0;
+            void Enqueue(MethodBase method, int depth) {
+                if (method == null || method.IsDefined(typeof(CodeGeneratorIgnoreAttribute), false) || !visited.Add(method)) return;
+                if (ILInfrastructure.SkipBody(method)) return;
+                if (method.ContainsGenericParameters) throw new System.InvalidOperationException("System dependency IL requires closed methods: " + method);
+                if (visited.Count > 10000 || depth > 128) throw new System.InvalidOperationException("System dependency IL traversal limit exceeded: " + root);
+                if (method.GetMethodBody() != null) q.Enqueue((method, depth));
+            }
+            void Initialize(System.Type type, int depth) {
+                if (type != null && initializers.Add(type)) Enqueue(type.TypeInitializer, depth);
+            }
+            Enqueue(root, 0);
             while (q.Count > 0) {
-                var body = q.Dequeue();
-                var instructions = body.GetInstructions();
-                var isReadonly = false;
-                foreach (var inst in instructions) {
+                var item = q.Dequeue();
+                var body = item.method;
+                CodeGeneratorTimings.Work(body);
+                var instructions = ILAnalysisSession.Instructions(body);
+                bodies.Add(body, instructions);
+                instructionCount = checked(instructionCount + instructions.Length);
+                if (instructionCount > 1000000) throw new System.InvalidOperationException("System dependency IL instruction limit exceeded: " + root);
+                // Initializers are possible effects, not an assumption that they
+                // execute on every invocation. They get unbound flow contexts.
+                Initialize(body.DeclaringType, item.depth + 1);
+                // Callback roots have no literal incoming call instruction from
+                // which to collect their own field/safety accesses.
+                uniqueTypes.UnionWith(JobsEarlyInitCodeGenerator.GetBodyTypesInfo(body, traverseHierarchy: false, methodParameters: false));
+                var callbacks = ILFormattingCallbacks.Collect(body, instructions, out var unknownFormatting);
+                foreach (var callback in callbacks)
+                    Enqueue(callback, item.depth + 1);
+                var delegates = ILDelegateTargets.Read(body, instructions);
+                diagnostics?.Read(body, instructions, unknownFormatting, delegates);
+                for (var index = 0; index < instructions.Length; ++index) {
+                    var inst = instructions[index];
                     var continueTraverse = true;
-                    if (inst.Operand is MethodInfo methodInfo) {
+                    if (inst.Operand is FieldInfo field && field.IsStatic &&
+                        (inst.OpCode == System.Reflection.Emit.OpCodes.Ldsfld || inst.OpCode == System.Reflection.Emit.OpCodes.Ldsflda || inst.OpCode == System.Reflection.Emit.OpCodes.Stsfld))
+                        Initialize(field.DeclaringType, item.depth + 1);
+                    var target = ILCallTargets.Resolve(instructions, index);
+                    if (target == null) continue;
+                    if (ILDelegateTargets.IsInvoke(target) && delegates.At(inst.Offset) is var invocation && invocation.complete) {
+                        // Receiver/argument value flow remains independent. These
+                        // roots enter the conservative query-mode inventory.
+                        foreach (var callback in invocation.targets) Enqueue(callback, item.depth + 1);
+                        continue;
+                    }
+                    if (ILInfrastructure.SkipBody(target)) continue;
+                    if (ILCallTargets.TryConstruction(target, out var constructed, out var constructor)) {
+                        Initialize(constructed, item.depth + 1);
+                        Enqueue(constructor, item.depth + 1);
+                        continue;
+                    }
+                    if (target is MethodInfo methodInfo) {
                         if (hasCompleteHandle == false && hasInterestInstructions == false && body == root) {
                             // search for Complete
                             if (IsMethod(methodInfo, completeHandleMethod) == true) {
@@ -541,66 +320,54 @@ namespace ME.BECS.Editor.Systems {
                                 op = RefOp.ReadWrite,
                             });
                             continueTraverse = false;
-                        } else if (IsMethod(methodInfo, withMethod) == true) {
+                        } else if (presence.TryFilter(methodInfo, out var components)) {
                             hasInterestInstructions = true;
-                            uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
-                                type = methodInfo.GetGenericArguments()[0],
-                                op = RefOp.ReadOnly,
-                            });
-                            continueTraverse = false;
-                        } else if (IsMethod(methodInfo, withAnyMethod) == true) {
-                            hasInterestInstructions = true;
-                            uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
-                                type = methodInfo.GetGenericArguments()[0],
-                                op = RefOp.ReadOnly,
-                            });
-                            continueTraverse = false;
-                        } else if (IsMethod(methodInfo, withoutMethod) == true) {
-                            hasInterestInstructions = true;
-                            uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
-                                type = methodInfo.GetGenericArguments()[0],
-                                op = RefOp.ReadOnly,
-                            });
-                            continueTraverse = false;
-                        } else if (IsMethod(methodInfo, withAspectMethod) == true) {
-                            hasInterestInstructions = true;
-                            var aspect = methodInfo.GetGenericArguments()[0];
-                            var fields = aspect.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                            foreach (var field in fields) {
-                                if (field.GetCustomAttribute<QueryWithAttribute>() != null) {
-                                    var type = field.FieldType.GetGenericArguments()[0];
-                                    uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
-                                        type = type,
-                                        op = RefOp.ReadOnly,
-                                    });
-                                    continueTraverse = false;
-                                }
+                            foreach (var component in components) {
+                                uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
+                                    type = component,
+                                    op = RefOp.ReadOnly,
+                                });
                             }
-                        } else if (IsMethod(methodInfo, asReadonlyMethod) == true) {
-                            hasInterestInstructions = true;
-                            isReadonly = true;
                             continueTraverse = false;
-                        } else if (methodInfo.Name == "Schedule" && methodInfo.IsGenericMethod == true) {
+                        } else if (SourceGeneratorScheduledJobsValidation.IsSchedulingMethod(methodInfo)) {
                             hasInterestInstructions = true;
-                            if (methodInfo.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
-                                var jobType = methodInfo.GetGenericArguments()[0];
-                                var info = this.sourceSafety.Select(jobType);
-                                foreach (var typeInfo in info) {
-                                    uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
-                                        type = typeInfo.type,
-                                        op = isReadonly == true && typeInfo.isArg == true ? RefOp.ReadOnly : typeInfo.op,
-                                    });
-                                    //continueTraverse = false;
-                                }
-
-                                isReadonly = false;
+                            // A scheduler is a terminal: analyze the selected job,
+                            // not internal scheduling helpers or unrelated Execute bodies.
+                            continueTraverse = false;
+                            foreach (var component in presence.Scheduled(methodInfo))
+                                uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo { type = component, op = RefOp.ReadOnly });
+                            // CodeGeneratorIgnore on a known low-level scheduler
+                            // hides its implementation, not the scheduled job's effects.
+                            var jobType = methodInfo.GetGenericArguments()[0];
+                            var jobContract = ILJobScheduleContract.GetWorkInterface(methodInfo);
+                            if (!jobAccesses.TryGetValue((jobType, jobContract), out var info)) {
+                                var jobRoot = ILJobScheduleContract.GetExecuteMethod(jobType, jobContract);
+                                var accesses = new System.Collections.Generic.List<JobsEarlyInitCodeGenerator.TypeInfo>(JobsEarlyInitCodeGenerator.GetMethodTypesInfo(jobRoot));
+                                // Compatibility safety merging retains one isArg
+                                // flag per component/op, erasing overlapping body
+                                // accesses. Project query arguments first, then
+                                // union independent accesses without narrowing.
+                                accesses.AddRange(JobsEarlyInitCodeGenerator.GetMethodTypesInfo(jobRoot, methodParameters: false));
+                                jobAccesses.Add((jobType, jobContract), info = accesses.ToArray());
                             }
+                            scheduled.Add((body, inst.Offset, info));
                         } else {
-                            if (methodInfo.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null && methodInfo.GetMethodBody() != null) {
-                                var info = JobsEarlyInitCodeGenerator.GetMethodTypesInfo(methodInfo, false);
+                            if (methodInfo.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                                var directSafety = methodInfo.GetCustomAttribute<SafetyCheckAttribute>();
+                                System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo> info;
+                                if (directSafety != null && methodInfo.IsGenericMethod &&
+                                    typeof(IComponentBase).IsAssignableFrom(methodInfo.GetGenericArguments()[0])) {
+                                    // Match the job IL analyzer's explicit safety
+                                    // contract: collect the declared access, not
+                                    // the allocator/validation internals behind it.
+                                    info = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo> {
+                                        new JobsEarlyInitCodeGenerator.TypeInfo { type = methodInfo.GetGenericArguments()[0], op = directSafety.Op },
+                                    };
+                                    continueTraverse = false;
+                                } else info = methodInfo.GetMethodBody() != null ? JobsEarlyInitCodeGenerator.GetMethodTypesInfo(methodInfo, false) :
+                                    new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
                                 if (info.Count > 0) {
                                     hasInterestInstructions = true;
-                                    hasDirectComponentChange = true;
                                     // Check if complete method exists
                                     if (hasCompleteHandle == false) {
                                         methodCallRequired = true;
@@ -617,13 +384,30 @@ namespace ME.BECS.Editor.Systems {
                         }
                     }
                     
-                    if (continueTraverse == true && inst.Operand is System.Reflection.MethodInfo member) {
-                        if (visited.Add(new MethodPointerData(member)) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
-                            if (member.GetMethodBody() != null) {
-                                q.Enqueue(member);
-                            }
-                        }
+                    if (continueTraverse && (inst.OpCode == System.Reflection.Emit.OpCodes.Call || inst.OpCode == System.Reflection.Emit.OpCodes.Callvirt ||
+                        inst.OpCode == System.Reflection.Emit.OpCodes.Newobj || inst.OpCode == System.Reflection.Emit.OpCodes.Jmp ||
+                        inst.OpCode == System.Reflection.Emit.OpCodes.Ldftn || inst.OpCode == System.Reflection.Emit.OpCodes.Ldvirtftn)) {
+                        if (!target.IsDefined(typeof(CodeGeneratorIgnoreAttribute), false) &&
+                            inst.OpCode != System.Reflection.Emit.OpCodes.Ldftn && inst.OpCode != System.Reflection.Emit.OpCodes.Ldvirtftn &&
+                            (target.IsStatic || target is ConstructorInfo || target.DeclaringType?.IsValueType == true))
+                            Initialize(target.DeclaringType, item.depth + 1);
+                        Enqueue(target, item.depth + 1);
                     }
+                }
+            }
+
+            // Bind every invocation before consuming modes: the same helper can
+            // receive readonly and writable queries from different call sites.
+            // A traversal-order-dependent first result must never win that union.
+            if (scheduled.Count > 0) {
+                var modes = ILQueryScheduleModes.ReadBodyGraph(root, bodies);
+                foreach (var call in scheduled) {
+                    if (!modes[call.body].TryGetValue(call.offset, out var mode)) mode = ILQueryScheduleModes.Mode.Unknown;
+                    foreach (var typeInfo in call.accesses)
+                        uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo {
+                            type = typeInfo.type,
+                            op = ILQueryScheduleModes.Apply(mode, typeInfo.op, typeInfo.isArg),
+                        });
                 }
             }
 
@@ -636,14 +420,9 @@ namespace ME.BECS.Editor.Systems {
                 errors.Add(err);
             }
 
-            if (hasDirectComponentChange == false && hasCompleteHandle == true) {
-                // Add error
-                var err = new MethodInfoDependencies.Error() {
-                    callerMethodInfo = root,
-                    code = MethodInfoDependencies.Error.Code.MethodNotRequired,
-                };
-                errors.Add(err);
-            }
+            // Absence of component access does not make Complete unnecessary:
+            // it can synchronize native containers or other side effects. This
+            // compatibility walk cannot prove that removing it is safe.
             
             JobsEarlyInitCodeGenerator.UpdateDeps(uniqueTypes);
             var deps = new MethodInfoDependencies(uniqueTypes);
@@ -667,7 +446,9 @@ namespace ME.BECS.Editor.Systems {
         }
 
         public static void GetUsedObjects(bool editorAssembly, out UsedObjects usedObjects) {
-            GetUsedObjects(editorAssembly, out usedObjects, useSourceCatalogs: true);
+            // Editor registers all declared types; source declaration catalogs are
+            // appropriate there. Runtime reachability comes from compiled IL.
+            GetUsedObjects(editorAssembly, out usedObjects, useSourceCatalogs: editorAssembly);
         }
 
         internal static void GetUsedObjects(bool editorAssembly, out UsedObjects usedObjects, bool useSourceCatalogs) {
@@ -684,7 +465,7 @@ namespace ME.BECS.Editor.Systems {
                 AddAllEditorTypes(systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet, useSourceCatalogs);
             } else {
                 var asms = System.AppDomain.CurrentDomain.GetAssemblies();
-                var lookup = new UsedObjectsLookup();
+                var lookup = new UsedObjectsLookup(useSourceCatalogs);
                 foreach (var asm in asms) {
                     var asmIncludes = asm.GetCustomAttributes<CodeGeneratorInclude>().ToArray();
                     if (asmIncludes.Length > 0) {
@@ -704,6 +485,7 @@ namespace ME.BECS.Editor.Systems {
 
                 var modules = UnityEditor.TypeCache.GetTypesDerivedFrom<Module>();
                 foreach (var module in modules) {
+                    if (module.IsAbstract || module.ContainsGenericParameters) continue;
                     lookup.AddMethod(module, nameof(Module.OnAwake), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
                     lookup.AddMethod(module, nameof(Module.OnStart), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
                     lookup.AddMethod(module, nameof(Module.OnUpdate), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
@@ -822,7 +604,16 @@ namespace ME.BECS.Editor.Systems {
         // All memoized work is scoped to one discovery run, never shared with worker threads.
         private sealed class UsedObjectsLookup {
 
+        private readonly SourceGeneratorRuntimeUsage sourceUsage;
+        internal UsedObjectsLookup(bool useSourceCatalogs) {
+            // Runtime source assistance is an explicit comparison oracle only.
+            // Production runtime discovery passes false and never reads catalogs.
+            if (useSourceCatalogs) this.sourceUsage = new SourceGeneratorRuntimeUsage();
+        }
+
         private readonly System.Collections.Generic.HashSet<MethodInfo> scannedMethods = new System.Collections.Generic.HashSet<MethodInfo>();
+        private readonly System.Collections.Generic.HashSet<MethodBase> scannedBodies = new System.Collections.Generic.HashSet<MethodBase>();
+        private readonly System.Collections.Generic.HashSet<(System.Type Owner, MethodInfo Method)> scannedRoots = new System.Collections.Generic.HashSet<(System.Type, MethodInfo)>();
         private readonly System.Collections.Generic.HashSet<System.Type> scannedAspects = new System.Collections.Generic.HashSet<System.Type>();
         private readonly System.Collections.Generic.Dictionary<System.Type, MethodInfo[]> methodsByType = new System.Collections.Generic.Dictionary<System.Type, MethodInfo[]>();
         private readonly MethodInfo newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
@@ -834,8 +625,14 @@ namespace ME.BECS.Editor.Systems {
                                              System.Collections.Generic.HashSet<System.Type> entityTypes,
                                              System.Collections.Generic.HashSet<System.Type> aspects) {
 
-            var lookUp = components.ToArray();
-            foreach (var comp in lookUp) {
+            // Config assets can select an aspect without a preceding job/access.
+            // Its optional storage fields still require component registration.
+            foreach (var aspect in aspects.ToArray()) AddToLookup(aspect, types, components, jobTypes, entityTypes, aspects);
+            var pending = new System.Collections.Generic.Queue<System.Type>(components);
+            var queued = new System.Collections.Generic.HashSet<System.Type>(components);
+            while (pending.Count != 0) {
+                var comp = pending.Dequeue();
+                var previousCount = components.Count;
                 if (typeof(IConfigInitialize).IsAssignableFrom(comp) == true) {
                     AddMethod(comp, nameof(IConfigInitialize.OnInitialize), types, components, jobTypes, entityTypes, aspects);
                 }
@@ -843,6 +640,9 @@ namespace ME.BECS.Editor.Systems {
                 if (typeof(IComponentDestroy).IsAssignableFrom(comp) == true) {
                     AddMethod(comp, nameof(IComponentDestroy.Destroy), types, components, jobTypes, entityTypes, aspects);
                 }
+                if (components.Count != previousCount)
+                    foreach (var discovered in components)
+                        if (queued.Add(discovered)) pending.Enqueue(discovered);
             }
             
         }
@@ -873,7 +673,11 @@ namespace ME.BECS.Editor.Systems {
                               System.Collections.Generic.HashSet<System.Type> jobTypes,
                               System.Collections.Generic.HashSet<System.Type> entityTypes,
                               System.Collections.Generic.HashSet<System.Type> aspects) {
-            if (type.IsGenericType == true) {
+            if (typeof(ISystem).IsAssignableFrom(type)) {
+                var selected = new System.Collections.Generic.List<System.Type> { type };
+                if (type.ContainsGenericParameters) CodeGenerator.PatchSystemsList(selected);
+                foreach (var system in selected) Run(system);
+            } else if (type.ContainsGenericParameters == true) {
                 var without = type.GetInterfaces().Where(x => typeof(IGenericWithout).IsAssignableFrom(x) && x.IsGenericType == true).Select(x => x.GetGenericArguments()[0]).ToArray();
                 var constraints = type.GetGenericArguments()[0].GetGenericParameterConstraints();
                 foreach (var constraint in constraints) {
@@ -891,50 +695,138 @@ namespace ME.BECS.Editor.Systems {
             }
 
             void Run(System.Type type) {
-                if (this.methodsByType.TryGetValue(type, out var methods) == false) {
+                MethodInfo[] methods;
+                var callbackOwner = typeof(Module).IsAssignableFrom(type) ||
+                    name == nameof(IConfigInitialize.OnInitialize) && typeof(IConfigInitialize).IsAssignableFrom(type) ||
+                    name == nameof(IComponentDestroy.Destroy) && typeof(IComponentDestroy).IsAssignableFrom(type);
+                if (typeof(ISystem).IsAssignableFrom(type)) {
+                    var lifecycle = SourceGeneratorScheduledJobsValidation.GetLifecycleMethod(type, name);
+                    methods = lifecycle == null ? System.Array.Empty<MethodInfo>() : new[] { lifecycle };
+                } else if (callbackOwner) {
+                    var callback = SourceGeneratorRuntimeUsage.GetCallback(type, name);
+                    methods = callback == null ? System.Array.Empty<MethodInfo>() : new[] { callback };
+                } else if (this.methodsByType.TryGetValue(type, out methods) == false) {
                     methods = type.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                     this.methodsByType.Add(type, methods);
                 }
                 foreach (var method in methods) {
-                    if (method.Name != name) continue;
+                    if (!typeof(ISystem).IsAssignableFrom(type) && !callbackOwner && method.Name != name) continue;
+                    if (this.scannedRoots.Add((type, method)) == false) continue;
+                    if (this.sourceUsage != null && this.sourceUsage.TryReadForOwner(type, method, out var sourceTypes)) {
+                        components.UnionWith(sourceTypes.components);
+                        aspects.UnionWith(sourceTypes.aspects);
+                        entityTypes.UnionWith(sourceTypes.entityTypes);
+                        jobTypes.UnionWith(sourceTypes.jobs);
+                        continue;
+                    }
                     if (this.scannedMethods.Add(method) == false) continue;
-                    var componentTypes = JobsEarlyInitCodeGenerator.GetMethodTypesInfo(method, methodParameters: false, onInstruction: (inst, q) => {
-                        if (inst.Operand is MethodInfo methodInfo) {
-                            if (IsMethod(methodInfo, aspectMethod) == true) {
-                                var t = methodInfo.GetGenericArguments()[0];
-                                AddToLookup(t, types, components, jobTypes, entityTypes, aspects);
-                            } else if (IsMethod(methodInfo, newEntMethod) == true) {
-                                var entityType = methodInfo.GetGenericArguments()[0];
-                                entityTypes.Add(entityType);
-                            } else if (methodInfo.Name == "Schedule" && methodInfo.IsGenericMethod == true) {
-                                if (methodInfo.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
-                                    var jobType = methodInfo.GetGenericArguments()[0];
-                                    jobTypes.Add(jobType);
-                                    var interfaces = jobType.GetInterfaces();
-                                    foreach (var inter in interfaces) {
-                                        if (inter.IsGenericType == true) {
-                                            var args = inter.GetGenericArguments();
-                                            foreach (var arg in args) {
-                                                AddToLookup(arg, types, components, jobTypes, entityTypes, aspects);
-                                            }
-                                        }
-                                    }
-
-                                    var exec = jobType.GetMethod("Execute", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                                    q.Enqueue(exec);
-                                }
-                            }
-                        }
-
-                        return false;
-                    });
-                    foreach (var componentType in componentTypes) {
-                        if (typeof(IComponentBase).IsAssignableFrom(componentType.type) == true) {
-                            components.Add(componentType.type);
-                        }
+                    CodeGeneratorTimings.Subject(type.FullName + "." + method.Name);
+                    var pending = new System.Collections.Generic.Queue<MethodBase>();
+                    pending.Enqueue(method);
+                    var bodyCount = 0;
+                    var instructionCount = 0;
+                    while (pending.Count > 0) {
+                        var body = pending.Dequeue();
+                        if (!this.scannedBodies.Add(body)) continue;
+                        CodeGeneratorTimings.Work(body);
+                        if (++bodyCount > 10000) throw new System.InvalidOperationException("Discovery IL traversal limit exceeded: " + method);
+                        var discovered = ILAnalysisSession.Get((typeof(DiscoveryBody), body), () =>
+                            ILPersistentAnalysis.Get("discovery", ILPersistentAnalysis.MethodIdentity(body), () => CollectBody(body), EncodeBody, DecodeBody));
+                        instructionCount = checked(instructionCount + discovered.instructions);
+                        if (instructionCount > 1000000) throw new System.InvalidOperationException("Discovery IL instruction limit exceeded: " + method);
+                        components.UnionWith(discovered.components);
+                        aspects.UnionWith(discovered.aspects);
+                        entityTypes.UnionWith(discovered.entities);
+                        jobTypes.UnionWith(discovered.jobs);
+                        foreach (var next in discovered.next) pending.Enqueue(next);
                     }
                 }
             }
+        }
+
+        private sealed class DiscoveryBody {
+            internal readonly System.Collections.Generic.HashSet<System.Type> components = new System.Collections.Generic.HashSet<System.Type>();
+            internal readonly System.Collections.Generic.HashSet<System.Type> aspects = new System.Collections.Generic.HashSet<System.Type>();
+            internal readonly System.Collections.Generic.HashSet<System.Type> entities = new System.Collections.Generic.HashSet<System.Type>();
+            internal readonly System.Collections.Generic.HashSet<System.Type> jobs = new System.Collections.Generic.HashSet<System.Type>();
+            internal readonly System.Collections.Generic.HashSet<MethodBase> next = new System.Collections.Generic.HashSet<MethodBase>();
+            internal int instructions;
+        }
+
+        [System.Serializable]
+        private sealed class DiscoveryData {
+            public ILSummaryData.Types components, aspects, entities, jobs;
+            public ILContentFingerprint.MethodReference[] next;
+            public int instructions;
+        }
+
+        private static DiscoveryData EncodeBody(DiscoveryBody body) => new DiscoveryData {
+            components = ILSummaryData.EncodeTypes(body.components), aspects = ILSummaryData.EncodeTypes(body.aspects),
+            entities = ILSummaryData.EncodeTypes(body.entities), jobs = ILSummaryData.EncodeTypes(body.jobs), instructions = body.instructions,
+            next = body.next.Select(ILContentFingerprint.MethodReference.From).OrderBy(method => method.Key, System.StringComparer.Ordinal).ToArray(),
+        };
+
+        private static DiscoveryBody DecodeBody(DiscoveryData data) {
+            if (data?.next == null || data.instructions < 0) throw new System.FormatException("Invalid cached discovery body.");
+            var body = new DiscoveryBody { instructions = data.instructions };
+            body.components.UnionWith(ILSummaryData.DecodeTypes(data.components));
+            body.aspects.UnionWith(ILSummaryData.DecodeTypes(data.aspects));
+            body.entities.UnionWith(ILSummaryData.DecodeTypes(data.entities));
+            body.jobs.UnionWith(ILSummaryData.DecodeTypes(data.jobs));
+            foreach (var method in data.next) body.next.Add(ILPersistentAnalysis.ResolveMethod(method) ?? throw new System.MissingMethodException("Cached discovery target no longer exists."));
+            return body;
+        }
+
+        private static DiscoveryBody CollectBody(MethodBase body) {
+            var result = new DiscoveryBody();
+            // Local aspect expansion must not depend on what an earlier root
+            // happened to visit. Every cached body is a complete local summary.
+            var lookup = new UsedObjectsLookup(false);
+            var types = new System.Collections.Generic.HashSet<System.Type>();
+            var components = result.components;
+            var jobTypes = result.jobs;
+            var entityTypes = result.entities;
+            var aspects = result.aspects;
+            var componentTypes = JobsEarlyInitCodeGenerator.GetDiscoveryBodyInfo(body, result.next, onInstruction: (inst, q) => {
+                if (inst.Operand is MethodInfo methodInfo) {
+                    // SafetyCheck describes access modes, not all types
+                    // reached by a user helper. Keep its body in discovery;
+                    // core ECS storage boundaries remain terminal.
+                    if (methodInfo.DeclaringType.Assembly != typeof(Ent).Assembly &&
+                        methodInfo.IsDefined(typeof(SafetyCheckAttribute), false) &&
+                        !methodInfo.IsDefined(typeof(CodeGeneratorIgnoreAttribute), false) && methodInfo.GetMethodBody() != null)
+                        q.Enqueue(methodInfo);
+                    if (IsMethod(methodInfo, lookup.aspectMethod) == true) {
+                        var t = methodInfo.GetGenericArguments()[0];
+                        lookup.AddToLookup(t, types, components, jobTypes, entityTypes, aspects);
+                    } else if (IsMethod(methodInfo, lookup.newEntMethod) == true) {
+                        var entityType = methodInfo.GetGenericArguments()[0];
+                        entityTypes.Add(entityType);
+                    } else if (SourceGeneratorScheduledJobsValidation.IsSchedulingMethod(methodInfo)) {
+                        if (methodInfo.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                            var jobType = methodInfo.GetGenericArguments()[0];
+                            jobTypes.Add(jobType);
+                            var contract = ILJobScheduleContract.GetWorkInterface(methodInfo);
+                            foreach (var arg in contract.GenericTypeArguments)
+                                lookup.AddToLookup(arg, types, components, jobTypes, entityTypes, aspects);
+                            q.Enqueue(ILJobScheduleContract.GetExecuteMethod(jobType, contract));
+                        }
+                        // The scheduling machinery is not a usage root.
+                        // Its selected deferred Execute body was queued above.
+                        return true;
+                    }
+                }
+
+                return false;
+            });
+            foreach (var componentType in componentTypes) {
+                if (typeof(IComponentBase).IsAssignableFrom(componentType.type) == true) {
+                    components.Add(componentType.type);
+                }
+            }
+            if (!ILInfrastructure.SkipBody(body) && body.GetMethodBody() != null)
+                result.instructions = ILAnalysisSession.Instructions(body).Length;
+            return result;
         }
 
         private void AddToLookup(System.Type type, System.Collections.Generic.HashSet<System.Type> types, System.Collections.Generic.HashSet<System.Type> components, System.Collections.Generic.HashSet<System.Type> jobTypes, System.Collections.Generic.HashSet<System.Type> entityTypes, System.Collections.Generic.HashSet<System.Type> aspects) {

@@ -8,7 +8,8 @@ using ME.BECS.Editor.Systems;
 namespace ME.BECS.Editor.Jobs {
     
     public class JobsEarlyInitCodeGenerator : CustomCodeGenerator {
-        public override string SourceInitializationKind => this.GetType() == typeof(JobsEarlyInitCodeGenerator) ? "jobs" : null;
+        public override string SourceInitializationKind => this.GetType() == typeof(JobsEarlyInitCodeGenerator) ? "jobs" : base.SourceInitializationKind;
+        public override bool CacheCompiledInputs => this.GetType() == typeof(JobsEarlyInitCodeGenerator);
 
         private System.Collections.Generic.List<(System.Type job, string call)> earlyInitDiagnostics;
         private MethodInfo[] earlyInitMethods;
@@ -17,15 +18,13 @@ namespace ME.BECS.Editor.Jobs {
             typeof(IJobParallelForAspectsBase), typeof(IJobForAspectsBase), typeof(IJobForAspectsComponentsBase),
             typeof(IJobParallelForAspectsComponentsBase),
         };
-        private readonly SourceGeneratorJobWeights sourceWeights = new SourceGeneratorJobWeights();
-        private readonly SourceGeneratorJobEntityCounts sourceEntityCounts = new SourceGeneratorJobEntityCounts();
+        private readonly SourceGeneratorJobEarlyInit sourceEarlyInit = new SourceGeneratorJobEarlyInit();
         private readonly SourceGeneratorJobSafety sourceSafety = new SourceGeneratorJobSafety();
         private readonly System.Collections.Generic.Dictionary<System.Type, uint> selectedWeights = new System.Collections.Generic.Dictionary<System.Type, uint>();
 
         private uint SelectWeight(System.Type jobType) {
             if (this.selectedWeights.TryGetValue(jobType, out var weight)) return weight;
-            weight = this.sourceWeights.TryGetComplete(jobType, out var sourceWeight)
-                ? sourceWeight : GetJobWeightsInfo(jobType).weight;
+            weight = ILJobWeights.Analyze(jobType);
             this.selectedWeights.Add(jobType, weight);
             return weight;
         }
@@ -41,8 +40,9 @@ namespace ME.BECS.Editor.Jobs {
                 jobTypes = jobs, editorAssembly = editor, asms = EditorUtils.GetAssembliesInfo(),
                 earlyInitDiagnostics = new System.Collections.Generic.List<(System.Type job, string call)>(),
             };
-            // Same selection path as real generation, but no cache, IL analysis, debug metadata or writes.
-            generator.AddInitialization(new System.Collections.Generic.List<string>(), new System.Collections.Generic.List<System.Type>());
+            // Diagnostic oracle shares production discovery/phase order only. Export
+            // does not call this comparison or perform legacy method selection.
+            generator.CollectLegacyInitialization();
             var report = new System.Text.StringBuilder();
             foreach (var generic in new[] { false, true }) {
                 var entries = generator.earlyInitDiagnostics.Where(e => e.job.IsGenericType == generic).Distinct().ToArray();
@@ -137,6 +137,25 @@ namespace ME.BECS.Editor.Jobs {
             }
         }
 
+        // Production reads compiler-selected wrapper signatures directly. Keep the
+        // phase/job slots (including stat-only slots and repeated jobs) unchanged.
+        private System.Collections.Generic.List<(System.Type job, MethodInfo method)> SelectSourceEarlyInit() {
+            var initialization = new System.Collections.Generic.List<(System.Type job, MethodInfo method)>();
+            for (var phase = 0; phase < EarlyInitContracts.Length; ++phase) {
+                foreach (var job in this.SelectEarlyInitJobs(EarlyInitContracts[phase])) {
+                    if (!job.IsValueType || !job.IsVisible || !this.IsValidTypeForAssembly(job)) continue;
+                    if (!this.sourceEarlyInit.TryGetMethods(job, out var methods, out var reason))
+                        throw new System.InvalidOperationException("Source EarlyInit selection failed for " + job.AssemblyQualifiedName + ": " + reason);
+                    foreach (var entry in methods) {
+                        if (!EarlyInitContracts[entry.Key].IsAssignableFrom(job))
+                            throw new System.InvalidOperationException("Source EarlyInit phase does not match job contract: " + job.AssemblyQualifiedName);
+                    }
+                    initialization.Add((job, methods.Where(entry => entry.Key == phase).Select(entry => entry.Value).SingleOrDefault()));
+                }
+            }
+            return initialization;
+        }
+
         private System.Collections.Generic.List<System.Type> SelectEarlyInitJobs(System.Type contract) {
             var jobs = this.GetTypesDerivedFrom(contract).OrderBy(type => type.FullName).ToList();
             CodeGenerator.PatchSystemsList(jobs);
@@ -189,12 +208,14 @@ namespace ME.BECS.Editor.Jobs {
                 var jobInterfaces = jobType.GetInterfaces();
                 System.Type workInterface = null;
                 foreach (var i in jobInterfaces) {
+                    // Other generic interfaces on the job are not scheduling contracts.
+                    if (i.Assembly != typeof(TJobBase).Assembly || !typeof(TJobBase).IsAssignableFrom(i)) continue;
                     if (i.IsGenericType == true) {
                         foreach (var type in i.GenericTypeArguments) {
                             if (typeof(T0).IsAssignableFrom(type) == true ||
                                 typeof(T1).IsAssignableFrom(type) == true) {
                                 if (this.IsValidTypeForAssembly(type) == false) continue;
-                                components.Add(EditorUtils.GetDataTypeName(type));
+                                components.Add(EditorUtils.GetTypeName(type));
                                 componentsTypes.Add(type);
                             }
                         }
@@ -259,13 +280,6 @@ namespace ME.BECS.Editor.Jobs {
             //return UnityEditor.TypeCache.GetTypesDerivedFrom(type).ToArray();
         }
 
-        public enum JobType {
-            Aspect,
-            Components,
-            Combined,
-        }
-
-        private System.Collections.Generic.List<System.Type> references;
         private readonly System.Collections.Generic.HashSet<System.Type> debugInputReferences = new System.Collections.Generic.HashSet<System.Type>();
 
         public override void AddSourceGeneratorReferences(System.Collections.Generic.List<System.Type> references) {
@@ -282,77 +296,9 @@ namespace ME.BECS.Editor.Jobs {
             references.AddRange(selected.OrderBy(type => type.AssemblyQualifiedName, System.StringComparer.Ordinal));
         }
         
-        public override FileContent[] AddFileContent(System.Collections.Generic.List<System.Type> references) {
-            return new[] {
-                new FileContent { filename = "Debug.Cache", content = "public unsafe partial class DebugJobs { private static void SourceDebugPlanV1() { } }" },
-                new FileContent { filename = "Debug.Func", content = "// Debug callbacks are emitted by the source generator." },
-                new FileContent { filename = "Debug.Struct", content = "// Debug layouts are emitted by the source generator." },
-                new FileContent { filename = "Debug.UnsafeStruct", content = "// Unsafe debug layouts are emitted by the source generator." },
-            };
-        }
+        public override System.Collections.Generic.IEnumerable<string> GetRetiredSourceFiles() =>
+            new[] { "Debug.Cache", "Debug.Func", "Debug.Struct", "Debug.UnsafeStruct" };
 
-        // Retained as a comparison oracle during the transition, not called by export.
-        private FileContent[] GenerateLegacyDebugFiles(System.Collections.Generic.List<System.Type> references) {
-
-            this.references = references;
-            
-            var files = new FileContent[4];
-            var cacheBuilderFile = new FileContent() {
-                filename = "Debug.Cache",
-            };
-            var structBuilderFile = new FileContent() {
-                filename = "Debug.Struct",
-            };
-            var structUnsafeBuilderFile = new FileContent() {
-                filename = "Debug.UnsafeStruct",
-            };
-            var funcBuilderFile = new FileContent() {
-                filename = "Debug.Func",
-            };
-            
-            var cacheBuilder = new System.Text.StringBuilder();
-            var funcBuilder = new System.Text.StringBuilder();
-            var structBuilder = new System.Text.StringBuilder();
-            var structUnsafeBuilder = new System.Text.StringBuilder();
-            cacheBuilder.AppendLine($"#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
-            structBuilder.AppendLine($"#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
-            structUnsafeBuilder.AppendLine($"#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
-            funcBuilder.AppendLine($"#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
-            funcBuilder.AppendLine($"public static void InitializeJobsDebug() {{");
-            this.AddJobs<IJobParallelForComponentsBase, IComponentBase, TNull>(cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
-            this.AddJobs<IJobForComponentsBase, IComponentBase, TNull>(cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Components);
-            this.AddJobs<IJobParallelForAspectsBase, TNull, IAspect>(cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
-            this.AddJobs<IJobForAspectsBase, TNull, IAspect>(cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
-            this.AddJobs<IJobForAspectsComponentsBase, IComponentBase, IAspect>(cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Combined);
-            this.AddJobs<IJobParallelForAspectsComponentsBase, IComponentBase, IAspect>(cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Combined);
-            funcBuilder.AppendLine($"}}");
-            funcBuilder.AppendLine($"#endif");
-            structBuilder.AppendLine($"#endif");
-            structUnsafeBuilder.AppendLine($"#endif");
-            cacheBuilder.AppendLine($"#endif");
-            
-            cacheBuilderFile.content = $"public unsafe partial class DebugJobs {{\n{cacheBuilder}\n}}";
-            funcBuilderFile.content = $"[BURST] public unsafe partial class DebugJobs {{\n{funcBuilder}\n}}";
-            structBuilderFile.content = $"public unsafe partial class DebugJobs {{\n{structBuilder}\n}}";
-            structUnsafeBuilderFile.content = $"public unsafe partial class DebugJobs {{\n{structUnsafeBuilder}\n}}";
-
-            files[0] = cacheBuilderFile;
-            files[1] = funcBuilderFile;
-            files[2] = structBuilderFile;
-            files[3] = structUnsafeBuilderFile;
-            
-            return files;
-            
-        }
-
-        public struct Item {
-
-            public string cacheBuilder;
-            public string funcBuilder;
-            public string structBuilder;
-            public string structUnsafeBuilder;
-
-        }
 
         internal static System.Type GetDebugWorkInterface(System.Type job, System.Type contract) {
             var candidates = job.GetInterfaces().Where(type => type.IsGenericType && contract.IsAssignableFrom(type) &&
@@ -365,8 +311,6 @@ namespace ME.BECS.Editor.Jobs {
         internal static string GetDebugWrapperName(System.Type job, System.Type contract) => "JobDebugData_" +
             ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(job.AssemblyQualifiedName + "\n" + contract.AssemblyQualifiedName);
 
-        internal static string GetDebugSafetyFieldName(System.Type component) => "safety_" +
-            ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(component.AssemblyQualifiedName);
 
         private sealed class DebugWrapperPlan {
             public System.Type job;
@@ -376,12 +320,12 @@ namespace ME.BECS.Editor.Jobs {
             public System.Type[] aspects;
             public TypeInfo[] safety;
             public bool hasTypedArguments;
+            public bool sourceSafety;
         }
 
         public override void AppendSourceGeneratorInputs(System.Text.StringBuilder manifest) {
             this.debugInputReferences.Clear();
-            var comparison = CompareEarlyInit(this.jobTypes, this.editorAssembly, out var issues, out var initialization);
-            if (issues != 0) throw new System.InvalidOperationException("Source EarlyInit preflight failed:\n" + comparison);
+            var initialization = this.SelectSourceEarlyInit();
             manifest.Append("job-early-init-schema\t0\tdjE=\n");
             for (var index = 0; index < initialization.Count; ++index) {
                 var entry = initialization[index];
@@ -399,58 +343,63 @@ namespace ME.BECS.Editor.Jobs {
                 manifest.Append("job-early-init\t").Append(index.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\t')
                     .Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(payload.ToString()))).Append('\n');
             }
+            SourceGeneratorRegistrationOwners.AppendJobInit(manifest, this.editorAssembly);
             manifest.Append("job-debug-schema\t0\tdjE=\n");
             var contracts = new[] { typeof(IJobParallelForComponentsBase), typeof(IJobForComponentsBase),
                 typeof(IJobParallelForAspectsBase), typeof(IJobForAspectsBase),
                 typeof(IJobForAspectsComponentsBase), typeof(IJobParallelForAspectsComponentsBase) };
             var ordinal = 0;
             var weightJobs = new System.Collections.Generic.HashSet<System.Type>();
-            var entityInitializerOrdinal = 0;
             var entityFallbackOrdinal = 0;
+            var entityILOrdinal = 0;
             foreach (var contract in contracts) {
                 var componentsOnly = contract == typeof(IJobParallelForComponentsBase) || contract == typeof(IJobForComponentsBase);
                 var aspectsOnly = contract == typeof(IJobParallelForAspectsBase) || contract == typeof(IJobForAspectsBase);
                 foreach (var job in this.SelectEarlyInitJobs(contract).Distinct()) {
                     if (!job.IsValueType || !job.IsVisible || !this.IsValidTypeForAssembly(job)) continue;
-                    var plan = this.CreateDebugWrapperPlan(job, contract, aspectsOnly ? typeof(TNull) : typeof(IComponentBase),
-                        componentsOnly ? typeof(TNull) : typeof(IAspect));
+                    CodeGeneratorTimings.Subject("Safety: " + job.FullName);
+                    var plan = this.CreateDebugWrapperPlan(job, contract, aspectsOnly ? null : typeof(IComponentBase),
+                        componentsOnly ? null : typeof(IAspect));
                     this.debugInputReferences.Add(plan.job);
                     this.debugInputReferences.Add(plan.contract);
                     if (plan.workInterface != null) this.debugInputReferences.Add(plan.workInterface);
                     foreach (var component in plan.components) this.debugInputReferences.Add(component);
                     foreach (var aspect in plan.aspects) this.debugInputReferences.Add(aspect);
                     foreach (var dependency in plan.safety) this.debugInputReferences.Add(dependency.type);
-                    var payload = new System.Text.StringBuilder("v1\n").Append(job.AssemblyQualifiedName).Append('\n')
+                    var payload = new System.Text.StringBuilder("v2\n").Append(job.AssemblyQualifiedName).Append('\n')
                         .Append(contract.AssemblyQualifiedName).Append('\n').Append(plan.workInterface?.AssemblyQualifiedName ?? "")
                         .Append('\n').Append(plan.hasTypedArguments ? "1" : "0");
                     foreach (var component in plan.components) payload.Append("\nC\t").Append(component.AssemblyQualifiedName);
                     foreach (var aspect in plan.aspects) payload.Append("\nA\t").Append(aspect.AssemblyQualifiedName);
+                    payload.Append("\nS\til");
+                    // An explicit IL snapshot is authoritative. Roslyn validates
+                    // the types/modes but must not substitute source summaries.
                     foreach (var dependency in plan.safety)
                         payload.Append("\nS\t").Append(dependency.op).Append('\t').Append(dependency.type.AssemblyQualifiedName);
                     manifest.Append("job-debug\t").Append((ordinal++).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\t')
                         .Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(payload.ToString()))).Append('\n');
                     if (weightJobs.Add(job)) {
-                        if (this.sourceEntityCounts.TrySelectPlan(job, this, out var entityPlan)) {
-                            this.debugInputReferences.Add(entityPlan.initializer);
-                            var entityPayload = "v1\n" + job.AssemblyQualifiedName + "\n" + entityPlan.initializer.AssemblyQualifiedName +
-                                string.Concat(entityPlan.groupKeys.Select(key => "\n" + key));
-                            manifest.Append("job-entity-initializer\t").Append((entityInitializerOrdinal++).ToString(System.Globalization.CultureInfo.InvariantCulture))
-                                .Append('\t').Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(entityPayload))).Append('\n');
-                        } else {
-                            var entityPayload = this.GetEntityFallbackPayload(job);
-                            manifest.Append("job-entity-fallback\t").Append((entityFallbackOrdinal++).ToString(System.Globalization.CultureInfo.InvariantCulture))
-                                .Append('\t').Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(entityPayload))).Append('\n');
-                        }
-                        var hasInitializer = this.sourceWeights.TryGetInitializerType(job, out var initializerType);
-                        if (hasInitializer) this.debugInputReferences.Add(initializerType);
+                        CodeGeneratorTimings.Subject("Entity counts: " + job.FullName);
+                        var entityPayload = this.GetEntityInputPayload(job, out var covered);
+                        var entityOrdinal = covered ? entityILOrdinal++ : entityFallbackOrdinal++;
+                        manifest.Append(covered ? "job-entity-il\t" : "job-entity-fallback\t")
+                            .Append(entityOrdinal.ToString(System.Globalization.CultureInfo.InvariantCulture))
+                            .Append('\t').Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(entityPayload))).Append('\n');
+                        CodeGeneratorTimings.Subject("Job weight: " + job.FullName);
                         manifest.Append("job-weight\t").Append((weightJobs.Count - 1).ToString(System.Globalization.CultureInfo.InvariantCulture))
                             .Append('\t').Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(job.AssemblyQualifiedName)))
-                            .Append('\t').Append(hasInitializer ? "source" : "value").Append('\t')
-                            .Append(hasInitializer ? System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(initializerType.AssemblyQualifiedName)) :
-                                this.SelectWeight(job).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\n');
+                            .Append("\til\t").Append(this.SelectWeight(job).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\n');
                     }
                 }
             }
+        }
+
+        private string GetEntityInputPayload(System.Type job, out bool covered) {
+            // Compiled IL owns the production reservation for ordinary and closed
+            // generic jobs alike. Source catalogs remain diagnostic-only, even if
+            // their metadata is complete, stale, duplicated or unavailable.
+            covered = ILJobEntityCounts.TryGetExportPayload(job, out var payload, out _);
+            return covered ? payload : this.GetEntityFallbackPayload(job);
         }
 
         private string GetEntityFallbackPayload(System.Type job) {
@@ -464,6 +413,8 @@ namespace ME.BECS.Editor.Jobs {
                     if (info.loopGroups[index]) reservations[index] = maximum;
             }
             var format = System.Globalization.CultureInfo.InvariantCulture;
+            // Preserve this explicitly selected compatibility IL result. The
+            // compiler must not substitute a diagnostic source catalog.
             var payload = new System.Text.StringBuilder("v1\n").Append(job.AssemblyQualifiedName).Append('\n')
                 .Append(maximum.ToString(format)).Append('\n').Append(info.brCount.ToString(format)).Append('\n')
                 .Append(reservations == null ? "0" : "1");
@@ -485,148 +436,60 @@ namespace ME.BECS.Editor.Jobs {
             System.Type componentContract, System.Type aspectContract) {
             var workInterface = GetDebugWorkInterface(job, contract);
             var arguments = workInterface?.GenericTypeArguments ?? System.Type.EmptyTypes;
-            var components = arguments.Where(type => componentContract.IsAssignableFrom(type) && this.IsValidTypeForAssembly(type)).ToArray();
-            var aspects = arguments.Where(type => aspectContract.IsAssignableFrom(type) && this.IsValidTypeForAssembly(type)).ToArray();
-            var safety = this.sourceSafety.Select(job);
+            var components = arguments.Where(type => componentContract != null && componentContract.IsAssignableFrom(type) && this.IsValidTypeForAssembly(type)).ToArray();
+            var aspects = arguments.Where(type => aspectContract != null && aspectContract.IsAssignableFrom(type) && this.IsValidTypeForAssembly(type)).ToArray();
+            var safety = this.sourceSafety.SelectForExport(job, out var sourceSafety);
             UpdateDeps(safety);
             return new DebugWrapperPlan {
                 job = job, contract = contract, workInterface = workInterface,
                 components = components, aspects = aspects,
+                sourceSafety = sourceSafety,
                 hasTypedArguments = workInterface != null && components.Length + aspects.Length == arguments.Length,
                 safety = safety.OrderBy(item => item.type.FullName, System.StringComparer.Ordinal)
                     .ThenBy(item => item.type.Assembly.FullName, System.StringComparer.Ordinal).ToArray(),
             };
         }
 
-        private void AddJobs<TJobBase, T0, T1>(System.Text.StringBuilder cacheBuilder, System.Text.StringBuilder funcBuilder, System.Text.StringBuilder structBuilder, System.Text.StringBuilder structUnsafeBuilder, JobType genType) {
-            
-            // Wrapper layout includes transitive safety dependencies. A persisted
-            // fragment keyed by the job type can outlive changes in called helpers.
-            // Re-select from the run-local source/IL snapshot on every export.
-            var jobsComponents = this.SelectEarlyInitJobs(typeof(TJobBase));
-            foreach (var jobType in jobsComponents) {
-                if (jobType.IsValueType == false) continue;
-                if (jobType.IsVisible == false) continue;
-                if (this.IsValidTypeForAssembly(jobType) == false) continue;
-                this.references.Add(jobType);
-
-                if (jobType.ContainsGenericParameters)
-                    throw new System.InvalidOperationException($"Debug job requires a closed specialization: {jobType.FullName}.");
-                
-                var tempCacheBuilder = new System.Text.StringBuilder();
-                var tempFuncBuilder = new System.Text.StringBuilder();
-                var tempStructBuilder = new System.Text.StringBuilder();
-                var tempStructUnsafeBuilder = new System.Text.StringBuilder();
-                
-                var jobTypeFullName = SourceGeneratorInputManifest.GetClosedTypeName(jobType);
-                var plan = this.CreateDebugWrapperPlan(jobType, typeof(TJobBase), typeof(T0), typeof(T1));
-                var aspects = plan.aspects.Select(SourceGeneratorInputManifest.GetClosedTypeName).ToArray();
-                var components = plan.components.Select(SourceGeneratorInputManifest.GetClosedTypeName).ToArray();
-                
-                var structName = GetDebugWrapperName(jobType, typeof(TJobBase));
-
-                tempCacheBuilder.AppendLine($"private struct Cache{structName} {{");
-                tempCacheBuilder.AppendLine($"public static readonly SharedStatic<System.IntPtr> cache = SharedStatic<System.IntPtr>.GetOrCreate<Cache{structName}>();");
-                tempCacheBuilder.AppendLine($"}}");
-
-                tempFuncBuilder.AppendLine($"{{ // {jobType.FullName}");
-                tempFuncBuilder.AppendLine($"Cache{structName}.cache.Data = default;");
-                tempFuncBuilder.AppendLine($"[BURST]");
-                tempFuncBuilder.AppendLine($"static void* Method(void* jobData, CommandBuffer* buffer, bool unsafeMode, ScheduleFlags scheduleFlags, in JobInfo jobInfo) {{");
-                tempFuncBuilder.AppendLine($"{structName}* data = ({structName}*)Cache{structName}.cache.Data;");
-                tempFuncBuilder.AppendLine($"if (data == null) {{");
-                tempFuncBuilder.AppendLine($"if (unsafeMode == true) {{");
-                tempFuncBuilder.AppendLine($"data = ({structName}*)_makeDefault(new {structName}Unsafe(), Constants.ALLOCATOR_DOMAIN).ptr;");
-                tempFuncBuilder.AppendLine($"}} else {{");
-                tempFuncBuilder.AppendLine($"data = ({structName}*)_makeDefault(new {structName}(), Constants.ALLOCATOR_DOMAIN).ptr;");
-                tempFuncBuilder.AppendLine($"}}");
-                tempFuncBuilder.AppendLine($"Cache{structName}.cache.Data = (System.IntPtr)data;");
-                tempFuncBuilder.AppendLine($"}}");
-                tempFuncBuilder.AppendLine($"data->scheduleFlags = scheduleFlags;");
-                tempFuncBuilder.AppendLine($"data->jobInfo = jobInfo;");
-                tempFuncBuilder.AppendLine($"data->jobData = *({jobTypeFullName}*)jobData;");
-                tempFuncBuilder.AppendLine($"data->buffer = buffer;");
-                tempStructBuilder.AppendLine($"public struct {structName} {{ // {jobType.FullName}");
-                tempStructBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleFlags scheduleFlags;");
-                tempStructBuilder.AppendLine($"public JobInfo jobInfo;");
-                tempStructBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
-                tempStructBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
-                tempStructUnsafeBuilder.AppendLine($"public struct {structName}Unsafe {{ // {jobType.FullName}");
-                tempStructUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleFlags scheduleFlags;");
-                tempStructUnsafeBuilder.AppendLine($"public JobInfo jobInfo;");
-                tempStructUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
-                tempStructUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
-                if (plan.hasTypedArguments) {
-
-                    {
-                        var i = 0u;
-                        
-                        i = 0u;
-                        foreach (var component in aspects) {
-                            tempStructBuilder.AppendLine($"public {component} a{i};");
-                            tempStructUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public {component} a{i};");
-                            tempFuncBuilder.AppendLine($"data->a{i} = WorldAspectStorage.Initialize<{component}>(buffer->worldId);");
-                            ++i;
-                        }
-                        
-                        i = 0u;
-                        foreach (var component in components) {
-                            tempStructBuilder.AppendLine($"public RefRW<{component}> c{i};");
-                            tempStructUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public RefRW<{component}> c{i};");
-                            tempFuncBuilder.AppendLine($"data->c{i} = buffer->state.ptr->components.GetRW<{component}>(buffer->state, buffer->worldId);");
-                            ++i;
-                        }
-
-                    }
-
-                    {
-                        var i = 0u;
-                        foreach (var typeInfo in plan.safety) {
-                            var type = SourceGeneratorInputManifest.GetClosedTypeName(typeInfo.type);
-                            var RWRO = string.Empty;
-                            if (typeInfo.op == RefOp.ReadOnly) RWRO = "RO";
-                            if (typeInfo.op == RefOp.WriteOnly) RWRO = "WO";
-                            if (typeInfo.op == RefOp.ReadWrite) RWRO = "RW";
-                            var fieldName = GetDebugSafetyFieldName(typeInfo.type);
-                            tempFuncBuilder.AppendLine($"data->{fieldName} = new SafetyComponentContainer{RWRO}<{type}>(buffer->state, buffer->worldId);");
-                            tempStructBuilder.AppendLine($"public SafetyComponentContainer{RWRO}<{type}> {fieldName};");
-                            tempStructUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public SafetyComponentContainer{RWRO}<{type}> {fieldName};");
-                            ++i;
-                        }
-                    }
-
-                }
-                tempStructBuilder.AppendLine($"}}");
-                tempStructUnsafeBuilder.AppendLine($"}}");
-                tempFuncBuilder.AppendLine($"return data;");
-                tempFuncBuilder.AppendLine($"}}");
-                tempFuncBuilder.AppendLine($"var fn = BurstCompiler.CompileFunctionPointer<CompiledJobCallback>(Method);");
-                tempFuncBuilder.AppendLine($"CompiledJobs<{jobTypeFullName}>.SetFunction(fn, (unsafeMode) => unsafeMode == true ? typeof({structName}Unsafe) : typeof({structName}));");
-                tempFuncBuilder.AppendLine($"}}");
-
-                var data = new Item() {
-                    cacheBuilder = tempCacheBuilder.ToString(),
-                    funcBuilder = tempFuncBuilder.ToString(),
-                    structBuilder = tempStructBuilder.ToString(),
-                    structUnsafeBuilder = tempStructUnsafeBuilder.ToString(),
-                };
-                cacheBuilder.AppendLine(data.cacheBuilder);
-                funcBuilder.AppendLine(data.funcBuilder);
-                structBuilder.AppendLine(data.structBuilder);
-                structUnsafeBuilder.AppendLine(data.structUnsafeBuilder);
-                
-            }
-            
-        }
 
         public static System.Collections.Generic.HashSet<TypeInfo> GetMethodTypesInfo(MethodInfo root, bool traverseHierarchy = true, bool useAnalyzer = false, bool methodParameters = true, System.Func<Instruction, System.Collections.Generic.Queue<System.Reflection.MethodInfo>, bool> onInstruction = null) {
+            return GetBodyTypesInfo(root, traverseHierarchy, useAnalyzer, methodParameters, onInstruction);
+        }
+
+        internal static System.Collections.Generic.HashSet<TypeInfo> GetBodyTypesInfo(MethodBase root, bool traverseHierarchy = true, bool useAnalyzer = false, bool methodParameters = true, System.Func<Instruction, System.Collections.Generic.Queue<System.Reflection.MethodInfo>, bool> onInstruction = null) {
+            // Discovery callbacks mutate their own inventories and must run on
+            // every visit. Pure safety requests can share a defensive snapshot.
+            if (onInstruction != null) return GetBodyTypesInfoCore(root, traverseHierarchy, useAnalyzer, methodParameters, onInstruction);
+            var cached = ILAnalysisSession.Get((typeof(TypeInfo), root, traverseHierarchy, useAnalyzer, methodParameters),
+                () => useAnalyzer || !ILPersistentAnalysis.Active ? GetBodyTypesInfoCore(root, traverseHierarchy, useAnalyzer, methodParameters, null) :
+                    ILPersistentAnalysis.Get("safety", ILPersistentAnalysis.MethodIdentity(root) is var identity && identity != null
+                            ? identity + "\n" + traverseHierarchy + "\n" + methodParameters : null,
+                        () => GetBodyTypesInfoCore(root, traverseHierarchy, false, methodParameters, null), ILSummaryData.Encode, ILSummaryData.Decode));
+            return new System.Collections.Generic.HashSet<TypeInfo>(cached);
+        }
+
+        internal static System.Collections.Generic.HashSet<TypeInfo> GetDiscoveryTypesInfo(MethodInfo root,
+            System.Collections.Generic.HashSet<MethodBase> scannedBodies,
+            System.Func<Instruction, System.Collections.Generic.Queue<MethodInfo>, bool> onInstruction) =>
+            GetBodyTypesInfoCore(root, true, false, false, onInstruction, scannedBodies);
+
+        internal static System.Collections.Generic.HashSet<TypeInfo> GetDiscoveryBodyInfo(MethodBase root,
+            System.Collections.Generic.HashSet<MethodBase> nextBodies,
+            System.Func<Instruction, System.Collections.Generic.Queue<MethodInfo>, bool> onInstruction) =>
+            GetBodyTypesInfoCore(root, true, false, false, onInstruction, nextBodies: nextBodies);
+
+        private static System.Collections.Generic.HashSet<TypeInfo> GetBodyTypesInfoCore(MethodBase root, bool traverseHierarchy, bool useAnalyzer, bool methodParameters,
+            System.Func<Instruction, System.Collections.Generic.Queue<System.Reflection.MethodInfo>, bool> onInstruction,
+            System.Collections.Generic.HashSet<MethodBase> scannedBodies = null,
+            System.Collections.Generic.HashSet<MethodBase> nextBodies = null) {
             var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
             var componentsType = new System.Collections.Generic.HashSet<System.Type>();
 
             var parametersOverrides = new System.Collections.Generic.HashSet<TypeInfo>();
+            var parameterAccesses = new System.Collections.Generic.HashSet<TypeInfo>();
             if (methodParameters == true) {
                 var parameters = root.GetParameters();
                 foreach (var p in parameters) {
+                    var parameterType = p.ParameterType.IsByRef ? p.ParameterType.GetElementType() : p.ParameterType;
                     var overrideWO = p.GetCustomAttribute<WOAttribute>() != null;
                     var overrideRO = p.GetCustomAttribute<ROAttribute>() != null;
                     var overrideRW = p.GetCustomAttribute<RWAttribute>() != null;
@@ -648,23 +511,62 @@ namespace ME.BECS.Editor.Jobs {
                             op = RefOp.ReadOnly,
                             isArg = true,
                         });
+                    } else if (p.ParameterType.IsByRef && typeof(IComponentBase).IsAssignableFrom(parameterType)) {
+                        // A ref component is part of the job's access contract even when
+                        // its body contains no SafetyCheck call (or does not use the value).
+                        parameterAccesses.Add(new TypeInfo() {
+                            type = parameterType,
+                            op = p.IsIn && !p.IsOut ? RefOp.ReadOnly : RefOp.ReadWrite,
+                            isArg = true,
+                        });
                     }
 
-                    if (p.ParameterType.GetInterfaces().Contains(typeof(IAspect)) == true) {
-                        aspectsType.Add(p.ParameterType.GetElementType());
-                    } else if (p.ParameterType.GetInterfaces().Contains(typeof(IComponentBase)) == true) {
-                        componentsType.Add(p.ParameterType.GetElementType());
+                    if (typeof(IAspect).IsAssignableFrom(parameterType)) {
+                        aspectsType.Add(parameterType);
+                    } else if (typeof(IComponentBase).IsAssignableFrom(parameterType)) {
+                        componentsType.Add(parameterType);
                     }
                 }
             }
 
             var q = new System.Collections.Generic.Queue<System.Reflection.MethodInfo>();
-            q.Enqueue(root);
+            var constructors = new System.Collections.Generic.Queue<ConstructorInfo>();
+            var visitedConstructors = new System.Collections.Generic.HashSet<ConstructorInfo>();
+            if (root is MethodInfo methodRoot) q.Enqueue(methodRoot);
+            else if (root is ConstructorInfo constructorRoot) { constructors.Enqueue(constructorRoot); visitedConstructors.Add(constructorRoot); }
+            else throw new System.InvalidOperationException("Unsupported safety IL root: " + root);
             var uniqueTypes = new System.Collections.Generic.HashSet<TypeInfo>();
             var visited = new System.Collections.Generic.HashSet<MethodPointerData>(MethodPointerData.ExactComparer);
-            while (q.Count > 0) {
-                var body = q.Dequeue();
-                var deps = useAnalyzer == true ? ILAnalyzer.AnalyzeMethod(body) : null;
+            if (root is MethodInfo visitedRoot) visited.Add(new MethodPointerData(visitedRoot));
+            var scanned = scannedBodies ?? new System.Collections.Generic.HashSet<MethodBase>();
+            var scannedInRoot = 0;
+            var initializers = new System.Collections.Generic.HashSet<System.Type>();
+            bool IgnoreBody(MethodBase member) => member.IsDefined(typeof(CodeGeneratorIgnoreAttribute), false) ||
+                member.IsDefined(typeof(DisableContainerSafetyRestrictionAttribute), false) || ILInfrastructure.SkipBody(member);
+            void EnqueueConstructor(ConstructorInfo constructor) {
+                if (constructor != null && !IgnoreBody(constructor) && visitedConstructors.Add(constructor) && constructor.GetMethodBody() != null)
+                    constructors.Enqueue(constructor);
+            }
+            void Initialize(System.Type type) {
+                // Reading metadata never executes a .cctor. A closed type's
+                // initializer is a possible effect, collected once per analysis.
+                if (traverseHierarchy && type != null && !type.ContainsGenericParameters && initializers.Add(type))
+                    EnqueueConstructor(type.TypeInitializer);
+            }
+            void InitializeCall(MethodBase member) {
+                if (member.IsStatic || member is ConstructorInfo || member.DeclaringType?.IsValueType == true)
+                    Initialize(member.DeclaringType);
+            }
+            if (!IgnoreBody(root)) InitializeCall(root);
+            var instructionCount = 0;
+            while (q.Count > 0 || constructors.Count > 0) {
+                MethodBase body = q.Count > 0 ? q.Dequeue() : (MethodBase)constructors.Dequeue();
+                if (nextBodies != null && !body.Equals(root)) { nextBodies.Add(body); continue; }
+                if (ILInfrastructure.SkipBody(body)) continue;
+                if (!scanned.Add(body)) continue;
+                CodeGeneratorTimings.Work(body);
+                if (++scannedInRoot > 10000) throw new System.InvalidOperationException("Job safety IL traversal exceeded 10000 method instances: " + root.DeclaringType?.FullName + "." + root.Name);
+                var deps = useAnalyzer && body is MethodInfo analyzedMethod ? ILAnalyzer.AnalyzeMethod(analyzedMethod) : null;
                 if (deps != null) {
                     foreach (var item in deps) {
                         uniqueTypes.Add(new TypeInfo() {
@@ -675,8 +577,19 @@ namespace ME.BECS.Editor.Jobs {
                     }
                 }
 
-                var instructions = body.GetInstructions();
-                foreach (var inst in instructions) {
+                var instructions = ILAnalysisSession.Instructions(body);
+                instructionCount = checked(instructionCount + instructions.Length);
+                if (instructionCount > 1000000) throw new System.InvalidOperationException("Job safety IL instruction limit exceeded: " + root);
+                if (traverseHierarchy) {
+                    foreach (var callback in ILFormattingCallbacks.Collect(body, instructions, out _)) {
+                        if (callback.IsDefined(typeof(CodeGeneratorIgnoreAttribute), false) ||
+                            callback.IsDefined(typeof(DisableContainerSafetyRestrictionAttribute), false)) continue;
+                        InitializeCall(callback);
+                        if (visited.Add(new MethodPointerData(callback, body.DeclaringType))) q.Enqueue(callback);
+                    }
+                }
+                for (var index = 0; index < instructions.Length; ++index) {
+                    var inst = instructions[index];
                     var continueTraverse = true;
                     if (onInstruction?.Invoke(inst, q) == true) continue;
                     {
@@ -687,6 +600,34 @@ namespace ME.BECS.Editor.Jobs {
                     {
                         if (inst.Operand is FieldInfo fieldInfo && fieldInfo.GetCustomAttribute<DisableContainerSafetyRestrictionAttribute>() != null) {
                             continue;
+                        }
+                    }
+                    var target = ILCallTargets.Resolve(instructions, index);
+                    if (target != null)
+                        foreach (var access in ILNativeComponentAccess.Collect(target)) uniqueTypes.Add(access);
+                    if (ILCallTargets.TryBurstComponentReference(target, out var storageComponent)) {
+                        uniqueTypes.Add(new TypeInfo { type = storageComponent, op = RefOp.ReadWrite });
+                        continue;
+                    }
+                    if (traverseHierarchy) {
+                        if (inst.Operand is FieldInfo staticField && staticField.IsStatic &&
+                            (inst.OpCode == System.Reflection.Emit.OpCodes.Ldsfld || inst.OpCode == System.Reflection.Emit.OpCodes.Ldsflda ||
+                             inst.OpCode == System.Reflection.Emit.OpCodes.Stsfld)) Initialize(staticField.DeclaringType);
+                        var called = inst.OpCode == System.Reflection.Emit.OpCodes.Call || inst.OpCode == System.Reflection.Emit.OpCodes.Callvirt ||
+                            inst.OpCode == System.Reflection.Emit.OpCodes.Newobj || inst.OpCode == System.Reflection.Emit.OpCodes.Jmp;
+                        // CodeGeneratorIgnore suppresses implementation traversal,
+                        // not the explicit SafetyCheck contract on that method.
+                        if (called && target != null && !IgnoreBody(target)) {
+                            // new T() is emitted as Activator.CreateInstance<T>().
+                            // Bind that exact constructor, not Activator's reflection
+                            // implementation or all constructors of its type argument.
+                            if (ILCallTargets.TryConstruction(target, out var constructed, out var constructor)) {
+                                Initialize(constructed);
+                                EnqueueConstructor(constructor);
+                                continue;
+                            }
+                            InitializeCall(target);
+                            if (target is ConstructorInfo directConstructor) EnqueueConstructor(directConstructor);
                         }
                     }
                     {
@@ -747,32 +688,23 @@ namespace ME.BECS.Editor.Jobs {
                         }
                     }
 
-                    if (continueTraverse == true && traverseHierarchy == true && inst.Operand is System.Reflection.MethodInfo member) {
+                    if (continueTraverse == true && traverseHierarchy == true && target is MethodInfo member && !ILInfrastructure.SkipBody(member)) {
                         if (member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null && (member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member, body.DeclaringType)) == true)) {
-                            if (body.DeclaringType.IsGenericType == true && member.DeclaringType.IsInterface == true) {
-                                var arg = body.DeclaringType.GetGenericArguments()[0];
-                                if (member.DeclaringType.IsAssignableFrom(arg)) {
-                                    var map = arg.GetInterfaceMap(member.DeclaringType);
-                                    var definition = member.IsGenericMethod ? member.GetGenericMethodDefinition() : member;
-                                    for (var methodIndex = 0; methodIndex < map.InterfaceMethods.Length; ++methodIndex) {
-                                        if (!map.InterfaceMethods[methodIndex].Equals(definition)) continue;
-                                        var target = map.TargetMethods[methodIndex];
-                                        if (member.IsGenericMethod && !member.IsGenericMethodDefinition)
-                                            target = target.MakeGenericMethod(member.GetGenericArguments());
-                                        if (target.GetMethodBody() != null) q.Enqueue(target);
-                                        break;
-                                    }
-                                } else if (member.GetMethodBody() != null) {
-                                    q.Enqueue(member);
-                                }
-                            } else {
-                                if (member.GetMethodBody() != null) q.Enqueue(member);
-                            }
+                            if (member.GetMethodBody() != null) q.Enqueue(member);
                         }
                     }
                 }
             }
 
+            foreach (var access in parameterAccesses) {
+                var merged = access;
+                foreach (var previous in uniqueTypes.Where(item => item.type == access.type))
+                    if (previous.op != merged.op) merged.op = RefOp.ReadWrite;
+                uniqueTypes.Remove(new TypeInfo { type = access.type, op = RefOp.ReadOnly });
+                uniqueTypes.Remove(new TypeInfo { type = access.type, op = RefOp.WriteOnly });
+                uniqueTypes.Remove(new TypeInfo { type = access.type, op = RefOp.ReadWrite });
+                uniqueTypes.Add(merged);
+            }
             foreach (var p in parametersOverrides) {
                 uniqueTypes.Remove(new TypeInfo() { type = p.type, op = RefOp.ReadOnly, });
                 uniqueTypes.Remove(new TypeInfo() { type = p.type, op = RefOp.WriteOnly, });
@@ -791,67 +723,26 @@ namespace ME.BECS.Editor.Jobs {
 
         }
         
+        // Compatibility projection only. The compiler keeps its legacy origin
+        // until unresolved dispatch/type initialization are independently covered.
         public static NewEntInfo GetJobEntInfo(System.Type jobType, CustomCodeGenerator codeGenerator) {
-
-            var allTypesArray = EntityTypeCodeGenerator.GetAllTypes(codeGenerator, out var groupsCount);
-            var allTypes = allTypesArray.ToDictionary(x => x.Item1, x => x.Item2);
-            var result = new NewEntInfo();
-            var anyCount = 0;
-            result.count = new int[groupsCount];
-            result.loopGroups = new bool[groupsCount];
-            result.brCount = 0;
-            var newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public).GetGenericMethodDefinition();
-            var root = jobType.GetMethod("Execute");
-            var instructions = root.GetInstructions().ToList();
-            var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
-            var brOpen = 0;
-            for (int i = 0; i < instructions.Count; ++i) {
-                var inst = instructions[i];
-                if ((inst.OpCode.FlowControl == FlowControl.Branch || inst.OpCode.FlowControl == FlowControl.Cond_Branch) &&
-                    inst.Operand is Instruction loopTarget && loopTarget.Offset < inst.Offset) {
-                    // jump to previous instruction - make it open
-                    ++loopTarget.loopInfo.openCount;
-                    ++inst.loopInfo.closeCount;
-                }
-
-                if (inst.Operand is System.Reflection.MethodInfo member) {
-                    if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) &&
-                        member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
-                        if (member.GetMethodBody() != null) {
-                            instructions.InsertRange(i + 1, member.GetInstructions());
-                        }
-                    }
-                }
+            var allTypes = EntityTypeCodeGenerator.GetAllTypes(codeGenerator, out var groupsCount)
+                .ToDictionary(entry => entry.Item1, entry => entry.Item2);
+            var known = ILJobEntityCounts.AnalyzeKnown(jobType, out _);
+            var result = new NewEntInfo {
+                count = new int[groupsCount],
+                loopGroups = new bool[groupsCount],
+            };
+            var anyInline = false;
+            foreach (var entry in known) {
+                if (!allTypes.TryGetValue(entry.Key, out var group))
+                    throw new System.InvalidOperationException("Entity reservation group is not registered: " + entry.Key + " in " + jobType);
+                result.count[group] = checked((int)entry.Value.inline);
+                result.loopGroups[group] = entry.Value.loop > 0u;
+                result.brCount = checked(result.brCount + checked((int)entry.Value.loop));
+                anyInline |= entry.Value.inline > 0u;
             }
-
-            for (int i = 0; i < instructions.Count; ++i) {
-                var inst = instructions[i];
-                if (inst.loopInfo.openCount > 0) {
-                    brOpen += inst.loopInfo.openCount;
-                }
-
-                if (inst.loopInfo.closeCount > 0) {
-                    brOpen -= inst.loopInfo.closeCount;
-                }
-
-                if (inst.Operand is MethodInfo methodInfo) {
-                    if (methodInfo.IsGenericMethod == true && methodInfo.GetGenericMethodDefinition() == newEntMethod && allTypes.TryGetValue(methodInfo.GetGenericArguments()[0], out var gId) == true) {
-                        if (brOpen > 0) {
-                            ++result.brCount;
-                            result.loopGroups[gId] = true;
-                        } else {
-                            ref var count = ref result.count[gId];
-                            ++count;
-                            ++anyCount;
-                        }
-                    }
-                }
-            }
-
-            if (anyCount == 0) {
-                result.count = null;
-            }
-
+            if (!anyInline) result.count = null;
             return result;
         }
 
@@ -899,10 +790,11 @@ namespace ME.BECS.Editor.Jobs {
                 methods = typeof(Components).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).Where(x => x.Name == nameof(Components.ReadUnknownType) || x.Name == nameof(Components.HasUnknownType)).ToArray(),
                 weight = 1u,
             });
-            var root = jobType.GetMethod("Execute");
             var visited = new System.Collections.Generic.HashSet<MethodPointerData>(MethodPointerData.ExactComparer);
-            var instructions = root.GetInstructions().ToList();
+            var instructions = GetJobExecuteMethods(jobType).SelectMany(root => root.GetInstructions()).ToList();
+            var expandedBodies = 0;
             for (int i = 0; i < instructions.Count; ++i) {
+                if (instructions.Count > 1000000) throw new System.InvalidOperationException("Legacy job weight instruction limit exceeded: " + jobType);
                 var inst = instructions[i];
                 if (inst.Operand is System.Reflection.MethodInfo member) {
                     if (member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() != null) continue;
@@ -931,6 +823,7 @@ namespace ME.BECS.Editor.Jobs {
                     }
                     if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                         if (member.GetMethodBody() != null) {
+                            if (++expandedBodies > 10000) throw new System.InvalidOperationException("Legacy job weight traversal limit exceeded: " + jobType);
                             instructions.InsertRange(i + 1, member.GetInstructions());
                         }
                     }
@@ -964,8 +857,58 @@ namespace ME.BECS.Editor.Jobs {
         }
         
         public static System.Collections.Generic.HashSet<TypeInfo> GetJobTypesInfo(System.Type jobType, System.Func<Instruction, System.Collections.Generic.Queue<System.Reflection.MethodInfo>, bool> onInstruction = null) {
-            var root = jobType.GetMethod("Execute");
-            return GetMethodTypesInfo(root, onInstruction: onInstruction);
+            var result = new System.Collections.Generic.HashSet<TypeInfo>();
+            foreach (var root in GetJobExecuteMethods(jobType)) result.UnionWith(GetMethodTypesInfo(root, onInstruction: onInstruction));
+            UpdateDeps(result);
+            return result;
+        }
+
+        internal static MethodInfo[] GetJobExecuteMethods(System.Type jobType) {
+            if (jobType == null || jobType.ContainsGenericParameters)
+                throw new System.InvalidOperationException("Job safety requires a closed job type: " + jobType);
+            var roots = new System.Collections.Generic.HashSet<MethodInfo>();
+            foreach (var contract in jobType.GetInterfaces().OrderBy(type => type.AssemblyQualifiedName, System.StringComparer.Ordinal)) {
+                if (contract.Namespace != "ME.BECS.Jobs" && contract.Namespace != "Unity.Jobs") continue;
+                // Interface maps handle explicit implementations and Unity's
+                // in/modreq forwarding methods; a same-named overload is not a root.
+                var map = jobType.GetInterfaceMap(contract);
+                for (var index = 0; index < map.InterfaceMethods.Length; ++index)
+                    if (map.InterfaceMethods[index].Name == "Execute") roots.Add(UnwrapJobExecuteForwarder(map.TargetMethods[index]));
+            }
+            if (roots.Count == 0)
+                throw new System.InvalidOperationException("No supported job Execute implementation: " + jobType.AssemblyQualifiedName);
+            return roots.OrderBy(method => method.DeclaringType.AssemblyQualifiedName, System.StringComparer.Ordinal)
+                .ThenBy(method => method.ToString(), System.StringComparer.Ordinal).ToArray();
+        }
+
+        internal static MethodInfo UnwrapJobExecuteForwarder(MethodInfo root) {
+            var parameters = root.GetParameters();
+            // Roslyn bridges imported `in` modreq signatures with an explicit
+            // interface method. Its parameters omit the user's RO/WO annotations.
+            // Only accept the exact load-this/arguments, call, ret adapter shape.
+            if (!root.IsPrivate || !root.IsVirtual || !root.IsFinal || root.IsStatic || root.ReturnType != typeof(void) ||
+                !parameters.Any(parameter => parameter.GetRequiredCustomModifiers().Any(modifier =>
+                    modifier.FullName == "System.Runtime.InteropServices.InAttribute")) ||
+                parameters.Any(parameter => parameter.IsDefined(typeof(ROAttribute), false) ||
+                    parameter.IsDefined(typeof(WOAttribute), false) || parameter.IsDefined(typeof(RWAttribute), false))) return root;
+            var body = root.GetMethodBody();
+            if (body == null || body.ExceptionHandlingClauses.Count != 0) return root;
+            var instructions = ILAnalysisSession.Instructions(root).Where(instruction => instruction.OpCode != OpCodes.Nop).ToArray();
+            if (instructions.Length != parameters.Length + 3 || instructions[instructions.Length - 1].OpCode != OpCodes.Ret ||
+                instructions[instructions.Length - 2].OpCode != OpCodes.Call ||
+                !(instructions[instructions.Length - 2].Operand is MethodInfo target) || target == root ||
+                target.IsStatic || target.Name != "Execute" || target.ReturnType != typeof(void) ||
+                target.DeclaringType != root.DeclaringType || target.ContainsGenericParameters ||
+                !target.GetParameters().Select(parameter => parameter.ParameterType).SequenceEqual(parameters.Select(parameter => parameter.ParameterType))) return root;
+            for (var index = 0; index <= parameters.Length; ++index) {
+                var instruction = instructions[index];
+                var argument = instruction.OpCode == OpCodes.Ldarg_0 ? 0 : instruction.OpCode == OpCodes.Ldarg_1 ? 1 :
+                    instruction.OpCode == OpCodes.Ldarg_2 ? 2 : instruction.OpCode == OpCodes.Ldarg_3 ? 3 :
+                    (instruction.OpCode == OpCodes.Ldarg || instruction.OpCode == OpCodes.Ldarg_S) && instruction.Operand is ParameterInfo parameter
+                        ? parameter.Position + 1 : -1;
+                if (argument != index) return root;
+            }
+            return target;
         }
 
         public static void UpdateDeps(System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo> uniqueTypes) {
@@ -994,14 +937,7 @@ namespace ME.BECS.Editor.Jobs {
         }
 
         
-        public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
-
-            if (this.earlyInitDiagnostics == null) {
-                // Custom derived feeders retain this compatibility entry point. Built-in
-                // bootstrap dispatch and the complete ordered body are compiler-owned.
-                dataList.Add("global::ME.BECS.SourceGenerated.JobBootstrapInputs.Initialize();");
-                return;
-            }
+        private void CollectLegacyInitialization() {
             this.CollectLegacyEarlyInit<IJobForComponentsBase, TNull, TNull>("DoComponents");
             this.CollectLegacyEarlyInit<IJobParallelForComponentsBase, IComponentBase, TNull>("DoParallelForComponents");
             this.CollectLegacyEarlyInit<IJobForComponentsBase, IComponentBase, TNull>("DoComponents");

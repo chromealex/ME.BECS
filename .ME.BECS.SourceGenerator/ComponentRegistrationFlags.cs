@@ -14,13 +14,7 @@ internal static class ComponentRegistrationFlags {
     internal static bool HasInvalidDefault(INamedTypeSymbol type) => type.GetMembers("Default").OfType<IPropertySymbol>()
         .Any(property => IsDefaultCandidate(property) && !IsReadableDefault(property, type));
 
-    internal static int Get(INamedTypeSymbol type) {
-        var explicitSize = type.GetAttributes()
-            .Where(attribute => attribute.AttributeClass?.ToDisplayString() == "System.Runtime.InteropServices.StructLayoutAttribute")
-            .SelectMany(attribute => attribute.NamedArguments)
-            .Where(argument => argument.Key == "Size" && argument.Value.Value is int)
-            .Select(argument => (int)argument.Value.Value!).DefaultIfEmpty(0).Max();
-        var tag = !type.GetMembers().OfType<IFieldSymbol>().Any(field => !field.IsStatic) && explicitSize <= 1;
+    internal static int Get(INamedTypeSymbol type, bool tag) {
         var flags = tag ? 1 : 0;
         if (type.AllInterfaces.Any(contract => contract.ToDisplayString() == "ME.BECS.IConfigComponentStatic")) flags |= 2;
         if (!tag && type.GetMembers("Default").OfType<IPropertySymbol>().Any(property =>
@@ -29,9 +23,11 @@ internal static class ComponentRegistrationFlags {
         if (shared != null) {
             flags |= 8;
             var hash = shared.GetMembers("GetHash").OfType<IMethodSymbol>().SingleOrDefault(method => method.Parameters.Length == 0);
-            // A default interface implementation is not a component's custom hash.
+            // Only the original throwing fallback is "no custom hash". A derived
+            // interface can explicitly replace that slot with a real implementation;
+            // a same-named new/overloaded method must not count as an override.
             if (hash != null && type.FindImplementationForInterfaceMember(hash) is IMethodSymbol implementation &&
-                implementation.ContainingType.TypeKind != TypeKind.Interface) flags |= 16;
+                !SymbolEqualityComparer.Default.Equals(implementation.OriginalDefinition, hash.OriginalDefinition)) flags |= 16;
         }
         if (type.AllInterfaces.Any(contract => contract.ToDisplayString() == "ME.BECS.IConfigInitialize")) flags |= 32;
         return flags;

@@ -12,17 +12,56 @@ namespace ME.BECS.SourceGenerator;
 [Generator(LanguageNames.CSharp)]
 public sealed class BecsCatalogGenerator : IIncrementalGenerator {
     public void Initialize(IncrementalGeneratorInitializationContext context) {
-        var candidates = context.SyntaxProvider.CreateSyntaxProvider(
+        var descriptions = context.SyntaxProvider.CreateSyntaxProvider(
             static (node, _) => node is TypeDeclarationSyntax declaration && declaration.BaseList != null,
-            static (syntax, cancellation) => Describe(syntax.SemanticModel.GetDeclaredSymbol(syntax.Node, cancellation) as INamedTypeSymbol,
-                syntax.SemanticModel.Compilation.Options is Microsoft.CodeAnalysis.CSharp.CSharpCompilationOptions options && options.AllowUnsafe))
-            .Where(static candidate => candidate != null);
+            static (syntax, cancellation) => {
+                var type = syntax.SemanticModel.GetDeclaredSymbol(syntax.Node, cancellation) as INamedTypeSymbol;
+                return (Catalog: Describe(type, syntax.SemanticModel.Compilation), Tag: ComponentLayoutReader.Describe(type),
+                    Usage: RuntimeTypeUsage.DescribeAspect(type, syntax.SemanticModel.Compilation));
+            });
+        var candidates = descriptions.Select(static (item, _) => item.Catalog).Where(static candidate => candidate != null);
+        context.RegisterSourceOutput(descriptions.Select(static (item, _) => item.Tag).Where(static tag => tag != null).Collect(),
+            static (output, tags) => ComponentLayoutReader.Emit(output, tags));
+        context.RegisterSourceOutput(descriptions.Select(static (item, _) => item.Usage).Where(static usage => usage != null).Collect(),
+            static (output, usage) => RuntimeTypeUsage.EmitAspects(output, usage));
         context.RegisterSourceOutput(candidates.Collect().Combine(context.CompilationProvider.Select(
             static (compilation, _) => compilation.AssemblyName ?? string.Empty)),
             static (production, input) => Emit(production, input.Left, input.Right));
     }
 
-    private static Candidate? Describe(INamedTypeSymbol? type, bool allowUnsafe) {
+    // A generator cannot inspect another generator's output in this compilation.
+    // Predict local targets using the exact catalog eligibility rules instead.
+    internal static bool TryResolveAspect(INamedTypeSymbol type, Compilation compilation, out string query, out string? construct) {
+        query = "";
+        construct = null;
+        var name = "ME.BECS.SourceGenerated.Catalog_" + Encode(type.ContainingAssembly.Name);
+        var key = Encode(type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+        var queryName = "InitializeAspectQuery_" + key;
+        var constructName = "ConstructAspect_" + key;
+        var needsConstruction = type.GetMembers().OfType<IFieldSymbol>().Any(static field => !field.IsStatic &&
+            field.Type.AllInterfaces.Any(static contract => contract.ToDisplayString() == "ME.BECS.IAspectData"));
+        if (SymbolEqualityComparer.Default.Equals(type.ContainingAssembly, compilation.Assembly)) {
+            var description = Describe(type, compilation);
+            if (description == null || !description.Aspect || description.Query == null ||
+                (needsConstruction && (description.Construction == null || description.Construction.Length == 0))) return false;
+        } else {
+            var catalog = type.ContainingAssembly.GetTypeByMetadataName(name);
+            if (catalog == null || !compilation.IsSymbolAccessibleWithin(catalog, compilation.Assembly)) return false;
+            bool Callable(IMethodSymbol method) => method.IsStatic && method.Arity == 0 && method.ReturnsVoid &&
+                compilation.IsSymbolAccessibleWithin(method, compilation.Assembly);
+            if (catalog.GetMembers(queryName).OfType<IMethodSymbol>().Count(method => Callable(method) && method.Parameters.Length == 0) != 1) return false;
+            var world = compilation.GetTypeByMetadataName("ME.BECS.World");
+            if (needsConstruction && catalog.GetMembers(constructName).OfType<IMethodSymbol>().Count(method => Callable(method) &&
+                method.Parameters.Length == 1 && method.Parameters[0].RefKind == RefKind.Ref &&
+                SymbolEqualityComparer.Default.Equals(method.Parameters[0].Type, world)) != 1) return false;
+        }
+        query = "global::" + name + "." + queryName;
+        if (needsConstruction) construct = "global::" + name + "." + constructName;
+        return true;
+    }
+
+    private static Candidate? Describe(INamedTypeSymbol? type, Compilation compilation) {
+        var allowUnsafe = compilation.Options is Microsoft.CodeAnalysis.CSharp.CSharpCompilationOptions options && options.AllowUnsafe;
         if (type == null || type.TypeKind != TypeKind.Struct || !type.IsUnmanagedType || type.IsRefLikeType) return null;
         // Match the public discovery surface of the existing editor generator.
         for (var owner = type; owner != null; owner = owner.ContainingType) {
@@ -35,15 +74,15 @@ public sealed class BecsCatalogGenerator : IIncrementalGenerator {
         var entityType = type.AllInterfaces.Any(static i => i.ToDisplayString() == "ME.BECS.IEntityType");
         if (!component && !aspect && !system && !entityType) return null;
         // Shared/static phases remain separate from ordinary component registration.
-        var flags = ComponentRegistrationFlags.Get(type);
+        var flags = ComponentRegistrationFlags.Get(type, ComponentLayoutReader.IsSourceTag(type));
         var shared = (flags & 8) != 0;
         var isStatic = (flags & 2) != 0;
-        var configInitialize = (flags & 32) != 0;
         var tag = (flags & 1) != 0;
         var partialScope = aspect && allowUnsafe ? DescribePartialScope(type) : null;
         return new Candidate(type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), component, aspect,
-            ordinary && !shared && !isStatic, tag, (flags & 4) != 0, shared, isStatic,
-            aspect ? DescribeQuery(type) : null, aspect && allowUnsafe ? DescribeConstruction(type, partialScope != null) : null, partialScope, configInitialize, system, entityType);
+            ordinary && !shared && !isStatic, tag, (flags & 4) != 0,
+            aspect ? DescribeQuery(type) : null, aspect && allowUnsafe ? DescribeConstruction(type, partialScope != null) : null, partialScope, system, entityType,
+            aspect ? SystemQueryFilterContracts.DescribeAspect(type, compilation) : null);
     }
 
     private static string[]? DescribePartialScope(INamedTypeSymbol aspect) {
@@ -115,7 +154,11 @@ public sealed class BecsCatalogGenerator : IIncrementalGenerator {
         var types = input.Where(static t => t != null).Select(static t => t!).GroupBy(static t => t.Name, StringComparer.Ordinal)
             .Select(static group => group.First()).OrderBy(static t => t.Name, StringComparer.Ordinal).ToArray();
         if (types.Length == 0) return;
-        var source = new StringBuilder("// <auto-generated/>\nnamespace ME.BECS.SourceGenerated {\n");
+        var source = new StringBuilder("// <auto-generated/>\n");
+        foreach (var type in types.Where(static t => t.QueryContract != null))
+            source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"").Append(SystemQueryFilterContracts.AspectMetadataKey).Append("\", ")
+                .Append(Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(type.QueryContract!, true)).Append(")]\n");
+        source.Append("namespace ME.BECS.SourceGenerated {\n");
         // Bounded deterministic encoding is shared with the Editor bridge.
         source.Append("public static class Catalog_").Append(Encode(assembly)).Append(" {\n");
         source.Append("public static global::System.Type[] GetComponents() => new global::System.Type[] {\n");
@@ -136,31 +179,11 @@ public sealed class BecsCatalogGenerator : IIncrementalGenerator {
             source.Append("if (type == typeof(").Append(type.Name).Append(")) return ").Append(flags).Append(";\n");
         }
         source.Append("return -1;\n}\n");
-        foreach (var type in types.Where(static t => t.CanRegister)) {
-            context.CancellationToken.ThrowIfCancellationRequested();
-            source.Append("// Called individually by the future global bootstrap, in its existing order.\n")
-                .Append("public static void Register_").Append(Encode(type.Name)).Append("() {\n")
-                .Append("global::ME.BECS.StaticTypes<").Append(type.Name).Append(">.Validate(isTag: ")
-                .Append(type.Tag ? "true" : "false").Append(", isStatic: false);\n");
-            if (type.HasDefault) source.Append("global::ME.BECS.StaticTypes<").Append(type.Name)
-                .Append(">.SetDefaultValue(").Append(type.Name).Append(".Default);\n");
-            source.Append("}\n");
-        }
-        // Separate phases: the global bootstrap supplies the legacy classification and ordering.
+        // Typed component bodies live in ComponentRegistrations_<assembly>.
+        // This discovery catalog neither duplicates them nor assigns IDs.
         foreach (var type in types) {
             if (type.EntityType) source.Append("public static void RegisterEntityType_").Append(Encode(type.Name))
                 .Append("(ushort id) => global::ME.BECS.EntityTypes.Register<").Append(type.Name).Append(">(id);\n");
-            if (type.System) source.Append("public static void RegisterSystem_").Append(Encode(type.Name))
-                .Append("() => global::ME.BECS.StaticSystemTypes<").Append(type.Name).Append(">.Validate();\n");
-            if (type.Component) EmitAot(source, type, "Component", "StaticTypes");
-            if (type.Shared) EmitAot(source, type, "Shared", "StaticTypesShared");
-            if (type.Static) EmitAot(source, type, "Static", "StaticTypesStatic");
-            if (type.ConfigInitialize) {
-                EmitAot(source, type, "Config", "ConfigInitializeTypes");
-                source.Append("public static void RegisterConfig_").Append(Encode(type.Name))
-                    .Append("(bool isTag, bool isStatic) => global::ME.BECS.StaticTypes<").Append(type.Name)
-                    .Append(">.Validate(isTag, isStatic);\n");
-            }
             if (type.Construction != null && type.Construction.Length > 0) {
                 source.Append("public static string[] GetAspectConstruction_").Append(Encode(type.Name))
                     .Append("() => new string[] {");
@@ -192,12 +215,6 @@ public sealed class BecsCatalogGenerator : IIncrementalGenerator {
                 .Append(">.ApplyGroup(groupType);\n");
             if (type.Aspect) source.Append("public static void RegisterAspect_").Append(Encode(type.Name))
                 .Append("() => global::ME.BECS.AspectTypeInfo<").Append(type.Name).Append(">.Validate();\n");
-            if (type.Shared) source.Append("public static void RegisterShared_").Append(Encode(type.Name))
-                .Append("(bool isTag, bool hasCustomHash) => global::ME.BECS.StaticTypes<").Append(type.Name)
-                .Append(">.ValidateShared(isTag, hasCustomHash);\n");
-            if (type.Static) source.Append("public static void RegisterStatic_").Append(Encode(type.Name))
-                .Append("(bool isTag) => global::ME.BECS.StaticTypes<").Append(type.Name)
-                .Append(">.ValidateStatic(isTag);\n");
         }
         source.Append("}\n}\n");
         foreach (var type in types.Where(static t => t.PartialScope != null && t.Construction != null && t.Construction.Length > 0)) {
@@ -207,11 +224,6 @@ public sealed class BecsCatalogGenerator : IIncrementalGenerator {
             source.Append("}\n").Append(type.PartialScope[1]).Append('\n');
         }
         context.AddSource("ME.BECS.Catalog.g.cs", SourceText.From(source.ToString(), Encoding.UTF8));
-    }
-
-    private static void EmitAot(StringBuilder source, Candidate type, string phase, string target) {
-        source.Append("public static void Aot").Append(phase).Append('_').Append(Encode(type.Name))
-            .Append("() => global::ME.BECS.").Append(target).Append('<').Append(type.Name).Append(">.AOT();\n");
     }
 
     private static void EmitConstructionBody(StringBuilder source, Candidate type) {
@@ -230,21 +242,21 @@ public sealed class BecsCatalogGenerator : IIncrementalGenerator {
 
     private sealed class Candidate : IEquatable<Candidate> {
         public readonly string Name;
-        public readonly bool Component, Aspect, CanRegister, Tag, HasDefault, Shared, Static, ConfigInitialize, System, EntityType;
+        public readonly string? QueryContract;
+        public readonly bool Component, Aspect, CanRegister, Tag, HasDefault, System, EntityType;
         public readonly string[]? Query, Construction, PartialScope;
-        public Candidate(string name, bool component, bool aspect, bool canRegister, bool tag, bool hasDefault, bool shared, bool isStatic, string[]? query, string[]? construction, string[]? partialScope, bool configInitialize, bool system, bool entityType) {
+        public Candidate(string name, bool component, bool aspect, bool canRegister, bool tag, bool hasDefault, string[]? query, string[]? construction, string[]? partialScope, bool system, bool entityType, string? queryContract) {
             Name = name; Component = component; Aspect = aspect; CanRegister = canRegister; Tag = tag; HasDefault = hasDefault;
-            Shared = shared; Static = isStatic;
             Query = query;
             Construction = construction;
             PartialScope = partialScope;
-            ConfigInitialize = configInitialize;
             System = system;
             EntityType = entityType;
+            QueryContract = queryContract;
         }
-        public bool Equals(Candidate? other) => other != null && Name == other.Name && Component == other.Component &&
+        public bool Equals(Candidate? other) => other != null && Name == other.Name && QueryContract == other.QueryContract && Component == other.Component &&
             Aspect == other.Aspect && CanRegister == other.CanRegister && Tag == other.Tag && HasDefault == other.HasDefault &&
-            Shared == other.Shared && Static == other.Static && ConfigInitialize == other.ConfigInitialize && System == other.System && EntityType == other.EntityType &&
+            System == other.System && EntityType == other.EntityType &&
             (Query == null ? other.Query == null : other.Query != null && Query.SequenceEqual(other.Query, StringComparer.Ordinal)) &&
             (Construction == null ? other.Construction == null : other.Construction != null && Construction.SequenceEqual(other.Construction, StringComparer.Ordinal)) &&
             (PartialScope == null ? other.PartialScope == null : other.PartialScope != null && PartialScope.SequenceEqual(other.PartialScope, StringComparer.Ordinal));

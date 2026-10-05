@@ -9,6 +9,7 @@ namespace ME.BECS.SourceGenerator;
 internal sealed class ConfigMaskInputEmitter {
     private readonly INamedTypeSymbol type;
     private readonly IFieldSymbol[] fields;
+    internal INamedTypeSymbol Type => this.type;
     private ConfigMaskInputEmitter(INamedTypeSymbol type, IFieldSymbol[] fields) { this.type = type; this.fields = fields; }
 
     internal static bool TryCreate(INamedTypeSymbol? type, string? orderedFields, Compilation compilation, out ConfigMaskInputEmitter? entry) {
@@ -21,7 +22,7 @@ internal sealed class ConfigMaskInputEmitter {
         // Metadata declaration order matches the reflection field order used by
         // serialized config masks. Never alphabetize these bit positions.
         var names = orderedFields == null ? fields.Select(field => field.Name).ToArray() : orderedFields.Split(',');
-        if (fields.Length < 2 || names.Length != fields.Length || names.Distinct(System.StringComparer.Ordinal).Count() != names.Length ||
+        if (fields.Length < 1 || names.Length != fields.Length || names.Distinct(System.StringComparer.Ordinal).Count() != names.Length ||
             fields.Any(static field => field.IsReadOnly || field.IsFixedSizeBuffer || field.IsImplicitlyDeclared)) return false;
         var ordered = new IFieldSymbol[names.Length];
         for (var index = 0; index < names.Length; ++index) {
@@ -41,23 +42,29 @@ internal sealed class ConfigMaskInputEmitter {
                 .Append(entries[index].type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append(">(Apply_")
                 .Append(index.ToString(CultureInfo.InvariantCulture)).Append(");\n");
         source.Append("}\n");
-        for (var index = 0; index < entries.Count; ++index) {
-            var entry = entries[index];
-            var name = entry.type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            source.Append("public static string[] GetFields_").Append(index.ToString(CultureInfo.InvariantCulture))
-                .Append("() => new string[] { ")
-                .Append(string.Join(",", entry.fields.Select(field => Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(field.Name, true))))
-                .Append(" };\n");
-            source.Append("[global::Unity.Burst.BurstCompile]\n[global::AOT.MonoPInvokeCallback(typeof(global::ME.BECS.UnsafeEntityConfig.MethodMaskCallerDelegate))]\n")
-                .Append("public static void Apply_").Append(index.ToString(CultureInfo.InvariantCulture))
-                .Append("(in global::ME.BECS.UnsafeEntityConfig config, void* componentPtr, void* configComponent, void* maskPtr, in global::ME.BECS.Ent ent) {\n")
-                .Append("var allocator = ent.World.state.ptr->allocator;\nvar mask = (global::ME.BECS.BitArray*)maskPtr;\nvar component = (")
-                .Append(name).Append("*)componentPtr;\nvar source = (").Append(name).Append("*)configComponent;\n");
-            for (var field = 0; field < entry.fields.Length; ++field)
-                source.Append("if (mask->IsSet(in allocator, ").Append(field.ToString(CultureInfo.InvariantCulture))
-                    .Append(")) component->@").Append(entry.fields[field].Name).Append(" = source->@").Append(entry.fields[field].Name).Append(";\n");
-            source.Append("}\n");
-        }
+        for (var index = 0; index < entries.Count; ++index)
+            entries[index].AppendEntry(source, source, index.ToString(CultureInfo.InvariantCulture), "");
         source.Append("} }\n");
+    }
+
+    internal void AppendEntry(StringBuilder source, StringBuilder registrations, string key, string callbackOwner) {
+        var entry = this;
+        var name = entry.type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        registrations.Append("public static void Register_").Append(key)
+            .Append("() => global::ME.BECS.WorldStaticCallbacks.RegisterConfigComponentMaskCallback<").Append(name)
+            .Append(">(").Append(callbackOwner).Append("Apply_").Append(key).Append(");\n");
+        registrations.Append("public static string[] GetFields_").Append(key)
+            .Append("() => new string[] { ")
+            .Append(string.Join(",", entry.fields.Select(field => Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(field.Name, true))))
+            .Append(" };\n");
+        source.Append("[global::Unity.Burst.BurstCompile]\n[global::AOT.MonoPInvokeCallback(typeof(global::ME.BECS.UnsafeEntityConfig.MethodMaskCallerDelegate))]\n")
+            .Append("[global::UnityEngine.Scripting.Preserve]\npublic static void Apply_").Append(key)
+            .Append("(in global::ME.BECS.UnsafeEntityConfig config, void* componentPtr, void* configComponent, void* maskPtr, in global::ME.BECS.Ent ent) {\n")
+            .Append("var allocator = ent.World.state.ptr->allocator;\nvar mask = (global::ME.BECS.BitArray*)maskPtr;\nvar component = (")
+            .Append(name).Append("*)componentPtr;\nvar source = (").Append(name).Append("*)configComponent;\n");
+        for (var field = 0; field < entry.fields.Length; ++field)
+            source.Append("if (mask->IsSet(in allocator, ").Append(field.ToString(CultureInfo.InvariantCulture))
+                .Append(")) component->@").Append(entry.fields[field].Name).Append(" = source->@").Append(entry.fields[field].Name).Append(";\n");
+        source.Append("}\n");
     }
 }

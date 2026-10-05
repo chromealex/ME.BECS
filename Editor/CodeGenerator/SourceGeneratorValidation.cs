@@ -96,6 +96,24 @@ namespace ME.BECS.Editor {
                     if (!used.components.SequenceEqual(assisted.components)) issues.Add("Catalog-assisted component discovery differs in content or order from legacy.");
                     if (!used.aspects.SequenceEqual(assisted.aspects)) issues.Add("Catalog-assisted aspect discovery differs in content or order from legacy.");
                     if (!used.componentsGroup.SequenceEqual(assisted.componentsGroup)) issues.Add("Catalog-assisted component groups differ in content or order from legacy.");
+                } else {
+                    Systems.SystemDependenciesCodeGenerator.GetUsedObjects(false, out var assisted, useSourceCatalogs: true);
+                    foreach (var selection in new[] {
+                                 (name: "components", legacy: used.components, source: assisted.components),
+                                 (name: "aspects", legacy: used.aspects, source: assisted.aspects),
+                                 (name: "component groups", legacy: used.componentsGroup, source: assisted.componentsGroup),
+                                 (name: "entity types", legacy: used.entityTypes, source: assisted.entityTypes),
+                                 (name: "jobs", legacy: used.jobTypes, source: assisted.jobTypes),
+                                 (name: "systems", legacy: used.systems, source: assisted.systems),
+                             }) {
+                        var sourceOnly = selection.source.Except(selection.legacy).Select(type => type.AssemblyQualifiedName).ToArray();
+                        var legacyOnly = selection.legacy.Except(selection.source).Select(type => type.AssemblyQualifiedName).ToArray();
+                        var sameOrder = selection.legacy.SequenceEqual(selection.source);
+                        report.AppendLine($"Runtime usage {selection.name}: production IL={selection.legacy.Count}, diagnostic source-assisted={selection.source.Count}, source-only={sourceOnly.Length}, IL-only={legacyOnly.Length}, same order={sameOrder}");
+                        if (!sameOrder) issues.Add("Source-assisted runtime " + selection.name + " differ from production IL in content or order (diagnostic comparison only).");
+                        foreach (var identity in sourceOnly) report.AppendLine("  source-only: " + identity);
+                        foreach (var identity in legacyOnly) report.AppendLine("  legacy-only: " + identity);
+                    }
                 }
                 var components = new HashSet<Type>();
                 var aspects = new HashSet<Type>();
@@ -184,15 +202,14 @@ namespace ME.BECS.Editor {
                         issues.Add("Group registration bridge falls back: " + Name(type));
                     }
                 }
+                var componentBootstrapAvailable = 0;
+                var componentBootstrapTotal = 0;
                 foreach (var type in used.components.Where(components.Contains)) {
+                    ++componentBootstrapTotal;
                     try {
-                        if (!SourceGeneratorBridge.TryGetAot(type, "Component", out _)) issues.Add("Component AOT bridge falls back: " + Name(type));
-                        if (typeof(IComponentShared).IsAssignableFrom(type) && !SourceGeneratorBridge.TryGetAot(type, "Shared", out _)) issues.Add("Shared AOT bridge falls back: " + Name(type));
-                        if (typeof(IConfigComponentStatic).IsAssignableFrom(type) && !SourceGeneratorBridge.TryGetAot(type, "Static", out _)) issues.Add("Static AOT bridge falls back: " + Name(type));
-                        if (typeof(IConfigInitialize).IsAssignableFrom(type)) {
-                            if (!SourceGeneratorBridge.TryGetConfigRegistration(type, false, false, out _)) issues.Add("Config registration bridge falls back: " + Name(type));
-                            if (!SourceGeneratorBridge.TryGetAot(type, "Config", out _)) issues.Add("Config AOT bridge falls back: " + Name(type));
-                        }
+                        var available = SourceGeneratorBridge.TryGetComponentRegistration(type, editor, out var compiledFlags, out var bootstrapReason);
+                        if (available) ++componentBootstrapAvailable;
+                        else issues.Add("Compiled component registration/AOT unavailable: " + Name(type) + " — " + bootstrapReason);
                         var catalog = catalogs[type.Assembly];
                         var metadata = catalog.GetMethod("GetRegistrationFlags", BindingFlags.Public | BindingFlags.Static,
                             null, new[] { typeof(Type) }, null);
@@ -207,15 +224,21 @@ namespace ME.BECS.Editor {
                         var ordinary = !special && typeof(IComponent).IsAssignableFrom(type);
                         var expected = (ordinary ? 1 : 0) | (tag ? 2 : 0) | (hasDefault ? 4 : 0);
                         if (actual != expected) issues.Add($"Registration flags: {Name(type)} legacy={expected}, generated={actual} (1=registration, 2=tag, 4=default)");
-                        if (ordinary && !SourceGeneratorBridge.TryGetRegistration(type, tag, false, out _)) {
-                            issues.Add("Registration bridge falls back: " + Name(type));
+                        if (available) {
+                            var expectedPhases = (tag ? 1 : 0) | (hasDefault ? 4 : 0) |
+                                (typeof(IConfigComponentStatic).IsAssignableFrom(type) ? 2 : 0) |
+                                (typeof(IComponentShared).IsAssignableFrom(type) ? 8 : 0) |
+                                (typeof(IConfigInitialize).IsAssignableFrom(type) ? 32 : 0);
+                            // Custom hash follows the compiler's interface slot, not the old
+                            // same-name reflection heuristic. This comparison never gates export.
+                            if ((compiledFlags & ~16) != expectedPhases)
+                                issues.Add($"Compiled component classification: {Name(type)} reflected={expectedPhases}, generated={compiledFlags} (custom hash excluded from reflection comparison)");
                         }
-                        if (typeof(IComponentShared).IsAssignableFrom(type) && !SourceGeneratorBridge.TryGetSpecialRegistration(type, true, tag, false, out _)) issues.Add("Shared registration bridge falls back: " + Name(type));
-                        if (typeof(IConfigComponentStatic).IsAssignableFrom(type) && !SourceGeneratorBridge.TryGetSpecialRegistration(type, false, tag, false, out _)) issues.Add("Static registration bridge falls back: " + Name(type));
                     } catch (Exception exception) {
                         issues.Add("Cannot compare registration: " + Name(type) + " — " + exception.GetBaseException().Message);
                     }
                 }
+                report.AppendLine($"Component registration/AOT plans: available={componentBootstrapAvailable}, total={componentBootstrapTotal} (compiled bootstrap signatures only; methods NOT invoked, Burst/stripping NOT validated)");
                 var extraComponents = components.Except(used.components).Select(Name).ToArray();
                 var extraAspects = aspects.Except(used.aspects).Select(Name).ToArray();
                 var extraSystems = systems.Except(used.systems).Select(Name).ToArray();

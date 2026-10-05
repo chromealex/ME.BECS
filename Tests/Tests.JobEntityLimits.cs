@@ -17,6 +17,7 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void SourceCountsIncludeEachCallToSharedHelper() {
+            global::ME.BECS.Tests.SourceAnalysisTests.Require();
             var rows = typeof(RepeatedCreationJob).Assembly
                 .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
                 .Where(attribute => attribute.Key == "ME.BECS.JobEntityCounts.v1" && attribute.Value != null)
@@ -42,6 +43,7 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void SourceCountsRetainBothLoopContextsOfSharedHelper() {
+            global::ME.BECS.Tests.SourceAnalysisTests.Require();
             var rows = typeof(MixedLoopCreationJob).Assembly
                 .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
                 .Where(attribute => attribute.Key == "ME.BECS.JobEntityCounts.v1" && attribute.Value != null)
@@ -197,6 +199,8 @@ namespace ME.BECS.Tests {
         public void MissingAttributeMessageExplainsBound() {
             var exception = Assert.Throws<System.Exception>(() => E.THROW_ENT_NEW());
             StringAssert.Contains("EntitiesJobMaxCount(number)", exception.Message);
+            StringAssert.Contains("exception filter", exception.Message);
+            StringAssert.Contains("recursion", exception.Message);
         }
     }
 }

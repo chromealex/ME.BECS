@@ -1,21 +1,22 @@
 namespace ME.BECS.Editor.Systems {
     using System;
     using System.Globalization;
+    using System.Linq;
     using System.Reflection;
     using System.Text;
     using ME.BECS.FeaturesGraph;
     using scg = System.Collections.Generic;
 
     public static class SourceGeneratorGraphLifecycleValidation {
-        [UnityEditor.MenuItem("ME.BECS/Source Generator/Compare Graph Lifecycle Calls")]
-        private static void Compare() {
+        [UnityEditor.MenuItem("ME.BECS/Source Generator/Inspect Graph Lifecycle Calls")]
+        private static void Inspect() {
             if (UnityEditor.EditorApplication.isCompiling) { UnityEngine.Debug.LogWarning("[ME.BECS] Wait for compilation."); return; }
             var report = new StringBuilder();
             var plans = new scg.Dictionary<(int, string), scg.List<string[]>>();
             var snapshots = new scg.Dictionary<int, scg.List<string>>();
             var execution = new scg.Dictionary<(int, string), scg.List<string>>();
             var metadataErrors = 0;
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().OrderBy(value => value.FullName, StringComparer.Ordinal)) {
                 if (assembly.IsDynamic) continue;
                 try {
                     foreach (var attribute in assembly.GetCustomAttributes<AssemblyMetadataAttribute>()) {
@@ -48,10 +49,9 @@ namespace ME.BECS.Editor.Systems {
                     }
                 } catch (Exception exception) { ++metadataErrors; report.AppendLine("Metadata error: " + assembly.FullName + ": " + exception.Message); }
             }
-            var compared = 0; var equal = 0; var unavailable = 0; var errors = 0; var dependencyEqual = 0;
+            var inspected = 0; var unavailable = 0; var errors = 0;
             var sourceSelected = 0;
             var selectionUnavailable = 0;
-            var generator = new SystemsCodeGenerator { burstedTypes = UnityEditor.TypeCache.GetTypesWithAttribute<Unity.Burst.BurstCompileAttribute>() };
             var guids = UnityEditor.AssetDatabase.FindAssets("t:SystemsGraph");
             Array.Sort(guids, StringComparer.Ordinal);
             foreach (var guid in guids) {
@@ -63,14 +63,13 @@ namespace ME.BECS.Editor.Systems {
                         ++sourceSelected;
                     } else {
                         ++selectionUnavailable;
-                        report.AppendLine(label + ": source execution selection missing or ambiguous; recompile the runtime manifest/catalog");
+                        report.AppendLine(label + ": source execution selection missing or ambiguous");
                     }
                     try {
-                        // GetSyncPoint may normalize missing arrays: refuse those assets before tracing.
+                        // Cached sync hints are diagnostic only: the compiler derives sync from topology.
                         var topology = SourceGeneratorGraphTopology.Serialize(graph);
-                        if (topology.Contains("\tunknown\n")) { ++unavailable; report.AppendLine(label + ": sync snapshot unavailable"); continue; }
-                        if (!snapshots.TryGetValue(graph.GetId(), out var snapshot) || snapshot.Count != 1 || snapshot[0] != topology) {
-                            ++unavailable; report.AppendLine(label + ": missing, duplicate or stale topology snapshot; regenerate inputs"); continue;
+                        if (!snapshots.TryGetValue(graph.GetId(), out var snapshot) || snapshot.Count != 1 || WithoutSyncHints(snapshot[0]) != WithoutSyncHints(topology)) {
+                            ++unavailable; report.AppendLine(label + ": missing, duplicate or stale topology snapshot"); continue;
                         }
                         if (!plans.TryGetValue((graph.GetId(), phase.ToString()), out var candidates) || candidates.Count != 1 ||
                             candidates[0][2] != "ME.BECS.GraphLifecyclePlan.v1") {
@@ -78,48 +77,27 @@ namespace ME.BECS.Editor.Systems {
                         }
                         var calls = ReadCalls(candidates[0]);
                         var sourceDependencies = LifecycleDependencyTrace.FromPlan(candidates[0]);
-                        var editorDependencies = new LifecycleDependencyTrace();
-                        var trace = new scg.List<string>();
-                        var ignoredContent = new scg.List<string>();
-                        var name = "Graph" + EditorUtils.GetCodeName(graph.name);
-                        switch (phase) {
-                            case Method.Awake: SystemsCodeGenerator.AddGraph<IAwake>(generator, name, 0, "OnAwake", phase, ignoredContent, graph, trace, editorDependencies); break;
-                            case Method.Start: SystemsCodeGenerator.AddGraph<IStart>(generator, name, 0, "OnStart", phase, ignoredContent, graph, trace, editorDependencies); break;
-                            case Method.Update: SystemsCodeGenerator.AddGraph<IUpdate>(generator, name, 0, "OnUpdate", phase, ignoredContent, graph, trace, editorDependencies); break;
-                            case Method.Destroy: SystemsCodeGenerator.AddGraph<IDestroy>(generator, name, 0, "OnDestroy", phase, ignoredContent, graph, trace, editorDependencies); break;
-                            case Method.DrawGizmos: SystemsCodeGenerator.AddGraph<IDrawGizmos>(generator, name, 0, "OnDrawGizmos", phase, ignoredContent, graph, trace, editorDependencies); break;
-                        }
-                        ++compared;
-                        var matches = calls.Count == trace.Count;
-                        for (var index = 0; index < Math.Max(calls.Count, trace.Count); ++index) {
-                            var source = index < calls.Count ? calls[index] : "<missing>";
-                            var legacy = index < trace.Count ? trace[index] : "<missing>";
-                            if (source == legacy) continue;
-                            matches = false;
-                            report.AppendLine(label + " call " + index + ": source=" + source + "; Editor=" + legacy);
-                        }
-                        if (matches) ++equal;
-                        var dependenciesMatch = sourceDependencies.Result == editorDependencies.Result &&
-                            sourceDependencies.Events.Count == editorDependencies.Events.Count;
-                        for (var index = 0; index < Math.Max(sourceDependencies.Events.Count, editorDependencies.Events.Count); ++index) {
-                            var source = index < sourceDependencies.Events.Count ? sourceDependencies.Events[index] : "<missing>";
-                            var legacy = index < editorDependencies.Events.Count ? editorDependencies.Events[index] : "<missing>";
-                            if (source == legacy) continue;
-                            dependenciesMatch = false;
-                            report.AppendLine(label + " dependency event " + index + ": source=" + source + "; Editor=" + legacy);
-                        }
-                        if (sourceDependencies.Result != editorDependencies.Result)
-                            report.AppendLine(label + " result handle: source=" + sourceDependencies.Result + "; Editor=" + editorDependencies.Result);
-                        if (dependenciesMatch) ++dependencyEqual;
+                        ++inspected;
+                        report.AppendLine(label + ": compiled call groups=" + calls.Count +
+                            ", symbolic dependency events=" + sourceDependencies.Events.Count);
+                        report.AppendLine("call\tfirst-slot\tcount\tmode\tpre-apply\tpost-apply\tburst");
+                        for (var index = 0; index < calls.Count; ++index)
+                            report.Append(index.ToString(CultureInfo.InvariantCulture)).Append('\t').AppendLine(calls[index]);
+                        foreach (var entry in sourceDependencies.Events) report.Append("dependency\t").AppendLine(entry);
+                        report.Append("result-handle\t").AppendLine(sourceDependencies.Result);
                     } catch (Exception exception) { ++errors; report.AppendLine(label + ": " + exception.Message); }
                 }
             }
-            SourceGeneratorGraphTopology.PublishLifecycleComparison("Lifecycle call traces: compared=" + compared + ", equal=" + equal +
-                ", dependency traces equal=" + dependencyEqual +
+            // Keep the historical report filename for existing workflows; this is
+            // inspection of compiler output, not equivalence to a retired emitter.
+            SourceGeneratorGraphTopology.PublishLifecycleComparison("Compiled lifecycle inspection: inspected=" + inspected +
                 ", unavailable=" + unavailable + ", errors=" + errors + ", metadata errors=" + metadataErrors +
                 ", source execution metadata=" + sourceSelected + ", execution selection unavailable=" + selectionUnavailable +
-                ". Checks call metadata plus symbolic dependency events and final handle, including pass-through batches. Does NOT verify runtime system behavior, Burst execution or stripping. No systems invoked; no C# files read/written.", report.ToString());
+                ". No legacy comparison. Advisory report only; does not affect export. Does NOT verify runtime behavior, Burst execution or stripping. No systems invoked; no C# files read/written.", report.ToString());
         }
+
+        private static string WithoutSyncHints(string topology) =>
+            string.Join("\n", topology.Split('\n').Where(line => !line.StartsWith("sync\t", StringComparison.Ordinal)));
 
         private static scg.List<string> ReadCalls(string[] rows) {
             var result = new scg.List<string>();

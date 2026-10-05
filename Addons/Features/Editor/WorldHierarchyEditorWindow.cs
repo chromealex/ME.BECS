@@ -94,7 +94,6 @@ namespace ME.BECS.Editor {
     
     public unsafe class WorldHierarchyEditorWindow : EditorWindow {
 
-        private const float TAG_WIDTH = 8f;
 
         private StyleSheet styleSheet;
         private StyleSheet styleSheetTooltip;
@@ -104,30 +103,32 @@ namespace ME.BECS.Editor {
         private string search;
         private readonly System.Collections.Generic.HashSet<System.Type> searchTypes = new System.Collections.Generic.HashSet<System.Type>();
         private readonly System.Collections.Generic.HashSet<string> searchNames = new System.Collections.Generic.HashSet<string>();
-        private VisualElement tagsBackground;
-        private readonly System.Collections.Generic.List<Renderer> currentObjects = new System.Collections.Generic.List<Renderer>();
         private bool alignSceneViewToObject = false;
-        private bool pause;
+        private bool synchronizingSelection;
+        private double nextHierarchyUpdate, nextWorldUpdate;
+        private ViewsModule viewsModule;
+        private StyleSheet currentTheme;
+        private StyleSheet compactHierarchyStyle;
+        private readonly scg::Dictionary<Ent, Ent> parents = new scg::Dictionary<Ent, Ent>();
+        private readonly scg::Dictionary<Ent, Ent> observedParents = new scg::Dictionary<Ent, Ent>();
+        private readonly scg::Dictionary<Ent, Ent> snapshotParents = new scg::Dictionary<Ent, Ent>();
+        private readonly scg::Dictionary<Ent, byte> traversal = new scg::Dictionary<Ent, byte>();
+        private readonly scg::List<Ent> pathBuffer = new scg::List<Ent>();
+        private readonly System.Collections.Generic.HashSet<int> parentIds = new System.Collections.Generic.HashSet<int>();
+        private readonly scg::List<int> staleParentIds = new scg::List<int>();
+        private readonly scg::List<int> selectionIds = new scg::List<int>();
+        private readonly scg::List<Object> selectionObjects = new scg::List<Object>();
+        private readonly scg::List<Ent> selectionBuffer = new scg::List<Ent>();
 
-        private readonly System.Collections.Generic.List<Element> elements = new System.Collections.Generic.List<Element>();
         private readonly System.Collections.Generic.HashSet<Ent> selected = new System.Collections.Generic.HashSet<Ent>();
         internal readonly System.Collections.Generic.HashSet<EditorUtils.ComponentGroupItem> uniqueGroups = new System.Collections.Generic.HashSet<EditorUtils.ComponentGroupItem>();
         internal readonly System.Collections.Generic.HashSet<EditorUtils.ComponentGroupItem> ignoredGroups = new System.Collections.Generic.HashSet<EditorUtils.ComponentGroupItem>();
-        private readonly System.Collections.Generic.Dictionary<Ent, bool> foldout = new System.Collections.Generic.Dictionary<Ent, bool>();
-        private readonly System.Collections.Generic.Dictionary<Ent, System.Collections.Generic.List<EditorUtils.ComponentGroupItem>> entToTags = new System.Collections.Generic.Dictionary<Ent, System.Collections.Generic.List<EditorUtils.ComponentGroupItem>>();
-        private readonly System.Collections.Generic.Dictionary<Ent, uint> entToComponentsCount = new System.Collections.Generic.Dictionary<Ent, uint>();
-        private readonly System.Collections.Generic.Dictionary<Ent, uint> entToVersions = new System.Collections.Generic.Dictionary<Ent, uint>();
         internal bool settingsChanged;
 
         private System.Collections.Generic.List<Ent> cache = new System.Collections.Generic.List<Ent>();
-        private int tagsCount;
-        private GradientAnimated logoLine;
 
         private readonly System.Collections.Generic.HashSet<Ent> current = new System.Collections.Generic.HashSet<Ent>();
-        private System.Collections.Generic.List<Ent> createEntities = new System.Collections.Generic.List<Ent>();
         private readonly System.Collections.Generic.HashSet<Ent> allEntities = new System.Collections.Generic.HashSet<Ent>();
-        private readonly System.Collections.Generic.HashSet<Ent> removeEntities = new System.Collections.Generic.HashSet<Ent>();
-        private readonly System.Collections.Generic.Dictionary<Ent, Element> entsToElements = new System.Collections.Generic.Dictionary<Ent, Element>();
         //private bool rawHierarchy;
 
         private scg::List<TreeViewItemData<Ent>> roots = new scg::List<TreeViewItemData<Ent>>();
@@ -187,13 +188,9 @@ namespace ME.BECS.Editor {
         
         private void ClearWindowData(PlayModeStateChange state) {
             if (state is PlayModeStateChange.ExitingPlayMode) {
-                this.aliveWorlds.Clear();
+                this.aliveWorlds.Clear(); this.openedWorlds.Clear(); this.tabsSignature = null;
                 this.selectedWorld = default;
-                this.foldout.Clear();
-                this.entToTags.Clear();
-                this.entsToElements.Clear();
-                this.entToVersions.Clear();
-                this.entToComponentsCount.Clear();
+                this.parents.Clear(); this.observedParents.Clear(); this.snapshotParents.Clear(); this.roots.Clear(); this.dics.Clear();
                 this.selected.Clear();
                 this.current.Clear();
                 this.CreateGUI();
@@ -212,41 +209,16 @@ namespace ME.BECS.Editor {
             
         }
 
-        private void OnSceneGUI(SceneView obj) {
-            
-            if (this.selected.Count > 0) {
-                var initializer = Object.FindObjectsByType<BaseWorldInitializer>(FindObjectsInactive.Exclude, FindObjectsSortMode.None).FirstOrDefault(x => x.world.id == this.selectedWorld.id);
-                var vm = initializer?.GetModule<ViewsModule>();
-                this.currentObjects.Clear();
-                Transform tr = null;
-                foreach (var selection in this.selected) {
-                    if (selection.IsAlive() == false) continue;
-                    var view = vm?.GetViewByEntity(selection);
-                    if (view is Component comp) {
-                        //this.currentObjects.Add(comp.gameObject);
-                        this.currentObjects.AddRange(comp.gameObject.GetComponentsInChildren<Renderer>());
-                        tr = comp.transform;
-                    }
-                    if (selection.Has<WorldMatrixComponent>() == true) {
-                        var t = selection.GetAspect<TransformAspect>();
-                        Handles.PositionHandle((Vector3)t.position, (Quaternion)t.rotation);
-                    }
-                }
-                Handles.DrawOutline(this.currentObjects.ToArray(), Color.green);
-                if (tr != null && this.alignSceneViewToObject == true) {
-                    if (this.currentObjects.Count > 0) {
-                        var bounds = this.currentObjects[0].bounds;
-                        for (int i = 1; i < this.currentObjects.Count; ++i) {
-                            bounds.Encapsulate(this.currentObjects[i].bounds);
-                        }
-                        obj.Frame(bounds);
-                    } else {
-                        obj.AlignViewToObject(tr);
-                    }
-                }
-                this.alignSceneViewToObject = false;
+        private void OnSceneGUI(SceneView scene) {
+            if (!this.alignSceneViewToObject) return;
+            this.alignSceneViewToObject = false;
+            if (scene.FrameSelected()) return;
+            foreach (var ent in this.selected) {
+                if (!ent.IsAlive() || !ent.Has<WorldMatrixComponent>()) continue;
+                var transform = ent.GetAspect<TransformAspect>();
+                scene.Frame(new Bounds((Vector3)transform.position, Vector3.one * 2f));
+                break;
             }
-
         }
 
         private void UpdateWorlds() {
@@ -266,20 +238,25 @@ namespace ME.BECS.Editor {
         }
 
         private void Update() {
-
-            if (this.pause == true) return;
-            
-            this.UpdateWorlds();
-            this.DrawToolbar();
-            this.UpdateFooter();
-
-            if (this.selectedWorld.isCreated == true) {
-                this.DrawEntities();
+            var now = EditorApplication.timeSinceStartup;
+            if (now >= this.nextWorldUpdate) {
+                this.nextWorldUpdate = now + 0.5;
+                this.UpdateWorlds(); this.DrawToolbar();
+                if (this.selectedWorld.isCreated && !this.aliveWorlds.Any(world => world.Equals(this.selectedWorld))) this.SelectWorld(default);
+                this.viewsModule = this.selectedWorld.isCreated ? WorldInitializers.GetByWorldName(this.selectedWorld.Name)?.GetModule<ViewsModule>() : null;
+                if (Selection.activeObject == this.currentInspector && this.selected.Any(ent => ent.IsAlive() && this.viewsModule?.GetViewByEntity(ent) is Component)) this.PublishSelection();
+                else this.OnSelectionChanged();
             }
-            
+            if (now < this.nextHierarchyUpdate) return;
+            this.nextHierarchyUpdate = now + 0.1;
+            if (this.selectedWorld.isCreated) this.DrawEntities();
+            this.UpdateFooter();
         }
 
         public void DrawToolbar() {
+            var removed = this.openedWorlds.RemoveAll(world => !this.aliveWorlds.Any(alive => alive.Equals(world)));
+            if (removed > 0) this.tabsSignature = null;
+            this.DrawWorldTabs();
 
             if (this.toolbarItemsContainer != null) {
 
@@ -293,7 +270,8 @@ namespace ME.BECS.Editor {
                     ++k;
                 }
 
-                this.toolbarItemsContainer.choices = list;
+                if (!this.toolbarItemsContainer.choices.SequenceEqual(list)) this.toolbarItemsContainer.choices = list;
+                if (index >= 0) this.toolbarItemsContainer.SetValueWithoutNotify(list[index]);
                 //this.toolbarItemsContainer.index = index;
 
             }
@@ -301,6 +279,17 @@ namespace ME.BECS.Editor {
         }
         
         private TreeView treeView;
+        private VisualElement worldTabs;
+        private readonly scg::List<World> openedWorlds = new scg::List<World>();
+        private string tabsSignature;
+        private void OnEnable() {
+            EditorApplication.delayCall -= this.RebuildAfterReload;
+            EditorApplication.delayCall += this.RebuildAfterReload;
+        }
+        private void RebuildAfterReload() {
+            if (this != null) this.CreateGUI();
+        }
+
         private void CreateGUI() {
 
             Selection.selectionChanged -= this.OnSelectionChanged;
@@ -308,18 +297,28 @@ namespace ME.BECS.Editor {
 
             this.LoadSettings();
             this.LoadStyle();
+            this.treeView = null;
+            this.tabsSignature = null;
             this.rootVisualElement.Clear();
-            EditorUIUtils.ApplyDefaultStyles(this.rootVisualElement);
-            this.rootVisualElement.styleSheets.Add(this.styleSheet);
-            this.rootVisualElement.styleSheets.Add(this.styleSheetTooltip);
+            this.rootVisualElement.AddToClassList("compact-ecs-hierarchy");
+            this.rootVisualElement.style.flexDirection = FlexDirection.Column;
+            this.ApplyTheme();
+            Themes.Changed -= this.ApplyTheme; Themes.Changed += this.ApplyTheme;
             
-            this.logoLine = EditorUIUtils.AddLogoLine(this.rootVisualElement);
 
             var root = this.rootVisualElement;
+            this.worldTabs = new VisualElement();
+            this.worldTabs.AddToClassList("world-tabs");
+            this.worldTabs.style.flexDirection = FlexDirection.Row;
+            this.worldTabs.style.flexShrink = 0;
+            this.worldTabs.style.minHeight = 30;
+            root.Add(this.worldTabs);
+            this.DrawWorldTabs();
             {
                 var toolbarContainer = new VisualElement();
                 root.Add(toolbarContainer);
                 toolbarContainer.AddToClassList("toolbar-container");
+                toolbarContainer.style.flexShrink = 0;
                 this.MakeToolbar(toolbarContainer);
             }
             
@@ -329,25 +328,32 @@ namespace ME.BECS.Editor {
                     bindItem = (element, i) => {
                         var item = this.treeView.GetItemDataForIndex<Ent>(i);
                         var txt = element.Q<Label>(className: "caption");
-                        txt.text = item.ToString(withWorld: false, withVersion: false).ToString();
+                        element.userData = item;
+                        txt.text = item.IsAlive() ? item.ToString(withWorld: false, withVersion: false).ToString() : "Destroyed entity";
                         var ver = element.Q<Label>(className: "version");
-                        ver.text = item.Version.ToString();
+                        ver.text = item.IsAlive() ? item.Version.ToString() : "—";
                     },
                 };
+                treeView.fixedItemHeight = 26;
+                treeView.RegisterCallback<KeyDownEvent>(evt => {
+                    if (evt.keyCode != KeyCode.Delete && evt.keyCode != KeyCode.Backspace) return;
+                    this.DeleteSelected(); evt.StopPropagation();
+                });
                 treeView.selectionType = SelectionType.Multiple;
-                treeView.selectionChanged += (values) => {
+                treeView.selectionChanged += values => {
+                    if (this.synchronizingSelection) return;
                     this.selected.Clear();
-                    var arr = values.ToArray();
-                    foreach (var item in arr) {
-                        this.selected.Add((Ent)item);
-                    }
-                    this.DrawInspector();
+                    foreach (var value in values) if (value is Ent ent && ent.IsAlive()) this.selected.Add(ent);
+                    this.PublishSelection();
                 };
                 treeView.AddToClassList("h-root");
                 this.treeView = treeView;
                 this.treeView.SetRootItems(this.roots);
                 
-                EditorUIUtils.AddWindowContent(root, treeView);
+                treeView.style.flexGrow = 1;
+                treeView.style.flexBasis = 0;
+                treeView.style.minHeight = 0;
+                root.Add(treeView);
                 
                 {
                     var toolbarContainer = new VisualElement();
@@ -359,25 +365,107 @@ namespace ME.BECS.Editor {
             } else {
                 var lbl = new Label("World is not selected");
                 lbl.AddToClassList("empty-label");
-                EditorUIUtils.AddWindowContent(root, lbl);
+                root.Add(lbl);
             }
             
         }
 
         private void OnSelectionChanged() {
-            if (Selection.activeObject != this.currentInspector) {
-                this.selected.Clear();
-                this.treeView?.ClearSelection();
+            if (this.synchronizingSelection) return;
+            this.selectionBuffer.Clear();
+            foreach (var obj in Selection.objects) {
+                if (obj is Entity entityObject) {
+                    if (entityObject.values != null) foreach (var ent in entityObject.values) if (ent.IsAlive()) this.selectionBuffer.Add(ent);
+                    continue;
+                }
+                if (obj is WorldEntityEditorWindow.TempObject entityReference) {
+                    if (entityReference.entity.IsAlive()) this.selectionBuffer.Add(entityReference.entity);
+                    continue;
+                }
+                var go = obj as GameObject ?? (obj as Component)?.gameObject;
+                var view = go != null ? go.GetComponentInParent<ME.BECS.Views.EntityView>(true) : null;
+                if (view == null) continue;
+                var entity = view.viewData.logicEnt.GetEntity();
+                if (!entity.IsAlive()) continue;
+                var module = WorldInitializers.GetByWorldName(entity.World.Name)?.GetModule<ViewsModule>();
+                // Pooled views can retain old handles until their next enable.
+                if (module?.GetViewByEntity(entity) is Component activeView && activeView == view) this.selectionBuffer.Add(entity);
             }
+            if (this.selected.SetEquals(this.selectionBuffer)) return;
+            this.synchronizingSelection = true;
+            try {
+                if (this.selectionBuffer.Count > 0 && !this.selectedWorld.Equals(this.selectionBuffer[0].World)) this.SelectWorld(this.selectionBuffer[0].World);
+                this.selected.Clear();
+                foreach (var ent in this.selectionBuffer) if (ent.World.Equals(this.selectedWorld)) this.selected.Add(ent);
+                if (this.selectedWorld.isCreated) this.DrawEntities();
+                this.RestoreSelection(true);
+            } finally { this.synchronizingSelection = false; }
+        }
+
+        private void RestoreSelection(bool reveal) {
+            if (this.treeView == null) return;
+            this.selectionIds.Clear();
+            foreach (var ent in this.selected) {
+                if (!ent.IsAlive() || !this.current.Contains(ent)) continue;
+                if (reveal) {
+                    var parent = ent;
+                    var remaining = this.parents.Count;
+                    while (remaining-- > 0 && this.parents.TryGetValue(parent, out parent) && !parent.IsEmpty()) this.treeView.ExpandItem((int)parent.id, false, false);
+                }
+                this.selectionIds.Add((int)ent.id);
+            }
+            this.treeView.SetSelectionByIdWithoutNotify(this.selectionIds);
+            if (reveal && this.selectionIds.Count > 0) this.treeView.ScrollToItemById(this.selectionIds[0]);
+        }
+
+        private void PublishSelection() {
+            this.selectionObjects.Clear();
+            foreach (var ent in this.selected) {
+                if (!ent.IsAlive()) continue;
+                if (this.viewsModule?.GetViewByEntity(ent) is Component view && view != null) this.selectionObjects.Add(view.gameObject);
+            }
+            this.synchronizingSelection = true;
+            try {
+                if (this.selectionObjects.Count > 0) Selection.objects = this.selectionObjects.Distinct().ToArray();
+                else if (this.selected.Count > 0) this.DrawInspector();
+                else Selection.objects = System.Array.Empty<Object>();
+            } finally { this.synchronizingSelection = false; }
+            SceneView.RepaintAll();
+        }
+
+        private void ApplyTheme() {
+            // EditorWindow's root owns Unity's default text/control styles too.
+            // Remove only our sheets, otherwise text loses its inherited font.
+            if (this.currentTheme != null) this.rootVisualElement.styleSheets.Remove(this.currentTheme);
+            if (this.compactHierarchyStyle != null) this.rootVisualElement.styleSheets.Remove(this.compactHierarchyStyle);
+            this.currentTheme = EditorUtils.LoadResource<StyleSheet>(Themes.CurrentTheme);
+            this.compactHierarchyStyle = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/HierarchyCompact.uss");
+            this.rootVisualElement.styleSheets.Add(this.currentTheme);
+            this.rootVisualElement.styleSheets.Add(this.compactHierarchyStyle);
+            // Also restore fonts in windows that were already open with the old implementation.
+            this.rootVisualElement.style.unityFont = EditorStyles.label.font ?? EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).font;
+            this.rootVisualElement.style.fontSize = 12;
+            this.rootVisualElement.style.color = EditorGUIUtility.isProSkin ? new Color(0.82f, 0.82f, 0.82f) : new Color(0.12f, 0.12f, 0.12f);
+        }
+
+        private void OnDisable() {
+            EditorApplication.delayCall -= this.RebuildAfterReload;
+            Selection.selectionChanged -= this.OnSelectionChanged;
+            SceneView.duringSceneGui -= this.OnSceneGUI;
+            EditorApplication.playModeStateChanged -= this.ClearWindowData;
+            Themes.Changed -= this.ApplyTheme;
+            if (this.currentInspector != null) Object.DestroyImmediate(this.currentInspector);
+            this.currentInspector = null;
         }
 
         private void SelectWorld(World world) {
             
+            if (world.isCreated && !this.openedWorlds.Any(opened => opened.Equals(world))) this.openedWorlds.Add(world);
             this.selectedWorld = world;
+            this.selected.Clear(); this.parents.Clear(); this.observedParents.Clear(); this.snapshotParents.Clear(); this.dics.Clear();
+            this.viewsModule = world.isCreated ? WorldInitializers.GetByWorldName(world.Name)?.GetModule<ViewsModule>() : null;
             this.current.Clear();
-            this.createEntities.Clear();
             this.allEntities.Clear();
-            this.removeEntities.Clear();
             this.roots.Clear();
             foreach (var kv in this.dics) {
                 kv.Value.Clear();
@@ -414,6 +502,41 @@ namespace ME.BECS.Editor {
             
         }
 
+        private void DrawWorldTabs() {
+            if (this.worldTabs == null) return;
+            var signature = this.selectedWorld.id + ":" + string.Join("|", this.openedWorlds.Select(world => world.id + ":" + world.Name.ToString()));
+            if (signature == this.tabsSignature) return;
+            this.tabsSignature = signature;
+            this.worldTabs.Clear();
+            foreach (var opened in this.openedWorlds) {
+                var world = opened;
+                var tab = new VisualElement(); tab.AddToClassList("world-tab");
+                tab.EnableInClassList("world-tab-selected", world.Equals(this.selectedWorld));
+                var select = new Button(() => this.SelectWorld(world)) { text = world.Name.ToString(), tooltip = "World #" + world.id };
+                tab.Add(select);
+                var close = new Button(() => {
+                    this.openedWorlds.RemoveAll(item => item.Equals(world));
+                    this.tabsSignature = null;
+                    if (this.selectedWorld.Equals(world)) this.SelectWorld(this.openedWorlds.Count > 0 ? this.openedWorlds[this.openedWorlds.Count - 1] : default);
+                    else this.DrawWorldTabs();
+                }) { text = "×", tooltip = "Close world tab" };
+                close.AddToClassList("world-tab-close"); tab.Add(close); this.worldTabs.Add(tab);
+            }
+            var add = new Button(() => {
+                this.UpdateWorlds();
+                var menu = new GenericMenu();
+                if (this.aliveWorlds.Count == 0) menu.AddDisabledItem(new GUIContent("No running worlds"));
+                foreach (var alive in this.aliveWorlds) {
+                    var world = alive;
+                    menu.AddItem(new GUIContent(world.Name.ToString() + " (#" + world.id + ")"), this.openedWorlds.Any(item => item.Equals(world)), () => this.SelectWorld(world));
+                }
+                menu.ShowAsContext();
+            }) { text = "+", tooltip = "Open world tab" };
+            add.AddToClassList("add-world-tab");
+            add.style.width = 28; add.style.height = 24; add.style.flexShrink = 0;
+            this.worldTabs.Add(add);
+        }
+
         private void MakeToolbar(VisualElement container) {
             
             container.Clear();
@@ -441,13 +564,7 @@ namespace ME.BECS.Editor {
                 var selection = new DropdownField(list, index, formatListItemCallback: (val) => {
                     if (val == null) return null;
                     return val.Replace("#", string.Empty);
-                }, formatSelectedValueCallback: (val) => {
-                    if (val == null) return "<b>W</b>";
-                    if (list.Count == 0) return null;
-                    var idx = list.IndexOf(val);
-                    if (idx < 0 || idx >= this.aliveWorlds.Count) return null;
-                    return $"#{this.aliveWorlds[idx].id}";
-                });
+                }, formatSelectedValueCallback: val => val ?? "Select world");
                 selection.RegisterValueChangedCallback((evt) => {
                     var idx = selection.choices.IndexOf(evt.newValue);
                     if (idx >= 0) {
@@ -514,177 +631,6 @@ namespace ME.BECS.Editor {
             
         }
 
-        public class Element {
-
-            public Ent value;
-            public Element parent;
-            public Element prev;
-            public Element next;
-            public VisualElement container;
-            public Label versionLabel;
-            public Foldout foldout;
-            public VisualElement tagsContainer;
-            private WorldHierarchyEditorWindow window;
-            public uint childrenCount;
-
-            public bool IsFoldout {
-                set {
-                    if (this.foldout.contentContainer.childCount == 0) return;
-                    if (this.window.foldout.TryAdd(this.value, value) == false) {
-                        this.window.foldout[this.value] = value;
-                    }
-                    this.foldout.value = value;
-                }
-                get {
-                    if (this.foldout.contentContainer.childCount == 0) return false;
-                    if (this.window.foldout.TryGetValue(this.value, out var val) == true) {
-                        return val;
-                    }
-                    return false;
-                }
-            }
-            public int level;
-            public VisualElement toggle;
-            public Rect worldBounds => this.toggle.worldBound;
-
-            public void UpdateLevel() {
-
-                var level = 0;
-                var element = this.parent;
-                while (element != null) {
-                    ++level;
-                    element = element.parent;
-                }
-                this.level = level;
-            
-            }
-
-            public Element(WorldHierarchyEditorWindow window) {
-                this.window = window;
-            }
-
-            public void Redraw(bool force) {
-                var versionChanged = force;
-                if (this.window.entToVersions.TryGetValue(this.value, out var version) == false) {
-                    this.window.entToVersions.Add(this.value, this.value.Version);
-                    versionChanged = true;
-                } else if (version != this.value.Version) {
-                    this.window.entToVersions[this.value] = this.value.Version;
-                    versionChanged = true;
-                }
-
-                if (versionChanged == true) {
-                    this.foldout.text = this.value.ToString(withWorld: false, withVersion: false, withGen: false).ToString();
-                    this.versionLabel.text = this.value.Version.ToString();
-                    this.RedrawTags(force);
-                }
-
-                this.toggle.style.paddingLeft = new StyleLength(0f + 20f * this.level);
-
-                if (this.window.selected.Contains(this.value) == true) {
-                    this.container.AddToClassList("selected");
-                } else {
-                    this.container.RemoveFromClassList("selected");
-                }
-            }
-
-            private void RedrawTags(bool force) {
-                var changed = true;
-                var state = this.value.World.state;
-                if (force == false) {
-                    #if ENABLE_BECS_FLAT_QUERIES
-                    var componentsCount = state.ptr->entities.GetEntityComponentsCount(state, this.value.id);
-                    #else
-                    var componentsCount = state.ptr->archetypes.list[state, state.ptr->archetypes.entToArchetypeIdx[state, this.value.id]].componentsCount;
-                    #endif
-                    if (this.window.entToComponentsCount.TryGetValue(this.value, out var count) == true) {
-                        if (count == componentsCount) {
-                            changed = false;
-                        }
-                    } else {
-                        this.window.entToComponentsCount.Add(this.value, componentsCount);
-                    }
-                }
-
-                if (changed == true) {
-                    this.window.entToTags.Remove(this.value);
-                }
-                if (this.window.entToTags.TryGetValue(this.value, out var tags) == false) {
-                    var groupsTags = new System.Collections.Generic.HashSet<EditorUtils.ComponentGroupItem>();
-                    var groups = EditorUtils.GetComponentGroups();
-                    foreach (var group in groups) {
-                        if (group.type == null) continue;
-                        if (groupsTags.Contains(group) == true) continue;
-                        foreach (var comp in group.components) {
-                            if (StaticTypesLoadedManaged.typeToId.TryGetValue(comp.type, out var typeId) == true) {
-                                if (Components.HasUnknownType(state, typeId, this.value.id, this.value.gen, true) == true) {
-                                    if (this.window.ignoredGroups.Contains(group) == false) groupsTags.Add(group);
-                                    this.window.uniqueGroups.Add(group);
-                                }
-                            }
-                        }
-                    }
-                    tags = groupsTags.ToList();
-                    this.window.entToTags.Add(this.value, tags);
-                    this.window.tagsCount = Mathf.Max(this.window.tagsCount, tags.Count);
-                    if (this.tagsContainer.childCount == tags.Count) {
-                        for (int i = 0; i < tags.Count; ++i) {
-                            var tag = tags[i];
-                            var tagLabel = this.tagsContainer.ElementAt(i);
-                            tagLabel.tooltip = tag.value;
-                            if (EditorUtils.TryGetGroupColor(tag.type, out var color) == true) {
-                                tagLabel.style.backgroundColor = new StyleColor(color);
-                                if (EditorUIUtils.IsDarkColor(color) == true) {
-                                    tagLabel.AddToClassList("dark-color");
-                                } else {
-                                    tagLabel.AddToClassList("light-color");
-                                }
-                            }
-
-                            tagLabel.AddToClassList("tag-label");
-                        }
-                    } else {
-                        this.tagsContainer.Clear();
-                        foreach (var tag in tags) {
-                            var tagLabel = new Label();
-                            tagLabel.tooltip = tag.value;
-                            if (EditorUtils.TryGetGroupColor(tag.type, out var color) == true) {
-                                tagLabel.style.backgroundColor = new StyleColor(color);
-                                if (EditorUIUtils.IsDarkColor(color) == true) {
-                                    tagLabel.AddToClassList("dark-color");
-                                } else {
-                                    tagLabel.AddToClassList("light-color");
-                                }
-                            }
-
-                            tagLabel.AddToClassList("tag-label");
-                            this.tagsContainer.Add(tagLabel);
-                        }
-                    }
-                }
-                this.tagsContainer.style.width = new StyleLength(this.window.GetTagsWidth());
-                this.tagsContainer.style.maxWidth = new StyleLength(this.window.GetTagsWidth());
-            }
-
-            public void Hide() {
-                this.IsFoldout = false;
-                if (this.container.parent != null) this.container.parent.Remove(this.container);
-            }
-
-            public void Reset() {
-                
-            }
-
-            public bool Contains(Vector2 position) {
-                return this.toggle.worldBound.Contains(position);
-            }
-
-        }
-
-        private float GetTagsWidth() {
-            return TAG_WIDTH * this.tagsCount + 4f + 2f + 8f + 6f;
-        }
-
         [CustomEditor(typeof(Entity))]
         public class EntityEditor : UnityEditor.Editor {
 
@@ -721,12 +667,13 @@ namespace ME.BECS.Editor {
         
         private void DrawInspector() {
             {
-                if (this.currentInspector != null) Object.DestroyImmediate(this.currentInspector);
-                {
-                    var obj = ScriptableObject.CreateInstance<Entity>();
-                    this.currentInspector = obj;
+                if (this.currentInspector == null) {
+                    this.currentInspector = ScriptableObject.CreateInstance<Entity>();
+                    this.currentInspector.hideFlags = HideFlags.HideAndDontSave;
                 }
                 this.currentInspector.values = this.selected.ToArray();
+                EditorUtility.SetDirty(this.currentInspector);
+                ActiveEditorTracker.sharedTracker.ForceRebuild();
                 Selection.activeObject = this.currentInspector;
             }
         }
@@ -742,6 +689,16 @@ namespace ME.BECS.Editor {
             versionLabel.AddToClassList("version");
             versionLabel.pickingMode = PickingMode.Ignore;
             container.Add(versionLabel);
+            container.AddManipulator(new ContextualMenuManipulator(menu => {
+                if (container.userData is not Ent ent || !ent.IsAlive()) return;
+                if (!this.selected.Contains(ent)) {
+                    this.selected.Clear(); this.selected.Add(ent); this.RestoreSelection(false);
+                }
+                menu.menu.AppendAction("Delete Entity", action => this.DeleteSelected(),
+                    action => this.selected.Count > 0 && this.selected.All(EntityDrawer.CanEditComponents) ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
+                menu.menu.AppendAction("Select View", action => this.PublishSelection(),
+                    action => this.selected.Any(item => item.IsAlive() && this.viewsModule?.GetViewByEntity(item) is Component) ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
+            }));
             container.RegisterCallback<ClickEvent>(evt => {
                 if (evt.clickCount == 2) {
                     this.alignSceneViewToObject = true;
@@ -750,294 +707,100 @@ namespace ME.BECS.Editor {
             return container;
         }
 
-        private Element MakeElement(Ent ent) {
-            var element = new Element(this) {
-                value = ent,
-            };
-            var container = new VisualElement();
-            var foldout = new Foldout();
-            var foldoutText = foldout.Q<Toggle>().Q(className: "unity-base-field__input");
-            var tagsContainer = new VisualElement();
-            tagsContainer.AddToClassList("tags");
-            tagsContainer.pickingMode = PickingMode.Ignore;
-            element.tagsContainer = tagsContainer;
-            foldout.text = ent.ToString(false, false, true).ToString();
-            foldout.value = false;
-            container.Add(foldout);
-            foldoutText.Add(tagsContainer);
-            container.focusable = true;
-            container.pickingMode = PickingMode.Position;
-            container.AddToClassList("h-element");
-            var context = new ContextualMenuManipulator((menu) => {
-                this.selected.Add(element.value);
-                menu.menu.AppendAction("Delete", (evt) => {
-                    foreach (var selection in this.selected) {
-                        if (selection.IsAlive() == true) selection.DestroyHierarchy();
-                    }
-                    this.selected.Clear();
-                });
-                {
-                    var status = DropdownMenuAction.Status.Disabled;
-                    var initializer = Object.FindObjectsByType<BaseWorldInitializer>(FindObjectsInactive.Exclude, FindObjectsSortMode.None).FirstOrDefault(x => x.world.id == this.selectedWorld.id);
-                    var viewsModule = initializer?.GetModule<ViewsModule>();
-                    if (viewsModule != null) {
-                        foreach (var selection in this.selected) {
-                            var view = viewsModule.GetViewByEntity(selection);
-                            if (view is Component) {
-                                status = DropdownMenuAction.Status.Normal;
-                                break;
-                            }
-                        }
-                    }
+        private void DeleteSelected() {
+            // Recheck at execution time: replay mode may have changed after opening the menu.
+            if (this.selected.Count == 0 || !this.selected.All(EntityDrawer.CanEditComponents)) return;
+            var deleting = this.selected.ToArray();
+            foreach (var ent in deleting) if (EntityDrawer.CanEditComponents(ent)) ent.DestroyHierarchy();
+            this.selected.Clear(); this.DrawEntities(); this.PublishSelection();
+        }
 
-                    menu.menu.AppendAction("Select View", (evt) => {
-                        var vm = initializer?.GetModule<ViewsModule>();
-                        if (vm != null) {
-                            var selections = new System.Collections.Generic.List<GameObject>();
-                            foreach (var selection in this.selected) {
-                                var view = vm.GetViewByEntity(selection);
-                                if (view is Component comp) {
-                                    selections.Add(comp.gameObject);
-                                }
-                            }
-
-                            Selection.objects = selections.ToArray();
-                        }
-                    }, status);
-                }
-            });
-            context.target = foldout;
-            var inp = foldout.Q(className: Foldout.inputUssClassName);
-            inp.pickingMode = PickingMode.Ignore;
-            foldout.Q(className: Foldout.toggleUssClassName).pickingMode = PickingMode.Ignore;
-            foldout.Q(className: Foldout.textUssClassName).pickingMode = PickingMode.Ignore;
-            foldout.Q(className: Foldout.checkmarkUssClassName).pickingMode = PickingMode.Position;
-            var toggle = foldout.Q(className: "unity-toggle");
-            element.toggle = toggle;
-            container.RegisterCallback<MouseOverEvent>(evt => {
-                if (toggle.worldBound.Contains(evt.mousePosition) == false) {
-                    container.RemoveFromClassList("hover");
-                    return;
-                }
-                container.AddToClassList("hover");
-            });
-            container.RegisterCallback<MouseOutEvent>(evt => {
-                container.RemoveFromClassList("hover");
-            });
-            foldout.RegisterValueChangedCallback((evt) => {
-                if (container.ClassListContains("hover") == false) return;
-                element.IsFoldout = evt.newValue;
-            });
-            container.RegisterCallback<MouseDownEvent>(evt => {
-                if (toggle.worldBound.Contains(evt.mousePosition) == false) return;
-                if (evt.clickCount == 2) {
-                    this.alignSceneViewToObject = true;
-                }
-                if (evt.ctrlKey == true || evt.commandKey == true) {
-                    if (this.selected.Add(element.value) == false) {
-                        this.selected.Remove(element.value);
-                    }
-                    this.DrawInspector();
-                    return;
-                } else if (evt.shiftKey == true) {
-                    if (this.selected.Count > 0) {
-                        var first = this.selected.First();
-                        var elem = this.entsToElements[first];
-                        var rect = new Bounds(elem.container.worldBound.center, elem.container.worldBound.size * 0.5f);
-                        rect.Encapsulate(((VisualElement)evt.target).worldBound.center);
-                        var found = false;
-                        foreach (var kv in this.entsToElements) {
-                            var e = kv.Value;
-                            var wb = e.toggle.worldBound;
-                            var b = new Bounds(wb.center, wb.size);
-                            if (rect.Intersects(b) == true) {
-                                this.selected.Add(e.value);
-                                found = true;
-                            } else if (found == true) {
-                                break;
-                            }
-                        }
-                        this.DrawInspector();
-                        return;
-                    }
-                }
-
-                this.selected.Clear();
-                this.selected.Add(element.value);
-
-                this.DrawInspector();
-            });
-            var versionLabel = new Label();
-            versionLabel.AddToClassList("version");
-            versionLabel.pickingMode = PickingMode.Ignore;
-            foldoutText.Add(versionLabel);
-            element.foldout = foldout;
-            element.container = container;
-            element.versionLabel = versionLabel;
-            var children = ent.Read<ChildrenComponent>();
-            if (children.list.Count > 0) {
-                element.container.AddToClassList("has-children");
-            } else {
-                element.container.RemoveFromClassList("has-children");
+        private bool MatchesSearch(Ent ent) {
+            if (string.IsNullOrWhiteSpace(this.search) || this.selected.Contains(ent)) return true;
+            foreach (var type in this.searchTypes) {
+                if (StaticTypesLoadedManaged.typeToId.TryGetValue(type, out var id) && Components.HasUnknownType(ent.World.state, id, ent.id, ent.gen, true)) return true;
             }
-            return element;
+            var name = ent.EditorName.ToString();
+            var idName = "#" + ent.id;
+            foreach (var term in this.searchNames) if (name.IndexOf(term, System.StringComparison.OrdinalIgnoreCase) >= 0 || idName.Contains(term)) return true;
+            return false;
         }
 
         private void DrawEntities() {
-            
-            this.cache.Clear();
-            this.createEntities.Clear();
-            this.allEntities.Clear();
-            this.removeEntities.Clear();
-            if (this.treeView?.viewController == null) return;
-            
-            //this.rawHierarchy = false;
-            if (this.searchTypes.Count == 0 && this.searchNames.Count == 0 && string.IsNullOrEmpty(this.search) == false) {
-                
-            } else {
-                #if ENABLE_BECS_FLAT_QUERIES
-                var bits = new TempBitArray(this.selectedWorld.state.ptr->entities.aliveBits.Length, allocator: Constants.ALLOCATOR_TEMP);
-                bits.Union(in this.selectedWorld.state.ptr->allocator, in this.selectedWorld.state.ptr->entities.aliveBits);
-                var trueBits = bits.GetTrueBitsTemp();
-                for (uint i = 0u; i < trueBits.Length; ++i) {
-                    var entId = trueBits[(int)i];
-                #else
-                for (uint i = 0u; i < this.selectedWorld.state.ptr->archetypes.list.Count; ++i) {
-                    var arch = this.selectedWorld.state.ptr->archetypes.list[this.selectedWorld.state, i];
-                    for (uint j = 0u; j < arch.entitiesList.Count; ++j) {
-                        var entId = arch.entitiesList[this.selectedWorld.state.ptr->allocator, j];
-                #endif
-                        var ent = new Ent(entId, this.selectedWorld);
-
-                        var found = true;
-                        if (this.searchTypes.Count > 0 || this.searchNames.Count > 0) {
-                            var containsType = false;
-                            var state = ent.World.state;
-                            foreach (var type in this.searchTypes) {
-                                if (StaticTypesGroups.groups.TryGetValue(type, out var groupId) == true) {
-                                    if (groupId > 0u) {
-                                        containsType = true;
-                                        break;
-                                    }
-                                } else if (StaticTypesLoadedManaged.typeToId.TryGetValue(type, out var id) == true) {
-                                    if (Components.HasUnknownType(state, id, ent.id, ent.gen, true) == true) {
-                                        containsType = true;
-                                        break;
-                                    }
-                                }
-                            }
-
-                            var containsName = false;
-                            var name = ent.EditorName;
-                            {
-                                var idName = $"#{ent.id}";
-                                var n = name.IsEmpty == false ? name.ToString() : null;
-                                foreach (var searchName in this.searchNames) {
-                                    if ((n == null || n.Contains(searchName, System.StringComparison.InvariantCultureIgnoreCase) == false) && idName.Contains(searchName) == false)
-                                        continue;
-                                    containsName = true;
-                                    break;
-                                }
-                            }
-
-                            found = (containsType == true || containsName == true);
-                            //this.rawHierarchy = true;
+            if (this.treeView?.viewController == null || !this.selectedWorld.isCreated) return;
+            this.allEntities.Clear(); this.snapshotParents.Clear();
+            var state = this.selectedWorld.state;
+            #if ENABLE_BECS_FLAT_QUERIES
+            var bits = new TempBitArray(state.ptr->entities.aliveBits.Length, allocator: Constants.ALLOCATOR_TEMP);
+            bits.Union(in state.ptr->allocator, in state.ptr->entities.aliveBits);
+            var alive = bits.GetTrueBitsTemp();
+            for (var i = 0; i < alive.Length; ++i) {
+                var ent = new Ent(alive[i], this.selectedWorld);
+            #else
+            for (uint i = 0; i < state.ptr->archetypes.list.Count; ++i) {
+                var arch = state.ptr->archetypes.list[state, i];
+                for (uint j = 0; j < arch.entitiesList.Count; ++j) {
+                    var ent = new Ent(arch.entitiesList[state.ptr->allocator, j], this.selectedWorld);
+            #endif
+                if (!ent.IsAlive() || !this.MatchesSearch(ent)) continue;
+                this.allEntities.Add(ent);
+                this.snapshotParents[ent] = ent.Has<ParentComponent>() ? ent.Read<ParentComponent>().value : default;
+            #if !ENABLE_BECS_FLAT_QUERIES
+                }
+            #endif
+            }
+            #if ENABLE_BECS_FLAT_QUERIES
+            alive.Dispose();
+            bits.Dispose();
+            #endif
+            var changed = this.current.Count != this.allEntities.Count;
+            foreach (var pair in this.snapshotParents) {
+                if (!this.observedParents.TryGetValue(pair.Key, out var previous) || !previous.Equals(pair.Value)) { changed = true; break; }
+            }
+            var removedSelection = this.selected.RemoveWhere(ent => !ent.IsAlive());
+            if (changed) {
+                var wasSynchronizing = this.synchronizingSelection;
+                this.synchronizingSelection = true;
+                try {
+                    this.cache.Clear(); this.cache.AddRange(this.allEntities); this.cache.Sort((a, b) => a.id.CompareTo(b.id));
+                    this.observedParents.Clear();
+                    foreach (var pair in this.snapshotParents) this.observedParents.Add(pair.Key, pair.Value);
+                    this.parents.Clear();
+                    foreach (var pair in this.snapshotParents) this.parents[pair.Key] = this.allEntities.Contains(pair.Value) ? pair.Value : default;
+                    // Break malformed parent cycles iteratively; never recurse over live Children lists.
+                    this.traversal.Clear();
+                    foreach (var ent in this.cache) {
+                        if (this.traversal.ContainsKey(ent)) continue;
+                        this.pathBuffer.Clear(); var cursor = ent;
+                        while (!cursor.IsEmpty() && !this.traversal.ContainsKey(cursor)) {
+                            this.traversal[cursor] = 1; this.pathBuffer.Add(cursor); cursor = this.parents[cursor];
                         }
-
-                        if (found == false) continue;
-
-                        if (this.current.Contains(ent) == false) {
-                            // new
-                            this.createEntities.Add(ent);
-                        }
-
-                        this.allEntities.Add(ent);
-                        
-                        if (this.dics.ContainsKey((int)ent.id) == false) {
-                            this.dics.Add((int)ent.id, new scg::List<TreeViewItemData<Ent>>());
-                        }
-                        
-                    #if !ENABLE_BECS_FLAT_QUERIES
+                        if (!cursor.IsEmpty() && this.traversal[cursor] == 1 && this.pathBuffer.Count > 0) this.parents[this.pathBuffer[this.pathBuffer.Count - 1]] = default;
+                        foreach (var visited in this.pathBuffer) this.traversal[visited] = 2;
                     }
-                    #endif
-                }
-            }
-
-            if (this.roots.Count == 0) {
-                var q = new scg::Queue<Ent>();
-                foreach (var ent in this.allEntities) {
-                    if (ent.Read<ParentComponent>().value.IsAlive() == false) {
-                        this.roots.Add(new TreeViewItemData<Ent>((int)ent.id, ent, this.dics[(int)ent.id]));
-                        this.current.Add(ent);
-                        q.Clear();
-                        q.Enqueue(ent);
-                        while (q.Count > 0) {
-                            var item = q.Dequeue();
-                            var list = this.dics[(int)item.id];
-                            var children = item.Read<ChildrenComponent>().list;
-                            for (uint k = 0u; k < children.Count; ++k) {
-                                var c = children[k];
-                                list.Add(new TreeViewItemData<Ent>((int)c.id, c, this.dics[(int)c.id]));
-                                this.current.Add(c);
-                                q.Enqueue(c);
-                            }
-                        }
+                    this.roots.Clear(); this.parentIds.Clear(); this.staleParentIds.Clear();
+                    foreach (var parent in this.parents.Values) if (!parent.IsEmpty()) this.parentIds.Add((int)parent.id);
+                    foreach (var pair in this.dics) {
+                        if (!this.parentIds.Contains(pair.Key)) this.staleParentIds.Add(pair.Key);
+                        else pair.Value.Clear();
                     }
-                }
-                this.createEntities.Clear();
-                this.removeEntities.Clear();
-
-                this.treeView.SetRootItems(this.roots);
-            }
-
-            var rebuild = false;
-            this.createEntities = this.createEntities.OrderBy(x => x.id).ToList();
-
-            foreach (var ent in this.allEntities) {
-                if (ent.Read<ParentComponent>().value.IsAlive() == false) {
-                    this.roots.Add(new TreeViewItemData<Ent>((int)ent.id, ent, this.dics[(int)ent.id]));
-                }
-            }
-
-            this.allEntities.IntersectWith(this.current);
-
-            foreach (var ent in this.current) {
-                if (this.allEntities.Contains(ent) == false) {
-                    this.removeEntities.Add(ent);
-                }
-            }
-
-            foreach (var ent in this.removeEntities) {
-                this.current.Remove(ent);
-                if (this.treeView.TryRemoveItem((int)ent.id, false) == true) {
-                    rebuild = true;
-                }
-            }
-
-            foreach (var ent in this.createEntities) {
-                var parent = ent.Read<ParentComponent>().value;
-                if (parent.IsAlive() == true && this.current.Contains(parent) == false) {
-                    continue;
-                }
-                this.current.Add(ent);
-                var parentId = parent.IsAlive() == true ? (int)parent.id : -1;
-                this.treeView.AddItem(new TreeViewItemData<Ent>((int)ent.id, ent, this.dics[(int)ent.id]), parentId, -1, false);
-                rebuild = true;
-            }
-
-            if (rebuild == true) {
-                this.treeView.Rebuild();
-                this.logoLine.ThinkOnce();
-            }
-            //this.treeView.RefreshItems();
-            
-            if (this.settingsChanged == true) {
-                this.SaveSettings();
-            }
+                    foreach (var id in this.staleParentIds) this.dics.Remove(id);
+                    foreach (var id in this.parentIds) if (!this.dics.ContainsKey(id)) this.dics[id] = new scg::List<TreeViewItemData<Ent>>();
+                    foreach (var ent in this.cache) {
+                        this.dics.TryGetValue((int)ent.id, out var children);
+                        var item = new TreeViewItemData<Ent>((int)ent.id, ent, children);
+                        var parent = this.parents[ent];
+                        if (parent.IsEmpty()) this.roots.Add(item); else this.dics[(int)parent.id].Add(item);
+                    }
+                    foreach (var old in this.current) if (!old.IsAlive()) this.treeView.CollapseItem((int)old.id, false, false);
+                    this.current.Clear(); this.current.UnionWith(this.allEntities);
+                    this.treeView.SetRootItems(this.roots);
+                    this.RestoreSelection(false);
+                } finally { this.synchronizingSelection = wasSynchronizing; }
+            } else this.treeView.RefreshItems(); // Only virtualized visible rows are rebound.
+            if (removedSelection > 0 && !this.synchronizingSelection) this.OnSelectionChanged();
+            if (this.settingsChanged) this.SaveSettings();
             this.settingsChanged = false;
-            
         }
-
     }
-
 }

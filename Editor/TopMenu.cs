@@ -3,6 +3,7 @@ namespace ME.BECS.Editor {
     using UnityEditor;
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections;
+    using System.Linq;
 
     public static class MainMenu {
         
@@ -21,13 +22,6 @@ namespace ME.BECS.Editor {
         }
 
         #if ME_BECS_EDITOR_INTERNAL
-        [MenuItem("ME.BECS/Internal/Generate Jobs", priority = 0)]
-        public static void CodeGenInternalGenerateJobs() {
-            
-            CodeGenerator.GenerateComponentsParallelFor();
-            
-        }
-        
         [MenuItem("ME.BECS/Internal/Clear Allocations State", priority = 0)]
         public static void ClearAllocationsState() {
             
@@ -68,48 +62,17 @@ namespace ME.BECS.Editor {
 
     public static class CodeGeneratorMenu {
 
-        private const string MENU_NAME = "ME.BECS/Code Generator/Run &r";
-        private const string MENU_NAME_CLEAN = "ME.BECS/Code Generator/Run and Clean #&r";
-        private const string MENU_NAME_AUTO = "ME.BECS/Code Generator/Run Automatically";
-        private const string MENU_NAME_IMPORT_CACHE = "ME.BECS/Code Generator/Generate Import Cache";
+        private const string MENU_NAME = "ME.BECS/Source Generator/Rebuild Inputs (Full Analysis)";
         
-        public static bool IsEnabledAuto => EditorPrefs.GetBool(MENU_NAME_AUTO, true);
-        public static bool IsEnabledImportCache => EditorPrefs.GetBool(MENU_NAME_IMPORT_CACHE, true);
+        // Compatibility for external callers. Asset/code refresh is mandatory;
+        // the old optional auto-codegen preference must not leave stale inputs.
+        public static bool IsEnabledAuto => true;
         
         [MenuItem(MENU_NAME, priority = 100)]
         private static void Run() {
             
-            CodeGenerator.RegenerateBurstAOT(true, false);
+            SourceGeneratorInputRefresh.TryRebuild();
 
-        }
-
-        [MenuItem(MENU_NAME_CLEAN, priority = 101)]
-        private static void RunAndClean() {
-            
-            CodeGenerator.RegenerateBurstAOT(true, true);
-
-        }
-
-        [MenuItem(MENU_NAME_AUTO, priority = 102)]
-        private static void RunAuto() {
-            EditorPrefs.SetBool(MENU_NAME_AUTO, !IsEnabledAuto);
-        }
-
-        [MenuItem(MENU_NAME_AUTO, true)]
-        private static bool AutoValidate() {
-            Menu.SetChecked(MENU_NAME_AUTO, IsEnabledAuto);
-            return true;
-        }
-
-        [MenuItem(MENU_NAME_IMPORT_CACHE, priority = 103)]
-        private static void RunImportCache() {
-            EditorPrefs.SetBool(MENU_NAME_IMPORT_CACHE, !IsEnabledImportCache);
-        }
-
-        [MenuItem(MENU_NAME_IMPORT_CACHE, true)]
-        private static bool ImportCacheValidate() {
-            Menu.SetChecked(MENU_NAME_IMPORT_CACHE, IsEnabledImportCache);
-            return true;
         }
 
     }
@@ -131,60 +94,59 @@ namespace ME.BECS.Editor {
         
         public static readonly string DEFAULT = themes[0].style;
 
-        public override FileContent[] AddFileContent(System.Collections.Generic.List<System.Type> references) {
+        private Theme[] collected;
+        private int builtInCount;
 
-            if (this.editorAssembly == false) return System.Array.Empty<FileContent>();
-            
-            var customList = new System.Collections.Generic.List<UnityEngine.UIElements.StyleSheet>();
+        public override void AppendSourceGeneratorInputs(System.Text.StringBuilder manifest) {
+            // Inherited compatibility hooks must not export the global menu twice.
+            if (!this.editorAssembly || this.GetType() != typeof(ThemesCodeGenerator)) return;
+            var plan = this.Collect();
+            void Append(string kind, int ordinal, string payload) => manifest.Append(kind).Append('\t')
+                .Append(ordinal.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\t')
+                .Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(payload))).Append('\n');
+            Append("theme-menu-schema", 0, "v1\n" + plan.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\n" +
+                this.builtInCount.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            for (var index = 0; index < plan.Length; ++index)
+                Append("theme-menu", index, plan[index].menuName + "\n" + plan[index].style);
+        }
+
+        public override void AddSourceGeneratorReferences(System.Collections.Generic.List<System.Type> references) {
+            if (this.editorAssembly && this.GetType() == typeof(ThemesCodeGenerator)) references.Add(typeof(Themes));
+        }
+
+        public override System.Collections.Generic.IEnumerable<string> GetRetiredSourceFiles() =>
+            this.editorAssembly ? new[] { "MenuThemes" } : System.Array.Empty<string>();
+
+        private Theme[] Collect() {
+            if (this.collected != null) return this.collected;
+            var custom = new System.Collections.Generic.Dictionary<string, Theme>(System.StringComparer.Ordinal);
             var guids = AssetDatabase.FindAssets("t:Object ME.BECS.CustomThemes");
-            foreach (var guid in guids) {
+            foreach (var guid in guids.OrderBy(value => value, System.StringComparer.Ordinal)) {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
+                if (!AssetDatabase.IsValidFolder(path)) continue;
                 var styleSheets = AssetDatabase.FindAssets("t:StyleSheet", new string[] { path });
                 foreach (var assetGuid in styleSheets) {
-                    var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.StyleSheet>(AssetDatabase.GUIDToAssetPath(assetGuid));
-                    if (asset != null) {
-                        customList.Add(asset);
-                    }
+                    var assetPath = AssetDatabase.GUIDToAssetPath(assetGuid);
+                    if (custom.ContainsKey(assetPath)) continue;
+                    var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.StyleSheet>(assetPath);
+                    if (asset != null) custom.Add(assetPath, new Theme { menuName = asset.name, style = assetPath });
                 }
             }
-
-            void Add(System.Text.StringBuilder builder, System.Text.StringBuilder builderValidation, Theme theme, int priority) {
-                builderValidation.AppendLine($"UnityEditor.Menu.SetChecked(\"ME.BECS/Themes/{theme.menuName}\", Themes.CurrentTheme == \"{theme.style}\");");
-                builder.AppendLine($"[UnityEditor.MenuItem(\"ME.BECS/Themes/{theme.menuName}\", priority = {priority})] private static void {EditorUtils.GetCodeName(theme.menuName)}() => Themes.CurrentTheme = \"{theme.style}\";");
+            var builtIns = themes.ToArray();
+            if (builtIns.Length == 0) throw new System.InvalidOperationException("The theme menu requires a default built-in theme.");
+            var plan = builtIns.Concat(custom.Values.OrderBy(theme => theme.menuName, System.StringComparer.Ordinal)
+                .ThenBy(theme => theme.style, System.StringComparer.Ordinal)).ToArray();
+            var names = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.Ordinal);
+            foreach (var theme in plan) {
+                if (string.IsNullOrWhiteSpace(theme.menuName) || string.IsNullOrWhiteSpace(theme.style) ||
+                    theme.menuName.Any(char.IsControl) || theme.style.Any(char.IsControl))
+                    throw new System.InvalidOperationException("Invalid theme menu name or stylesheet path: " + theme.style);
+                if (names.TryGetValue(theme.menuName, out var previous))
+                    throw new System.InvalidOperationException("Duplicate theme menu '" + theme.menuName + "': " + previous + " and " + theme.style + ". Rename one theme.");
+                names.Add(theme.menuName, theme.style);
             }
-            
-            var priority = 200;
-            var builder = new System.Text.StringBuilder();
-            var builderValidation = new System.Text.StringBuilder();
-            foreach (var theme in themes) {
-                Add(builder, builderValidation, theme, priority);
-                ++priority;
-            }
-
-            priority += 10;
-            foreach (var custom in customList) {
-                Add(builder, builderValidation, new Theme() {
-                    menuName = custom.name,
-                    style = AssetDatabase.GetAssetPath(custom),
-                }, priority);
-                ++priority;
-            }
-            
-            var content = $@"
-    public static class ThemesMenu {{
-        [UnityEditor.MenuItem(""ME.BECS/Themes/Default"", true)] private static bool DefaultValidation() {{ {builderValidation.ToString()} return true; }}
-        {builder.ToString()}
-    }}
-    ";
-            
-            var file = new FileContent();
-            file.filename = "MenuThemes";
-            file.content = content;
-            
-            return new FileContent[] {
-                file,
-            };
-            
+            this.builtInCount = builtIns.Length;
+            return this.collected = plan;
         }
 
     }
