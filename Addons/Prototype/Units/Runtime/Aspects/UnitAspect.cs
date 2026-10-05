@@ -35,7 +35,7 @@ namespace ME.BECS.Units {
         
         [INLINE(256)]
         [NotThreadSafe]
-        public readonly void Hit(in Ent hitOwner, uint damage, in Ent source, in JobInfo jobInfo) {
+        public readonly void Hit(in Ent hitOwner, uint damage, in Ent source, in JobInfo jobInfo, byte damageTypeId = 0) {
             if (damage == 0u) return;
             if (this.readHealth > 0u) {
                 var ent = Ent.New<UnitHitEntityType>(in jobInfo);
@@ -45,6 +45,7 @@ namespace ME.BECS.Units {
                     target = this.ent,
                     damage = damage,
                     damageTotal = damage,
+                    damageTypeId = damageTypeId,
                 });
                 ent.Destroy(1UL);
                 this.ent.SetOneShot(new DamageTookEvent() {
