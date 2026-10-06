@@ -1,0 +1,51 @@
+.compact-ecs-hierarchy { background-color: rgba(128, 128, 128, 0.025); }
+.compact-ecs-hierarchy .h-root { flex-grow: 1; background-color: rgba(0, 0, 0, 0); }
+.compact-ecs-hierarchy .h-element { flex-direction: row; align-items: center; flex-grow: 1; height: 26px; padding: 0px 6px; border-bottom-width: 1px; border-bottom-color: rgba(128, 128, 128, 0.1); }
+.compact-ecs-hierarchy .h-element .caption { flex-grow: 1; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.compact-ecs-hierarchy .h-element .version { font-size: 10px; opacity: 0.55; margin-left: 8px; }
+.compact-ecs-hierarchy .unity-collection-view__item--selected { background-color: var(--main-color); }
+.compact-ecs-hierarchy .unity-collection-view__item--selected Label { color: var(--highlight-text-color); }
+.compact-ecs-hierarchy .footer-container { flex-direction: row; justify-content: space-between; padding: 5px 8px; border-top-width: 1px; border-top-color: rgba(128, 128, 128, 0.2); }
+.compact-ecs-hierarchy .footer-container Label { font-size: 10px; opacity: 0.7; }
+.compact-ecs-hierarchy .empty-label { margin: 20px; opacity: 0.6; -unity-text-align: middle-center; }
+
+
+
+
+/* Explicit control surfaces also cover windows whose Unity USS was removed previously. */
+.compact-ecs-hierarchy .h-element:hover { background-color: rgba(128, 128, 128, 0.08); }
+.compact-ecs-hierarchy .dashboard-tabs { flex-shrink: 0; }
+.compact-ecs-hierarchy .toolbar-container { padding: 6px 10px; flex-shrink: 0; }
+.compact-ecs-hierarchy .toolbar { height: 25px; padding: 0px; margin: 0px; border-width: 0px; background-color: rgba(0, 0, 0, 0); }
+.compact-ecs-hierarchy .search-container { flex-grow: 1; min-width: 0px; padding: 0px; }
+.compact-ecs-hierarchy .hierarchy-search { flex-grow: 1; margin: 0px; min-height: 24px; }
+.compact-ecs-hierarchy .hierarchy-search > TextField { flex-grow: 1; margin: 0px; }
+.compact-ecs-hierarchy .hierarchy-search .unity-text-field__input {
+    min-height: 24px;
+    padding: 2px 7px;
+    border-width: 1px;
+    border-color: rgba(128, 128, 128, 0.3);
+    border-radius: 4px;
+    background-color: rgba(128, 128, 128, 0.08);
+    font-size: 12px;
+}
+.compact-ecs-hierarchy .hierarchy-search .unity-text-field__input:focus { border-color: var(--highlight-color); }
+
+.compact-ecs-hierarchy .search-container {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+    flex-shrink: 1;
+    width: auto;
+    max-width: none;
+    min-width: 120px;
+    height: 24px;
+    border-width: 1px;
+    border-color: rgba(128, 128, 128, 0.3);
+    border-radius: 4px;
+    background-color: rgba(128, 128, 128, 0.08);
+}
+.compact-ecs-hierarchy .search-container > Label { padding: 0px 7px; font-size: 10px; opacity: 0.65; }
+.compact-ecs-hierarchy .hierarchy-search { flex-grow: 1; flex-shrink: 1; min-width: 0px; min-height: 20px; }
+.compact-ecs-hierarchy .hierarchy-search .unity-text-field__input { border-width: 0px; border-radius: 0px; padding: 1px 3px; min-height: 20px; background-color: rgba(0, 0, 0, 0); }
+.compact-ecs-hierarchy .hierarchy-search-clear { width: 22px; height: 20px; padding: 0px; margin: 0px; border-width: 0px; background-color: rgba(0, 0, 0, 0); -unity-text-align: middle-center; }

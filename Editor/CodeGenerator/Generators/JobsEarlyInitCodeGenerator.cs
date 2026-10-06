@@ -162,6 +162,24 @@ namespace ME.BECS.Editor.Jobs {
             return jobs;
         }
 
+        // Populate only the IL memo for exactly the production debug/weight jobs.
+        // No registration, compiler input publication or Unity asset access here.
+        internal void PrepareAnalysis() => this.PrepareAnalysis(new System.Collections.Generic.HashSet<System.Type>());
+
+        // Safety/count/weight summaries are keyed by the concrete job, not the
+        // publication profile. Share this set only within one analysis session.
+        internal void PrepareAnalysis(System.Collections.Generic.HashSet<System.Type> visited) {
+            foreach (var contract in EarlyInitContracts.Distinct()) {
+                foreach (var job in this.SelectEarlyInitJobs(contract)) {
+                    if (!job.IsValueType || !job.IsVisible || !this.IsValidTypeForAssembly(job) || !visited.Add(job)) continue;
+                    ILAnalysisSession.Checkpoint();
+                    GetJobTypesInfo(job);
+                    ILJobEntityCounts.TryGetExportPayload(job, out _, out _);
+                    ILJobWeights.Analyze(job);
+                }
+            }
+        }
+
         public struct TypeInfo : System.IEquatable<TypeInfo> {
 
             public System.Type type;
@@ -632,11 +650,11 @@ namespace ME.BECS.Editor.Jobs {
                     }
                     {
                         if (inst.Operand is System.Reflection.FieldInfo field && typeof(IRefOp).IsAssignableFrom(field.FieldType) == true) {
-                            var op = (IRefOp)System.Activator.CreateInstance(field.FieldType);
-                            //UnityEngine.Debug.Log(field.FieldType + " :: " + op.Op);
+                            var op = ILAnalysisSession.Get((typeof(IRefOp), field.FieldType), () =>
+                                ILAnalysisSession.ReadMetadata(() => ((IRefOp)System.Activator.CreateInstance(field.FieldType)).Op));
                             uniqueTypes.Add(new TypeInfo() {
                                 type = field.FieldType.GenericTypeArguments[0],
-                                op = op.Op,
+                                op = op,
                             });
                             continueTraverse = false;
                         }

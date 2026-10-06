@@ -24,10 +24,7 @@ namespace ME.BECS.Tests {
         private static string Encode(string value) => Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(value));
         private static string Decode(string value) => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(value));
         private static string Row(int ordinal, string component, string owner) => "destroy-registration-owner\t" + ordinal + "\t" + Encode(component) + "\t" + Encode(owner);
-        private static string[] Rows(string profile) => Assembly.Load("ME.BECS.Gen." + profile)
-            .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-            .Where(item => item.Key == "ME.BECS.TypeInput.v1" && item.Value.StartsWith(profile.ToLowerInvariant() + "\t", StringComparison.Ordinal))
-            .Select(item => item.Value.Substring(profile.Length + 1)).ToArray();
+        private static string[] Rows(string profile) => Tests_SourceGeneratorInputCatalog.Rows(profile == "Editor");
         private static object[] Documents(IEnumerable<string> rows, bool editor) => ((Array)Call(Format, "Documents", rows, editor)).Cast<object>().ToArray();
         private static string Serialize(object document) => (string)Call(Format, "Serialize", document);
         private static MethodInfo[] Calls(MethodInfo method) => ME.BECS.Mono.Reflection.Disassembler.GetInstructions(method)
@@ -78,13 +75,8 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void SelectedBurstBodiesAndRegistrationLiveOutsideTheAggregate(string profile) {
-            var aggregate = Assembly.Load("ME.BECS.Gen." + profile);
-            var selection = aggregate.GetType("ME.BECS.SourceGenerated.BootstrapDestroySelection", true);
-            Assert.IsEmpty(selection.GetFields(Static));
-            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("ExpectDestroyPlan") }, Calls(selection.GetMethod("Publish")));
-            var facade = aggregate.GetType("ME.BECS.SourceGenerated.DestroyInputs", true);
-            CollectionAssert.AreEqual(new[] { "Initialize" }, facade.GetMethods(Static | BindingFlags.Public | BindingFlags.DeclaredOnly).Select(method => method.Name));
-            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("RegisterInstalledDestroyCallbacks") }, Calls(facade.GetMethod("Initialize")));
+            // Startup selection lives in the independent composition publisher;
+            // typed callback coverage does not require an aggregate assembly.
             var rows = Rows(profile);
             var selected = rows.Where(row => row.StartsWith("destroy-registration\t", StringComparison.Ordinal)).Select(row => row.Split('\t'))
                 .OrderBy(row => int.Parse(row[1])).Select(row => Type.GetType(Decode(row[2]), true)).ToArray();
@@ -93,7 +85,7 @@ namespace ME.BECS.Tests {
             foreach (var document in Documents(rows, profile == "Editor")) {
                 var owner = Field<string>(document, "Owner");
                 var assembly = Assembly.Load(owner);
-                Assert.AreNotEqual(aggregate, assembly);
+                Assert.IsFalse(assembly.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal));
                 var publisher = assembly.GetType("ME.BECS.SourceGenerated.DestroyFragment_" + profile, true);
                 var bodies = assembly.GetType("ME.BECS.SourceGenerated.DestroyCallbacks_" + profile, true);
                 Assert.IsNull(bodies.TypeInitializer, "Burst roots must not evaluate managed publication arrays.");
@@ -131,8 +123,8 @@ namespace ME.BECS.Tests {
                     Assert.AreEqual(bodies, target.DeclaringType);
                     Assert.AreEqual("Invoke", target.Name);
                     Assert.AreEqual(component, target.GetGenericArguments().Single());
-                    var availability = new object[] { component, profile == "Editor", null };
-                    Assert.IsTrue((bool)Call(bridge, "TryGetDestroyRegistration", availability), component.FullName);
+                    var availability = new object[] { component, profile == "Editor" };
+                    Assert.IsTrue((bool)Call(bridge, "HasDestroyRegistration", availability), component.FullName);
                 }
                 var compiled = UnityEditor.Compilation.CompilationPipeline.GetAssemblies(profile == "Editor"
                     ? UnityEditor.Compilation.AssembliesType.Editor : UnityEditor.Compilation.AssembliesType.Player).Single(item => item.name == owner);

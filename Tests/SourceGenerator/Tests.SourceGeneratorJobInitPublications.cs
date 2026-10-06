@@ -50,7 +50,7 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void OwnerCallbacksExactlyMatchSelectedClosedMethodsWithoutInvokingThem(string profile) {
-            var assembly = Assembly.Load("ME.BECS.Gen." + profile);
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor");
             var rows = Rows(assembly, profile);
             CollectionAssert.Contains(rows, "jobinit-publication-schema\t0\tdjE=");
             var slots = rows.Where(row => row.StartsWith("job-early-init\t", StringComparison.Ordinal)).Select(row => row.Split('\t'))
@@ -61,7 +61,8 @@ namespace ME.BECS.Tests {
             var seen = new System.Collections.Generic.HashSet<int>();
             foreach (var doc in Documents(rows, profile == "Editor")) {
                 var owner = Assembly.Load(Field<string>(doc, "Owner"));
-                Assert.AreNotEqual(assembly, owner);
+                Assert.IsFalse(owner.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal));
+                Assert.IsFalse(owner.GetReferencedAssemblies().Any(reference => reference.Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal)));
                 var publisher = owner.GetType("ME.BECS.SourceGenerated.JobInitFragment_" + profile, true);
                 var publish = publisher.GetMethod("Publish", Static);
                 CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("InstallJobInitFragment") }, Calls(publish));
@@ -91,26 +92,13 @@ namespace ME.BECS.Tests {
                 }
             }
             CollectionAssert.AreEquivalent(Enumerable.Range(0, slots.Length), seen);
-            var selection = assembly.GetType("ME.BECS.SourceGenerated.BootstrapJobInitSelection", true);
+            var selection = Tests_SourceGeneratorBootstrapPublications.Owner(assembly)
+                .GetType("ME.BECS.SourceGenerated.BootstrapProfile_" + profile, true);
             Assert.IsEmpty(selection.GetFields(Static));
-            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("ExpectJobInitPlan") }, Calls(selection.GetMethod("Publish")));
-            var initialize = assembly.GetType("ME.BECS.SourceGenerated.JobBootstrapInputs", true).GetMethod("Initialize");
-            var il = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(initialize).ToArray();
-            var ordinals = new System.Collections.Generic.List<int>();
-            for (var i = 2; i < il.Length; ++i) {
-                if (!(il[i].Operand is MethodInfo method) || method != typeof(BootstrapRuntime).GetMethod("InvokeJobEarlyInit")) continue;
-                Assert.AreEqual(profile == "Editor" ? 1 : 0, Constant(il[i - 1].OpCode, il[i - 1].Operand));
-                ordinals.Add(Constant(il[i - 2].OpCode, il[i - 2].Operand));
-            }
-            CollectionAssert.AreEqual(Enumerable.Range(0, slots.Length), ordinals, "Every slot must dispatch at its own exact position.");
-            Assert.IsFalse(Calls(initialize).Any(method => method.DeclaringType.FullName.StartsWith("ME.BECS.SourceGenerated.JobEarlyInit_", StringComparison.Ordinal)));
-        }
-
-        private static int Constant(OpCode opcode, object operand) {
-            if (opcode == OpCodes.Ldc_I4 || opcode == OpCodes.Ldc_I4_S) return Convert.ToInt32(operand);
-            if (opcode == OpCodes.Ldc_I4_M1) return -1;
-            if (opcode.Value >= OpCodes.Ldc_I4_0.Value && opcode.Value <= OpCodes.Ldc_I4_8.Value) return opcode.Value - OpCodes.Ldc_I4_0.Value;
-            throw new InvalidOperationException("Expected an explicit slot/profile integer.");
+            var calls = Calls(selection.GetMethod("Publish", Static));
+            Assert.AreEqual(1, calls.Count(method => method == typeof(BootstrapRuntime).GetMethod("ExpectJobInitPlan")));
+            Tests_SourceGeneratorBootstrapPhases.AssertJobSequence(assembly);
+            Assert.IsFalse(calls.Any(method => method.DeclaringType.FullName.StartsWith("ME.BECS.SourceGenerated.JobEarlyInit_", StringComparison.Ordinal)));
         }
 
         [Test]

@@ -52,6 +52,7 @@ public sealed class JobDebugPublicationGenerator : IIncrementalGenerator {
                     }
                     if (!valid) continue;
                     var profile = editor ? "Editor" : "Runtime";
+                    DebugJobInputEmitter.AppendMetadata(source, plans, "ME.BECS.PublishedDebugJobSafety." + profile + ".v1");
                     // Public wrapper owners must not collide through references
                     // when several participating assemblies are visible together.
                     var debugOwner = "DebugJobs_" + profile + "_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(document.Owner);

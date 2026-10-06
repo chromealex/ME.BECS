@@ -121,17 +121,6 @@ internal sealed class ViewTypeInputEmitter {
             .Append(SymbolDisplay.FormatLiteral(payload.ToString(), true)).Append(")]\n");
     }
 
-    internal void Append(StringBuilder source) {
-        if (!this.HasSchema) return;
-        source.Append("namespace ME.BECS.SourceGenerated { internal static class ViewTypeInputs {\n")
-            .Append("[global::UnityEngine.Scripting.PreserveAttribute] public static void Initialize() {\n")
-            .Append("global::ME.BECS.WorldStaticCallbacks.RegisterCallback<global::ME.BECS.Views.ViewsModuleData>(Register);\n}\n")
-            .Append("private static void Register(ref global::ME.BECS.Views.ViewsModuleData viewsModule) {\n");
-        foreach (var entry in this.types) {
-            AppendRegistration(source, entry.Type, entry.Flags);
-        }
-        source.Append("}\n} }\n");
-    }
 
     internal static void AppendRegistration(StringBuilder source, INamedTypeSymbol type, int flags) {
         var name = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);

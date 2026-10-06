@@ -24,8 +24,12 @@ decoupling step moves the project-independent initialization lifecycle into
 `ME.BECS.BootstrapRuntime`. Generated entry points now supply ordered type/method
 callbacks to that runtime API. It retains the same reset, type/lock, callback, config
 and module-pass sequence and has no knowledge of consumer names or locations.
-The generated AOT roots and their preservation attributes remain unchanged. This
-does not yet distribute global dispatch or remove either aggregate consumer.
+System/component AOT roots now belong to their selected publication owners (see
+"Owner-local AOT preservation" below). Core composition now has a project-owned,
+type-free publisher; Views dependency selection has its own feature-scoped project
+owner. Compiled input evidence and readiness checks now use independent profile
+catalogs plus each typed owner's receipt. Remaining diagnostic readers and compatibility
+adapters still retain both aggregate consumers, but startup no longer comes from them.
 
 Unity verification of this lifecycle extraction (2026-10-05, 14:49–14:51 MSK):
 `Tests_SourceGeneratorBootstrapOwnership` passed 31/31, including IL checks of both
@@ -39,15 +43,257 @@ The analyzer DLL build completed with zero warnings/errors. Unity's script compi
 automatic Runtime/Editor input export and consumer compile all completed successfully;
 the cold exports after the analyzer/core change took 95.46 s and 60.01 s respectively.
 
-Remaining structural work: emit selected registration fragments in assemblies that
-can reference their types (including closed generic specializations); coordinate
-their global order without depending on aggregate consumer types; distribute asset/IL
-inputs to these fragments through assembly-scoped data-file transport. The clean-import and
-build-machine path must recreate this state, not depend on a pre-existing Library
-cache. Cross-assembly graph calls and AOT roots need explicit ownership as part of
-that work. Moving or renaming the generated folder does not satisfy this requirement.
+Selected registrations, graph bodies, AOT references and core composition now have explicit owners,
+including downstream bridges for closed generic specializations. Remaining structural
+work is retiring aggregate selection/bootstrap adapters and their diagnostic consumers,
+then removing legacy export/upgrade paths. The clean-import and build-machine path
+must recreate this state, not depend on a pre-existing Library cache. Moving or
+renaming the generated folder does not satisfy this requirement.
+
+### Non-modal input export progress
+
+Input export uses scoped `UnityEditor.Progress` tasks in Unity's background-task UI,
+not `EditorUtility.DisplayProgressBar`/`DisplayCancelableProgressBar`. Stage names,
+current subject and elapsed time are still reported at most every 150 ms. Managed
+tasks finish with the export outcome and never clear unrelated Unity/Burst progress.
+Cancellation is cooperative during analysis and disabled before publishing any input
+files or assembly settings. Batch mode creates no UI task. The migration smoke suite
+includes task isolation/cleanup and cancellation-before-publication tests (not yet run).
+
+Automatic refresh, Rebuild and both graph Compile buttons now use `RequestExport`:
+capture Unity data -> one IL worker -> validate the snapshot -> publish on the Editor
+thread. Its return value means accepted, not completed; graph UI clears compile-dirty
+state only in the successful publication callback. Synchronous `TryExport`/`TryRebuild`
+remain for compatibility, not for these UI paths. No Player build is started.
+
+`CaptureRuntimeDiscovery` reads graph, config and module roots into a type-only snapshot;
+`AnalyzeRuntimeDiscovery` consumes it without retaining asset instances.
+`ILAnalysisEnvironment.Capture` copies compilation inventory, target and cache path.
+The worker prepares discovery, exact selected job safety/entity-count/weight summaries,
+and Editor system dependencies, using the same production analyzers. An isolated
+`ILAnalysisSession` transfers its memo once, only after its Task completes; it never
+borrows the Editor's retained dictionary. Code-identity dictionaries use short locks;
+file hashing runs outside those locks. User `IRefOp` constructors/getters are serviced
+by a small Editor-update queue, with cancellation releasing the waiting worker.
+
+Editor Update polls without waiting. Native Progress stays on the Editor thread;
+analysis supports cooperative cancellation, including declaration/body fingerprinting.
+Compilation or a new input request supersedes the task. Before publication both the
+request version and full fingerprint must still match. Reload is locked while the
+worker owns reflection objects and unlocked on cleanup, including cancellation/error.
+No cancelled/stale task publishes files or a successful receipt. Cancelling an unfinished
+declaration index preserves the previous persistent cache.
+
+Asset capture, final input composition/addon work and file publication still run on the
+Editor thread, as does Unity's own reload. This does not claim an entirely stall-free
+Editor: compare the remaining main-thread timings in Unity after these changes.
+`Tests_ILAnalysisSnapshot`, `Tests_ILExportSession` and graph-refresh tests cover ordered
+worker/main-thread discovery parity (including generic systems), memo transfer/isolation,
+cancellation and stale-result gates. The new Unity tests have not been run.
+
+### Independent compiled input catalogs and readiness
+
+`InputCatalogPublicationGenerator` emits data-only `InputCatalog_Editor` and
+`InputCatalog_Runtime` markers into project-owned bridges selected without gameplay
+or addon references. A checksummed native additional file contains the exact exported
+manifest, including its profile and asset snapshot. The marker has no methods,
+initializers, world state or registration side effects. Retired selections emit no
+marker; duplicate inputs withhold the entire affected profile rather than publishing
+the first candidate. No compiler arguments or framework-local input assets are added.
+
+`SourceGeneratorInputCatalog` discovers the compiled owner by its marker and metadata,
+not an aggregate assembly name. Raw input rows, content hash and graph snapshot remain
+available to Editor consumers without referencing gameplay types. Parsed metadata is
+cached per immutable assembly, but candidate uniqueness is checked on each discovery.
+Public raw-row access returns a copy so diagnostic callers cannot corrupt readiness.
+
+Analysis receipts and graph readiness use logical `runtime`/`editor` profiles. They
+require matching current analysis, compiled input content and asset snapshot, followed
+by exact typed publication receipts for every runtime-required selection. An input
+catalog alone cannot certify world readiness. Each readiness pass shares its assembly
+inventory, catalog lookups and owner metadata between fragment kinds. Advisory system
+dependency tables remain excluded. Transitional compiler recovery guards are still
+detected by their actual type and metadata, not by the old consumer name.
+
+`Tests_SourceGeneratorInputCatalog` covers exact compiled evidence, caller isolation,
+missing/ambiguous profiles, envelope round trips and invalid/retired selections. Its
+integration case removes aggregate assemblies from the candidate set, checks both
+analysis and typed publication readiness, then removes a real typed owner while keeping
+the input catalogs to ensure readiness fails. These tests are added to migration smoke;
+Unity execution of this stage is still pending. Existing aggregate diagnostic emission,
+compatibility adapters and the old assembly exporter have not yet been removed.
+
+Config/count/mask and destroy availability readers now consume these input catalogs
+and validate the selected owner-local callback/registration methods. Their obsolete
+aggregate fallback paths and returned C# `Initialize()` call strings were removed.
+They remain read-only diagnostics and never execute registration callbacks. Config
+and destroy publication tests obtain selection from the independent input catalogs;
+global composition/phase ordering is tested by the bootstrap publication/phase fixtures,
+not by asserting that legacy forwarding facades still exist. Component flag/AOT readers
+were the next detachment step, now described below; other older diagnostic consumers
+and compatibility adapters remain.
+
+Analyzer DLL built and installed on 2026-10-06 in 21.51 s, zero warnings/errors.
+Installed/output SHA-256 both:
+`61c0b34b30341de6f930ba6a4d8546b368d5881a12c2d00dc7a9923039202002`.
+This confirms analyzer compilation only, not Unity compilation or execution of the
+new input-catalog and updated callback tests.
+
+### Owner-local component flags and AOT diagnostics
+
+Each selected `TypeFragment_Editor`/`TypeFragment_Runtime` now exposes a literal
+`Flags_<ordinal>` beside its registration/AOT/size methods. The value is the exact
+compiler classification used to emit that closed component's registration, including
+generic/local fallbacks. It introduces neither a runtime initializer nor simulation
+state. Component availability diagnostics read the constant after validating the
+selected owner receipt and phase methods. Aggregate flag metadata/fallback bodies
+are no longer the authority for these readers.
+
+System AOT diagnostics read the existing profile-specific `SystemAotPublication`
+metadata from the selected owners. Masks are matched by exact system identity and
+assembled by explicit global ordinal, never assembly-load or attribute enumeration
+order. The raw input catalog still provides the independent global system selection.
+The distributed aggregate path no longer repeats AOT analysis or emits duplicate
+`SystemAotPlan`/`ComponentFlags` metadata; legacy-format emission is transitional only.
+
+Ownership/contract tests now use the independent input catalog and selected owners.
+AOT expectations come from reflection interface maps and WithoutBurst/Burst attributes,
+including explicit and closed generic lifecycle implementations. Additional diagnostic
+tests exclude aggregate assemblies, reverse input/assembly enumeration and omit a typed
+owner to check missing coverage. No AOT, Default or registration method is executed by
+these diagnostics. Unity/Burst/Player execution of this stage remains unverified.
+
+Analyzer DLL built/installed on 2026-10-06 in 21.59 s with zero warnings/errors;
+installed/output SHA-256:
+`23fb959dac858eed8c583f2b5c4f182fea927e9b7dbcd194c7722eed02a6680a`.
+
+### Independent Editor system dependency diagnostics
+
+`SystemDependencyPublicationGenerator` consumes the Editor-only dependency input
+slice in a dedicated project bridge. It reuses `SystemDependencyInputEmitter`'s
+existing IL operation selection, writer edges, canonical ordering, generic-definition
+unions, private-type indirection and advisory messages. The current aggregate path
+no longer analyzes or emits these tables or their selected/origin metadata.
+
+The universal Editor `SystemDependencyCatalog` discovers the compiled owner and
+binds typed delegates once. Graph layout and node UI use this API instead of looking
+up `ME.BECS.Editor.StaticMethods` in a named generated assembly. New systems whose
+diagnostics have not compiled yet do not break node drawing; explicit table requests
+still report unavailable data rather than silently proving an empty dependency set.
+Late bridge loads invalidate the discovery cache. Diagnostic tables are initialized
+only when queried, with no Editor/runtime startup hook or simulation State changes.
+
+Missing/invalid dependency diagnostics produce a generator warning, not a runtime
+preflight rejection. No synchronization hint changes scheduling or requires the user
+to add/remove `Complete()`. These diagnostic fragments are intentionally excluded
+from the world/bootstrap publication-completeness gate. Raw global input metadata,
+analysis receipts and graph freshness were the next removal step; the independent
+input catalog section above describes that subsequent transition.
+
+On 2026-10-06 the analyzer DLL built/installed with zero warnings/errors (21.42 s),
+SHA-256 `0783206988c20d37b2ba1b86b4bb4ceb8a6b11d8d0c019a2a5282362f30245ac`.
+Two new smoke cases cover detached ownership, API forwarding, selected typed plans,
+unknown/null systems, receipts, unrelated-input stability and retired envelopes.
+Existing generic-union/private-type diagnostics tests read the new owner. Unity
+compilation/tests and Player builds were not run for this change.
+
+### Project-owned Views dependency selection
+
+`ViewSelectionPublicationGenerator` consumes only the canonical Views input slice
+in a project-owned bridge. It reuses the existing tracker/type selectors unchanged:
+IL callback snapshots, `IViewIgnoreTracker`, `IViewTrackIgnore<T>`, explicit opt-in
+after exclusions, imported private aspect filters, dual view/module role union and
+type callback flags retain their semantics. Its compiler view imports all metadata
+but still applies normal C# accessibility checks. The bridge references Views and
+its selected type dependencies, not the complete systems/jobs/graphs inventory.
+
+The selection emits a preserved Editor/Runtime publisher plus the ordered component
+ordinal dependency table. Typed registration callbacks still belong to the existing
+per-type owners. The table is static startup data and the runtime takes its own copy;
+no simulation State layout or component access behavior changes. Empty/retired owners
+emit receipts without publishers. Runtime owners remain linker roots.
+
+Current aggregate inputs validate the transported selection envelope without redoing
+Views symbol analysis or emitting its selected catalogs/table. Views diagnostic menus
+and tests resolve the actual compiler owner; they no longer read selected Views
+metadata from `ME.BECS.Gen`. `StaticMethods.PublishBootstrapPlan` and its automatic
+initializer are absent in the fully distributed path. The transitional callable
+`Load` is now only a forwarding call to `BootstrapRuntime.LoadInstalled`.
+
+On 2026-10-06 the analyzer DLL built/installed with zero warnings/errors (21.24 s),
+SHA-256 `60384047e65ada034d0c930615f89a29ecb62f78ea38f0438b5eab092d91f2a9`.
+Two additional Editor/Runtime cases check independent ownership, exact dependency
+ordinals/role unions, transport receipts, startup attributes, unrelated-input stability
+and retired envelopes. Existing tracker, callback-flag and repeated-bootstrap tests
+read the new owner. Unity tests/builds were not run for this change; analyzer build
+success alone is not generated Unity-code or Player/AOT verification.
+
+### Project-owned bootstrap composition
+
+`BootstrapPublicationGenerator` emits the core composition in a minimal project
+bridge under `Assets/ME.BECS.SourceInputs`. Its reference surface contains the
+framework, Unity startup attributes and installed Network/Views addons, not the
+concrete gameplay systems/components/jobs. `BootstrapFragment.v1` carries only
+ordered plan hashes/counts, feeder kinds and the job setup ordinal map. Editor
+and Runtime have separate owners. The framework remains universal and receives
+no project cache files or response-file paths.
+
+The owner publishes expected system/type/entity/aspect/destroy/config/network/job
+selections before installing the immutable core phase data. Runtime also publishes
+the graph selection and registers its first-pass callback at `BeforeSplashScreen`.
+Neither publication runs registrations, creates a world or assigns IDs. Existing
+global ordinals and repeated EarlyInit slots are unchanged. Runtime owners have
+`AlwaysLinkAssembly`; the composition publication has `Preserve` and the same
+Editor/Runtime initialization stage as before.
+
+The aggregate no longer publishes core phase data or the graph first-pass hook.
+The initial composition extraction left `BootstrapViewsSelection` there; the feature
+selection step above removes that last startup publication. Retiring remaining
+diagnostic/freshness/compatibility consumers is still necessary before the aggregate
+assemblies/folder can be removed. The old manifest branch is transitional, not an
+alternative completed architecture.
+
+On 2026-10-06 the analyzer DLL built/installed with zero warnings/errors (21.52 s),
+SHA-256 `9d90418e243467c7cd5154ada162eee6a680f7e5f14e19f8d678734e588252d1`.
+Ten added composition cases cover exact publication arguments/receipts and phase
+order, the graph hook, canonical round trips, unrelated snapshot changes, retired
+owners, invalid plans and empty profiles without optional addons. Existing graph
+and phase tests follow the new owner. These Unity cases have not been run; this
+build is not Unity compilation, Player/AOT execution or clean-import evidence.
 
 ### Framework-owned bootstrap entry point
+
+The current distributed path publishes `BootstrapPhaseInputs`: ordered
+`Action<bool>` phase arrays, addon preflight delegates and the original EarlyInit
+slot-to-statistics-ordinal mapping. `BootstrapPhases` in the core runtime copies
+this data and owns both execution loops. Normal system/component registration
+still precedes the ordered feeder initializers; config masks still precede config
+collections inside their registration feeder. None/no-op feeder slots and repeated
+job slots remain explicit. Each job setup runs immediately before its corresponding
+EarlyInit/stat-only slot, independent of publication-owner arrival order.
+
+The runtime checks complete job-map coverage and optional addon preflight before
+shared resets. Identical publication reuses the same core plan; a conflicting
+phase order, callback, map or debug flag poisons that profile. The debug flag is
+compiled in the publishing profile rather than inferred from core assembly defines.
+All of this is managed startup data, outside simulation State.
+
+For this path the compiler no longer emits `RegisterTypePlan`,
+`RegisterAdditionalTypes`, `RegisterGeneratedMethods`, `ValidateGeneratedInputs`
+or per-feeder executable hooks. `StaticTypesInitializer.Load` and
+`JobBootstrapInputs.Initialize` temporarily remain as callable forwarding adapters;
+the installed plan contains only framework-owned execution delegates. The initial
+extraction still placed expected selections and phase data in the aggregate; the
+project-owned composition step above removes that core publication dependency.
+Views selection is now extracted as described above; other diagnostic tables remain.
+
+On 2026-10-06 the analyzer DLL built/installed with zero warnings/errors (21.51 s),
+SHA-256 `f6c8a20d7836ff0eb2e65ffcae2d6bf2d6a6b49bc16c1611742c112956d91dc2`.
+Thirteen phase-plan cases cover ordered data, repeated-slot execution, independent
+owner arrival, copied arrays, invalid coverage and conflict handling. Existing
+ownership/feeder/EarlyInit checks now inspect data plus core execution instead of
+requiring the retired generated bodies. These Unity tests have not been run for
+this change; no Unity/Player build was initiated.
 
 Automatic startup now belongs to `BootstrapRuntime.LoadRuntime` in the core runtime
 assembly, at `BeforeSceneLoad`. Generated Runtime code publishes typed delegates at
@@ -59,7 +305,7 @@ ordered type/method callbacks through its existing lifecycle.
 `AllTests.Start` requires the installed Editor plan and calls `LoadInstalled` directly.
 It no longer discovers `ME.BECS.Gen.Editor` or invokes a named generated method through
 reflection. The callable generated `StaticMethods.Load` remains a compatibility
-adapter (publish + typed runtime API), not another automatic startup hook.
+adapter forwarding to the typed runtime API, not another automatic startup hook.
 The managed plan registry is outside simulation State; main-thread startup owns it.
 Repeated identical publication is idempotent, and conflicting owners/callbacks poison
 only their profile so initializer ordering cannot select a silent winner.
@@ -253,7 +499,41 @@ delta owner. The original EarlyInit/statistics/entity input hash is unchanged.
 Cold input exports took 103.81 s Runtime / 79.29 s Editor. The five new graph tests,
 six debug tests and indexed statistics test still need a completed fresh smoke run;
 intervening Features.Editor/Tests recompilations triggered further input refreshes.
+The later UI test-launch attempt was not confirmed: the Unity window became
+unavailable/timeouts persisted after reload. The last smoke XML is still the earlier
+01:22 result, not a result for these changes. Play verification is also outstanding;
+the running Editor was not restarted or its user session stopped.
 No Player build or stripping validation was performed.
+
+### Owner-local AOT preservation
+
+`SystemFragment_Editor/Runtime.PreserveReferences` retains the selected registration,
+Burst/NoBurst/direct lifecycle and factory references in the owner's original slot
+order. Masks are still compiler-derived from the exact closed system/interface map,
+including explicit/private implementations and `[WithoutBurst]`. Public declaring-
+assembly contracts are preferred; precompiled definitions use typed local references.
+
+`TypeFragment_Editor/Runtime.PreserveReferences` retains normal/shared/static/config
+component AOT calls through global-ordinal wrappers. Native size helpers live in the
+same owner. Group slots do not introduce AOT calls. Registration delegates and global
+phase-major ID assignment are unchanged. These preservation-only methods have no
+runtime/Editor initialization attribute and are never put in registration arrays.
+The existing `AlwaysLinkAssembly` publication marker makes the linker process each
+nonempty Runtime owner; it does not preserve unrelated systems or lifecycle phases.
+
+Distributed inputs no longer emit `SystemInputs`, `ComponentInputs`, `SystemAotInputs`,
+`CoreTypeInputs.AotComponents`, or the aggregate `AOTBurstHelper`. The old-snapshot
+upgrade branch temporarily retains its former roots independently per domain.
+Diagnostic comparison resolves the current owner receipts and masks; it never invokes
+an AOT/registration/Default method. The aggregate AOT metadata remains only an oracle
+until aggregate diagnostic consumers are retired.
+
+Ownership tests now compare exact owner calls and closed generic arguments, complete
+phase-major coverage, preserved non-initializer roots, linker marking and absence of
+aggregate typed AOT bodies. Unity tests and Player/Burst/IL2CPP stripping for this
+change have not been run; an analyzer DLL build alone does not verify them.
+On 2026-10-06 the analyzer DLL built and installed with zero warnings/errors
+(21.53 s). Installed SHA-256: `a86358b15150826ff41b81f471661ac9288e80f65f562d86ffdc7a54d0254673`.
 
 Type fragment assets use the same checked envelope and native transport. Their
 entries are globally ordered group
@@ -1866,12 +2146,16 @@ This also works with in-memory references, uses per-compilation module caches, a
 runtime assembly, invoke user code, inspect IL method bodies, or scan/read project paths. If neither
 classification nor a compiler reference image is available, registration fails with a layout diagnostic.
 
-Modern bootstrap entry points (`SourceBootstrapPlanV1` / `SourceRegistrationPlanV1` templates)
-are emitted by InputManifestGenerator only after its selected manifest validates successfully.
-Missing/invalid inputs retain BECSG100 without generating calls to absent registration methods.
-Editor/runtime profiles must match their target assembly. The separate BootstrapGenerator handles
-old exported hooks only, so compatibility does not emit duplicate Load methods. This does not turn
-missing registrations into optional/no-op partial methods or permit incomplete initialization.
+The aggregate InputManifestGenerator, BootstrapGenerator and InputRecoveryOutput have been
+removed. No analyzer emits StaticMethods/StaticTypesInitializer compatibility entry points from
+old aggregate manifests or exported hooks. Project-owned composition is emitted by
+BootstrapPublicationGenerator, and each typed publication validates its own owner/profile and
+input fragment. The input catalog retains the full exported evidence for diagnostics; it is not
+an executable aggregate. Missing publications remain subject to the installed-plan preflight.
+GraphDeltaSetterContract retains the shared private-field injection contract independently of
+the retired manifest reader. Normal export does not modify old Assets/ME.BECS.Gen files.
+The current project removed that directory explicitly, with a recoverable backup outside Assets;
+clean-project Unity verification remains required.
 
 View-tracker manifests keep distinct `(owner, role)` records for an EntityView that also implements
 IViewModule. The runtime has ONE tracker ID per Type; emission registers that owner once using the
@@ -3516,31 +3800,53 @@ these metadata and Editor dictionary getters, without initializing worlds or exe
 Asset/type selection, incomplete-domain fallback and other legacy analyzers remain retirement
 work; this step does not claim that all legacy IL has been removed.
 
-`bootstrap-schema v2` now selects compiler-owned `StaticTypesInitializer`, `StaticMethods`
-and the AOT root. The main Editor/runtime bootstrap no longer needs a Resources C#
-template or `SourceBootstrapPlanV1` / `SourceRegistrationPlanV1` methods. Editor system
-dependency tables and the public `DebugJobs` owner are selected by their input schemas,
-not empty methods in exported C# files. `DebugJobs` remains public with checks disabled.
-Preserve, BurstCompile and DefaultExecutionOrder attributes on `StaticMethods` retain
-their previous values; only the runtime `Load` has a runtime initialization attribute.
-Feeder dispatch and core registration order are unchanged.
+BootstrapPublicationGenerator emits profile composition and its phase selection.
+BootstrapRuntime owns execution; typed registration and AOT callbacks belong to independent
+publication owners. StaticTypesInitializer/StaticMethods and the aggregate emitter are retired.
+Editor dependency tables live in EditorSystemDependencies. Job debug wrappers remain available
+with checks disabled, while their safety bodies retain the checks guards. Registration ordering
+is explicit in the exported global ordinals and phase plans, not assembly discovery order.
 
-Normal export is data-only: it writes a fixed comment for the old main bootstrap and
-retires only existing files explicitly listed by `GetRetiredSourceFiles` (validated bare
-names without `.cs`, deduplicated and ordered ordinally). It does not execute C# hooks,
-format C# templates, load/store their file caches, or recursively delete the output folder.
+Normal export publishes project-owned additional files and independent owner bridges.
+It no longer creates an aggregate asmdef, writes a compiler response, or reads/writes
+retirement stubs in the former `Assets/ME.BECS.Gen` directory. Existing old outputs
+are left untouched by the exporter; this project removed them explicitly after inspecting their
+stubs and checking incoming assembly references. The old header target identity is retained only for
+snapshot compatibility, not as a requirement to create a compilation host.
+Export does not execute C# hooks, format C# templates, load/store their file caches,
+or recursively delete the output folder.
 Old `AddInitialization`, `AddMethods`, `AddPublicContent` and `AddFileContent` overrides
 are rejected before constructing a feeder; extensions must use data inputs/references and
 a compiler emitter instead. These base APIs remain only for actionable migration errors.
-The new v2 schema rejects `legacy` dispatch, while v1/marker manifests remain readable
-for upgrade compatibility. The disabled CopyFrom body is retained privately for the
+The new v2 schema rejects `legacy` dispatch. Old aggregate manifests and marker hooks no longer
+emit an executable bootstrap. The disabled CopyFrom body is retained privately for the
 deferred investigation, not invoked or enabled by this change. Graph initialization now
 owns its class-level BurstCompile attribute in Roslyn as well, without duplicating an old stub's attribute.
-For a compiler-owned plan, conflicting old bodies or missing plans
-produce BECSG100 atomically, without a half-generated Load method. An empty generated
-assembly with no active inputs is diagnosed rather than silently missing its entry point.
+Publication generators validate their own fragments before emitting callbacks. Runtime plan
+preflight and the Editor freshness gate reject missing/incomplete publications. The aggregate
+BECSG100–BECSG105 diagnostics were retired with their emitter, not reused as publication IDs.
+
+### Remaining verification after aggregate retirement
+
+The analyzer DLL builds successfully; this does not prove Unity compilation or runtime behavior.
+Required evidence still includes fresh Editor compilation without the aggregate directory, source
+generator contract and integration tests, independent-world deterministic entity creation and
+generic scheduling, graph-edit re-export, config/View/Network callbacks, and clean import with the
+framework relocated. Player/Burst/IL2CPP stripping validation belongs to the build machine.
+Do not treat older test results, published receipts alone, or an analyzer-only build as proof of
+these checks. CopyFrom remains a separately deferred investigation, not a silently enabled feature.
 
 ## Compiler-owned Editor theme menus
+
+Theme menus are published independently into the assembly that declares `Themes`.
+`ThemeMenuPublicationGenerator` consumes only that owner's Editor additional file,
+stored under the project's `Assets/ME.BECS.SourceInputs/ThemeMenuFragments`, not
+inside the framework. The aggregate generator skips menu emission when the
+`thememenu-publication-schema` selection is present. Older manifests retain the
+compatibility emission until the next export. Invalid owner-local menu inputs
+produce warning BECSG137; menu receipts are not world/bootstrap readiness gates.
+The menu tests resolve the actual Editor owner and independent input catalog,
+without loading the former aggregate assemblies or invoking preference setters.
 
 `ThemesCodeGenerator` discovers built-in and custom stylesheet assets and exports
 `theme-menu-schema` / `theme-menu` data only. The source generator owns `ThemesMenu`,
@@ -3555,9 +3861,9 @@ Method names use bounded ordinals, including for long or non-identifier asset na
 The compiler validates schema counts/order, duplicate names and accessible Editor
 contracts. These records are rejected in Runtime inputs; an absent plan emits no
 Editor references. `ME.BECS.ThemeMenuInputs.v1` records names, paths and priorities
-without reading preferences or invoking menu actions. Normal regeneration replaces
-the old `MenuThemes` file with a comment-only compatibility stub to remove its old
-executable body without leaving duplicate Unity menu items. Asset discovery remains
+without reading preferences or invoking menu actions. Older migration versions retired
+the old `MenuThemes` body with a comment-only stub; current export does not access
+the old output directory. Asset discovery remains
 an Editor responsibility. Unity menu execution is distinct from compiler/metadata tests.
 
 ## Follow-up: unified job API

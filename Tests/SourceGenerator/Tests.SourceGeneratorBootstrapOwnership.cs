@@ -8,39 +8,32 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void BootstrapUsesManifestWithoutExportedMarkers(string profile) {
-            var assembly = Assembly.Load("ME.BECS.Gen." + profile);
-            var ns = profile == "Editor" ? "ME.BECS.Editor" : "ME.BECS";
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor");
             var schema = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
                 .Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t'))
                 .Single(row => row[0] == profile.ToLowerInvariant() && row[1] == "bootstrap-schema");
             Assert.AreEqual("0", schema[2]);
             Assert.AreEqual("v2", System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(schema[3])));
-            var initializer = assembly.GetType(ns + ".StaticTypesInitializer", true);
-            var registry = assembly.GetType(ns + ".StaticMethods", true);
-            var debug = assembly.GetType(ns + ".DebugJobs", true);
+            var owner = Tests_SourceGeneratorBootstrapPublications.Owner(assembly);
+            var publication = owner.GetType("ME.BECS.SourceGenerated.BootstrapProfile_" + profile, true);
+            var phases = Tests_SourceGeneratorBootstrapPublications.PhaseInputs(assembly);
+            var debug = Tests_SourceGeneratorJobDebugPublications.Owners(profile).Values.Distinct().ToArray();
+            Assert.IsNotEmpty(debug);
             const BindingFlags all = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
-            foreach (var pair in new[] {
-                (initializer, "SourceBootstrapPlanV1"), (registry, "SourceRegistrationPlanV1"),
-                (registry, "SourceSystemDependenciesV1"), (debug, "SourceDebugPlanV1"),
-            }) Assert.IsEmpty(pair.Item1.GetMember(pair.Item2, all), "Regenerate inputs and retirement stubs; markers must no longer own bootstrap.");
-            Assert.IsTrue(Attribute.IsDefined(initializer.GetMethod("Load"), typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)));
-            Assert.IsTrue(Attribute.IsDefined(initializer.GetMethod("RegisterAdditionalTypes", all), typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)));
-            Assert.IsTrue(Attribute.IsDefined(registry.GetMethod("RegisterGeneratedMethods", all), typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)));
-            var attributes = registry.GetCustomAttributesData();
-            Assert.AreEqual(1, attributes.Count(item => item.AttributeType.FullName == "UnityEngine.Scripting.PreserveAttribute"));
-            Assert.AreEqual(1, attributes.Count(item => item.AttributeType.FullName == "Unity.Burst.BurstCompileAttribute"));
-            var order = attributes.Single(item => item.AttributeType.FullName == "UnityEngine.DefaultExecutionOrder");
-            Assert.AreEqual(-100000, order.ConstructorArguments.Single().Value);
-            Assert.IsFalse(registry.GetMethod("Load").GetCustomAttributesData()
-                .Any(item => item.AttributeType.FullName == "UnityEngine.RuntimeInitializeOnLoadMethodAttribute"));
-            var publish = registry.GetMethod("PublishBootstrapPlan", BindingFlags.NonPublic | BindingFlags.Static);
-            Assert.IsNotNull(publish);
-            if (profile == "Runtime") {
-                var startup = publish.GetCustomAttribute<UnityEngine.RuntimeInitializeOnLoadMethodAttribute>();
-                Assert.IsNotNull(startup);
-                Assert.AreEqual(UnityEngine.RuntimeInitializeLoadType.AfterAssembliesLoaded, startup.loadType);
-            } else Assert.IsTrue(Attribute.IsDefined(publish, typeof(UnityEditor.InitializeOnLoadMethodAttribute)));
-            Assert.IsTrue(debug.IsPublic, "The DebugJobs owner must remain available even without collection-check defines.");
+            foreach (var type in new[] { publication, phases }.Concat(debug)) {
+                Assert.IsFalse(type.Assembly.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal));
+                foreach (var marker in new[] { "SourceBootstrapPlanV1", "SourceRegistrationPlanV1", "SourceSystemDependenciesV1", "SourceDebugPlanV1",
+                    "RegisterAdditionalTypes", "RegisterGeneratedMethods" }) Assert.IsEmpty(type.GetMember(marker, all));
+            }
+            foreach (var type in new[] { publication, phases }) Assert.IsTrue(Attribute.IsDefined(type, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)));
+            var publish = publication.GetMethod("Publish", all);
+            Assert.IsTrue(Attribute.IsDefined(publish, typeof(UnityEngine.Scripting.PreserveAttribute)));
+            if (profile == "Editor") Assert.IsTrue(Attribute.IsDefined(publish, typeof(UnityEditor.InitializeOnLoadMethodAttribute)));
+            else Assert.AreEqual(UnityEngine.RuntimeInitializeLoadType.AfterAssembliesLoaded,
+                publish.GetCustomAttribute<UnityEngine.RuntimeInitializeOnLoadMethodAttribute>().loadType);
+            Assert.IsFalse(CalledMethods(publish).Any(method => method.Name == "LoadInstalled" || method.Name == "InitializeInstalledTypes"),
+                "Publication must not execute initialization before all fragments are installed.");
+            Assert.IsTrue(debug.All(type => type.IsPublic), "Debug owners remain available without collection-check defines.");
         }
 
         private static Type ExportContract => Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.SourceGeneratorExportContract", true);
@@ -52,45 +45,25 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void GeneratedEntryPointsDelegateLifecycleToRuntime(string profile) {
-            var assembly = Assembly.Load("ME.BECS.Gen." + profile);
-            var ns = profile == "Editor" ? "ME.BECS.Editor" : "ME.BECS";
-            var initializer = assembly.GetType(ns + ".StaticTypesInitializer", true);
-            var registry = assembly.GetType(ns + ".StaticMethods", true);
-            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("InitializeTypes") }, CalledMethods(initializer.GetMethod("Load")));
-            var publish = registry.GetMethod("PublishBootstrapPlan", BindingFlags.NonPublic | BindingFlags.Static);
-            CollectionAssert.AreEqual(new[] { publish, typeof(BootstrapRuntime).GetMethod("LoadInstalled") }, CalledMethods(registry.GetMethod("Load")));
-            CollectionAssert.AreEqual(new[] {
-                assembly.GetType("ME.BECS.SourceGenerated.BootstrapSystemSelection", true).GetMethod("Publish"),
-                assembly.GetType("ME.BECS.SourceGenerated.BootstrapTypeInputs", true).GetMethod("Publish"),
-                assembly.GetType("ME.BECS.SourceGenerated.BootstrapEntitySelection", true).GetMethod("Publish"),
-                assembly.GetType("ME.BECS.SourceGenerated.BootstrapAspectSelection", true).GetMethod("Publish"),
-                assembly.GetType("ME.BECS.SourceGenerated.BootstrapDestroySelection", true).GetMethod("Publish"),
-                assembly.GetType("ME.BECS.SourceGenerated.BootstrapConfigSelection", true).GetMethod("Publish"),
-                assembly.GetType("ME.BECS.SourceGenerated.BootstrapNetworkSelection", true).GetMethod("Publish"),
-                assembly.GetType("ME.BECS.SourceGenerated.BootstrapViewsSelection", true).GetMethod("Publish"),
-                assembly.GetType("ME.BECS.SourceGenerated.BootstrapJobInitSelection", true).GetMethod("Publish"),
-                assembly.GetType("ME.BECS.SourceGenerated.BootstrapJobSetupSelection", true).GetMethod("Publish"),
-                assembly.GetType("ME.BECS.SourceGenerated.BootstrapJobDebugSelection", true).GetMethod("Publish"),
-                }.Concat(profile == "Runtime" ? new[] { assembly.GetType("ME.BECS.SourceGenerated.BootstrapGraphSelection", true).GetMethod("Publish") } : Array.Empty<MethodInfo>())
-                .Concat(new[] { typeof(BootstrapRuntime).GetMethod("InstallPlanWithPreflight") }).ToArray(), CalledMethods(publish),
-                "Publishing must not execute registrations or reset any runtime state.");
-            var plan = initializer.GetMethod("RegisterTypePlan", BindingFlags.NonPublic | BindingFlags.Static);
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor");
+            var runtimeLoad = typeof(BootstrapRuntime).GetMethod("LoadRuntime", BindingFlags.NonPublic | BindingFlags.Static);
+            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("LoadInstalled") }, CalledMethods(runtimeLoad));
+            Assert.AreEqual(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad,
+                runtimeLoad.GetCustomAttribute<UnityEngine.RuntimeInitializeOnLoadMethodAttribute>().loadType);
+            var core = typeof(BootstrapRuntime).Assembly.GetType("ME.BECS.BootstrapPhases", true);
+            var plan = core.GetMethod("RegisterTypes", BindingFlags.NonPublic | BindingFlags.Instance);
             Assert.IsNotNull(plan);
-            Assert.IsTrue(Attribute.IsDefined(plan, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)));
             CollectionAssert.AreEqual(new[] {
-                assembly.GetType("ME.BECS.SourceGenerated.CoreTypeInputs", true).GetMethod("Initialize"),
-                initializer.GetMethod("RegisterAdditionalTypes", BindingFlags.NonPublic | BindingFlags.Static),
+                typeof(BootstrapRuntime).GetMethod("RegisterInstalledTypes"),
+                typeof(Action<bool>).GetMethod("Invoke"),
             }, CalledMethods(plan), "Global registration and feeder order must not change when the lifecycle owner moves.");
-            var targets = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(publish)
+            var targets = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(runtimeLoad)
                 .Where(instruction => instruction.OpCode == System.Reflection.Emit.OpCodes.Ldftn)
                 .Select(instruction => (MethodInfo)instruction.Operand).ToArray();
-            CollectionAssert.AreEqual(new[] { initializer.GetMethod("Load"),
-                registry.GetMethod("RegisterGeneratedMethods", BindingFlags.NonPublic | BindingFlags.Static),
-                registry.GetMethod("ValidateGeneratedInputs", BindingFlags.NonPublic | BindingFlags.Static) }, targets);
-            CollectionAssert.AreEqual(new[] {
-                assembly.GetType("ME.BECS.SourceGenerated.BootstrapNetworkSelection", true).GetMethod("Validate"),
-                assembly.GetType("ME.BECS.SourceGenerated.BootstrapViewsSelection", true).GetMethod("Validate"),
-            }, CalledMethods(registry.GetMethod("ValidateGeneratedInputs", BindingFlags.NonPublic | BindingFlags.Static)));
+            Assert.IsEmpty(targets, "The runtime loader executes installed data, not generated executable plans.");
+            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("InitializeTypes") },
+                CalledMethods(core.GetMethod("InitializeTypes", BindingFlags.NonPublic | BindingFlags.Instance)));
+            Tests_SourceGeneratorBootstrapPhases.AssertFeederSequence(assembly);
         }
 
         [Test]
@@ -158,7 +131,7 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void GraphInitializersRetainOneBurstAttributeWithoutLegacyPhaseFiles() {
-            var assembly = Assembly.Load("ME.BECS.Gen.Runtime");
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(false);
             var graphs = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
                 .Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t'))
                 .Where(row => row.Length == 6 && row[0] == "runtime" && row[1] == "graph-registration");

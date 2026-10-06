@@ -9,7 +9,14 @@ namespace ME.BECS.Editor {
         [ThreadStatic] private static ILDependencyCapture current;
         private readonly ILDependencyCapture previous;
         private HashSet<MethodBase> methods;
-        internal MethodBase[] Methods => this.methods == null ? Array.Empty<MethodBase>() : new List<MethodBase>(this.methods).ToArray();
+        internal MethodBase[] Methods {
+            get {
+                if (this.methods == null || this.methods.Count == 0) return Array.Empty<MethodBase>();
+                var result = new MethodBase[this.methods.Count];
+                this.methods.CopyTo(result);
+                return result;
+            }
+        }
 
         internal ILDependencyCapture() { this.previous = current; current = this; }
         internal static void Observe(MethodBase method) {
@@ -22,7 +29,11 @@ namespace ME.BECS.Editor {
         }
         public void Dispose() {
             current = this.previous;
-            Observe(this.methods);
+            if (current == null || this.methods == null || this.methods.Count == 0) return;
+            // Propagate all dependencies without an interface enumerator and a
+            // thread-static lookup for every method. Do not share mutable sets.
+            if (current.methods == null) current.methods = new HashSet<MethodBase>(this.methods);
+            else current.methods.UnionWith(this.methods);
         }
     }
 }

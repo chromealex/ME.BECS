@@ -42,7 +42,7 @@ public sealed class JobInitPublicationGenerator : IIncrementalGenerator {
                         compilation.GetTypeByMetadataName(editor ? "UnityEditor.InitializeOnLoadMethodAttribute" : "UnityEngine.RuntimeInitializeOnLoadMethodAttribute") == null) {
                         Fail("The selected job owner requires runtime and initialization references"); continue;
                     }
-                    var jobs = new JobBootstrapInputEmitter();
+                    var jobs = new JobEarlyInitInputPlan();
                     var resolver = new InputManifestTypes(compilation, output.CancellationToken);
                     jobs.Read(new[] { "job-early-init-schema", "0", "djE=" }, resolver, compilation);
                     var valid = true;

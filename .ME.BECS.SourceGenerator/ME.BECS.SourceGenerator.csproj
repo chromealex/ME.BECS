@@ -16,7 +16,6 @@
     <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
     <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
     <Compile Include="../Editor/CodeGenerator/SourceGeneratorNames.cs" Link="SourceGeneratorNames.cs" />
-    <Compile Include="../Editor/CodeGenerator/SourceGeneratorInputFiles.cs" Link="SourceGeneratorInputFiles.cs" />
     <Compile Include="../Editor/CodeGenerator/SourceGeneratorSystemFragmentFormat.cs" Link="SourceGeneratorSystemFragmentFormat.cs" />
     <Compile Include="../Editor/CodeGenerator/SourceGeneratorTypeFragmentFormat.cs" Link="SourceGeneratorTypeFragmentFormat.cs" />
     <Compile Include="../Editor/CodeGenerator/SourceGeneratorEntityFragmentFormat.cs" Link="SourceGeneratorEntityFragmentFormat.cs" />
@@ -29,6 +28,11 @@
     <Compile Include="../Editor/CodeGenerator/SourceGeneratorJobSetupFragmentFormat.cs" Link="SourceGeneratorJobSetupFragmentFormat.cs" />
     <Compile Include="../Editor/CodeGenerator/SourceGeneratorJobDebugFragmentFormat.cs" Link="SourceGeneratorJobDebugFragmentFormat.cs" />
     <Compile Include="../Editor/CodeGenerator/SourceGeneratorGraphFragmentFormat.cs" Link="SourceGeneratorGraphFragmentFormat.cs" />
+    <Compile Include="../Editor/CodeGenerator/SourceGeneratorBootstrapFragmentFormat.cs" Link="SourceGeneratorBootstrapFragmentFormat.cs" />
+    <Compile Include="../Editor/CodeGenerator/SourceGeneratorViewSelectionFragmentFormat.cs" Link="SourceGeneratorViewSelectionFragmentFormat.cs" />
+    <Compile Include="../Editor/CodeGenerator/SourceGeneratorSystemDependencyFragmentFormat.cs" Link="SourceGeneratorSystemDependencyFragmentFormat.cs" />
+    <Compile Include="../Editor/CodeGenerator/SourceGeneratorInputCatalogFormat.cs" Link="SourceGeneratorInputCatalogFormat.cs" />
+    <Compile Include="../Editor/CodeGenerator/SourceGeneratorThemeMenuFragmentFormat.cs" Link="SourceGeneratorThemeMenuFragmentFormat.cs" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.1" PrivateAssets="all" />
   </ItemGroup>
   <Target Name="InstallUnityAnalyzer" AfterTargets="Build" Condition="'$(InstallUnityAnalyzer)' == 'true'">

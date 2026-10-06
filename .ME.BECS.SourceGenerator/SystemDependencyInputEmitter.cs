@@ -241,12 +241,13 @@ internal sealed class SystemDependencyInputEmitter {
         var depsType = collection + "HashSet<global::System.Type>";
         var componentsType = collection + "List<" + component + ">";
         var errorsType = collection + "List<" + error + ">";
-        source.Append("\nnamespace ME.BECS.Editor { public static unsafe partial class StaticMethods {\n");
+        source.Append("\nnamespace ME.BECS.SourceGenerated { internal static class EditorSystemDependencies {\n");
         foreach (var field in new[] { ("Dependencies", depsType), ("Components", componentsType), ("Errors", errorsType) })
             source.Append("private static ").Append(collection).Append("Dictionary<global::System.Type, ").Append(field.Item2).Append("> sourceSystem").Append(field.Item1).Append(";\n");
         foreach (var getter in new[] { ("GetSystemDependencies", "Dependencies", depsType), ("GetSystemComponentsDependencies", "Components", componentsType), ("GetSystemDependenciesErrors", "Errors", errorsType) })
             source.Append("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\npublic static ").Append(getter.Item3).Append(' ').Append(getter.Item1)
                 .Append("(global::System.Type type) { InitializeSystemDependenciesInfo(); return sourceSystem").Append(getter.Item2).Append("[type]; }\n");
+        source.Append("public static bool ContainsSystem(global::System.Type type) { InitializeSystemDependenciesInfo(); return sourceSystemComponents.ContainsKey(type); }\n");
         source.Append("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\npublic static void InitializeSystemDependenciesInfo() {\nif (sourceSystemDependencies != null) return;\n")
             .Append("var dependencies = new ").Append(collection).Append("Dictionary<global::System.Type, ").Append(depsType).Append(">();\n")
             .Append("var components = new ").Append(collection).Append("Dictionary<global::System.Type, ").Append(componentsType).Append(">();\n")

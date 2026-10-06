@@ -42,18 +42,10 @@ namespace ME.BECS.Tests {
             .Where(instruction => instruction.OpCode == System.Reflection.Emit.OpCodes.Call || instruction.OpCode == System.Reflection.Emit.OpCodes.Callvirt)
             .Select(instruction => (MethodInfo)instruction.Operand).ToArray();
 
-        private static string[] Operations(int flags) {
-            var phases = new System.Collections.Generic.List<string> { "Size", "Register", "Aot" };
-            if ((flags & 8) != 0) phases.AddRange(new[] { "RegisterShared", "AotShared" });
-            if ((flags & 2) != 0) phases.AddRange(new[] { "RegisterStatic", "AotStatic" });
-            if ((flags & 32) != 0) phases.AddRange(new[] { "RegisterConfig", "AotConfig" });
-            return phases.ToArray();
-        }
-
         private static (Type Type, int Flags)[] Selected(Assembly assembly, string profile) {
             var metadata = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>().ToArray();
-            var flags = metadata.Where(item => item.Key == "ME.BECS.ComponentFlags.v1").Select(item => item.Value.Split('\n'))
-                .ToDictionary(row => row[0], row => int.Parse(row[1], System.Globalization.CultureInfo.InvariantCulture));
+            var flags = Tests_SourceGeneratorAotPublications.Entries(assembly, false).Where(entry => entry.Phase == "Register")
+                .ToDictionary(entry => entry.Selected.AssemblyQualifiedName, entry => (int)entry.Publisher.GetField("Flags_" + entry.Ordinal).GetRawConstantValue());
             return metadata.Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t'))
                 .Where(row => row.Length >= 4 && row[0] == profile.ToLowerInvariant() && row[1] == "component-registration")
                 .OrderBy(row => int.Parse(row[2], System.Globalization.CultureInfo.InvariantCulture))
@@ -64,8 +56,9 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void SelectedSourceComponentsForwardToTheirDeclaringAssembly(string profile) {
-            var assembly = Assembly.Load("ME.BECS.Gen." + profile);
-            var dispatch = assembly.GetType("ME.BECS.SourceGenerated.ComponentInputs", true);
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor");
+            var entries = Tests_SourceGeneratorAotPublications.Entries(assembly, false);
+            var callbacks = Tests_SourceGeneratorBootstrapTypePlan.SelectedTypes(assembly);
             var covered = 0;
             foreach (var component in Selected(assembly, profile)) {
                 var owner = Owner(component.Type);
@@ -75,9 +68,11 @@ namespace ME.BECS.Tests {
                 ++covered;
                 Assert.IsTrue(Attribute.IsDefined(owner, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)));
                 Assert.AreEqual(component.Flags, owner.GetField("Flags_" + Key(component.Type)).GetRawConstantValue());
-                foreach (var operation in Operations(component.Flags)) {
-                    var method = dispatch.GetMethod(operation + "_" + Name("Hash", component.Type.AssemblyQualifiedName));
-                    CollectionAssert.AreEqual(new[] { Method(component.Type, operation) }, Calls(method), component.Type + " / " + operation);
+                foreach (var entry in entries.Where(item => item.Selected == component.Type && item.Phase != "Group")) {
+                    Assert.AreEqual(Method(component.Type, entry.Phase), callbacks[entry.Ordinal], component.Type + " / " + entry.Phase);
+                    var aot = entry.Publisher.GetMethod("Aot_" + entry.Ordinal);
+                    CollectionAssert.AreEqual(new[] { Method(component.Type, "Aot" + entry.Phase.Substring("Register".Length)) }, Calls(aot));
+                    if (entry.Phase == "Register") CollectionAssert.AreEqual(new[] { Method(component.Type, "Size") }, Calls(entry.Publisher.GetMethod("Size_" + entry.Ordinal)));
                 }
                 Assert.IsFalse(owner.GetMethods().Any(method => Attribute.IsDefined(method, typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute))),
                     "Loading an assembly must not assign component IDs or run Default getters.");
@@ -88,22 +83,31 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void ComponentPlansKeepGlobalPhaseMajorOrder(string profile) {
-            var assembly = Assembly.Load("ME.BECS.Gen." + profile);
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor");
             var selected = Selected(assembly, profile);
             Assert.IsNotEmpty(selected);
-            var plan = assembly.GetType("ME.BECS.SourceGenerated.CoreTypeInputs", true);
-            var dispatch = assembly.GetType("ME.BECS.SourceGenerated.ComponentInputs", true);
-            foreach (var operation in new[] { "Register", "Aot" }) {
-                var expected = new System.Collections.Generic.List<MethodInfo>();
-                foreach (var phase in new[] { (0, ""), (8, "Shared"), (2, "Static"), (32, "Config") })
-                    foreach (var component in selected.Where(item => phase.Item1 == 0 || (item.Flags & phase.Item1) != 0))
-                        expected.Add(operation == "Register" && Owner(component.Type)?.GetField("Flags_" + Key(component.Type)) != null ?
-                            Method(component.Type, operation + phase.Item2) :
-                            dispatch.GetMethod(operation + phase.Item2 + "_" + Name("Hash", component.Type.AssemblyQualifiedName)));
-                var groupCount = ((Type[])assembly.GetType("ME.BECS.SourceGenerated.GroupInputs", true).GetMethod("GetComponents").Invoke(null, null)).Length;
-                var actual = operation == "Register" ? Tests_SourceGeneratorBootstrapTypePlan.SelectedTypes(assembly).Skip(groupCount).ToArray() :
-                    Calls(plan.GetMethod("AotComponents")).Where(method => method.DeclaringType == dispatch).ToArray();
-                CollectionAssert.AreEqual(expected, actual, operation);
+            var callbacks = Tests_SourceGeneratorBootstrapTypePlan.SelectedTypes(assembly);
+            var entries = Tests_SourceGeneratorAotPublications.Entries(assembly, false);
+            var expected = new System.Collections.Generic.List<string>();
+            foreach (var phase in new[] { (0, ""), (8, "Shared"), (2, "Static"), (32, "Config") })
+                foreach (var component in selected.Where(item => phase.Item1 == 0 || (item.Flags & phase.Item1) != 0))
+                    expected.Add("Register" + phase.Item2 + "\n" + component.Type.AssemblyQualifiedName);
+            CollectionAssert.AreEqual(expected, entries.Where(entry => entry.Phase != "Group").Select(entry => entry.Phase + "\n" + entry.Selected.AssemblyQualifiedName).ToArray());
+            foreach (var group in entries.GroupBy(entry => entry.Publisher)) {
+                var aot = group.Where(entry => entry.Phase != "Group").Select(entry => group.Key.GetMethod("Aot_" + entry.Ordinal)).ToArray();
+                CollectionAssert.AreEqual(aot, Calls(group.Key.GetMethod("PreserveReferences")), "AOT preserves exactly the phase-major slots assigned to this owner.");
+                foreach (var entry in group) {
+                    if (entry.Phase == "Group") { Assert.IsNull(group.Key.GetMethod("Aot_" + entry.Ordinal)); continue; }
+                    var forwarded = Owner(entry.Selected)?.GetField("Flags_" + Key(entry.Selected)) != null;
+                    var register = forwarded ? Method(entry.Selected, entry.Phase) : callbacks[entry.Ordinal];
+                    Assert.AreEqual(register, callbacks[entry.Ordinal]);
+                    var expectedAot = forwarded ? Method(entry.Selected, "Aot" + entry.Phase.Substring("Register".Length)) :
+                        (entry.Phase == "RegisterShared" ? typeof(StaticTypesShared<>) : entry.Phase == "RegisterStatic" ? typeof(StaticTypesStatic<>) :
+                            entry.Phase == "RegisterConfig" ? typeof(ConfigInitializeTypes<>) : typeof(StaticTypes<>)).MakeGenericType(entry.Selected).GetMethod("AOT");
+                    var actual = Calls(group.Key.GetMethod("Aot_" + entry.Ordinal)).Single();
+                    if (!forwarded) actual = Calls(actual).Single();
+                    Assert.AreEqual(expectedAot, actual, entry.Selected + " / " + entry.Phase);
+                }
             }
         }
 

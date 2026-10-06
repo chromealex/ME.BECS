@@ -179,8 +179,8 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void EditorSystemDependencyTablesMatchTypedPlans() {
-            var assembly = Assembly.Load("ME.BECS.Gen.Editor");
-            var owner = assembly.GetType("ME.BECS.Editor.StaticMethods", true);
+            var owner = SystemDependencyPublisher;
+            var assembly = owner.Assembly;
             var components = owner.GetMethod("GetSystemComponentsDependencies", BindingFlags.Public | BindingFlags.Static);
             var dependencies = owner.GetMethod("GetSystemDependencies", BindingFlags.Public | BindingFlags.Static);
             var errors = owner.GetMethod("GetSystemDependenciesErrors", BindingFlags.Public | BindingFlags.Static);
@@ -228,9 +228,9 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void JobBootstrapCallsFollowEveryOrderedSlotWithoutExecution() {
-            var assembly = Assembly.Load("ME.BECS.Gen.Editor");
-            var method = assembly.GetType("ME.BECS.SourceGenerated.JobBootstrapInputs", true).GetMethod("Initialize", BindingFlags.Public | BindingFlags.Static);
-            Assert.IsTrue(Attribute.IsDefined(method, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)));
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(true);
+            var phases = Tests_SourceGeneratorBootstrapPublications.PhaseInputs(assembly);
+            Assert.IsTrue(Attribute.IsDefined(phases, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)));
             var records = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
                 .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1").Select(attribute => attribute.Value.Split('\t')).ToArray();
             Assert.AreEqual(1, records.Count(row => row.Length == 4 && row[1] == "job-early-init-schema" && row[3] == "djE="));
@@ -242,36 +242,19 @@ namespace ME.BECS.Tests {
                 .Select(row => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(row[3])).Split('\n')[1]).Distinct().ToArray(),
                 slots.Select(slot => slot[1]).Distinct().ToArray(),
                 "Every selected job must have a bootstrap slot; a truncated sequence must not silently skip initialization.");
-            var expected = new System.Collections.Generic.List<MethodInfo>();
-#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
-            expected.Add(assembly.GetType("ME.BECS.Editor.DebugJobs", true).GetMethod("InitializeJobsDebug", BindingFlags.Public | BindingFlags.Static));
-#endif
-            foreach (var slot in slots) {
-                expected.Add(typeof(BootstrapRuntime).GetMethod("InvokeJobSetup"));
-                expected.Add(typeof(BootstrapRuntime).GetMethod("InvokeJobEarlyInit"));
-            }
-            Assert.IsTrue(expected.All(target => target != null));
-            var actual = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(method)
-                .Where(instruction => instruction.OpCode == System.Reflection.Emit.OpCodes.Call)
-                .Select(instruction => (MethodInfo)instruction.Operand).ToArray();
-            CollectionAssert.AreEqual(expected, actual, "Stat-only slots and repeated jobs must keep their original phase ordering.");
+            Tests_SourceGeneratorBootstrapPhases.AssertJobSequence(assembly);
         }
 
         [Test]
         public void JobEntityInitializersPreserveGroupArgumentOrderWithoutExecution() {
-            var assembly = Assembly.Load("ME.BECS.Gen.Editor");
             var methods = Tests_SourceGeneratorJobSetupPublications.Methods("Editor", "JobEntityInputCalls");
-            var entities = assembly.GetType("ME.BECS.SourceGenerated.EntityInputs", true);
-            var records = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1").Select(attribute => attribute.Value.Split('\t')).ToArray();
-            var selected = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Where(attribute => attribute.Key == "ME.BECS.JobEntitySelection.v1").Select(attribute => attribute.Value.Split('\n')).ToArray();
+            var records = Tests_SourceGeneratorInputCatalog.Rows(true).Select(row => ("editor\t" + row).Split('\t')).ToArray();
+            var selected = Tests_SourceGeneratorJobSetupPublications.Selected("Editor", "JobEntitySelection");
             var plans = selected.Where(row => row[2] == "source").Select(row => new[] { row[0], row[1] }.Concat(row.Skip(3)).ToArray()).ToArray();
             var fallbacks = selected.Where(row => row[2] == "legacy" || row[2] == "il").Select(row => new[] { row[0], row[1] }.Concat(row.Skip(3)).ToArray()).ToArray();
             Assert.IsNotEmpty(selected);
-            var hash = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.CodeGeneration.SourceGeneratorNames", true)
-                .GetMethod("Hash", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
-            string Hash(string key) => (string)hash.Invoke(null, new object[] { key });
+            var groups = Tests_SourceGeneratorJobSetupPublications.EntityGroups(true);
+            var groupCount = (uint)records.Count(row => row[1] == "entity-registration");
             Assert.AreEqual(plans.Length + fallbacks.Length, methods.Count);
             CollectionAssert.AreEquivalent(records.Where(row => row.Length == 4 && row[1] == "job-debug")
                 .Select(row => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(row[3])).Split('\n')[1]).Distinct().ToArray(),
@@ -298,8 +281,7 @@ namespace ME.BECS.Tests {
                 Assert.AreEqual(Type.GetType(plan[2], true), calls[0].DeclaringType);
                 Assert.AreEqual("Apply", calls[0].Name);
                 CollectionAssert.AreEqual(new[] { Type.GetType(plan[1], true) }, calls[0].GetGenericArguments());
-                var expected = new[] { (uint)entities.GetField("GroupCount").GetRawConstantValue() }
-                    .Concat(plan.Skip(3).Select(key => (uint)entities.GetField("Id_" + Hash(key)).GetRawConstantValue())).ToArray();
+                var expected = new[] { groupCount }.Concat(plan.Skip(3).Select(key => groups[key])).ToArray();
                 var actual = instructions.Where(instruction => instruction.OpCode.Name.StartsWith("ldc.i4", StringComparison.Ordinal))
                     .Select(instruction => {
                         if (instruction.OpCode == System.Reflection.Emit.OpCodes.Ldc_I4 || instruction.OpCode == System.Reflection.Emit.OpCodes.Ldc_I4_S)
@@ -313,12 +295,9 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void JobWeightInitializersPreserveSelectedSourceOrNumericPlanWithoutExecution() {
-            var assembly = Assembly.Load("ME.BECS.Gen.Editor");
             var methods = Tests_SourceGeneratorJobSetupPublications.Methods("Editor", "JobWeightInputs");
-            var records = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1").Select(attribute => attribute.Value.Split('\t')).ToArray();
-            var plans = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Where(attribute => attribute.Key == "ME.BECS.JobWeightSelection.v1").Select(attribute => attribute.Value.Split('\n')).ToArray();
+            var records = Tests_SourceGeneratorInputCatalog.Rows(true).Select(row => ("editor\t" + row).Split('\t')).ToArray();
+            var plans = Tests_SourceGeneratorJobSetupPublications.Selected("Editor", "JobWeightSelection");
             Assert.IsNotEmpty(plans);
             string Decode(string value) => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(value));
             CollectionAssert.AreEquivalent(records.Where(row => row.Length == 4 && row[1] == "job-debug")
@@ -357,9 +336,8 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void JobLayoutInitializersUseNativeSizesFromSafetyPlansWithoutRunningJobs() {
-            var assembly = Assembly.Load("ME.BECS.Gen.Editor");
             var methods = Tests_SourceGeneratorJobSetupPublications.Methods("Editor", "JobLayoutInputs");
-            var plans = CompiledDebugSafetyPlans(assembly);
+            var plans = CompiledDebugSafetyPlans("Editor");
             Assert.IsNotEmpty(plans);
             var groups = plans.GroupBy(plan => plan[1]).ToArray();
             Assert.AreEqual(groups.Length, methods.Count);
@@ -387,21 +365,14 @@ namespace ME.BECS.Tests {
         [Test]
         public void DebugWrapperLayoutsMatchTransportPlansWithoutBurstExecution() {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
-            var assembly = Assembly.Load("ME.BECS.Gen.Editor");
-            var owner = assembly.GetType("ME.BECS.Editor.DebugJobs", true);
-            var initialize = owner.GetMethod("InitializeJobsDebug", BindingFlags.Public | BindingFlags.Static);
-            Assert.IsNotNull(initialize);
-            Assert.IsTrue(Attribute.IsDefined(initialize, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)),
-                "Regenerate bootstrap and inputs to switch debug wrappers to the compiler.");
-            var records = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1").Select(attribute => attribute.Value.Split('\t')).ToArray();
+            var records = Tests_SourceGeneratorInputCatalog.Rows(true).Select(row => ("editor\t" + row).Split('\t')).ToArray();
             Assert.AreEqual(1, records.Count(row => row.Length == 4 && row[1] == "job-debug-schema" && row[3] == "djE="));
             var plans = records.Where(row => row.Length == 4 && row[1] == "job-debug")
                 .Select(row => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(row[3])).Split('\n')).ToArray();
             Assert.IsNotEmpty(plans);
-            var selected = CompiledDebugSafetyPlans(assembly).ToDictionary(plan => plan[1] + "\n" + plan[2]);
+            var selected = CompiledDebugSafetyPlans("Editor").ToDictionary(plan => plan[1] + "\n" + plan[2]);
             var owners = Tests_SourceGeneratorJobDebugPublications.Owners("Editor");
-            Assert.IsEmpty(owner.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic), "The aggregate must no longer contain debug layouts or caches.");
+            Assert.IsTrue(owners.Values.All(owner => !owner.Assembly.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal)));
             Assert.AreEqual(plans.Length, selected.Count);
             var noArguments = plans.Single(plan => plan[1] == typeof(DebugNoArgumentsJob).AssemblyQualifiedName);
             Assert.AreEqual("0", noArguments[4]);
@@ -590,12 +561,7 @@ namespace ME.BECS.Tests {
         [TestCase(typeof(CompilerSizedEmpty), 8u)]
         [TestCase(typeof(CompilerNativeBool), 1u)]
         public void CompilerComponentSizesUseNativeLayout(Type component, uint expected) {
-            var names = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.CodeGeneration.SourceGeneratorNames", true);
-            var hash = names.GetMethod("Hash", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
-            Assert.IsNotNull(hash);
-            var key = (string)hash.Invoke(null, new object[] { component.AssemblyQualifiedName });
-            var catalog = Assembly.Load("ME.BECS.Gen.Editor").GetType("ME.BECS.SourceGenerated.ComponentInputs", true);
-            var size = catalog.GetMethod("Size_" + key, BindingFlags.Public | BindingFlags.Static);
+            var size = Tests_SourceGeneratorAotPublications.Size(Tests_SourceGeneratorInputCatalog.Owner(true), component);
             Assert.IsNotNull(size, "Regenerate Editor inputs before checking component sizes");
             Assert.AreEqual(expected, (uint)size.Invoke(null, null), component.FullName);
             // A bool occupies one byte in native ECS storage; marshaling size is not the contract.
@@ -608,21 +574,23 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void CompilerGroupsMatchAttributesAndSupportOpenGenericGroups() {
-            var assembly = Assembly.Load("ME.BECS.Gen.Editor");
-            var catalog = assembly.GetType("ME.BECS.SourceGenerated.GroupInputs", true);
-            var getComponents = catalog.GetMethod("GetComponents", BindingFlags.Public | BindingFlags.Static);
-            var getGroups = catalog.GetMethod("GetGroups", BindingFlags.Public | BindingFlags.Static);
-            Assert.IsNotNull(getComponents);
-            Assert.IsNotNull(getGroups);
-            var components = (Type[])getComponents.Invoke(null, null);
-            var groups = (Type[])getGroups.Invoke(null, null);
-            Assert.AreEqual(components.Length, groups.Length);
+            var entries = Tests_SourceGeneratorAotPublications.Entries(Tests_SourceGeneratorInputCatalog.Owner(true), false)
+                .Where(entry => entry.Phase == "Group").ToArray();
+            var components = entries.Select(entry => entry.Selected).ToArray();
             CollectionAssert.Contains(components, typeof(CompilerGrouped));
             CollectionAssert.Contains(components, typeof(CompilerGroupOverride));
             for (var index = 0; index < components.Length; ++index) {
                 var attribute = (ComponentGroupAttribute)Attribute.GetCustomAttribute(components[index], typeof(ComponentGroupAttribute));
                 Assert.IsNotNull(attribute, components[index].FullName);
-                Assert.AreEqual(attribute.groupType, groups[index], components[index].FullName);
+                var publisher = entries[index].Publisher;
+                var ordinals = (int[])publisher.GetField("Ordinals", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+                var callbacks = (Action[])publisher.GetField("Callbacks", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+                var method = callbacks[Array.IndexOf(ordinals, entries[index].Ordinal)].Method;
+                var bytes = method.GetMethodBody().GetILAsByteArray();
+                var groups = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(method)
+                    .Where(instruction => instruction.OpCode == System.Reflection.Emit.OpCodes.Ldtoken)
+                    .Select(instruction => method.Module.ResolveType(BitConverter.ToInt32(bytes, instruction.Offset + instruction.OpCode.Size))).ToArray();
+                CollectionAssert.AreEqual(new[] { attribute.groupType }, groups, components[index].FullName);
             }
             // Catalog reads only: never assign group IDs in this test.
         }
@@ -676,12 +644,10 @@ namespace ME.BECS.Tests {
                     attribute.Value.StartsWith("global::" + component.FullName.Replace('+', '.') + "\n", StringComparison.Ordinal)).ToArray();
             Assert.AreEqual(1, tag.Length, "The declaring compilation must preserve tag classification for imported types.");
             Assert.AreEqual("global::" + component.FullName.Replace('+', '.') + "\n" + (expected & 1), tag[0].Value);
-            var assembly = Assembly.Load("ME.BECS.Gen.Editor");
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(true);
             var attributes = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>().ToArray();
-            var flags = attributes.Where(attribute => attribute.Key == "ME.BECS.ComponentFlags.v1" && attribute.Value != null &&
-                attribute.Value.StartsWith(component.AssemblyQualifiedName + "\n", StringComparison.Ordinal)).ToArray();
-            Assert.AreEqual(1, flags.Length, "Regenerate Editor inputs before checking compiler flags");
-            Assert.AreEqual(component.AssemblyQualifiedName + "\n" + expected, flags[0].Value);
+            Assert.AreEqual(expected, Tests_SourceGeneratorAotPublications.Flags(assembly, component),
+                "Inspect the constant used by the selected registration owner, not duplicate aggregate metadata.");
             var identity = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(component.AssemblyQualifiedName));
             var inputs = attributes.Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1" && attribute.Value != null)
                 .Select(attribute => attribute.Value.Split('\t'))
@@ -728,45 +694,21 @@ namespace ME.BECS.Tests {
         [TestCase(typeof(ExplicitAotSystem), 5, 1, 1)]
         [TestCase(typeof(GenericAotSystem<AotMarker>), 4, 4, 4)]
         public void CompilerAotPlanHandlesExplicitAndGenericSystems(Type system, int present, int burst, int factory) {
-            var assembly = Assembly.Load("ME.BECS.Gen.Editor");
-            var rows = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Where(attribute => attribute.Key == "ME.BECS.SystemAotPlan.v1" && attribute.Value != null &&
-                    attribute.Value.StartsWith(system.AssemblyQualifiedName + "\n", StringComparison.Ordinal))
-                .Select(attribute => attribute.Value.Split('\n')).ToArray();
-            Assert.AreEqual(1, rows.Length, "Regenerate Editor inputs before checking AOT selection metadata");
-            CollectionAssert.AreEqual(new[] { system.AssemblyQualifiedName, present.ToString(), burst.ToString(), factory.ToString() }, rows[0]);
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(true);
+            var row = Tests_SourceGeneratorAotPublications.SystemPlan(assembly, system).Split('\n');
+            CollectionAssert.AreEqual(new[] { system.AssemblyQualifiedName, present.ToString(), burst.ToString(), factory.ToString() }, row);
         }
 
         [Test]
         public void CompilerEntityIdsMatchOrderedRegistrationsWithoutBootstrap() {
-            var assembly = Assembly.Load("ME.BECS.Gen.Editor");
-            var catalog = assembly.GetType("ME.BECS.SourceGenerated.EntityInputs", true);
-            var records = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1" && attribute.Value != null)
-                .Select(attribute => attribute.Value.Split('\t'))
-                .Where(row => row.Length == 4 && row[1] == "entity-registration").ToArray();
-            Assert.IsNotEmpty(records);
-            var groupCount = catalog.GetField("GroupCount", BindingFlags.Public | BindingFlags.Static);
-            Assert.IsNotNull(groupCount);
-            Assert.IsTrue(groupCount.IsLiteral);
-            Assert.AreEqual((uint)records.Length, groupCount.GetRawConstantValue());
-            var names = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.CodeGeneration.SourceGeneratorNames", true);
-            var hash = names.GetMethod("Hash", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
-            Assert.IsNotNull(hash);
-            for (var index = 0; index < records.Length; ++index) {
-                var entity = Type.GetType(System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(records[index][3])), true);
-                var identity = entity.Assembly.FullName + "\tT:" + entity.FullName.Replace('+', '.');
-                var key = (string)hash.Invoke(null, new object[] { identity });
-                var field = catalog.GetField("Id_" + key, BindingFlags.Public | BindingFlags.Static);
-                Assert.IsNotNull(field, identity);
-                Assert.IsTrue(field.IsLiteral, identity);
-                Assert.AreEqual((uint)index, field.GetRawConstantValue(), identity);
-            }
+            // Validate constants in the actual Register<TEntity>(id) calls, not
+            // a second diagnostic table that could disagree with execution.
+            new Tests_SourceGeneratorEntityPublications().TypedEntityRegistrationsLiveInOwnersAndRetainExactSelectedIds("Editor");
         }
 
         [Test]
         public void AspectConstructionSelectionBelongsToCompiler() {
-            var records = Assembly.Load("ME.BECS.Gen.Editor")
+            var records = Tests_SourceGeneratorInputCatalog.Owner(true)
                 .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
                 .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1" && attribute.Value != null)
                 .Select(attribute => attribute.Value.Split('\t')).ToArray();
@@ -781,7 +723,7 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void CompilerConfigMasksRetainSerializedBitPositions() {
-            var assembly = Assembly.Load("ME.BECS.Gen.Editor");
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(true);
             var records = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
                 .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1" && attribute.Value != null)
                 .Select(attribute => attribute.Value.Split('\t')).ToArray();
@@ -807,7 +749,7 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void CompilerConfigCollectionFieldsRetainReflectionOrder() {
-            var assembly = Assembly.Load("ME.BECS.Gen.Editor");
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(true);
             var records = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
                 .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1" && attribute.Value != null)
                 .Select(attribute => attribute.Value.Split('\t')).ToArray();
@@ -835,7 +777,7 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void ConfigCollectionCountsAreNoLongerExportedByEditor() {
-            var records = Assembly.Load("ME.BECS.Gen.Editor")
+            var records = Tests_SourceGeneratorInputCatalog.Owner(true)
                 .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
                 .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1" && attribute.Value != null)
                 .Select(attribute => attribute.Value.Split('\t')).ToArray();
@@ -848,16 +790,20 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void TypeBootstrapUsesCompilerOwnedCoreRegistration() {
-            var initializer = Assembly.Load("ME.BECS.Gen.Editor").GetType("ME.BECS.Editor.StaticTypesInitializer", true);
-            var load = initializer.GetMethod("Load", BindingFlags.Public | BindingFlags.Static, null, Type.EmptyTypes, null);
-            Assert.IsNotNull(load);
-            Assert.IsTrue(Attribute.IsDefined(load, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)));
-            Assert.IsTrue(Attribute.IsDefined(load, typeof(UnityEngine.Scripting.PreserveAttribute)));
-            Assert.IsNotNull(initializer.GetMethod("RegisterAdditionalTypes", BindingFlags.NonPublic | BindingFlags.Static),
-                "Regenerate Editor bootstrap: core registration must no longer be part of the Editor payload");
-            Assert.IsNull(initializer.GetMethod("RegisterGeneratedTypes", BindingFlags.NonPublic | BindingFlags.Static),
-                "The old hook owns core registration and must be replaced, not retained alongside the new hook");
-            // Metadata-only check: invoking Load here would reset shared runtime state.
+            var catalog = Tests_SourceGeneratorInputCatalog.Owner(true);
+            var owner = Tests_SourceGeneratorBootstrapPublications.Owner(catalog);
+            var publication = owner.GetType("ME.BECS.SourceGenerated.BootstrapProfile_Editor", true);
+            Assert.IsTrue(Attribute.IsDefined(publication, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)));
+            var publish = publication.GetMethod("Publish", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.IsTrue(Attribute.IsDefined(publish, typeof(UnityEngine.Scripting.PreserveAttribute)));
+            var phases = typeof(BootstrapRuntime).Assembly.GetType("ME.BECS.BootstrapPhases", true);
+            var initialize = phases.GetMethod("InitializeTypes", BindingFlags.Instance | BindingFlags.NonPublic);
+            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("InitializeTypes") }, Tests_SourceGeneratorAotPublications.Calls(initialize));
+            var registration = phases.GetMethod("RegisterTypes", BindingFlags.Instance | BindingFlags.NonPublic);
+            CollectionAssert.AreEqual(new[] { registration }, ME.BECS.Mono.Reflection.Disassembler.GetInstructions(initialize)
+                .Where(instruction => instruction.OpCode == System.Reflection.Emit.OpCodes.Ldftn).Select(instruction => instruction.Operand));
+            Tests_SourceGeneratorBootstrapPhases.AssertFeederSequence(catalog);
+            // Inspect only: initializing types would reset shared runtime state.
         }
 
         [Test]
@@ -906,99 +852,24 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void BootstrapFeederCallsFollowManifestOrderWithoutExecutingInitializers() {
-            var assembly = Assembly.Load("ME.BECS.Gen.Editor");
-            var initializer = assembly.GetType("ME.BECS.Editor.StaticTypesInitializer", true);
-            var method = initializer.GetMethod("RegisterAdditionalTypes", BindingFlags.NonPublic | BindingFlags.Static);
-            Assert.IsNotNull(method);
-            Assert.IsTrue(Attribute.IsDefined(method, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)),
-                "Regenerate the Editor bootstrap: feeder dispatch must be compiler-owned.");
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(true);
             var records = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
                 .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1").Select(attribute => attribute.Value.Split('\t'))
                 .Where(row => row.Length >= 4 && row.Length <= 6 && row[0] == "editor" && row[1] == "bootstrap-feeder")
                 .OrderBy(row => int.Parse(row[2], System.Globalization.CultureInfo.InvariantCulture)).ToArray();
             Assert.IsNotEmpty(records);
-            var hash = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.CodeGeneration.SourceGeneratorNames", true)
-                .GetMethod("Hash", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
-            Assert.IsNotNull(hash);
-            var expected = records.Select(row => "InitializeFeeder_" + (string)hash.Invoke(null,
-                new object[] { System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(row[3])) })).ToArray();
-            var calls = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(method)
-                .Where(instruction => instruction.OpCode == System.Reflection.Emit.OpCodes.Call)
-                .Select(instruction => (MethodInfo)instruction.Operand).ToArray();
-            CollectionAssert.AreEqual(expected, calls.Select(call => call.Name).ToArray());
-            var registry = assembly.GetType("ME.BECS.Editor.StaticMethods", true);
-            var register = registry.GetMethod("RegisterGeneratedMethods", BindingFlags.NonPublic | BindingFlags.Static);
-            Assert.IsNotNull(register);
-            Assert.IsTrue(Attribute.IsDefined(register, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)),
-                "Regenerate bootstrap to move callback dispatch to the compiler.");
-            var registrationCalls = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(register)
-                .Where(instruction => instruction.OpCode == System.Reflection.Emit.OpCodes.Call)
-                .Select(instruction => (MethodInfo)instruction.Operand).ToArray();
-            CollectionAssert.AreEqual(expected.Select(name => name.Replace("InitializeFeeder_", "RegisterFeeder_")).ToArray(),
-                registrationCalls.Select(call => call.Name).ToArray());
-            Assert.IsTrue(registrationCalls.All(call => call.DeclaringType == registry && call.IsStatic && call.GetParameters().Length == 0));
             foreach (var kind in new[] { "aspect-construction", "config-callbacks", "destroy-callbacks" })
                 Assert.IsTrue(records.Any(row => row.Length == 6 && row[5] == kind),
                     "Regenerate inputs to include compiler-owned callback registration: " + kind);
-            for (var index = 0; index < records.Length; ++index) {
-                if (records[index].Length != 6 || records[index][5] == "legacy") continue;
-                var expectedTargets = records[index][5] switch {
-                    "none" => Array.Empty<string>(),
-                    "aspect-construction" => new[] { "AspectInputs.RegisterConstruction" },
-                    "config-callbacks" => new[] { "ConfigMaskInputs.Initialize", "ConfigCollectionsInputs.Initialize" },
-                    "destroy-callbacks" => new[] { "DestroyInputs.Initialize" },
-                    "network-methods" => new[] { "NetworkMethodInputs.Initialize" },
-                    "view-types" => new[] { "ViewTypeInputs.Initialize" },
-                    _ => throw new InvalidOperationException("Unknown callback registration: " + records[index][5]),
-                };
-                Assert.IsTrue(Attribute.IsDefined(registrationCalls[index], typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)));
-                var bodyCalls = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(registrationCalls[index])
-                    .Where(instruction => instruction.OpCode == System.Reflection.Emit.OpCodes.Call)
-                    .Select(instruction => (MethodInfo)instruction.Operand).ToArray();
-                CollectionAssert.AreEqual(expectedTargets.Select(name => "ME.BECS.SourceGenerated." + name).ToArray(),
-                    bodyCalls.Select(call => call.DeclaringType.FullName + "." + call.Name).ToArray());
-            }
-            Assert.IsTrue(calls.All(call => call.DeclaringType == initializer && call.IsStatic && call.GetParameters().Length == 0));
             foreach (var kind in new[] { "aspects", "entities", "config-counts", "jobs" })
                 Assert.IsTrue(records.Any(row => row.Length >= 5 && row[4] == kind),
                     "Regenerate inputs to include compiler-owned initialization: " + kind);
-            for (var index = 0; index < records.Length; ++index) {
-                if (records[index].Length < 5 || records[index][4] == "legacy") continue;
-                var target = records[index][4] switch {
-                    "none" => null,
-                    "aspects" => "AspectInputs",
-                    "entities" => "EntityInputs",
-                    "config-counts" => "ConfigCollectionCounts",
-                    "views" => "ViewTrackerInputs",
-                    "jobs" => "JobBootstrapInputs",
-                    _ => throw new InvalidOperationException("Unknown source bootstrap operation: " + records[index][4]),
-                };
-                Assert.IsTrue(Attribute.IsDefined(calls[index], typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)));
-                var bodyCalls = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(calls[index])
-                    .Where(instruction => instruction.OpCode == System.Reflection.Emit.OpCodes.Call)
-                    .Select(instruction => (MethodInfo)instruction.Operand).ToArray();
-                Assert.AreEqual(target == null ? 0 : 1, bodyCalls.Length);
-                if (target == null) continue;
-                Assert.AreEqual("ME.BECS.SourceGenerated." + target, bodyCalls[0].DeclaringType.FullName);
-                Assert.AreEqual("Initialize", bodyCalls[0].Name);
-            }
+            Tests_SourceGeneratorBootstrapPhases.AssertFeederSequence(assembly);
         }
 
         [Test]
         public void AotBootstrapRootIsCompilerOwnedAndPreservedButNotRuntimeInitializer() {
-            var root = Assembly.Load("ME.BECS.Gen.Editor").GetType("ME.BECS.Editor.AOTBurstHelper", false);
-            Assert.IsNotNull(root,
-                "Compiler-owned AOT root is absent. Resolve the first export/preflight error, regenerate Editor inputs, " +
-                "and wait for Unity compilation before running bootstrap tests.");
-            Assert.IsTrue(Attribute.IsDefined(root, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)),
-                "Regenerate Editor bootstrap to replace the old template AOT root");
-            Assert.IsTrue(Attribute.IsDefined(root, typeof(UnityEngine.Scripting.PreserveAttribute)));
-            var method = root.GetMethod("AOT", BindingFlags.Public | BindingFlags.Static, null, Type.EmptyTypes, null);
-            Assert.IsNotNull(method);
-            Assert.AreEqual(typeof(void), method.ReturnType);
-            Assert.IsTrue(Attribute.IsDefined(method, typeof(UnityEngine.Scripting.PreserveAttribute)));
-            Assert.IsFalse(Attribute.IsDefined(method, typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute)));
-            // Never invoke AOT: its purpose is static reachability, not execution.
+            Tests_SourceGeneratorAotPublications.AssertRoots(Tests_SourceGeneratorInputCatalog.Owner(true));
         }
 
         public partial struct SafetyCatalogJob : ME.BECS.Jobs.IJobForComponents<TestComponent> {

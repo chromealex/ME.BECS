@@ -3,6 +3,9 @@ using System.Collections;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
+using System.Threading;
+using System.Threading.Tasks;
+using UnityEngine.TestTools;
 
 namespace ME.BECS.Tests {
     // Metadata-only regressions. No bootstrap/world or callback execution.
@@ -11,6 +14,9 @@ namespace ME.BECS.Tests {
         private static IDisposable Session() => (IDisposable)Activator.CreateInstance(EditorType("ILAnalysisSession"), true);
         private static Array Instructions(MethodBase method) => (Array)EditorType("ILAnalysisSession")
             .GetMethod("Instructions", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { method });
+        private static IDisposable Worker(CancellationToken token) => (IDisposable)Activator.CreateInstance(
+            EditorType("ILAnalysisSession"), BindingFlags.Instance | BindingFlags.NonPublic, null,
+            new object[] { token, (Action<MethodBase>)null }, null);
         private static bool Boundary(string name, MethodBase method) => (bool)EditorType("ILInfrastructure")
             .GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, new object[] { method });
 
@@ -54,6 +60,49 @@ namespace ME.BECS.Tests {
                 first = Instructions(body);
             }
             using (Export(fingerprint + "-changed-dependency")) Assert.AreNotSame(first, Instructions(body));
+        }
+
+        [UnityTest]
+        public IEnumerator WorkerMemoTransfersOnceWithoutSharingTheRetainedEditorDictionary() {
+            var type = EditorType("ILAnalysisSession");
+            var body = typeof(Tests_ILExportSession).GetMethod(nameof(Body), BindingFlags.NonPublic | BindingFlags.Static);
+            var fingerprint = Guid.NewGuid().ToString("N");
+            IDisposable Export() => (IDisposable)Activator.CreateInstance(type, BindingFlags.Instance | BindingFlags.NonPublic,
+                null, new object[] { fingerprint, false }, null);
+            Array editorInstructions;
+            using (Export()) editorInstructions = Instructions(body);
+            var task = System.Threading.Tasks.Task.Run(() => {
+                using var scope = Worker(CancellationToken.None);
+                var instructions = Instructions(body);
+                var snapshot = type.GetMethod("Detach", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(scope, null);
+                var failure = Assert.Throws<TargetInvocationException>(() => Instructions(body));
+                Assert.IsInstanceOf<InvalidOperationException>(failure.InnerException);
+                return (snapshot, instructions);
+            });
+            while (!task.IsCompleted) yield return null;
+            var result = task.GetAwaiter().GetResult();
+            Assert.AreNotSame(editorInstructions, result.instructions);
+            IDisposable Adopt() => (IDisposable)Activator.CreateInstance(type, BindingFlags.Instance | BindingFlags.NonPublic,
+                null, new[] { (object)fingerprint, false, result.snapshot }, null);
+            using (Adopt()) Assert.AreSame(result.instructions, Instructions(body));
+            var duplicate = Assert.Throws<TargetInvocationException>(() => Adopt());
+            Assert.IsInstanceOf<InvalidOperationException>(duplicate.InnerException);
+            using (Export()) Assert.AreSame(editorInstructions, Instructions(body));
+        }
+
+        [Test]
+        public void WorkerCancellationStopsMemoHitsAndPreventsHandoff() {
+            var type = EditorType("ILAnalysisSession");
+            var body = typeof(Tests_ILExportSession).GetMethod(nameof(Body), BindingFlags.NonPublic | BindingFlags.Static);
+            using var cancellation = new CancellationTokenSource();
+            using var scope = Worker(cancellation.Token);
+            Instructions(body);
+            cancellation.Cancel();
+            var read = Assert.Throws<TargetInvocationException>(() => Instructions(body));
+            Assert.IsInstanceOf<OperationCanceledException>(read.InnerException);
+            var handoff = Assert.Throws<TargetInvocationException>(() =>
+                type.GetMethod("Detach", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(scope, null));
+            Assert.IsInstanceOf<OperationCanceledException>(handoff.InnerException);
         }
 
         [Test]

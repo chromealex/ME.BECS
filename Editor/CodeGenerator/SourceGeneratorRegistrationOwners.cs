@@ -8,6 +8,87 @@ namespace ME.BECS.Editor {
     // Ownership is a compilation property, not just Type.Assembly. A closed
     // System<Component> can require references to two otherwise unrelated asmdefs.
     internal static class SourceGeneratorRegistrationOwners {
+        internal static void AppendThemeMenus(StringBuilder manifest, bool editor) {
+            if (!editor) return;
+            var entry = CodeGeneration.SourceGeneratorThemeMenuFragmentFormat.EntryValue(manifest.ToString().Split('\n'));
+            // Themes already owns the Editor API; no bridge or gameplay reference
+            // is needed. The additional file remains a project asset.
+            manifest.Append("thememenu-publication-schema\t0\tdjE=\nthememenu-registration-owner\t0\t")
+                .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(entry)).Append('\t')
+                .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(typeof(Themes).Assembly.GetName().Name)).Append('\n');
+        }
+
+        internal static void AppendInputCatalog(StringBuilder manifest, bool editor) {
+            // Metadata only: no gameplay type or addon reference is needed.
+            var owner = SourceGeneratorPublicationBridges.Select(RequiredAssemblies(typeof(BootstrapRuntime)), editor);
+            manifest.Append("inputcatalog-publication-schema\t0\tdjE=\ninputcatalog-registration-owner\t0\tdjE=\t")
+                .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(owner)).Append('\n');
+        }
+
+        internal static void AppendSystemDependencies(StringBuilder manifest, bool editor) {
+            if (!editor) return;
+            var entry = CodeGeneration.SourceGeneratorSystemDependencyFragmentFormat.EntryValue(manifest.ToString().Split('\n'));
+            var types = new HashSet<Type> { typeof(ComponentDependencyGraphInfo) };
+            foreach (var record in CodeGeneration.SourceGeneratorSystemDependencyFragmentFormat.Rows(entry)) {
+                var fields = record.Split('\t');
+                if (fields[0] != "system-dependencies") continue;
+                var rows = CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(fields[2]).Split('\n');
+                types.Add(Type.GetType(rows[1], true));
+                foreach (var row in rows.Skip(2).Select(value => value.Split('\t')))
+                    if (row[0] == "M" || row[0] == "D") types.Add(Type.GetType(row[1], true));
+                    else if (row[0] == "C") types.Add(Type.GetType(row[2], true));
+            }
+            var required = types.SelectMany(type => RequiredAssembliesCore(type, allowOpen: true)).Distinct(StringComparer.Ordinal).ToArray();
+            var owner = SourceGeneratorPublicationBridges.Select(required, editor: true);
+            manifest.Append("systemdependency-publication-schema\t0\tdjE=\nsystemdependency-registration-owner\t0\t")
+                .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(entry)).Append('\t')
+                .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(owner)).Append('\n');
+        }
+
+        internal static void AppendViewSelection(StringBuilder manifest, bool editor) {
+            var rows = manifest.ToString().Split('\n');
+            if (!rows.Any(row => row.StartsWith("view-type-schema\t", StringComparison.Ordinal))) return;
+            var payload = CodeGeneration.SourceGeneratorViewSelectionFragmentFormat.EntryValue(rows);
+            var types = new HashSet<Type> { Type.GetType("ME.BECS.Views.BootstrapViews, ME.BECS.Views", true) };
+            foreach (var row in CodeGeneration.SourceGeneratorViewSelectionFragmentFormat.Rows(payload).Select(row => row.Split('\t'))) {
+                if (row[0] == "views-registration-owner") {
+                    if (!CodeGeneration.SourceGeneratorViewsFragmentFormat.TryEntry(CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(row[2]), out var entry))
+                        throw new InvalidOperationException("Invalid Views registration selection.");
+                    types.Add(Type.GetType(entry.Component, true));
+                } else if (row[0] == "view-tracker-view" || row[0] == "view-tracker-module") {
+                    var lines = CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(row[2]).Split('\n');
+                    types.Add(Type.GetType(lines[0], true));
+                    // Include IL dependencies even when filtered out later. Private
+                    // metadata is inspected, never emitted as inaccessible C#.
+                    foreach (var dependency in lines.Skip(1).Where(line => line.StartsWith("C\t", StringComparison.Ordinal)))
+                        types.Add(Type.GetType(dependency.Split('\t')[2], true));
+                }
+            }
+            var required = types.SelectMany(RequiredAssemblies).Concat(new[] {
+                typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly.GetName().Name,
+                typeof(UnityEngine.Scripting.PreserveAttribute).Assembly.GetName().Name,
+            }).Concat(editor ? new[] { typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly.GetName().Name } : Array.Empty<string>()).Distinct(StringComparer.Ordinal).ToArray();
+            var owner = SourceGeneratorPublicationBridges.Select(required, editor);
+            manifest.Append("viewselection-publication-schema\t0\tdjE=\nviewselection-registration-owner\t0\t")
+                .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(payload)).Append('\t')
+                .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(owner)).Append('\n');
+        }
+
+        internal static void AppendBootstrap(StringBuilder manifest, bool editor) {
+            var profile = CodeGeneration.SourceGeneratorBootstrapFragmentFormat.Create(manifest.ToString().Split('\n'), editor);
+            var required = new HashSet<string>(RequiredAssemblies(typeof(BootstrapRuntime)), StringComparer.Ordinal) {
+                typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly.GetName().Name,
+                typeof(UnityEngine.Scripting.PreserveAttribute).Assembly.GetName().Name,
+            };
+            if (editor) required.Add(typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly.GetName().Name);
+            if (profile.Selections.Any(item => item.Kind == "Network")) required.UnionWith(RequiredAssemblies(Type.GetType("ME.BECS.Network.BootstrapNetworkMethods, ME.BECS.Network", true)));
+            if (profile.Initialize.Contains("views")) required.UnionWith(RequiredAssemblies(Type.GetType("ME.BECS.Views.BootstrapViews, ME.BECS.Views", true)));
+            var owner = SourceGeneratorPublicationBridges.Select(required.ToArray(), editor);
+            manifest.Append("bootstrap-publication-schema\t0\tdjE=\nbootstrap-registration-owner\t0\t")
+                .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(CodeGeneration.SourceGeneratorBootstrapFragmentFormat.EntryValue(profile)))
+                .Append('\t').Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(owner)).Append('\n');
+        }
+
         internal sealed class Candidate {
             internal readonly string name;
             internal readonly bool editorOnly;

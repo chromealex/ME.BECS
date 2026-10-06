@@ -87,7 +87,11 @@ public sealed class JobSetupPublicationGenerator : IIncrementalGenerator {
             }
         }
         var profile = document.Editor ? "Editor" : "Runtime";
-        var suffix = "_" + profile;
+        // Friend assemblies can see each other's internal helpers. Keep names
+        // owner-specific instead of relying on local-type shadowing (CS0436).
+        var suffix = "_" + profile + "_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(document.Owner);
+        entities.AppendMetadata(source, "ME.BECS.PublishedJobEntitySelection." + profile + ".v1");
+        weights.AppendMetadata(source, "ME.BECS.PublishedJobWeightSelection." + profile + ".v1");
         if (!entities.Append(source, groups, count, suffix, out error)) return false;
         weights.Append(source, suffix);
         JobLayoutInputEmitter.Append(source, compilation, debug, suffix);

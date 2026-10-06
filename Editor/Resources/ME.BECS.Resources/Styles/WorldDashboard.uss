@@ -1,0 +1,64 @@
+.world-dashboard { flex-grow: 1; }
+.world-dashboard.dark { background-color: #202226; color: #e8eaf0; }
+.world-dashboard.light { background-color: #f4f5f7; color: #242831; }
+.dashboard-toolbar { flex-direction: row; align-items: center; flex-wrap: wrap; padding: 8px 12px; }
+.dashboard-page.selected { border-bottom-width: 2px; border-bottom-color: #7196ff; }
+.dashboard-status { flex-grow: 1; -unity-text-align: middle-right; font-size: 11px; padding: 4px; }
+.dashboard-tabs { flex-direction: row; flex-wrap: wrap; padding: 0 12px; border-bottom-width: 1px; }
+.dark .dashboard-tabs { background-color: #292c31; border-bottom-color: #3c424c; }
+.light .dashboard-tabs { background-color: white; border-bottom-color: #d9dee6; }
+.dashboard-tab { padding: 10px 14px; margin: 0 3px 0 0; border-width: 0; border-radius: 0; background-color: rgba(0,0,0,0); }
+.dashboard-tab.selected { border-bottom-width: 2px; border-bottom-color: #7196ff; }
+.dark .dashboard-tab.selected { background-color: #202226; }
+.light .dashboard-tab.selected { background-color: #f4f5f7; }
+.dashboard-body, .dashboard-scroll { flex-grow: 1; min-height: 0; }
+.dashboard-scroll > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { padding: 18px; }
+.dashboard-stats { flex-direction: row; flex-wrap: wrap; margin-bottom: 22px; }
+.dashboard-stat { flex-grow: 1; flex-basis: 170px; padding: 14px; margin: 0 10px 10px 0; border-width: 1px; border-radius: 6px; }
+.dark .dashboard-stat { background-color: #292c31; border-color: #3c424c; }
+.light .dashboard-stat { background-color: white; border-color: #d9dee6; }
+.dashboard-caption { font-size: 12px; }
+.dashboard-stat-value { font-size: 25px; margin-top: 6px; margin-bottom: 6px; }
+.dashboard-columns { flex-direction: row; flex-wrap: wrap; }
+.dashboard-column { flex-grow: 1; flex-basis: 300px; margin-right: 20px; margin-bottom: 18px; }
+.dashboard-heading { font-size: 13px; -unity-font-style: bold; margin-bottom: 14px; }
+.dashboard-note { font-size: 11px; white-space: normal; margin-top: 4px; margin-bottom: 8px; }
+.dark .dashboard-note, .dark .dashboard-status, .dark .dashboard-caption { color: #aab3c1; }
+.light .dashboard-note, .light .dashboard-status, .light .dashboard-caption { color: #596373; }
+.dashboard-row-group { padding-top: 6px; padding-bottom: 6px; }
+.dashboard-row { flex-direction: row; justify-content: space-between; }
+.dashboard-row > Label { white-space: normal; flex-shrink: 1; }
+.dashboard-row-value { -unity-text-align: middle-right; margin-left: 12px; }
+.dashboard-track { height: 7px; margin-top: 6px; border-radius: 2px; overflow: hidden; }
+.dark .dashboard-track { background-color: #3a404a; }
+.light .dashboard-track { background-color: #e4e8ee; }
+.dashboard-fill { height: 7px; background-color: #7196ff; }
+.dashboard-stack { flex-direction: row; height: 18px; margin-bottom: 12px; overflow: hidden; }
+.dashboard-stack > VisualElement { height: 18px; flex-shrink: 0; }
+.dashboard-stack > .state { background-color: #7196ff; }
+.dashboard-stack > .persistent { background-color: #bd9add; }
+.dashboard-stack > .temp { background-color: #50c5b8; }
+.dashboard-bottom { border-top-width: 1px; padding-top: 20px; }
+.dark .dashboard-bottom { border-top-color: #3c424c; }
+.light .dashboard-bottom { border-top-color: #d9dee6; }
+/* These controls are outside Unity's toolbar, so apply the BECS theme explicitly. */
+.world-dashboard .dashboard-toolbar > Button,
+.world-dashboard .dashboard-tabs > Button {
+    min-height: 28px;
+    padding: 5px 12px;
+    margin: 2px 4px 2px 0;
+    border-width: var(--toolbar-buttons-border-width);
+    border-radius: var(--toolbar-buttons-radius);
+    border-color: var(--toolbar-buttons-border-color);
+    background-color: var(--toolbar-buttons-background-color);
+}
+.world-dashboard .dashboard-toolbar > Button:hover,
+.world-dashboard .dashboard-tabs > Button:hover { background-color: var(--toolbar-buttons-background-color-hover); }
+.world-dashboard.dark .dashboard-toolbar > Button,
+.world-dashboard.dark .dashboard-tabs > Button { color: #e8eaf0; }
+.world-dashboard.light .dashboard-toolbar > Button,
+.world-dashboard.light .dashboard-tabs > Button { color: #242831; }
+.world-dashboard .dashboard-tabs > .dashboard-tab { padding: 9px 14px; border-radius: 4px 4px 0px 0px; margin-bottom: 0px; }
+.world-dashboard .dashboard-toolbar > .dashboard-page.selected,
+.world-dashboard .dashboard-tabs > .dashboard-tab.selected { background-color: #395f85; color: white; border-bottom-width: 2px; border-bottom-color: #7196ff; }
+.world-dashboard .dashboard-toolbar > Button:disabled { opacity: 0.45; }

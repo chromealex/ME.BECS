@@ -21,11 +21,11 @@ namespace ME.BECS.Editor {
                 if (assembly.IsDynamic) continue;
                 try {
                     foreach (System.Reflection.AssemblyMetadataAttribute attribute in assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyMetadataAttribute), false)) {
-                        if (attribute.Key == "ME.BECS.GraphSyncComparison.v1") {
+                        if (attribute.Key == "ME.BECS.PublishedGraphSyncComparison.v1") {
                             report.AppendLine("fresh-vs-saved-sync\t" + assembly.FullName).AppendLine(attribute.Value);
                             continue;
                         }
-                        if (attribute.Key != "ME.BECS.GraphLifecyclePlan.v1") continue;
+                        if (attribute.Key != "ME.BECS.PublishedGraphLifecyclePlan.v1") continue;
                         var rows = attribute.Value?.Split('\n');
                         if (rows == null || rows.Length < 4) { ++errors; report.AppendLine("Malformed plan in " + assembly.FullName); continue; }
                         if (rows[2] == "ME.BECS.GraphLifecyclePlan.v1") ++available;

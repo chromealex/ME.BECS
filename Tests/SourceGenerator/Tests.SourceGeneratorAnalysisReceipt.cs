@@ -12,8 +12,8 @@ namespace ME.BECS.Tests {
             (string)Receipt.GetMethod("Create", BindingFlags.Static | BindingFlags.NonPublic)
                 .Invoke(null, new object[] { Hash(code), Hash(assets), Hash(runtime), Hash(editor) });
         private static KeyValuePair<string, string>[] Inputs(char runtime = 'C', char editor = 'D') => new[] {
-            new KeyValuePair<string, string>("ME.BECS.Gen.Runtime", Hash(runtime)),
-            new KeyValuePair<string, string>("ME.BECS.Gen.Editor", Hash(editor)),
+            new KeyValuePair<string, string>("runtime", Hash(runtime)),
+            new KeyValuePair<string, string>("editor", Hash(editor)),
         };
         private static KeyValuePair<string, string[]>[] Compiled(char runtime = 'C', char editor = 'D') =>
             Inputs(runtime, editor).Select(pair => new KeyValuePair<string, string[]>(pair.Key, new[] { pair.Value })).ToArray();
@@ -101,7 +101,7 @@ namespace ME.BECS.Tests {
             Assert.IsTrue((bool)snapshot.GetMethod("IsCompiledCurrent").Invoke(null, args), (string)args[1]);
             var compilerSnapshot = (string)snapshot.GetMethod("GetCompilerSnapshot", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, null);
             foreach (var editor in new[] { false, true }) {
-                var assembly = Assembly.Load("ME.BECS.Gen." + (editor ? "Editor" : "Runtime"));
+                var assembly = Tests_SourceGeneratorInputCatalog.Owner(editor);
                 CollectionAssert.AreEqual(new[] { compilerSnapshot }, assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false)
                     .Cast<AssemblyMetadataAttribute>().Where(attribute => attribute.Key == "ME.BECS.GraphInputSnapshot.v1")
                     .Select(attribute => attribute.Value).ToArray());

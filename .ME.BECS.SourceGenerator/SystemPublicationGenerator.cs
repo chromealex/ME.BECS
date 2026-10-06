@@ -23,6 +23,10 @@ public sealed class SystemPublicationGenerator : IIncrementalGenerator {
             .Select(static (input, cancellation) => (input.Left.Path, Content: input.Left.GetText(cancellation)?.ToString())).Collect();
         context.RegisterSourceOutput(files.Combine(context.CompilationProvider), static (output, input) => {
             var compilation = input.Right;
+            // AOT masks depend on explicit/private lifecycle implementations,
+            // including [WithoutBurst] on imported closed generic systems.
+            if (compilation.Options.MetadataImportOptions != MetadataImportOptions.All)
+                compilation = compilation.WithOptions(compilation.Options.WithMetadataImportOptions(MetadataImportOptions.All));
             var inEditor = compilation.SyntaxTrees.Any(tree => tree.Options.PreprocessorSymbolNames.Contains("UNITY_EDITOR"));
             var seen = new HashSet<bool>();
             foreach (var file in input.Left) {
@@ -43,6 +47,7 @@ public sealed class SystemPublicationGenerator : IIncrementalGenerator {
                 }
                 var resolver = new InputManifestTypes(compilation, output.CancellationToken);
                 var callbacks = new List<string>();
+                var registrations = new List<(string Identity, INamedTypeSymbol Type)>();
                 var bodies = new StringBuilder();
                 var valid = true;
                 foreach (var entry in document.Entries) {
@@ -53,6 +58,7 @@ public sealed class SystemPublicationGenerator : IIncrementalGenerator {
                         Fail("Cannot publish " + entry.Value + " (" + (gap ?? "requires accessible closed unmanaged ISystem") + ")");
                         valid = false; break;
                     }
+                    registrations.Add((entry.Value, type));
                     if (GenericSystemGenerator.TryResolve(type, compilation, "Register", out var target)) callbacks.Add(target);
                     else {
                         var method = "Register_" + entry.Key.ToString(CultureInfo.InvariantCulture);
@@ -62,7 +68,13 @@ public sealed class SystemPublicationGenerator : IIncrementalGenerator {
                     }
                 }
                 if (!valid) continue;
-                source.Append("namespace ME.BECS.SourceGenerated {\n[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\ninternal static class SystemFragment_")
+                var profile = editor ? "Editor" : "Runtime";
+                var aot = SystemAotInputEmitter.Create(compilation, registrations, out var aotError,
+                    owner: "SystemFragment_" + profile, registrationTargets: callbacks,
+                    metadataKey: "ME.BECS.SystemAotPublication." + profile + ".v1");
+                if (aot == null) { Fail(aotError); continue; }
+                source.Append(aot.Metadata);
+                source.Append("namespace ME.BECS.SourceGenerated {\n[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\ninternal static partial class SystemFragment_")
                     .Append(editor ? "Editor" : "Runtime").Append(" {\nprivate static readonly int[] Ordinals = new int[] { ")
                     .Append(string.Join(",", document.Entries.Select(entry => entry.Key.ToString(CultureInfo.InvariantCulture)))).Append(" };\n")
                     .Append("private static readonly global::System.Action[] Callbacks = new global::System.Action[] {\n")
@@ -73,6 +85,9 @@ public sealed class SystemPublicationGenerator : IIncrementalGenerator {
                     .Append(SymbolDisplay.FormatLiteral(document.Plan, true)).Append(", ")
                     .Append(SymbolDisplay.FormatLiteral(document.Owner, true)).Append(", ").Append(document.Count.ToString(CultureInfo.InvariantCulture))
                     .Append(", Ordinals, Callbacks, editor: ").Append(editor ? "true" : "false").Append(");\n} }\n");
+                // A preservation-only method: never included in the publisher or
+                // runtime callback array. Closed generic references stay typed.
+                source.Append(aot.Body);
                 output.AddSource("ME.BECS.SystemFragment." + (editor ? "Editor" : "Runtime") + ".g.cs", SourceText.From(source.ToString(), Encoding.UTF8));
             }
         });

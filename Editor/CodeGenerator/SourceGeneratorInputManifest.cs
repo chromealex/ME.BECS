@@ -84,9 +84,11 @@ namespace ME.BECS.Editor {
         // and updating assembly references remain the caller's responsibility.
         internal static string PrepareActiveInputs(string targetAssembly, bool editor,
             IEnumerable<CustomCodeGenerator> addonFeeders,
-            out Systems.SystemDependenciesCodeGenerator.UsedObjects used, List<Type> references = null) {
+            out Systems.SystemDependenciesCodeGenerator.UsedObjects used, List<Type> references = null,
+            Systems.SystemDependenciesCodeGenerator.UsedObjects? prepared = null) {
             CodeGeneratorTimings.Stage("Discover used types", 0.02f);
-            Systems.SystemDependenciesCodeGenerator.GetUsedObjects(editor, out used);
+            if (prepared.HasValue) used = prepared.Value;
+            else Systems.SystemDependenciesCodeGenerator.GetUsedObjects(editor, out used);
             var feeders = (addonFeeders ?? CreateFeeders()).ToArray();
             CodeGeneratorTimings.Stage("Prepare graph inputs", 0.15f);
             var manifest = Serialize(targetAssembly, editor, used, registerGraphReferences: true, addonFeeders: feeders);
@@ -307,6 +309,11 @@ namespace ME.BECS.Editor {
             SourceGeneratorRegistrationOwners.AppendJobSetup(result, editor);
             SourceGeneratorRegistrationOwners.AppendJobDebug(result, editor);
             SourceGeneratorRegistrationOwners.AppendGraphs(result, editor);
+            SourceGeneratorRegistrationOwners.AppendViewSelection(result, editor);
+            SourceGeneratorRegistrationOwners.AppendSystemDependencies(result, editor);
+            SourceGeneratorRegistrationOwners.AppendThemeMenus(result, editor);
+            SourceGeneratorRegistrationOwners.AppendBootstrap(result, editor);
+            SourceGeneratorRegistrationOwners.AppendInputCatalog(result, editor);
             if (graphSnapshot != SourceGeneratorGraphSnapshot.GetCurrent())
                 throw new InvalidOperationException("Graphs or loaded script assemblies changed during input preparation. Retry after imports/compilation settle.");
             var payload = result.ToString();

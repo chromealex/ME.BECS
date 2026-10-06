@@ -9,14 +9,16 @@ namespace ME.BECS.Tests {
     public class Tests_SourceGeneratorThemeMenus {
         [Test]
         public void EditorMenuMatchesCompilerPlanWithoutChangingPreferences() {
-            var assembly = Assembly.Load("ME.BECS.Gen.Editor");
+            var assembly = Assembly.Load("ME.BECS.Editor");
             var metadata = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>().ToArray();
             var plan = metadata.Single(item => item.Key == "ME.BECS.ThemeMenuInputs.v1").Value.Split('\n');
-            var inputs = metadata.Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t'))
-                .Where(row => row[0] == "editor").ToArray();
+            var inputs = Tests_SourceGeneratorInputCatalog.Rows(true).Select(row => row.Split('\t')).ToArray();
             string Decode(string value) => Encoding.UTF8.GetString(Convert.FromBase64String(value));
-            var schema = Decode(inputs.Single(row => row[1] == "theme-menu-schema")[3]).Split('\n');
-            var themes = inputs.Where(row => row[1] == "theme-menu").Select(row => Decode(row[3]).Split('\n')).ToArray();
+            var schema = Decode(inputs.Single(row => row[0] == "theme-menu-schema")[2]).Split('\n');
+            var themes = inputs.Where(row => row[0] == "theme-menu").OrderBy(row => int.Parse(row[1], CultureInfo.InvariantCulture))
+                .Select(row => Decode(row[2]).Split('\n')).ToArray();
+            Assert.AreEqual(assembly.GetName().Name, Decode(inputs.Single(row => row[0] == "thememenu-registration-owner")[3]));
+            Assert.AreEqual(1, metadata.Count(item => item.Key == "ME.BECS.ThemeMenuFragment.v1"));
             Assert.AreEqual("v1", schema[0]);
             CollectionAssert.AreEqual(schema, plan.Take(3));
             Assert.AreEqual(themes.Length.ToString(CultureInfo.InvariantCulture), schema[1]);
@@ -50,12 +52,37 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void RuntimeHasNoThemeMenuOrEditorThemeInputs() {
-            var assembly = Assembly.Load("ME.BECS.Gen.Runtime");
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(false);
             Assert.IsNull(assembly.GetType("ME.BECS.Editor.ThemesMenu"));
             var metadata = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>().ToArray();
             Assert.IsFalse(metadata.Any(item => item.Key == "ME.BECS.ThemeMenuInputs.v1"));
-            Assert.IsFalse(metadata.Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t'))
-                .Any(row => row.Length > 1 && (row[1] == "theme-menu-schema" || row[1] == "theme-menu")));
+            Assert.IsFalse(Tests_SourceGeneratorInputCatalog.Rows(false).Select(row => row.Split('\t'))
+                .Any(row => row[0] == "theme-menu-schema" || row[0] == "theme-menu" || row[0] == "thememenu-registration-owner"));
+        }
+
+        [Test]
+        public void ThemeFragmentRoundTripsAndRetiresWithoutRuntimePublication() {
+            const BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic;
+            var format = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.CodeGeneration.SourceGeneratorThemeMenuFragmentFormat", true);
+            object Call(string name, params object[] args) => format.GetMethod(name, flags).Invoke(null, args);
+            string Encode(string value) => Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
+            var rows = new[] { "theme-menu-schema\t0\t" + Encode("v1\n1\n1"), "theme-menu\t0\t" + Encode("Default\nDefaultStyle") };
+            var entry = (string)Call("EntryValue", (object)rows);
+            var selection = rows.Concat(new[] { "thememenu-publication-schema\t0\tdjE=",
+                "thememenu-registration-owner\t0\t" + Encode(entry) + "\t" + Encode("Example.Editor") }).ToArray();
+            var documents = (Array)Call("Documents", selection, true);
+            Assert.AreEqual(1, documents.Length);
+            var document = documents.GetValue(0);
+            var content = (string)Call("Serialize", document);
+            Assert.IsTrue((bool)Call("TryParse", content, null));
+            Assert.IsFalse((bool)Call("TryParse", content + "corrupt", null));
+            CollectionAssert.AreEqual(rows, (string[])Call("Rows", entry));
+            var entries = document.GetType().GetField("Entries", BindingFlags.Instance | BindingFlags.NonPublic);
+            entries.SetValue(document, Array.CreateInstance(entries.FieldType.GetElementType(), 0));
+            Assert.IsTrue((bool)Call("TryParse", Call("Serialize", document), null), "Retired publications must remain readable.");
+            Assert.IsEmpty((Array)Call("Documents", Array.Empty<string>(), false));
+            var error = Assert.Throws<TargetInvocationException>(() => Call("Documents", selection, false));
+            Assert.IsInstanceOf<InvalidOperationException>(error.InnerException);
         }
 
         [TestCase(false)]

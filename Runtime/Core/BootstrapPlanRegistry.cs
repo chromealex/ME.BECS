@@ -8,12 +8,14 @@ namespace ME.BECS {
             internal readonly System.Action initializeTypes;
             internal readonly System.Action registerMethods;
             internal readonly System.Action validateInputs;
+            internal readonly BootstrapPhases phases;
 
-            internal Plan(string owner, System.Action initializeTypes, System.Action registerMethods, System.Action validateInputs) {
+            internal Plan(string owner, System.Action initializeTypes, System.Action registerMethods, System.Action validateInputs, BootstrapPhases phases = null) {
                 this.owner = owner;
                 this.initializeTypes = initializeTypes;
                 this.registerMethods = registerMethods;
                 this.validateInputs = validateInputs;
+                this.phases = phases;
             }
         }
 
@@ -32,8 +34,17 @@ namespace ME.BECS {
             this.InstallCore(owner, initializeTypes, registerMethods, validateInputs, editor);
         }
 
+        internal void InstallPhases(string owner, System.Action<bool>[] initialize, System.Action<bool>[] register,
+                                    System.Action<bool>[] preflight, int[] jobSetupOrdinals, bool editor, bool jobDebug) {
+            if (string.IsNullOrEmpty(owner)) throw new System.ArgumentException("A bootstrap plan must identify its owner.", nameof(owner));
+            var previous = editor ? this.editor : this.runtime;
+            if (previous?.owner == owner && previous.phases?.Matches(initialize, register, preflight, jobSetupOrdinals, jobDebug) == true) return;
+            var phases = new BootstrapPhases(initialize, register, preflight, jobSetupOrdinals, editor, jobDebug);
+            this.InstallCore(owner, phases.InitializeTypes, phases.RegisterMethods, phases.ValidateInputs, editor, phases);
+        }
+
         private void InstallCore(string owner, System.Action initializeTypes, System.Action registerMethods,
-                                 System.Action validateInputs, bool editor) {
+                                 System.Action validateInputs, bool editor, BootstrapPhases phases = null) {
             if (string.IsNullOrEmpty(owner)) throw new System.ArgumentException("A bootstrap plan must identify its owner.", nameof(owner));
             if (initializeTypes == null) throw new System.ArgumentNullException(nameof(initializeTypes));
             if (registerMethods == null) throw new System.ArgumentNullException(nameof(registerMethods));
@@ -49,7 +60,7 @@ namespace ME.BECS {
                 throw new System.InvalidOperationException("Conflicting ME.BECS " + (editor ? "Editor" : "Runtime") +
                     " bootstrap plans: " + previous.owner + " and " + owner + ". Recompile a single complete registration plan.");
             }
-            var plan = new Plan(owner, initializeTypes, registerMethods, validateInputs);
+            var plan = new Plan(owner, initializeTypes, registerMethods, validateInputs, phases);
             if (editor) this.editor = plan;
             else this.runtime = plan;
         }

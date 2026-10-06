@@ -10,19 +10,12 @@ namespace ME.BECS.Network.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void CompilerNetworkRegistrationPreservesOrderedMethodIds(string profile) {
-            var assembly = Assembly.Load("ME.BECS.Gen." + profile);
-            var metadata = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>().ToArray();
-            var plan = metadata.Single(item => item.Key == "ME.BECS.NetworkMethodInputs.v1").Value.Split('\n');
-            var inputs = metadata.Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t'))
-                .Where(row => row[0] == profile.ToLowerInvariant()).ToArray();
+            var inputs = Rows(profile).Select(row => (profile.ToLowerInvariant() + "\t" + row).Split('\t')).ToArray();
             string Decode(string value) => Encoding.UTF8.GetString(Convert.FromBase64String(value));
             var schema = Decode(inputs.Single(row => row[1] == "network-method-schema")[3]).Split('\n');
-            var selections = inputs.Where(row => row[1] == "network-method").ToArray();
+            var selections = inputs.Where(row => row[1] == "network-method").OrderBy(row => int.Parse(row[2], CultureInfo.InvariantCulture)).ToArray();
             Assert.AreEqual("v1", schema[0]);
-            Assert.AreEqual("v1", plan[0]);
             Assert.AreEqual(selections.Length.ToString(CultureInfo.InvariantCulture), schema[1]);
-            Assert.AreEqual(schema[1], plan[1]);
-            Assert.AreEqual(selections.Length + 2, plan.Length);
             Assert.AreEqual(1, inputs.Count(row => row[1] == "bootstrap-feeder" && row.Length == 6 && row[5] == "network-methods"));
             var identities = selections.Select(row => Decode(row[3]).Split('\n')).ToArray();
             CollectionAssert.AreEqual(identities.Select(row => row[0] + "\n" + row[1]).ToArray(),
@@ -30,8 +23,6 @@ namespace ME.BECS.Network.Tests {
                     .Select(row => row[0] + "\n" + row[1]).ToArray());
             for (var index = 0; index < identities.Length; ++index) {
                 Assert.AreEqual(index.ToString(CultureInfo.InvariantCulture), selections[index][2]);
-                CollectionAssert.AreEqual(new[] { (index + 1).ToString(CultureInfo.InvariantCulture), identities[index][0], identities[index][1] },
-                    plan[index + 2].Split('\t'));
                 var owner = Type.GetType(identities[index][0], true);
                 var method = owner.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.DeclaredOnly)
                     .Single(candidate => candidate.Name == identities[index][1] && Attribute.IsDefined(candidate, typeof(NetworkMethodAttribute)));
@@ -44,13 +35,14 @@ namespace ME.BECS.Network.Tests {
                 Assert.IsFalse(parameters[0].IsOut);
                 Assert.IsFalse(parameters[1].IsIn || parameters[1].IsOut);
             }
-            var generated = assembly.GetType("ME.BECS.SourceGenerated.NetworkMethodInputs", true);
-            var initialize = generated.GetMethod("Initialize", BindingFlags.Public | BindingFlags.Static);
-            Assert.IsNotNull(initialize);
-            Assert.IsTrue(initialize.IsDefined(typeof(UnityEngine.Scripting.PreserveAttribute), false));
-            Assert.AreEqual(typeof(void), initialize.ReturnType);
-            Assert.IsEmpty(initialize.GetParameters());
-            Assert.IsNull(generated.GetMethod("Register", BindingFlags.NonPublic | BindingFlags.Static), "Typed delegates now belong to their owners, not the aggregate.");
+            OwnerDelegatesExactlyMatchSelectionAndFragmentMetadata(profile);
+            var compositionOwner = Decode(inputs.Single(row => row[1] == "bootstrap-registration-owner")[4]);
+            var phases = Assembly.Load(compositionOwner).GetType("ME.BECS.SourceGenerated.BootstrapPhaseInputs", true);
+            var registrations = (Action<bool>[])phases.GetField("Registrations", Static).GetValue(null);
+            var feeders = inputs.Where(row => row[1] == "bootstrap-feeder").OrderBy(row => int.Parse(row[2], CultureInfo.InvariantCulture)).ToArray();
+            Assert.AreEqual(feeders.Length, registrations.Length);
+            var indexOfNetwork = Array.FindIndex(feeders, row => row[5] == "network-methods");
+            Assert.AreEqual(typeof(BootstrapNetworkMethods).GetMethod("RegisterInstalled"), registrations[indexOfNetwork].Method);
             // Inspect metadata only. Do not initialize a world, register callbacks,
             // invoke network methods or alter the process-global callback registry.
         }
@@ -122,10 +114,8 @@ namespace ME.BECS.Network.Tests {
         private static Type Format => Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.CodeGeneration.SourceGeneratorNetworkFragmentFormat", true);
         private static object FormatCall(string method, params object[] args) => Format.GetMethod(method, Static).Invoke(null, args);
         private static T Field<T>(object document, string name) => (T)document.GetType().GetField(name, Instance).GetValue(document);
-        private static string[] Rows(string profile) => Assembly.Load("ME.BECS.Gen." + profile)
-            .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-            .Where(item => item.Key == "ME.BECS.TypeInput.v1" && item.Value.StartsWith(profile.ToLowerInvariant() + "\t", StringComparison.Ordinal))
-            .Select(item => item.Value.Substring(profile.Length + 1)).ToArray();
+        private static string[] Rows(string profile) => (string[])Format.Assembly.GetType("ME.BECS.Editor.SourceGeneratorInputCatalog", true)
+            .GetMethod("GetRows", BindingFlags.Public | BindingFlags.Static).Invoke(null, new object[] { profile == "Editor" });
 
         [TestCase(false)]
         [TestCase(true)]
@@ -167,6 +157,7 @@ namespace ME.BECS.Network.Tests {
                 var owner = Field<string>(document, "Owner");
                 var assembly = Assembly.Load(owner);
                 Assert.IsFalse(owner.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal));
+                Assert.IsFalse(assembly.GetReferencedAssemblies().Any(reference => reference.Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal)));
                 var metadata = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>();
                 var envelope = Format.Assembly.GetType("ME.BECS.CodeGeneration.SourceGeneratorSystemFragmentFormat", true);
                 var expected = (string)envelope.GetMethod("Metadata", Static).Invoke(null, new[] { document, content });

@@ -9,10 +9,8 @@ namespace ME.BECS.Tests {
     public partial class Tests_SourceGeneratorContracts {
         [Test]
         public void CompilerGraphSystemInjectionsMatchFieldsAndFirstRegisteredTargets() {
-            var assembly = Assembly.Load("ME.BECS.Gen.Runtime");
-            var attributes = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>().ToArray();
-            var inputs = attributes.Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1")
-                .Select(attribute => attribute.Value.Split('\t')).Where(row => row[0] == "runtime").ToArray();
+            var attributes = Tests_SourceGeneratorGraphPublications.PublishedMetadata();
+            var inputs = Tests_SourceGeneratorInputCatalog.Rows(false).Select(row => ("runtime\t" + row).Split('\t')).ToArray();
             string Decode(string value) => Encoding.UTF8.GetString(Convert.FromBase64String(value));
             var slots = inputs.Where(row => row[1] == "graph-system").Select(row => (
                 graph: int.Parse(row[4], CultureInfo.InvariantCulture),
@@ -22,7 +20,7 @@ namespace ME.BECS.Tests {
             Assert.AreEqual("v1", Decode(schema[3]), "Regenerate Runtime inputs: compiler must select graph system injection fields.");
             Assert.IsFalse(inputs.Any(row => row[1] == "graph-system-injection" || row[1] == "graph-system-injection-auto"));
             var selections = slots.Select(slot => (slot.graph, owner: slot.type.AssemblyQualifiedName)).Distinct().ToArray();
-            var plans = attributes.Where(attribute => attribute.Key == "ME.BECS.GraphSystemInjectionPlan.v1")
+            var plans = attributes.Where(attribute => attribute.Key == "ME.BECS.PublishedGraphSystemInjectionPlan.v1")
                 .Select(attribute => attribute.Value.Split('\n')).ToArray();
             Assert.AreEqual(selections.Length, plans.Length);
             foreach (var selection in selections) {
@@ -42,8 +40,12 @@ namespace ME.BECS.Tests {
                 }).ToArray();
                 CollectionAssert.AreEqual(expected, plan[4].Length == 0 ? Array.Empty<string>() : plan[4].Split(','), owner.FullName);
             }
-            Assert.IsNull(assembly.GetType("ME.BECS.SourceGenerated.SystemInjectionInputs", false),
-                "Unused graph-independent injection helpers must not be emitted.");
+            foreach (var graph in slots.Select(slot => slot.graph).Distinct()) {
+                var owner = Tests_SourceGeneratorGraphPublications.Owner(graph.ToString(CultureInfo.InvariantCulture));
+                Assert.IsFalse(owner.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal));
+                Assert.IsNull(owner.GetType("ME.BECS.SourceGenerated.SystemInjectionInputs", false),
+                    "Unused graph-independent injection helpers must not be emitted.");
+            }
             // Metadata and field shape only: no graph, patch or registration method is invoked.
         }
     }

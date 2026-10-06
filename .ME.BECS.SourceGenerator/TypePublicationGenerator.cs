@@ -50,6 +50,7 @@ public sealed class TypePublicationGenerator : IIncrementalGenerator {
                 var targets = new Dictionary<INamedTypeSymbol, (int Flags, string Owner, string Key, string Arguments)>(SymbolEqualityComparer.Default);
                 var callbacks = new List<string>();
                 var bodies = new StringBuilder();
+                var aot = new StringBuilder();
                 var valid = true;
                 foreach (var item in document.Entries) {
                     output.CancellationToken.ThrowIfCancellationRequested();
@@ -92,7 +93,20 @@ public sealed class TypePublicationGenerator : IIncrementalGenerator {
                     if (!ComponentRegistrationEmitter.Operations(target.Flags).Contains(entry.Phase)) {
                         Fail("Stale component registration phase: " + entry.Phase + " / " + entry.Component); valid = false; break;
                     }
-                    callbacks.Add((target.Owner.Length == 0 ? "" : target.Owner + ".") + entry.Phase + "_" + target.Key + target.Arguments);
+                    var prefix = target.Owner.Length == 0 ? "" : target.Owner + ".";
+                    var suffix = "_" + target.Key + target.Arguments;
+                    callbacks.Add(prefix + entry.Phase + suffix);
+                    var ordinal = item.Key.ToString(CultureInfo.InvariantCulture);
+                    bodies.Append("public static void Aot_").Append(ordinal).Append("() => ").Append(prefix)
+                        .Append("Aot").Append(entry.Phase.Substring("Register".Length)).Append(suffix).Append("();\n");
+                    aot.Append("Aot_").Append(ordinal).Append("();\n");
+                    if (entry.Phase == "Register") {
+                        // The exact selected owner exports the flags it used, not
+                        // a second aggregate classification of the same component.
+                        bodies.Append("public const int Flags_").Append(ordinal).Append(" = ").Append(target.Flags.ToString(CultureInfo.InvariantCulture)).Append(";\n")
+                            .Append("public static uint Size_").Append(ordinal).Append("() => ")
+                            .Append(prefix).Append("Size").Append(suffix).Append("();\n");
+                    }
                 }
                 if (!valid) continue;
                 source.Append("namespace ME.BECS.SourceGenerated {\n[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\ninternal static class TypeFragment_")
@@ -100,6 +114,7 @@ public sealed class TypePublicationGenerator : IIncrementalGenerator {
                     .Append(string.Join(",", document.Entries.Select(entry => entry.Key.ToString(CultureInfo.InvariantCulture)))).Append(" };\n")
                     .Append("private static readonly global::System.Action[] Callbacks = new global::System.Action[] {\n")
                     .Append(string.Join(",\n", callbacks)).Append("\n};\n").Append(bodies)
+                    .Append("[global::UnityEngine.Scripting.PreserveAttribute]\npublic static void PreserveReferences() {\n").Append(aot).Append("}\n")
                     .Append(editor ? "[global::UnityEditor.InitializeOnLoadMethodAttribute]\n" :
                         "[global::UnityEngine.RuntimeInitializeOnLoadMethod(global::UnityEngine.RuntimeInitializeLoadType.AfterAssembliesLoaded)]\n")
                     .Append("[global::UnityEngine.Scripting.PreserveAttribute]\nprivate static void Publish() => global::ME.BECS.BootstrapRuntime.InstallTypeFragment(")

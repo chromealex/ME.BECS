@@ -27,7 +27,9 @@ namespace ME.BECS.Tests {
         private static void Incomplete(TestDelegate action) => Assert.IsInstanceOf<InvalidOperationException>(Assert.Throws<TargetInvocationException>(action).InnerException);
 
         internal static Type Catalog(Assembly selection, string phase, Type component, out string key, string[][] records = null) {
-            var profile = selection.GetName().Name.EndsWith("Editor", StringComparison.Ordinal) ? "Editor" : "Runtime";
+            var inputProfile = selection.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .Single(attribute => attribute.Key == "ME.BECS.TypeInputProfile.v1").Value;
+            var profile = inputProfile == "editor" ? "Editor" : "Runtime";
             var rows = records == null ? Rows(selection, profile).Select(value => value.Split('\t')) :
                 records.Where(value => value[0] == profile.ToLowerInvariant()).Select(value => value.Skip(1).ToArray());
             var row = rows.Where(value => value[0] == "config-registration-owner")
@@ -100,28 +102,22 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void TypedRegistrationsAndBurstBodiesLiveInEligibleOwners(string profile) {
-            var selection = Assembly.Load("ME.BECS.Gen." + profile);
+            var selection = Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor");
             var rows = Rows(selection, profile);
             CollectionAssert.Contains(rows, "config-publication-schema\t0\tdjE=");
             var expected = rows.Where(row => row.StartsWith("config-collection-callback\t", StringComparison.Ordinal)).Select(row => row.Split('\t'))
                 .OrderBy(row => int.Parse(row[1])).Select(row => "Counts|" + row[2])
                 .Concat(rows.Where(row => row.StartsWith("config-mask-registration\t", StringComparison.Ordinal)).Select(row => row.Split('\t')).OrderBy(row => int.Parse(row[1])).Select(row => "Masks|" + row[2]))
                 .Concat(rows.Where(row => row.StartsWith("config-collection-callback\t", StringComparison.Ordinal)).Select(row => row.Split('\t')).OrderBy(row => int.Parse(row[1])).Select(row => "Collections|" + row[2])).ToArray();
-            var publishSelection = selection.GetType("ME.BECS.SourceGenerated.BootstrapConfigSelection", true);
-            Assert.IsEmpty(publishSelection.GetFields(Static));
-            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("ExpectConfigPlan") }, Calls(publishSelection.GetMethod("Publish")));
-            foreach (var pair in new[] { (Facade: "ConfigCollectionCounts", Phase: "Counts"), (Facade: "ConfigMaskInputs", Phase: "Masks"), (Facade: "ConfigCollectionsInputs", Phase: "Collections") }) {
-                var facade = selection.GetType("ME.BECS.SourceGenerated." + pair.Facade, true);
-                CollectionAssert.AreEqual(new[] { "Initialize" }, facade.GetMethods(Static | BindingFlags.Public | BindingFlags.DeclaredOnly).Select(method => method.Name));
-                CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("RegisterInstalledConfig" + pair.Phase) }, Calls(facade.GetMethod("Initialize")));
-            }
+            // Global composition/phase order is covered by BootstrapPublications
+            // and BootstrapPhases; config availability has no aggregate facade.
             var seen = new System.Collections.Generic.HashSet<int>();
             var bridge = Format.Assembly.GetType("ME.BECS.Editor.SourceGeneratorBridge", true);
             using var scope = (IDisposable)Call(bridge, "BeginLookupScope");
             foreach (var document in Documents(rows, profile == "Editor")) {
                 var owner = Field<string>(document, "Owner");
                 var assembly = Assembly.Load(owner);
-                Assert.AreNotEqual(selection, assembly);
+                Assert.IsFalse(assembly.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal));
                 var publisher = assembly.GetType("ME.BECS.SourceGenerated.ConfigFragment_" + profile, true);
                 var bodies = assembly.GetType("ME.BECS.SourceGenerated.ConfigCallbacks_" + profile, true);
                 Assert.IsNull(bodies.TypeInitializer);
@@ -158,9 +154,9 @@ namespace ME.BECS.Tests {
                         Assert.AreEqual(parts[0] == "Masks" ? typeof(UnsafeEntityConfig.MethodMaskCallerDelegate) : typeof(UnsafeEntityConfig.MethodCallerDelegate),
                             callback.GetCustomAttributesData().Single(attribute => attribute.AttributeType == typeof(AOT.MonoPInvokeCallbackAttribute)).ConstructorArguments.Single().Value);
                     }
-                    var args = parts[0] == "Masks" ? new object[] { component, profile == "Editor", null, null } :
-                        new object[] { component, parts[0] == "Counts", profile == "Editor", null, null };
-                    Assert.IsTrue((bool)Call(bridge, parts[0] == "Masks" ? "TryGetConfigMaskRegistration" : "TryGetConfigCollectionsRegistration", args), component.FullName);
+                    var args = parts[0] == "Masks" ? new object[] { component, profile == "Editor", null } :
+                        new object[] { component, parts[0] == "Counts", profile == "Editor", null };
+                    Assert.IsTrue((bool)Call(bridge, parts[0] == "Masks" ? "HasConfigMaskRegistration" : "HasConfigCollectionsRegistration", args), component.FullName);
                 }
                 Assert.IsTrue(UnityEditor.Compilation.CompilationPipeline.GetAssemblies(profile == "Editor" ? UnityEditor.Compilation.AssembliesType.Editor : UnityEditor.Compilation.AssembliesType.Player)
                     .Single(item => item.name == owner).compilerOptions.AllowUnsafeCode);

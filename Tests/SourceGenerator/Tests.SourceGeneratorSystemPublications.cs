@@ -81,18 +81,19 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void CommonPublisherOnlyDeclaresSelectionAndOwnersPublishTypedCallbacks(string profile) {
-            var aggregate = Assembly.Load("ME.BECS.Gen." + profile);
-            var selection = aggregate.GetType("ME.BECS.SourceGenerated.BootstrapSystemSelection", true);
-            Assert.IsEmpty(selection.GetFields(Static), "The aggregate must not retain system callback arrays.");
-            var calls = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(selection.GetMethod("Publish"))
+            var catalog = Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor");
+            var selection = Tests_SourceGeneratorBootstrapPublications.Owner(catalog).GetType("ME.BECS.SourceGenerated.BootstrapProfile_" + profile, true);
+            Assert.IsEmpty(selection.GetFields(Static), "The composition must not retain system callback arrays.");
+            var calls = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(selection.GetMethod("Publish", Static))
                 .Where(instruction => instruction.OpCode == System.Reflection.Emit.OpCodes.Call).Select(instruction => instruction.Operand).ToArray();
-            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("ExpectSystemPlan") }, calls);
-            Assert.IsNotEmpty(Tests_SourceGeneratorBootstrapTypePlan.SelectedSystems(aggregate));
+            Assert.AreEqual(1, calls.Count(method => Equals(method, typeof(BootstrapRuntime).GetMethod("ExpectSystemPlan"))));
+            Assert.IsNotEmpty(Tests_SourceGeneratorBootstrapTypePlan.SelectedSystems(catalog));
             var publishers = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => !assembly.IsDynamic)
                 .Select(assembly => assembly.GetType("ME.BECS.SourceGenerated.SystemFragment_" + profile, false)).Where(type => type != null).ToArray();
             Assert.IsNotEmpty(publishers);
             foreach (var publisher in publishers) {
-                Assert.AreNotEqual(aggregate, publisher.Assembly);
+                Assert.IsFalse(publisher.Assembly.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal));
+                Assert.IsFalse(publisher.Assembly.GetReferencedAssemblies().Any(reference => reference.Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal)));
                 var publish = publisher.GetMethod("Publish", Static);
                 Assert.IsTrue(Attribute.IsDefined(publish, typeof(UnityEngine.Scripting.PreserveAttribute)));
                 if (profile == "Editor") Assert.IsTrue(Attribute.IsDefined(publish, typeof(UnityEditor.InitializeOnLoadMethodAttribute)));
@@ -110,10 +111,7 @@ namespace ME.BECS.Tests {
             var args = new object[] { null };
             Assert.IsTrue((bool)Call(Transport, "ValidateCompiled", args), (string)args[0]);
             foreach (var profile in new[] { "Editor", "Runtime" }) {
-                var assembly = Assembly.Load("ME.BECS.Gen." + profile);
-                var rows = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                    .Where(item => item.Key == "ME.BECS.TypeInput.v1" && item.Value.StartsWith(profile.ToLowerInvariant() + "\t"))
-                    .Select(item => item.Value.Substring(profile.Length + 1)).ToArray();
+                var rows = Tests_SourceGeneratorInputCatalog.Rows(profile == "Editor");
                 foreach (var doc in Documents(rows, profile == "Editor")) {
                     var owner = Field<string>(doc, "Owner");
                     var compiler = UnityEditor.Compilation.CompilationPipeline.GetAssemblies(UnityEditor.Compilation.AssembliesType.Editor).Single(item => item.name == owner);

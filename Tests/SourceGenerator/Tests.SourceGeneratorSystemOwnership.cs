@@ -49,20 +49,23 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void SelectedSystemsUseOwnerBodiesInGlobalOrder(string profile) {
-            var assembly = Assembly.Load("ME.BECS.Gen." + profile);
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor");
             var selected = Selected(assembly, profile);
             Assert.IsNotEmpty(selected);
-            var dispatch = assembly.GetType("ME.BECS.SourceGenerated.SystemInputs", true);
-            var wrappers = selected.Select(system => dispatch.GetMethod("Register_" + Name("Hash", system.AssemblyQualifiedName))).ToArray();
-            var expected = selected.Select((system, index) => Method(system, "Register") ?? wrappers[index]).ToArray();
+            var callbacks = Tests_SourceGeneratorBootstrapTypePlan.SelectedSystems(assembly);
+            Assert.AreEqual(selected.Length, callbacks.Length);
+            var expected = selected.Select((system, index) => Method(system, "Register") ?? callbacks[index]).ToArray();
             var plan = Tests_SourceGeneratorBootstrapTypePlan.Selected(assembly);
             CollectionAssert.AreEqual(expected, plan.Take(expected.Length).ToArray(), "System IDs retain their original global order, before groups/components.");
             var forwarded = 0;
             for (var index = 0; index < selected.Length; ++index) {
                 var body = Method(selected[index], "Register");
-                if (body == null) continue; // A precompiled definition may lack an owner contract.
+                if (body == null) {
+                    CollectionAssert.AreEqual(new[] { typeof(StaticSystemTypes<>).MakeGenericType(selected[index]).GetMethod("Validate") }, Calls(callbacks[index]));
+                    continue;
+                }
                 ++forwarded;
-                CollectionAssert.AreEqual(new[] { body }, Calls(wrappers[index]), selected[index].ToString());
+                Assert.AreEqual(body, callbacks[index], selected[index].ToString());
             }
             Assert.Greater(forwarded, 0);
             TestContext.WriteLine(profile + ": owner registrations=" + forwarded + ", local fallback=" + (selected.Length - forwarded));
@@ -71,33 +74,38 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void AotRootRetainsSelectedMasksAndCallsOwnerBodies(string profile) {
-            var assembly = Assembly.Load("ME.BECS.Gen." + profile);
-            var root = assembly.GetType("ME.BECS.SourceGenerated.SystemAotInputs", true).GetMethod("PreserveReferences");
-            Assert.IsTrue(Attribute.IsDefined(root, typeof(UnityEngine.Scripting.PreserveAttribute)));
-            Assert.IsFalse(Attribute.IsDefined(root, typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute)));
-            var plans = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Where(item => item.Key == "ME.BECS.SystemAotPlan.v1").Select(item => item.Value.Split('\n'))
-                .ToDictionary(row => Type.GetType(row[0], true));
-            var dispatch = assembly.GetType("ME.BECS.SourceGenerated.SystemInputs", true);
-            var expected = new System.Collections.Generic.List<MethodInfo>();
-            var selected = Selected(assembly, profile);
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor");
+            var plans = Selected(assembly, profile).ToDictionary(system => system, system => Tests_SourceGeneratorAotPublications.ExpectedSystemPlan(system).Split('\n'));
+            var callbacks = Tests_SourceGeneratorBootstrapTypePlan.SelectedSystems(assembly);
+            var entries = Tests_SourceGeneratorAotPublications.Entries(assembly, true);
+            CollectionAssert.AreEqual(Selected(assembly, profile), entries.Select(entry => entry.Selected).ToArray());
             var forwarded = 0;
-            foreach (var system in selected) {
-                var row = plans[system];
-                expected.Add(dispatch.GetMethod("Register_" + Name("Hash", system.AssemblyQualifiedName)));
-                foreach (var phaseGroup in new[] { ("Burst", 2), ("NoBurst", 1), ("", 1), ("Factory", 3) }) {
-                    var mask = int.Parse(row[phaseGroup.Item2], System.Globalization.CultureInfo.InvariantCulture);
-                    for (var i = 0; i < Phases.Length; ++i) {
-                        if ((mask & (1 << i)) == 0) continue;
-                        var method = Method(system, "Aot" + phaseGroup.Item1 + Phases[i]);
-                        if (method != null) ++forwarded;
-                        else method = (phaseGroup.Item1.Length == 0 ? typeof(SourceGeneratorSystemCalls) : typeof(SourceGeneratorSystemAot))
-                            .GetMethod(phaseGroup.Item1 + Phases[i]).MakeGenericMethod(system);
-                        expected.Add(method);
+            foreach (var group in entries.GroupBy(entry => entry.Publisher)) {
+                var root = group.Key.GetMethod("PreserveReferences");
+                Assert.IsTrue(Attribute.IsDefined(root, typeof(UnityEngine.Scripting.PreserveAttribute)));
+                Assert.IsFalse(Attribute.IsDefined(root, typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute)));
+                var masks = group.Key.Assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                    .Where(item => item.Key == "ME.BECS.SystemAotPublication." + profile + ".v1").Select(item => item.Value).ToArray();
+                CollectionAssert.AreEquivalent(group.Select(entry => string.Join("\n", plans[entry.Selected])).ToArray(), masks);
+                var expected = new System.Collections.Generic.List<MethodInfo>();
+                foreach (var entry in group) {
+                    var system = entry.Selected;
+                    var row = plans[system];
+                    expected.Add(callbacks[entry.Ordinal]);
+                    foreach (var phaseGroup in new[] { ("Burst", 2), ("NoBurst", 1), ("", 1), ("Factory", 3) }) {
+                        var mask = int.Parse(row[phaseGroup.Item2], System.Globalization.CultureInfo.InvariantCulture);
+                        for (var i = 0; i < Phases.Length; ++i) {
+                            if ((mask & (1 << i)) == 0) continue;
+                            var method = Method(system, "Aot" + phaseGroup.Item1 + Phases[i]);
+                            if (method != null) ++forwarded;
+                            else method = (phaseGroup.Item1.Length == 0 ? typeof(SourceGeneratorSystemCalls) : typeof(SourceGeneratorSystemAot))
+                                .GetMethod(phaseGroup.Item1 + Phases[i]).MakeGenericMethod(system);
+                            expected.Add(method);
+                        }
                     }
                 }
+                CollectionAssert.AreEqual(expected, Calls(root), "Each owner retains the exact selected phases and closed generic bodies, in original slot order.");
             }
-            CollectionAssert.AreEqual(expected, Calls(root), "Only selected phases reach the preserved AOT root, in the original order.");
             Assert.Greater(forwarded, 0);
         }
 

@@ -7,76 +7,92 @@ using UnityEngine.UIElements;
 namespace ME.BECS.Editor {
 
     [CustomEditor(typeof(EntityConfig))]
-    public class EntityConfigEditor : UnityEditor.Editor {
+    [CanEditMultipleObjects]
+    public partial class EntityConfigEditor : UnityEditor.Editor {
 
-        public StyleSheet styleSheetBase;
-        public StyleSheet styleSheetTooltip;
-        public StyleSheet styleSheet;
-        
+        private StyleSheet compactStyleSheet;
+        private StyleSheet themeStyleSheet;
+
         private void LoadStyle() {
-            if (this.styleSheetBase == null) {
-                this.styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Entity.uss");
-            }
-            if (this.styleSheetTooltip == null) {
-                this.styleSheetTooltip = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Tooltip.uss");
-            }
-            if (this.styleSheet == null) {
-                this.styleSheet = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/EntityConfig.uss");
-            }
+            this.compactStyleSheet = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/EntityConfigCompact.uss");
         }
 
         public override VisualElement CreateInspectorGUI() {
             
             this.LoadStyle();
             var rootVisualElement = new VisualElement();
-            this.Build(rootVisualElement);
+            rootVisualElement.RegisterCallback<WheelEvent>(evt => this.HideTooltip());
             this.rootVisualElement = rootVisualElement;
+            this.Build(rootVisualElement);
             return rootVisualElement;
             
         }
 
         private void Build(VisualElement rootVisualElement) {
-            //rootVisualElement.Clear();
-            EditorUIUtils.ApplyDefaultStyles(rootVisualElement);
-            rootVisualElement.styleSheets.Add(this.styleSheetBase);
-            rootVisualElement.styleSheets.Add(this.styleSheetTooltip);
-            rootVisualElement.styleSheets.Add(this.styleSheet);
+            rootVisualElement.Clear();
+            rootVisualElement.AddToClassList("compact-config-inspector");
+            rootVisualElement.EnableInClassList("config-light", !EditorGUIUtility.isProSkin);
+            rootVisualElement.styleSheets.Clear();
+            this.ApplyTheme();
 
-            EditorUIUtils.AddLogoLine(rootVisualElement);
-            
             var serializedObject = this.serializedObject;
-            this.DrawComponents(rootVisualElement, serializedObject);
+            if (this.targets.Length > 1) this.DrawMultiComponents(rootVisualElement);
+            else this.DrawComponents(rootVisualElement, serializedObject);
         }
 
         private VisualElement rootVisualElement;
         private Item componentsContainer;
-        private VisualElement componentsContainerRoot;
-        private Item componentsSharedContainer;
-        private VisualElement componentsSharedContainerRoot;
-        private Item aspects;
-
-        private void RedrawComponents() {
-            
-            var data = this.serializedObject.FindProperty(nameof(EntityConfig.data));
-            var componentsData = data.FindPropertyRelative(nameof(EntityConfig.data.components));
-            if (this.componentsContainer.container != null) {
-                this.componentsContainer.container.RemoveFromHierarchy();
-            }
-            this.componentsContainer = this.DrawFields(typeof(IConfigComponent), data, componentsData, this.serializedObject);
-            this.componentsContainerRoot.Add(this.componentsContainer.container);
-            
+        private sealed class SearchInfo {
+            public SerializedObject owner;
+            public string path;
+            public string name;
+            public string expansionKey;
         }
 
-        private void RedrawSharedComponents() {
-            
-            var data = this.serializedObject.FindProperty(nameof(EntityConfig.sharedData));
-            var componentsData = data.FindPropertyRelative(nameof(EntityConfig.sharedData.components));
-            if (this.componentsSharedContainer.container != null) {
-                this.componentsSharedContainer.container.RemoveFromHierarchy();
+        private Label tooltipPopup;
+        private string searchText = string.Empty;
+        private bool showBaseComponents = true;
+        private readonly System.Collections.Generic.Dictionary<string, bool> expandedComponents = new();
+        private readonly System.Collections.Generic.Dictionary<EntityConfig, SerializedObject> baseSerializedObjects = new();
+
+        private void OnEnable() {
+            Undo.undoRedoPerformed += this.RebuildInspector;
+            Themes.Changed += this.ApplyTheme;
+        }
+
+        private void OnDisable() {
+            Undo.undoRedoPerformed -= this.RebuildInspector;
+            Themes.Changed -= this.ApplyTheme;
+            this.HideTooltip();
+            this.ReleaseMultiObjects();
+            this.ReleaseBaseObjects();
+        }
+
+        private void ApplyTheme() {
+            if (this.rootVisualElement == null) return;
+            this.HideTooltip();
+            if (this.themeStyleSheet != null) this.rootVisualElement.styleSheets.Remove(this.themeStyleSheet);
+            this.themeStyleSheet = EditorUtils.LoadResource<StyleSheet>(Themes.CurrentTheme);
+            this.rootVisualElement.styleSheets.Add(this.themeStyleSheet);
+            // Keep our layout and scoped control rules after the theme's global selectors.
+            if (this.compactStyleSheet != null) {
+                this.rootVisualElement.styleSheets.Remove(this.compactStyleSheet);
+                this.rootVisualElement.styleSheets.Add(this.compactStyleSheet);
             }
-            this.componentsSharedContainer = this.DrawFields(typeof(IConfigComponentShared), data, componentsData, this.serializedObject, false);
-            this.componentsSharedContainerRoot.Add(this.componentsSharedContainer.container);
-            
+        }
+
+        private void ReleaseBaseObjects() {
+            foreach (var item in this.baseSerializedObjects.Values) item.Dispose();
+            this.baseSerializedObjects.Clear();
+        }
+
+        private void RebuildInspector() {
+            if (this.rootVisualElement == null || this.target == null) return;
+            this.HideTooltip();
+            this.serializedObject.Update();
+            this.ReleaseMultiObjects();
+            this.ReleaseBaseObjects();
+            this.Build(this.rootVisualElement);
         }
 
         private void DrawComponents(VisualElement root, SerializedObject serializedObject) {
@@ -124,131 +140,374 @@ namespace ME.BECS.Editor {
             }));
             container.Add(scrollView);
             var componentsContainer = new VisualElement();
+            componentsContainer.AddToClassList("config-content");
             scrollView.contentContainer.Add(componentsContainer);
-            {
-                var baseConfig = new PropertyField(serializedObject.FindProperty(nameof(EntityConfig.baseConfig)));
-                baseConfig.AddToClassList("baseconfig-field");
-                componentsContainer.Add(baseConfig);
-            }
-            {
-                var components = new VisualElement();
-                components.AddToClassList("entity-components");
-                components.AddToClassList("entity-state-components");
-                componentsContainer.Add(components);
-
-                var tooltip = new VisualElement();
-                components.Add(tooltip);
-                EditorUIUtils.DrawTooltip(tooltip, "<b>IConfigComponent</b>\nWill be applied at runtime and stores on entity in world state.");
-                var componentsLabel = new Label("Components");
-                componentsLabel.AddToClassList("entity-components-label");
-                tooltip.Add(componentsLabel);
-
-                var componentsList = new VisualElement();
-                componentsList.AddToClassList("entity-components-list");
-                components.Add(componentsList);
-                {
-                    var componentContainer = new VisualElement();
-                    this.componentsContainerRoot = componentContainer;
-                    componentsList.Add(componentContainer);
-
-                    this.RedrawComponents();
+            var toolbar = new VisualElement();
+            toolbar.AddToClassList("config-toolbar");
+            componentsContainer.Add(toolbar);
+            var baseConfig = new ObjectField("Base Config") {
+                objectType = typeof(EntityConfig), allowSceneObjects = false,
+            };
+            var baseProperty = serializedObject.FindProperty(nameof(EntityConfig.baseConfig));
+            baseConfig.SetValueWithoutNotify(baseProperty.objectReferenceValue);
+            baseConfig.AddToClassList("baseconfig-field");
+            baseConfig.RegisterValueChangedCallback(evt => {
+                if (evt.newValue == evt.previousValue) return;
+                var next = evt.newValue as EntityConfig;
+                var visited = new System.Collections.Generic.HashSet<EntityConfig> { (EntityConfig)this.target };
+                for (var config = next; config != null; config = config.baseConfig) {
+                    if (visited.Add(config)) continue;
+                    baseConfig.SetValueWithoutNotify(evt.previousValue);
+                    EditorUtility.DisplayDialog("Base Config", "This reference would create a Base Config cycle.", "OK");
+                    return;
                 }
-            }
-            {
-                
-                var components = new VisualElement();
-                components.AddToClassList("entity-components");
-                components.AddToClassList("entity-shared-components");
-                componentsContainer.Add(components);
+                serializedObject.Update();
+                serializedObject.FindProperty(nameof(EntityConfig.baseConfig)).objectReferenceValue = next;
+                serializedObject.ApplyModifiedProperties();
+                this.needSync = true;
+                EditorApplication.delayCall += this.Update;
+                EditorApplication.delayCall += this.RebuildInspector;
+            });
+            toolbar.Add(baseConfig);
 
-                var tooltip = new VisualElement();
-                components.Add(tooltip);
-                EditorUIUtils.DrawTooltip(tooltip, "<b>ISharedComponent</b>\nWill be applied at runtime and stores in special container in world state.");
-                var componentsLabel = new Label("Shared Components");
-                componentsLabel.AddToClassList("entity-components-label");
-                tooltip.Add(componentsLabel);
+            var search = new TextField();
+            search.textEdition.placeholder = "Search components or fields…";
+            search.SetValueWithoutNotify(this.searchText);
+            search.AddToClassList("config-search");
+            search.RegisterValueChangedCallback(evt => {
+                this.searchText = evt.newValue;
+                this.ApplySearch();
+            });
+            toolbar.Add(search);
 
-                var componentsList = new VisualElement();
-                componentsList.AddToClassList("entity-components-list");
-                components.Add(componentsList);
-                {
-                    var componentContainer = new VisualElement();
-                    this.componentsSharedContainerRoot = componentContainer;
-                    componentsList.Add(componentContainer);
-
-                    this.RedrawSharedComponents();
-                }
-            }
-            {
-                
-                var components = new VisualElement();
-                components.AddToClassList("entity-components");
-                components.AddToClassList("entity-static-components");
-                componentsContainer.Add(components);
-
-                var tooltip = new VisualElement();
-                components.Add(tooltip);
-                EditorUIUtils.DrawTooltip(tooltip, "<b>IConfigStaticComponent</b>\nWill <b>not</b> be applied at runtime, it will stored in this config.");
-                var componentsLabel = new Label("Static Components");
-                componentsLabel.AddToClassList("entity-components-label");
-                tooltip.Add(componentsLabel);
-
-                var componentsList = new VisualElement();
-                componentsList.AddToClassList("entity-components-list");
-                components.Add(componentsList);
-                {
-                    var componentContainer = new VisualElement();
-                    componentsList.Add(componentContainer);
-                    
-                    var data = serializedObject.FindProperty(nameof(EntityConfig.staticData));
-                    var componentsData = data.FindPropertyRelative(nameof(EntityConfig.staticData.components));
-                    componentContainer.Add(this.DrawFields(typeof(IConfigComponentStatic), data, componentsData, serializedObject, false).container);
-                }
-            }
-            {
-                
-                var components = new VisualElement();
-                components.AddToClassList("entity-components");
-                components.AddToClassList("entity-aspects");
-                componentsContainer.Add(components);
-                
-                var tooltip = new VisualElement();
-                components.Add(tooltip);
-                EditorUIUtils.DrawTooltip(tooltip, "<b>IAspect</b>\nWill be applied at runtime on entity with QueryWith attribute.");
-                var componentsLabel = new Label("Aspects");
-                componentsLabel.AddToClassList("entity-components-label");
-                tooltip.Add(componentsLabel);
-
-                var componentsList = new VisualElement();
-                componentsList.AddToClassList("entity-components-list");
-                components.Add(componentsList);
-                {
-                    var componentContainer = new VisualElement();
-                    componentsList.Add(componentContainer);
-                    
-                    var data = serializedObject.FindProperty(nameof(EntityConfig.aspects));
-                    var componentsData = data.FindPropertyRelative(nameof(EntityConfig.aspects.components));
-                    this.aspects = this.DrawFields(typeof(IAspect), data, componentsData, serializedObject);
-                    componentContainer.Add(this.aspects.container);
-                }
-            }
-            {
-                // maskable
-                var prop = serializedObject.FindProperty(nameof(EntityConfig.maskable));
-                var maskable = new Toggle("Maskable Config");
-                EditorUIUtils.DrawTooltip(maskable, "<b>Maskable Config</b>\nChoose which fields in components you want to apply.");
-                maskable.value = prop.boolValue;
-                maskable.RegisterValueChangedCallback((evt) => {
-                    if (this.rootVisualElement == null) return;
-                    prop.boolValue = evt.newValue;
-                    prop.serializedObject.ApplyModifiedProperties();
-                    this.RedrawComponents();
-                    this.RedrawSharedComponents();
+            if (baseProperty.objectReferenceValue != null) {
+                var showBase = new Toggle("Show Base Components");
+                showBase.SetValueWithoutNotify(this.showBaseComponents);
+                showBase.RegisterValueChangedCallback(evt => {
+                    this.showBaseComponents = evt.newValue;
+                    this.RebuildInspector();
                 });
-                maskable.AddToClassList("maskable-field");
-                componentsContainer.Add(maskable);
+                toolbar.Add(showBase);
             }
-            
+            var maskable = new Toggle("Maskable Config");
+            maskable.SetValueWithoutNotify(serializedObject.FindProperty(nameof(EntityConfig.maskable)).boolValue);
+            maskable.AddToClassList("maskable-field");
+            maskable.tooltip = "Select which fields of Config Components are applied. Shared and Static Components are applied in full.";
+            maskable.RegisterValueChangedCallback(evt => {
+                if (evt.target != maskable || evt.newValue == evt.previousValue) return;
+                // Commit before rebuilding; Update() in RebuildInspector must not discard
+                // a pending value from UI Toolkit's asynchronous property binding.
+                serializedObject.Update();
+                serializedObject.FindProperty(nameof(EntityConfig.maskable)).boolValue = evt.newValue;
+                serializedObject.ApplyModifiedProperties();
+                this.needSync = true;
+                EditorApplication.delayCall += this.Update;
+                this.rootVisualElement.schedule.Execute(this.RebuildInspector);
+            });
+            toolbar.Add(maskable);
+
+            this.componentsContainer = this.DrawSection(componentsContainer, "Config Components", nameof(EntityConfig.data), typeof(IConfigComponent), true);
+            this.DrawSection(componentsContainer, "Static Components", nameof(EntityConfig.staticData), typeof(IConfigComponentStatic), false);
+            this.DrawSection(componentsContainer, "Shared Components", nameof(EntityConfig.sharedData), typeof(IConfigComponentShared), false);
+            this.DrawSection(componentsContainer, "Aspects", nameof(EntityConfig.aspects), typeof(IAspect), false);
+            this.ApplySearch();
+        }
+
+        private Item DrawSection(VisualElement parent, string title, string storageName, System.Type contract, bool useMaskable) {
+            var section = new VisualElement();
+            section.AddToClassList("entity-components");
+            parent.Add(section);
+            var label = new Label(title);
+            label.AddToClassList("entity-components-label");
+            label.userData = title;
+            section.Add(label);
+            var data = this.serializedObject.FindProperty(storageName);
+            var components = data.FindPropertyRelative("components");
+            var item = this.DrawFields(contract, data, components, this.serializedObject, useMaskable);
+            section.Add(item.container);
+            return item;
+        }
+
+        private void ApplySearch() {
+            if (this.rootVisualElement == null) return;
+            this.HideTooltip();
+            this.rootVisualElement.Query<VisualElement>(className: "config-component-row").ForEach(row => {
+                var info = row.userData as SearchInfo;
+                var text = info?.name ?? row.userData as string ?? string.Empty;
+                var componentMatch = MatchesText(text, this.searchText);
+                var property = info?.owner.FindProperty(info.path);
+                var visible = componentMatch || MatchesPropertyTree(property, this.searchText);
+                row.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+                if (row is Foldout foldout) {
+                    if (string.IsNullOrEmpty(this.searchText) && info != null) {
+                        foldout.value = this.expandedComponents.TryGetValue(info.expansionKey, out var expanded) && expanded;
+                    } else if (visible) {
+                        foldout.value = true;
+                    }
+                }
+                row.Query<VisualElement>(className: "config-field-row").ForEach(fieldRow => {
+                    if (fieldRow.userData is not SearchInfo fieldInfo) return;
+                    this.FilterField(fieldRow, fieldInfo, componentMatch);
+                });
+            });
+            this.rootVisualElement.Query<Foldout>(className: "config-difference-group").ForEach(group => {
+                var visible = string.IsNullOrEmpty(this.searchText) || group.Query<VisualElement>(className: "config-component-row").ToList()
+                    .Any(row => row.style.display.value != DisplayStyle.None);
+                group.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+                if (visible && !string.IsNullOrEmpty(this.searchText)) group.value = true;
+            });
+            this.rootVisualElement.Query<VisualElement>(className: "drag-root").ForEach(handle => {
+                handle.SetEnabled(string.IsNullOrEmpty(this.searchText));
+            });
+            this.rootVisualElement.Query<VisualElement>(className: "entity-components").ForEach(section => {
+                var label = section.Q<Label>(className: "entity-components-label");
+                if (label == null) return;
+                var count = section.Query<VisualElement>(className: "config-component-row").ToList()
+                    .Count(row => row.style.display.value != DisplayStyle.None);
+                label.text = label.userData + " · " + count;
+            });
+        }
+
+        private static bool MatchesText(string text, string query) {
+            return string.IsNullOrEmpty(query) || (!string.IsNullOrEmpty(text) && text.IndexOf(query, System.StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        private static bool MatchesPropertyTree(SerializedProperty property, string query) {
+            if (property == null) return false;
+            if (MatchesText(property.name, query) || MatchesText(property.displayName, query)) return true;
+            var iterator = property.Copy();
+            var end = property.GetEndProperty();
+            while (iterator.NextVisible(true)) {
+                if (SerializedProperty.EqualContents(iterator, end) || iterator.depth <= property.depth) break;
+                if (MatchesText(iterator.name, query) || MatchesText(iterator.displayName, query)) return true;
+            }
+            return false;
+        }
+
+        private void FilterField(VisualElement row, SearchInfo info, bool componentMatch) {
+            var property = info.owner.FindProperty(info.path);
+            var showAll = componentMatch || MatchesText(property?.name, this.searchText) || MatchesText(property?.displayName, this.searchText);
+            row.style.display = showAll || MatchesPropertyTree(property, this.searchText) ? DisplayStyle.Flex : DisplayStyle.None;
+            row.Query<PropertyField>().ForEach(field => {
+                if (string.IsNullOrEmpty(field.bindingPath)) return;
+                var nested = info.owner.FindProperty(field.bindingPath);
+                if (nested == null) return;
+                var ancestorMatch = showAll;
+                var parentPath = nested.propertyPath;
+                while (!ancestorMatch && parentPath.Length > info.path.Length) {
+                    var dot = parentPath.LastIndexOf('.');
+                    if (dot < 0) break;
+                    parentPath = parentPath.Substring(0, dot);
+                    var parent = info.owner.FindProperty(parentPath);
+                    ancestorMatch = parent != null && (MatchesText(parent.name, this.searchText) || MatchesText(parent.displayName, this.searchText));
+                }
+                var visible = ancestorMatch || MatchesPropertyTree(nested, this.searchText);
+                field.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+                if (visible && !string.IsNullOrEmpty(this.searchText)) {
+                    // Unity creates nested PropertyFields lazily when their foldout opens.
+                    field.Query<Foldout>().ForEach(foldout => {
+                        if (foldout.parent == field || foldout == field.Q<Foldout>()) foldout.value = true;
+                    });
+                }
+            });
+        }
+
+        private VisualElement DrawComponent(SerializedProperty component, System.Type type, string label,
+                                            SerializedProperty masks, bool useMaskable, string source = null) {
+            var key = component.serializedObject.targetObject.GetInstanceID() + ":" + component.propertyPath;
+            var names = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+            var search = new SearchInfo {
+                owner = component.serializedObject, path = component.propertyPath,
+                name = label + " " + type.FullName, expansionKey = key,
+            };
+            var hasBase = this.serializedObject.FindProperty(nameof(EntityConfig.baseConfig)).objectReferenceValue != null;
+            var title = hasBase ? label + (source == null ? "   · Local" : "   · Base: " + source) : label;
+            if (!component.hasVisibleChildren) {
+                var tag = new Label(title);
+                tag.AddToClassList("config-component-row");
+                tag.AddToClassList("config-tag-row");
+                tag.userData = search;
+                return tag;
+            }
+            var foldout = new Foldout { text = title };
+            foldout.AddToClassList("config-component-row");
+            foldout.AddToClassList("config-component-foldout");
+            foldout.userData = search;
+            foldout.SetValueWithoutNotify(this.expandedComponents.TryGetValue(key, out var expanded) && expanded);
+            var built = false;
+            void BuildFields() {
+                if (built) return;
+                built = true;
+                var iterator = component.Copy();
+                var end = component.GetEndProperty();
+                if (!iterator.NextVisible(true)) return;
+                do {
+                    if (SerializedProperty.EqualContents(iterator, end) || iterator.depth <= component.depth) break;
+                    if (iterator.depth != component.depth + 1) continue;
+                    var field = iterator.Copy();
+                    var propertyField = new PropertyField(field);
+                    var row = new VisualElement();
+                    row.AddToClassList("config-field-row");
+                    var fieldSearch = new SearchInfo { owner = field.serializedObject, path = field.propertyPath };
+                    row.userData = fieldSearch;
+                    // Match mask bits by reflection field name, never by visible UI order.
+                    var index = System.Array.FindIndex(names, name => name.Name == field.name);
+                    if (useMaskable && index >= 0 && masks != null) {
+                        var toggle = new Toggle();
+                        toggle.AddToClassList("config-field-mask");
+                        toggle.tooltip = "Apply " + field.displayName;
+                        var maskPath = masks.propertyPath;
+                        var so = component.serializedObject;
+                        var values = so.FindProperty(maskPath);
+                        toggle.SetValueWithoutNotify(index < values.arraySize && values.GetArrayElementAtIndex(index).boolValue);
+                        toggle.showMixedValue = index < values.arraySize && values.GetArrayElementAtIndex(index).hasMultipleDifferentValues;
+                        row.EnableInClassList("config-field-excluded", !toggle.showMixedValue && !toggle.value);
+                        toggle.RegisterValueChangedCallback(evt => {
+                            so.Update();
+                            var bits = so.FindProperty(maskPath);
+                            if (bits.arraySize < names.Length) bits.arraySize = names.Length;
+                            bits.GetArrayElementAtIndex(index).boolValue = evt.newValue;
+                            so.ApplyModifiedProperties();
+                            toggle.showMixedValue = false;
+                            this.CommitCommonComponent(so, component.propertyPath);
+                            row.EnableInClassList("config-field-excluded", !evt.newValue);
+                            this.needSync = true;
+                            EditorApplication.delayCall += this.Update;
+                        });
+                        row.Add(toggle);
+                        // Custom drawers may put their first label below the top of the property.
+                        // Align the mask with that label, not the height of the whole expanded field.
+                        void AlignMask() {
+                            var firstLabel = propertyField.Query<Label>().ToList()
+                                .FirstOrDefault(item => !item.ClassListContains("tooltip") && !item.ClassListContains("tooltip-text") && item.worldBound.height > 0f && item.resolvedStyle.display != DisplayStyle.None);
+                            if (firstLabel == null || toggle.resolvedStyle.height <= 0f) return;
+                            var offset = UnityEngine.Mathf.Max(0f, firstLabel.worldBound.center.y - row.worldBound.yMin - toggle.resolvedStyle.height * 0.5f);
+                            if (UnityEngine.Mathf.Abs(toggle.resolvedStyle.marginTop - offset) > 0.5f) toggle.style.marginTop = offset;
+                        }
+                        propertyField.RegisterCallback<GeometryChangedEvent>(evt => AlignMask());
+                        propertyField.RegisterCallback<AttachToPanelEvent>(evt => propertyField.schedule.Execute(AlignMask));
+                    }
+                    row.Add(propertyField);
+                    propertyField.BindProperty(field);
+                    propertyField.RegisterCallback<GeometryChangedEvent>(evt => {
+                        this.ConfigureTooltips(propertyField);
+                        if (!string.IsNullOrEmpty(this.searchText)) this.FilterField(row, fieldSearch, MatchesText(search.name, this.searchText));
+                    });
+                    propertyField.RegisterCallback<AttachToPanelEvent>(evt => propertyField.schedule.Execute(() => {
+                        this.ConfigureTooltips(propertyField);
+                        this.FilterField(row, fieldSearch, MatchesText(search.name, this.searchText));
+                    }));
+                    if (source == null) propertyField.RegisterCallback<SerializedPropertyChangeEvent>(evt => {
+                        this.CommitCommonComponent(field.serializedObject, component.propertyPath);
+                        this.needSync = true;
+                        EditorApplication.delayCall += this.Update;
+                    });
+                    foldout.Add(row);
+                } while (iterator.NextVisible(false));
+                if (source != null) foldout.contentContainer.SetEnabled(false);
+            }
+            foldout.RegisterValueChangedCallback(evt => {
+                if (evt.target != foldout) return;
+                if (string.IsNullOrEmpty(this.searchText)) this.expandedComponents[key] = evt.newValue;
+                if (evt.newValue) BuildFields();
+            });
+            if (foldout.value) BuildFields();
+            foldout.tooltip = EditorUtils.GetComponent(type)?.GetEditorComment();
+            return foldout;
+        }
+
+        private void ConfigureTooltips(PropertyField propertyField) {
+            propertyField.Query<VisualElement>(className: "has-tooltip").ForEach(decorator => {
+                if (decorator.ClassListContains("config-tooltip-ready")) return;
+                var text = decorator.Q<Label>(className: "tooltip-text")?.text;
+                if (string.IsNullOrEmpty(text)) return;
+                decorator.AddToClassList("config-tooltip-ready");
+                var anchor = decorator.ClassListContains("tooltip-decorator") ? decorator.parent : decorator;
+                anchor.AddToClassList("config-tooltip-anchor");
+                anchor.RegisterCallback<PointerEnterEvent>(evt => this.ShowTooltip(anchor, text));
+                anchor.RegisterCallback<PointerLeaveEvent>(evt => this.HideTooltip());
+                anchor.RegisterCallback<DetachFromPanelEvent>(evt => this.HideTooltip());
+                // Avoid the delayed native tooltip appearing on top of the immediate one.
+                anchor.RegisterCallback<TooltipEvent>(evt => evt.StopImmediatePropagation());
+            });
+        }
+
+        private void HideTooltip() {
+            this.tooltipPopup?.RemoveFromHierarchy();
+            this.tooltipPopup = null;
+        }
+
+        private void ShowTooltip(VisualElement anchor, string text) {
+            this.HideTooltip();
+            if (anchor.panel == null) return;
+            var overlay = anchor.panel.visualTree;
+            var popup = new Label(text) { pickingMode = PickingMode.Ignore, enableRichText = true };
+            popup.AddToClassList("config-tooltip-popup");
+            popup.EnableInClassList("config-tooltip-light", !EditorGUIUtility.isProSkin);
+            popup.styleSheets.Add(this.themeStyleSheet);
+            popup.styleSheets.Add(this.compactStyleSheet);
+            var width = UnityEngine.Mathf.Min(360f, overlay.worldBound.width - 16f);
+            popup.style.width = UnityEngine.Mathf.Max(80f, width);
+            var position = overlay.WorldToLocal(anchor.worldBound.position);
+            popup.style.left = UnityEngine.Mathf.Clamp(position.x, 8f, UnityEngine.Mathf.Max(8f, overlay.worldBound.width - width - 8f));
+            popup.style.bottom = overlay.worldBound.height - position.y + 4f;
+            // The panel overlay avoids clipping by section borders and the inspector ScrollView.
+            overlay.Add(popup);
+            popup.BringToFront();
+            this.tooltipPopup = popup;
+        }
+
+        private VisualElement DrawAspect(SerializedProperty component, System.Type type, string label) {
+            var key = component.serializedObject.targetObject.GetInstanceID() + ":" + component.propertyPath;
+            var foldout = new Foldout { text = label };
+            foldout.AddToClassList("config-component-row");
+            foldout.AddToClassList("config-component-foldout");
+            foldout.userData = label + " " + type.FullName;
+            foldout.SetValueWithoutNotify(this.expandedComponents.TryGetValue(key, out var expanded) && expanded);
+            foldout.RegisterValueChangedCallback(evt => {
+                if (evt.target == foldout) this.expandedComponents[key] = evt.newValue;
+            });
+            foreach (var field in EditorUtils.GetAspectTypes(type)) {
+                var row = new VisualElement();
+                row.AddToClassList("config-aspect-row");
+                var name = new Label(EditorUtils.GetComponentName(field.fieldType));
+                name.AddToClassList("config-aspect-name");
+                row.Add(name);
+                row.Add(new Label(field.required ? "Required" : "Optional"));
+                row.Add(new Label(field.config ? "Config" : "Runtime"));
+                foldout.Add(row);
+            }
+            return foldout;
+        }
+
+        private void DrawBaseComponents(VisualElement container, string storageName, bool useMaskable) {
+            if (!this.showBaseComponents) return;
+            var current = ((EntityConfig)this.target).baseConfig;
+            var visited = new System.Collections.Generic.HashSet<EntityConfig> { (EntityConfig)this.target };
+            while (current != null) {
+                if (!visited.Add(current)) {
+                    container.Add(new HelpBox("Base Config contains a cycle.", HelpBoxMessageType.Error));
+                    break;
+                }
+                if (!this.baseSerializedObjects.TryGetValue(current, out var so)) {
+                    so = new SerializedObject(current);
+                    this.baseSerializedObjects.Add(current, so);
+                }
+                so.Update();
+                var data = so.FindProperty(storageName);
+                var components = data.FindPropertyRelative("components");
+                var masks = data.FindPropertyRelative("masks");
+                for (var i = 0; i < components.arraySize; ++i) {
+                    var component = components.GetArrayElementAtIndex(i).Copy();
+                    var type = EditorUtils.GetTypeFromPropertyField(component.managedReferenceFullTypename);
+                    if (type == null || typeof(IAspect).IsAssignableFrom(type)) continue;
+                    var bits = i < masks.arraySize ? masks.GetArrayElementAtIndex(i).FindPropertyRelative("mask") : null;
+                    var row = this.DrawComponent(component, type, EditorUtils.GetComponentName(type), bits, useMaskable && current.maskable, current.name);
+                    row.AddToClassList("config-inherited-row");
+                    container.Add(row);
+                }
+                current = current.baseConfig;
+            }
         }
 
         public struct Item {
@@ -289,9 +548,9 @@ namespace ME.BECS.Editor {
             int selectedIndex = -1;
             void UpdateButtons(System.Collections.Generic.List<VisualElement> allProps, int selectIndex) {
                 if (selectIndex >= -1) {
-                    if (selectedIndex >= 0) allProps[selectedIndex].RemoveFromClassList("field-selected");
+                    if (selectedIndex >= 0 && selectedIndex < allProps.Count) allProps[selectedIndex].RemoveFromClassList("field-selected");
                     selectedIndex = selectIndex;
-                    if (selectedIndex >= 0) allProps[selectedIndex].AddToClassList("field-selected");
+                    if (selectedIndex >= 0 && selectedIndex < allProps.Count) allProps[selectedIndex].AddToClassList("field-selected");
                 }
 
                 this.needSync = true;
@@ -325,7 +584,7 @@ namespace ME.BECS.Editor {
                     this.DrawFields_INTERNAL(UpdateButtons, drawFieldsContainer, serializedObject.FindProperty(dataContainer.propertyPath), serializedObject.FindProperty(componentsArr.propertyPath), serializedObject, useMaskable);
                     this.componentsContainer.redrawFields?.Invoke();
                 });
-                removeButton.text = "-";
+                removeButton.text = "Remove";
                 removeButton.AddToClassList("remove-button");
                 buttons.Add(removeButton);
             }
@@ -335,6 +594,8 @@ namespace ME.BECS.Editor {
                     EditorUtils.ShowPopup(rect, (type) => {
                         {
                             AddComponent(serializedObject, dataContainer, componentsArr, type);
+                            var key = serializedObject.targetObject.GetInstanceID() + ":" + componentsArr.propertyPath + ".Array.data[" + (componentsArr.arraySize - 1) + "]";
+                            this.expandedComponents[key] = true;
                         }
                         if (typeof(IAspect).IsAssignableFrom(type) == true) {
                             // Add missing types
@@ -356,19 +617,19 @@ namespace ME.BECS.Editor {
                                 }
                                 if (found == false) {
                                     // Add component
-                                    AddComponent(serializedObject, dataContainer, componentsData, item.fieldType);
+                                    AddComponent(serializedObject, data, componentsData, item.fieldType);
                                     refreshRequired = true;
                                 }
                             }
 
                             if (refreshRequired == true) {
-                                this.DrawFields_INTERNAL(this.componentsContainer.updateButtons, this.componentsContainer.drawFieldsContainer, serializedObject.FindProperty(dataContainer.propertyPath), serializedObject.FindProperty(componentsData.propertyPath), serializedObject, useMaskable);
+                                this.DrawFields_INTERNAL(this.componentsContainer.updateButtons, this.componentsContainer.drawFieldsContainer, data, serializedObject.FindProperty(componentsData.propertyPath), serializedObject, true);
                             }
                         }
                         this.DrawFields_INTERNAL(UpdateButtons, drawFieldsContainer, serializedObject.FindProperty(dataContainer.propertyPath), serializedObject.FindProperty(componentsArr.propertyPath), serializedObject, useMaskable);
                     }, type, unmanagedTypes: true, runtimeAssembliesOnly: true, showNullElement: false);
                 });
-                addButton.text = "+";
+                addButton.text = "+ Component";
                 addButton.AddToClassList("add-button");
                 buttons.Add(addButton);
             }
@@ -387,13 +648,13 @@ namespace ME.BECS.Editor {
         private static void AddComponent(SerializedObject serializedObject, SerializedProperty dataContainer, SerializedProperty componentsArr, System.Type componentType) {
             var prop = serializedObject.FindProperty(componentsArr.propertyPath);
             var masksProp = serializedObject.FindProperty(dataContainer.propertyPath).FindPropertyRelative(nameof(EntityConfig.data.masks));
-            ++masksProp.arraySize;
+            masksProp.arraySize = UnityEngine.Mathf.Max(masksProp.arraySize, prop.arraySize + 1);
             ++prop.arraySize;
             var lastProp = prop.GetArrayElementAtIndex(prop.arraySize - 1);
             var mask = masksProp.GetArrayElementAtIndex(prop.arraySize - 1);
             mask.FindPropertyRelative(nameof(ComponentsStorageBitMask.mask)).arraySize = componentType.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public).Length; 
-            var obj = lastProp.CreateComponent(componentType);
-            lastProp.isExpanded = obj != null;
+            lastProp.CreateComponent(componentType);
+            lastProp.isExpanded = false;
             lastProp.serializedObject.ApplyModifiedProperties();
             lastProp.serializedObject.Update();
         }
@@ -403,13 +664,13 @@ namespace ME.BECS.Editor {
             container.Clear();
 
             var maskable = serializedObject.FindProperty("maskable").boolValue;
-            var dataPropertyPath = dataContainer.propertyPath;
             
             var list = new System.Collections.Generic.List<VisualElement>();
             var dataArr = componentsArr;
             var masks = dataContainer.FindPropertyRelative("masks");
             if (masks.arraySize < dataArr.arraySize) {
                 masks.arraySize = dataArr.arraySize;
+                serializedObject.ApplyModifiedProperties();
             }
 
             var dragHandler = new VisualElement();
@@ -432,171 +693,33 @@ namespace ME.BECS.Editor {
             for (int i = 0; i < dataArr.arraySize; ++i) {
 
                 VisualElement rootElement = null;
-                PropertyField propertyField = null;
+
                 var idx = i;
                 var it = dataArr.GetArrayElementAtIndex(i);
                 var copy = it.Copy();
                 var type = EditorUtils.GetTypeFromPropertyField(it.managedReferenceFullTypename);
+                if (type == null) {
+                    var missing = new HelpBox("Missing component type. Remove or restore its script.", HelpBoxMessageType.Warning);
+                    var missingIndex = list.Count;
+                    missing.RegisterCallback<ClickEvent>(evt => updateButtons.Invoke(list, missingIndex));
+                    list.Add(missing);
+                    container.Add(missing);
+                    continue;
+                }
                 var label = EditorUtils.GetComponentName(type);
                 if (typeof(IAspect).IsAssignableFrom(type) == true) {
                     
-                    var fieldContainer = EditorUIUtils.DrawAspects(container, new System.Collections.Generic.List<EditorUtils.AspectItem>() { EditorUtils.GetAspect(type) });
-                    list.AddRange(fieldContainer);
-                    foreach (var fc in fieldContainer) {
-                        var lbl = fc.Q(className: "aspect-component-container-field");
-                        lbl.RegisterCallback<ClickEvent>((evt) => { updateButtons.Invoke(list, idx); });
-                    }
-                    
-                } else if (copy.hasVisibleChildren == true) {
-
-                    var propContainer = new VisualElement();
-                    rootElement = propContainer;
-                    propContainer.AddToClassList("property-field-container");
-                    
-                    propertyField = new UnityEditor.UIElements.PropertyField(copy, label) {
-                        name = $"PropertyField:{it.propertyPath}",
-                    };
-                    propertyField.RegisterCallback<ClickEvent>((evt) => { updateButtons.Invoke(list, idx); });
-                    propertyField.AddToClassList("field");
-                    propertyField.Bind(serializedObject);
-
-                    System.Action rebuild = null;
-                    rebuild = () => {
-                        var lbl = propertyField.Q<Label>();
-                        if (lbl != null) lbl.text = label;
-
-                        if (useMaskable == true && maskable == true) {
-                            var foldout = propertyField.Query(className: "unity-foldout").First();
-                            if (foldout != null) {
-                                var container = foldout.Query(className: "unity-foldout__content").First();
-                                var children = container.Children();
-                                if (children != null && children.Count() > 1) {
-                                    var list = children.ToList();
-                                    var addContainers = new System.Collections.Generic.List<VisualElement>();
-                                    var so = new SerializedObject(this.targets);
-                                    var maskValues = so.FindProperty(dataPropertyPath).FindPropertyRelative("masks").GetArrayElementAtIndex(idx).FindPropertyRelative(nameof(ComponentsStorageBitMask.mask));
-                                    /*if (maskValues.arraySize != list.Count) {
-                                        so.Update();
-                                        maskValues.arraySize = list.Count;
-                                        UnityEngine.Debug.Log("RESIZE: " + maskValues.arraySize);
-                                        so.ApplyModifiedProperties();
-                                        so.Update();
-                                    }*/
-                                    for (int i = 0; i < list.Count; ++i) {
-                                        var savedIndex = i;
-                                        var item = list[i];
-                                        if (item is not PropertyField) continue;
-                                        item.RegisterCallbackOnce<UnityEngine.UIElements.GeometryChangedEvent>((evt) => { rebuild.Invoke(); });
-                                        item.RegisterCallbackOnce<UnityEngine.UIElements.AttachToPanelEvent>((evt) => { rebuild.Invoke(); });
-                                        item.RegisterCallbackOnce<UnityEngine.UIElements.DetachFromPanelEvent>((evt) => { rebuild.Invoke(); });
-                                        if (item.userData is Toggle tlg) {
-                                            tlg.RemoveFromHierarchy();
-                                            addContainers.Add(tlg);
-                                            continue;
-                                        }
-
-                                        static void ApplyState(VisualElement item, bool state) {
-                                            item.RemoveFromClassList("checked");
-                                            item.RemoveFromClassList("unchecked");
-                                            if (state == true) {
-                                                item.AddToClassList("checked");
-                                            } else {
-                                                item.AddToClassList("unchecked");
-                                            }
-                                        }
-
-                                        item.AddToClassList("maskable-property-field");
-                                        var toggle = new Toggle();
-                                        toggle.RegisterValueChangedCallback(evt => {
-                                            so.Update();
-                                            var maskValues = so.FindProperty(dataPropertyPath).FindPropertyRelative("masks").GetArrayElementAtIndex(idx).FindPropertyRelative(nameof(ComponentsStorageBitMask.mask));
-                                            if (maskValues.arraySize != list.Count) {
-                                                maskValues.arraySize = list.Count;
-                                            }
-                                            maskValues.GetArrayElementAtIndex(savedIndex).boolValue = evt.newValue;
-                                            so.ApplyModifiedProperties();
-                                            so.Update();
-                                            ApplyState(item, evt.newValue);
-                                        });
-                                        if (i < maskValues.arraySize) toggle.value = maskValues.GetArrayElementAtIndex(i).boolValue;
-                                        ApplyState(item, toggle.value);
-                                        toggle.AddToClassList("toggle-mask-field");
-                                        addContainers.Add(toggle);
-                                        item.userData = toggle;
-                                        toggle.userData = item;
-                                    }
-
-                                    for (int i = addContainers.Count - 1; i >= 0; --i) {
-                                        var addContainer = addContainers[i];
-                                        if (addContainer.userData is VisualElement root) {
-                                            root.Add(addContainer);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                    };
-                    propertyField.RegisterCallback<UnityEngine.UIElements.GeometryChangedEvent>((evt) => { rebuild.Invoke(); });
-                    propertyField.RegisterCallback<AttachToPanelEvent>(new EventCallback<AttachToPanelEvent>((evt) => { rebuild.Invoke(); }));
-                    propertyField.RegisterCallback<UnityEngine.UIElements.FocusEvent>((evt) => { rebuild.Invoke(); });
-                    propertyField.RegisterCallback<ChangeEvent<object>, PropertyField>((evt, p) => rebuild(), propertyField);
-                    propertyField.RegisterCallback<ChangeEvent<string>, PropertyField>((evt, p) => rebuild(), propertyField);
-                    propertyField.RegisterCallback<ChangeEvent<StyleFont>, PropertyField>((evt, p) => rebuild(), propertyField);
-                    propertyField.RegisterCallback<ChangeEvent<StyleFontDefinition>, PropertyField>((evt, p) => rebuild(), propertyField);
-                    propertyField.RegisterCallback<ChangeEvent<StyleLength>, PropertyField>((evt, p) => rebuild(), propertyField);
-
-                    propContainer.Add(propertyField);
-
-                    if (EditorUtils.TryGetComponentGroupColor(type, out var color) == true) {
-                        color.a = 0.1f;
-                        propertyField.style.backgroundColor = new StyleColor(color);
-                    }
-                    
-                    container.Add(propContainer);
-                    list.Add(propertyField);
-
-                    EditorUIUtils.DrawTooltip(propContainer, EditorUtils.GetComponent(type)?.GetEditorComment());
-                    rebuild.Invoke();
-                    
-                    this.DrawAspects(propContainer, type);
-
+                    rootElement = this.DrawAspect(copy, type, label);
+                    rootElement.RegisterCallback<ClickEvent>(evt => updateButtons.Invoke(list, idx));
+                    container.Add(rootElement);
+                    list.Add(rootElement);
                 } else {
-
-                    var elementContainer = new VisualElement();
-                    elementContainer.AddToClassList("field");
-                    elementContainer.AddToClassList("tag-component");
-                    var labelField = new Label();
-                    labelField.AddToClassList("unity-foldout");
-                    elementContainer.Add(labelField);
-                    rootElement = elementContainer;
-                    var foldoutLabel = labelField.Q<Toggle>() ?? (VisualElement)labelField;
-                    EditorUIUtils.DrawTooltip(foldoutLabel, EditorUtils.GetComponent(type)?.GetEditorComment());
-                    labelField.RegisterCallback<ClickEvent>((evt) => { updateButtons.Invoke(list, idx); });
-                    labelField.text = label;
-                    labelField.AddToClassList("tag-component");
-                    if (EditorUtils.TryGetComponentGroupColor(type, out var color) == true) {
-                        color.a = 0.1f;
-                        labelField.style.backgroundColor = new StyleColor(color);
-                    }
-                    container.Add(elementContainer);
-                    list.Add(elementContainer);
-
-                    elementContainer.AddManipulator(new ContextualMenuManipulator((menu) => {
-                        menu.menu.AppendAction("Move Up", (evt) => {
-                            copy.serializedObject.Update();
-                            dataArr.MoveArrayElement(idx, idx - 1);
-                            copy.serializedObject.ApplyModifiedProperties();
-                            copy.serializedObject.Update();
-                        }, idx == 0 ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
-                        menu.menu.AppendAction("Move Down", (evt) => {
-                            copy.serializedObject.Update();
-                            dataArr.MoveArrayElement(idx, idx + 1);
-                            copy.serializedObject.ApplyModifiedProperties();
-                            copy.serializedObject.Update();
-                        }, idx == dataArr.arraySize - 1 ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
-                    }));
-
+                    var bits = masks.GetArrayElementAtIndex(i).FindPropertyRelative("mask");
+                    rootElement = this.DrawComponent(copy, type, label, bits, useMaskable && maskable);
+                    rootElement.AddToClassList("field");
+                    rootElement.RegisterCallback<ClickEvent>(evt => updateButtons.Invoke(list, idx));
+                    container.Add(rootElement);
+                    list.Add(rootElement);
                 }
 
                 if (rootElement != null) {
@@ -630,7 +753,7 @@ namespace ME.BECS.Editor {
                             copy.serializedObject.Update();
                             Redraw();
                         }, idx == dataArr.arraySize - 1 ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
-                        if (propertyField != null) {
+                        if (copy.hasVisibleChildren) {
                             menu.menu.AppendSeparator();
                             menu.menu.AppendAction("Copy JSON", (evt) => {
                                 var json = JSON.JsonUtils.ComponentToJSON(copy);
@@ -648,8 +771,7 @@ namespace ME.BECS.Editor {
                                 JSON.JsonUtils.JSONToComponent(buffer, copy);
                                 copy.serializedObject.ApplyModifiedProperties();
                                 copy.serializedObject.Update();
-                                propertyField.Bind(serializedObject);
-                                propertyField.BindProperty(copy);
+                                Redraw();
                             }, pasteStatus);
                             menu.menu.AppendAction("Copy CSV", (evt) => {
                                 var csv = JSON.JsonUtils.ComponentToCSV(copy);
@@ -660,7 +782,7 @@ namespace ME.BECS.Editor {
 
                     var dragRoot = new VisualElement();
                     dragRoot.AddToClassList("drag-root");
-                    rootElement.Add(dragRoot);
+                    rootElement.hierarchy.Add(dragRoot);
 
                     dragRoot.RegisterCallback<PointerDownEvent>((evt) => {
                         // show handler
@@ -698,6 +820,8 @@ namespace ME.BECS.Editor {
 
             }
 
+            this.DrawBaseComponents(container, dataContainer.propertyPath, useMaskable);
+            this.ApplySearch();
             updateButtons.Invoke(list, -2);
 
             return;
@@ -753,37 +877,6 @@ namespace ME.BECS.Editor {
                 this.DrawFields_INTERNAL(updateButtons, container, dataContainer, componentsArr, serializedObject, useMaskable);
             }
 
-        }
-
-        private void DrawAspects(VisualElement propContainer, System.Type type) {
-            
-            var aspects = new VisualElement();
-            aspects.AddToClassList("component-aspects");
-            {
-                var data = this.serializedObject.FindProperty(nameof(EntityConfig.aspects));
-                var componentsData = data.FindPropertyRelative(nameof(EntityConfig.aspects.components));
-                for (int j = 0; j < componentsData.arraySize; ++j) {
-
-                    var itAspect = componentsData.GetArrayElementAtIndex(j);
-                    var typeAspect = EditorUtils.GetTypeFromPropertyField(itAspect.managedReferenceFullTypename);
-                    if (typeof(IAspect).IsAssignableFrom(typeAspect) == true) {
-
-                        var label = EditorUtils.GetComponentName(typeAspect);
-                        var fields = EditorUtils.GetAspectTypes(typeAspect);
-                        foreach (var field in fields) {
-                            if (field.fieldType == type) {
-                                var aspect = new Label(label);
-                                aspect.AddToClassList("component-aspect");
-                                aspects.Add(aspect);
-                                break;
-                            }
-                        }
-                                    
-                    }
-                }
-            }
-            propContainer.Add(aspects);
-            
         }
 
     }

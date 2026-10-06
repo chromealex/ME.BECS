@@ -264,31 +264,4 @@ internal sealed class ViewTrackerInputEmitter {
         }
     }
 
-    internal void Append(StringBuilder source) {
-        if (this.capacity < 0) return; // Views addon is optional; old manifests have no schema.
-        string Name(INamedTypeSymbol type) => type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-        source.Append("namespace ME.BECS.SourceGenerated { internal static class ViewTrackerInputs {\n")
-            .Append("[global::UnityEngine.Scripting.PreserveAttribute] public static void Initialize() {\n")
-            .Append("global::ME.BECS.StaticTypes.SetTracker(").Append(this.tracked.Count.ToString(CultureInfo.InvariantCulture)).Append("u);\n");
-        foreach (var type in this.tracked)
-            source.Append("global::ME.BECS.StaticTypes<").Append(Name(type)).Append(">.TrackVersion();\n");
-        source.Append("global::ME.BECS.ViewsTracker.SetTracker(").Append(this.capacity.ToString(CultureInfo.InvariantCulture)).Append("u);\n");
-        // ViewsTracker has one ID and one dictionary entry per concrete Type, not
-        // per role. Preserve first occurrence order and register dual-role owners
-        // once, with the union needed by both callbacks. Never overwrite one role
-        // with the other or call Dictionary.Add twice for the same owner.
-        foreach (var group in this.entries.GroupBy(static entry => entry.Type, SymbolEqualityComparer.Default)) {
-            var entry = group.First();
-            var components = group.SelectMany(static item => item.Components).Distinct(SymbolEqualityComparer.Default).Cast<INamedTypeSymbol>().ToArray();
-            source.Append("{ var info = new global::ME.BECS.ViewsTracker.ViewInfo();\n");
-            if (components.Length != 0)
-                source.Append("info.tracker.Resize(").Append(components.Length.ToString(CultureInfo.InvariantCulture)).Append("u);\n");
-            for (var i = 0; i < components.Length; ++i)
-                source.Append("info.tracker.Get(").Append(i.ToString(CultureInfo.InvariantCulture)).Append("u) = global::ME.BECS.StaticTypes<")
-                    .Append(Name(components[i])).Append(">.trackerIndex;\n");
-            source.Append("global::ME.BECS.ViewsTracker.").Append(entry.Module ? "TrackViewModule" : "TrackView")
-                .Append('<').Append(Name(entry.Type)).Append(">(info); }\n");
-        }
-        source.Append("} } }\n");
-    }
 }

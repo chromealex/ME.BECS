@@ -12,7 +12,7 @@ namespace ME.BECS.SourceGenerator;
 // One generator owns the attribute, regardless of how many fragment kinds exist.
 [Generator(LanguageNames.CSharp)]
 public sealed class PublicationRootsGenerator : IIncrementalGenerator {
-    private static readonly string[] Kinds = { "System", "Type", "Entity", "Aspect", "Destroy", "Config", "Network", "Views", "JobInit", "JobSetup", "JobDebug", "Graph" };
+    private static readonly string[] Kinds = { "System", "Type", "Entity", "Aspect", "Destroy", "Config", "Network", "Views", "JobInit", "JobSetup", "JobDebug", "Graph", "Bootstrap", "ViewSelection" };
 
     public void Initialize(IncrementalGeneratorInitializationContext context) {
         var files = context.AdditionalTextsProvider.Where(static file => file.Path.EndsWith("Runtime" + Envelope.NativeSuffix, StringComparison.Ordinal))

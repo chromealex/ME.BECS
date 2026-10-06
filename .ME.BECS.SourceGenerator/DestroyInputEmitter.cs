@@ -92,34 +92,6 @@ internal static class DestroyInputEmitter {
             Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(payload, true) + ")]\n" + safetyMetadata, Encoding.UTF8));
     }
 
-    internal static void Append(StringBuilder source, IReadOnlyList<INamedTypeSymbol> components, DestroyRegistrationOwners owners, bool editor, string target) {
-        var profile = editor ? "true" : "false";
-        source.Append("namespace ME.BECS.SourceGenerated { ");
-        if (!owners.Distributed) source.Append("[global::Unity.Burst.BurstCompile] ");
-        source.Append("internal static unsafe class DestroyInputs {\npublic static void Initialize() => global::ME.BECS.BootstrapRuntime.RegisterInstalledDestroyCallbacks(editor: ")
-            .Append(profile).Append(");\n");
-        if (!owners.Distributed) {
-            // Old snapshots can reload once to publish owner-local inputs. Active
-            // distributed selections emit neither typed bodies nor delegates here.
-            AppendInvoker(source);
-            for (var index = 0; index < components.Count; ++index) {
-                var key = index.ToString(CultureInfo.InvariantCulture);
-                AppendRegistration(source, components[index], key, "");
-                AppendCallback(source, components[index], key);
-            }
-        }
-        source.Append("} }\n");
-        if (owners.Distributed) source.Append("namespace ME.BECS.SourceGenerated { internal static class BootstrapDestroySelection { public static void Publish() => ")
-            .Append("global::ME.BECS.BootstrapRuntime.ExpectDestroyPlan(")
-            .Append(Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(owners.Plan, true)).Append(", ")
-            .Append(owners.Count.ToString(CultureInfo.InvariantCulture)).Append(", editor: ").Append(profile).Append("); } }\n");
-        else {
-            var plan = new BootstrapTypePlanEmitter();
-            for (var index = 0; index < components.Count; ++index)
-                plan.Add(target, "global::ME.BECS.SourceGenerated.DestroyInputs.Register_" + index.ToString(CultureInfo.InvariantCulture));
-            plan.Append(source, editor, kind: "Destroy");
-        }
-    }
 
     internal static void AppendRegistration(StringBuilder source, INamedTypeSymbol component, string key, string callbackOwner) =>
         source.Append("public static void Register_").Append(key).Append("() => global::ME.BECS.WorldStaticCallbacks.RegisterAutoDestroyCallback<")

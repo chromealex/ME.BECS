@@ -13,8 +13,7 @@ namespace ME.BECS.Tests {
         [TestCase(false)]
         [TestCase(true)]
         public void BootstrapUsesProjectOwnedNativeInputsAndCurrentContent(bool editor) {
-            var profile = editor ? "Editor" : "Runtime";
-            var assembly = Assembly.Load("ME.BECS.Gen." + profile);
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(editor);
             var values = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
                 .Where(attribute => attribute.Key == "ME.BECS.InputTransport.v1").Select(attribute => attribute.Value).ToArray();
             CollectionAssert.AreEqual(new[] { "native-additionalfile" }, values);
@@ -29,13 +28,29 @@ namespace ME.BECS.Tests {
 
         [TestCase("ME.BECS")]
         [TestCase("ME.BECS.Tests")]
-        [TestCase("ME.BECS.Gen.Runtime")]
-        [TestCase("ME.BECS.Gen.Editor")]
         public void UnityDiscoversProjectInputsWithoutInjectedResponseArguments(string assemblyName) {
             var compilation = UnityEditor.Compilation.CompilationPipeline.GetAssemblies(UnityEditor.Compilation.AssembliesType.Editor)
                 .Single(assembly => assembly.name == assemblyName);
             var files = compilation.compilerOptions.RoslynAdditionalFilePaths;
             Assert.IsTrue((files ?? Array.Empty<string>()).Any(path => Call<bool>(Files, "IsNative", path)), assemblyName);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void CatalogOwnerReceivesNativeInputsWithoutAnAggregateHost(bool editor) {
+            UnityDiscoversProjectInputsWithoutInjectedResponseArguments(Tests_SourceGeneratorInputCatalog.Owner(editor).GetName().Name);
+        }
+
+        [Test]
+        public void ExportPublishesInputsWithoutWritingAggregateHostsOrCompilerResponses() {
+            var exporter = Files.Assembly.GetType("ME.BECS.Editor.CodeGenerator", true)
+                .GetMethod("Build", BindingFlags.Static | BindingFlags.NonPublic);
+            var calls = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(exporter)
+                .Where(instruction => instruction.Operand is MethodInfo).Select(instruction => (MethodInfo)instruction.Operand).ToArray();
+            Assert.AreEqual(1, calls.Count(method => method.DeclaringType == Transport && method.Name == "Publish"));
+            Assert.IsFalse(calls.Any(method => method.DeclaringType == typeof(System.IO.File) || method.DeclaringType == typeof(System.IO.Directory)));
+            Assert.IsFalse(calls.Any(method => method.Name == "CompilerResponse" || method.Name == "GetRetiredFileNames" || method.Name == "GetAssemblyReferenceNames"));
+            Assert.IsFalse(exporter.GetParameters().Any(parameter => parameter.Name == "dir" || parameter.Name == "asms"));
         }
 
         [TestCase("ME.BECS")]

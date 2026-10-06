@@ -12,7 +12,7 @@ namespace ME.BECS.Editor {
     internal static class SourceGeneratorAnalysisReceipt {
         private const string Schema = "ME.BECS.AnalysisReceipt.v1";
         internal const string ContentMetadataKey = "ME.BECS.InputContentHash.v1";
-        private static readonly string[] Consumers = { "ME.BECS.Gen.Runtime", "ME.BECS.Gen.Editor" };
+        private static readonly string[] Consumers = { "runtime", "editor" };
         private static string PathName => Path.GetFullPath(Path.Combine(UnityEngine.Application.dataPath,
             "../Library/ME.BECS.SourceGenerator/AnalysisReceipt.v1.txt"));
 
@@ -64,9 +64,12 @@ namespace ME.BECS.Editor {
         }
 
         internal static bool TryValidateCompiled(string fingerprint, Assembly[] assemblies, out string compilerSnapshot, out string reason) {
-            var compiled = assemblies.Select(assembly => new KeyValuePair<string, string[]>(assembly.GetName().Name,
-                assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                    .Where(attribute => attribute.Key == ContentMetadataKey).Select(attribute => attribute.Value).ToArray())).ToArray();
+            compilerSnapshot = null;
+            var compiled = new KeyValuePair<string, string[]>[2];
+            foreach (var editor in new[] { false, true }) {
+                if (!SourceGeneratorInputCatalog.TryGet(editor, assemblies, out var catalog, out reason)) return false;
+                compiled[editor ? 1 : 0] = new KeyValuePair<string, string[]>(catalog.Profile, new[] { catalog.ContentHash });
+            }
             return ValidateCompiled(Read(), fingerprint, CurrentInputHashes(), compiled, out compilerSnapshot, out reason);
         }
 

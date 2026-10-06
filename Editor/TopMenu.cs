@@ -152,12 +152,15 @@ namespace ME.BECS.Editor {
     }
     
     public static class Themes {
+
+        public static event System.Action Changed;
         
         public static string CurrentTheme {
             get => EditorPrefs.GetString("ME.BECS.Editor.Theme", ThemesCodeGenerator.DEFAULT);
             set {
                 EditorPrefs.SetString("ME.BECS.Editor.Theme", value);
                 EditorUIUtils.RefreshStyles();
+                Changed?.Invoke();
             }
         }
 

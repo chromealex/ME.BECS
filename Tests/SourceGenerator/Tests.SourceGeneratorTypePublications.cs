@@ -86,18 +86,18 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void CommonSelectionHasNoCallbacksAndAllOwnersPublishWithoutAssigningIds(string profile) {
-            var aggregate = Assembly.Load("ME.BECS.Gen." + profile);
-            var selection = aggregate.GetType("ME.BECS.SourceGenerated.BootstrapTypeInputs", true);
+            var aggregate = Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor");
+            var selection = Tests_SourceGeneratorBootstrapPublications.Owner(aggregate).GetType("ME.BECS.SourceGenerated.BootstrapProfile_" + profile, true);
             Assert.IsEmpty(selection.GetFields(Static));
-            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("ExpectTypePlan") }, Calls(selection.GetMethod("Publish")));
-            Assert.IsNull(aggregate.GetType("ME.BECS.SourceGenerated.GroupInputs", true).GetMethod("Initialize"), "Group registration bodies must no longer live in the aggregate.");
+            Assert.AreEqual(1, Calls(selection.GetMethod("Publish", Static)).Count(method => method == typeof(BootstrapRuntime).GetMethod("ExpectTypePlan")));
             var rows = Rows(aggregate, profile);
             var documents = Documents(rows, profile == "Editor");
             Assert.IsNotEmpty(documents);
             foreach (var document in documents) {
                 var owner = Field<string>(document, "Owner");
                 var publisher = Assembly.Load(owner).GetType("ME.BECS.SourceGenerated.TypeFragment_" + profile, true);
-                Assert.AreNotEqual(aggregate, publisher.Assembly);
+                Assert.IsFalse(publisher.Assembly.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal));
+                Assert.IsFalse(publisher.Assembly.GetReferencedAssemblies().Any(reference => reference.Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal)));
                 var publish = publisher.GetMethod("Publish", Static);
                 CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("InstallTypeFragment") }, Calls(publish));
                 Assert.IsTrue(Attribute.IsDefined(publish, typeof(UnityEngine.Scripting.PreserveAttribute)));
@@ -108,7 +108,7 @@ namespace ME.BECS.Tests {
                 CollectionAssert.AreEqual(selected.Select(item => item.Key), ordinals);
                 var callbacks = (Action[])publisher.GetField("Callbacks", Static).GetValue(null);
                 Assert.AreEqual(ordinals.Length, callbacks.Length);
-                Assert.IsTrue(callbacks.All(callback => callback.Method.DeclaringType.Assembly != aggregate));
+                Assert.IsTrue(callbacks.All(callback => callback.Method.DeclaringType.Assembly == publisher.Assembly));
                 for (var i = 0; i < selected.Length; ++i) {
                     var args = new object[] { selected[i].Value, null };
                     Assert.IsTrue((bool)Call(Format, "TryEntry", args));

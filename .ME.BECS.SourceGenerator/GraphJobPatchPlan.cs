@@ -35,7 +35,7 @@ internal sealed class GraphJobPatchPlan {
             if (field == null || field.IsReadOnly) return null;
             var index = -1;
             if (parts[1] == "d") {
-                if (field.DeclaredAccessibility != Accessibility.Public && !InputManifestGenerator.HasDeltaSetter(job, field, compilation)) return null;
+                if (field.DeclaredAccessibility != Accessibility.Public && !GraphDeltaSetterContract.IsAvailable(job, field, compilation)) return null;
                 if (!IsDelta(field) || IsInject(field) || (field.Type.SpecialType != SpecialType.System_UInt32 &&
                     field.Type.SpecialType != SpecialType.System_Single && !SymbolEqualityComparer.Default.Equals(field.Type, softFloat))) return null;
             } else {
@@ -93,7 +93,7 @@ internal sealed class GraphJobPatchPlan {
             if (IsDelta(field)) {
                 if (IsInject(field) || (field.Type.SpecialType != SpecialType.System_UInt32 &&
                     field.Type.SpecialType != SpecialType.System_Single && !SymbolEqualityComparer.Default.Equals(field.Type, softFloat))) return null;
-                if (field.DeclaredAccessibility != Accessibility.Public && !InputManifestGenerator.HasDeltaSetter(owner, field, compilation)) {
+                if (field.DeclaredAccessibility != Accessibility.Public && !GraphDeltaSetterContract.IsAvailable(owner, field, compilation)) {
                     error = "partial delta-time setter unavailable for " + field.Name;
                     return null;
                 }
@@ -164,7 +164,7 @@ internal sealed class GraphJobPatchPlan {
         var name = this.Job.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         foreach (var item in this.Fields) {
             if (item.Field.DeclaredAccessibility != Accessibility.Public) {
-                source.Append(name).Append('.').Append(item.Slot < 0 ? InputManifestGenerator.DeltaSetterName(item.Field) : InjectionSetterName(item.Field))
+                source.Append(name).Append('.').Append(item.Slot < 0 ? GraphDeltaSetterContract.Name(item.Field) : InjectionSetterName(item.Field))
                     .Append("(ref *job, ");
                 if (item.Slot < 0) source.Append("worldId");
                 else source.Append("(void*)").Append(storage).Append('[').Append(item.Slot.ToString(CultureInfo.InvariantCulture)).Append(']');

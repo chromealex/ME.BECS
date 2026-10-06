@@ -5,14 +5,16 @@ using NUnit.Framework;
 
 namespace ME.BECS.Tests {
     public partial class Tests_SourceGeneratorContracts {
-        private static string[][] SelectedSystemMetadata(string key) => Assembly.Load("ME.BECS.Gen.Editor")
+        private static Type SystemDependencyPublisher => (Type)Assembly.Load("ME.BECS.Editor")
+            .GetType("ME.BECS.Editor.SystemDependencyCatalog", true).GetMethod("GetPublisherType").Invoke(null, null);
+        private static string[][] SelectedSystemMetadata(string key) => SystemDependencyPublisher.Assembly
             .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
             .Where(attribute => attribute.Key == key).Select(attribute => attribute.Value.Split('\n')).ToArray();
 
         [Test]
         public void SystemInputSelectionsTransportILOperationsAndAdvisoryMessages() {
-            var inputs = Assembly.Load("ME.BECS.Gen.Editor").GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1").Select(attribute => attribute.Value.Split('\t')).ToArray();
+            var inputs = SystemDependencyPublisher.Assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .Where(attribute => attribute.Key == "ME.BECS.SystemDependencyInputs.v1").Select(attribute => ("editor\t" + attribute.Value).Split('\t')).ToArray();
             Assert.AreEqual("djI=", inputs.Single(row => row.Length == 4 && row[1] == "system-dependencies-schema")[3]);
             var plans = inputs.Where(row => row.Length == 4 && row[1] == "system-dependencies")
                 .Select(row => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(row[3])).Split('\n')).ToArray();

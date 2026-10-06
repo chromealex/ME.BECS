@@ -57,7 +57,7 @@ namespace ME.BECS.Editor {
                     .Where(t => t.IsValueType && EditorUtils.IsValidTypeForAssembly(editor, t, destroyAssemblies, true)).ToArray();
                 var destroyGenerated = 0;
                 foreach (var type in destroyTypes) {
-                    if (SourceGeneratorBridge.TryGetDestroyRegistration(type, editor, out _)) ++destroyGenerated;
+                    if (SourceGeneratorBridge.HasDestroyRegistration(type, editor)) ++destroyGenerated;
                     else issues.Add("Manifest destroy callback unavailable: " + Name(type));
                 }
                 report.AppendLine($"Component destroy callbacks: generated={destroyGenerated}, total={destroyTypes.Length} (callbacks/registration NOT invoked)");
@@ -66,7 +66,7 @@ namespace ME.BECS.Editor {
                                 t.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public).Length > 1).ToArray();
                 var maskGenerated = 0;
                 foreach (var type in maskTypes) {
-                    if (SourceGeneratorBridge.TryGetConfigMaskRegistration(type, editor, out _, out var reason)) ++maskGenerated;
+                    if (SourceGeneratorBridge.HasConfigMaskRegistration(type, editor, out var reason)) ++maskGenerated;
                     else issues.Add("Manifest config mask callback unavailable: " + Name(type) + " — " + reason);
                 }
                 report.AppendLine($"Config mask callbacks: generated={maskGenerated}, total={maskTypes.Length} (field order checked; callbacks/registration NOT invoked)");
@@ -80,7 +80,7 @@ namespace ME.BECS.Editor {
                     var generated = 0;
                     var label = countOnly ? "Config collection counts" : "Config collection callbacks";
                     foreach (var type in collectionTypes) {
-                        if (SourceGeneratorBridge.TryGetConfigCollectionsRegistration(type, countOnly, editor, out _, out var reason)) ++generated;
+                        if (SourceGeneratorBridge.HasConfigCollectionsRegistration(type, countOnly, editor, out var reason)) ++generated;
                         else issues.Add(label + " manifest unavailable: " + Name(type) + " — " + reason);
                     }
                     report.AppendLine($"{label}: generated={generated}, total={collectionTypes.Length} (metadata checked; callbacks/registration NOT invoked)");
@@ -311,18 +311,11 @@ namespace ME.BECS.Editor {
 
         private static HashSet<Type> CompareSystemAotPlan(bool editor, List<Type> expanded, StringBuilder report, List<string> issues) {
             var selected = new HashSet<Type>();
-            var name = "ME.BECS.Gen." + (editor ? "Editor" : "Runtime");
-            var owners = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => !assembly.IsDynamic && assembly.GetName().Name == name).ToArray();
-            if (owners.Length != 1) {
-                issues.Add("System AOT plan requires one loaded " + name + " assembly; found " + owners.Length);
+            if (!SourceGeneratorInputCatalog.TryGet(editor, out var selection, out var reason)) {
+                issues.Add("System AOT plan unavailable: " + reason);
                 return selected;
             }
-            var actual = owners[0].GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Where(attribute => attribute.Key == "ME.BECS.SystemAotPlan.v1").Select(attribute => attribute.Value).ToArray();
-            var aotRoot = owners[0].GetType(editor ? "ME.BECS.Editor.AOTBurstHelper" : "ME.BECS.AOTBurstHelper", false);
-            var sourceOwnedRoot = aotRoot != null && Attribute.IsDefined(aotRoot, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute));
-            report.AppendLine("AOT bootstrap root: source-owned=" + sourceOwnedRoot + " (method NOT invoked)");
-            if (!sourceOwnedRoot) issues.Add("AOT bootstrap still uses the old template or is missing in " + name + "; regenerate bootstrap");
+            var actual = ReadPublishedAotPlan(selection.Rows, editor, AppDomain.CurrentDomain.GetAssemblies(), report, issues);
             var assemblyInfo = EditorUtils.GetAssembliesInfo();
             var expected = new List<string>();
             var pointerTotal = 0;
@@ -360,12 +353,60 @@ namespace ME.BECS.Editor {
                 } else issues.Add("System AOT selection missing/changed: " + Name(type));
             }
             var same = expected.SequenceEqual(actual, StringComparer.Ordinal);
-            if (!same) issues.Add("System AOT manifest selection/order differs in " + name);
+            if (!same) issues.Add("System AOT publication selection/order differs for " + (editor ? "editor" : "runtime"));
             report.AppendLine("System AOT plan: matching=" + selected.Count + ", selected=" + expected.Count + ", compiled=" + actual.Length +
                 ", order equal=" + same + " (reflection interface map vs source plan; AOT methods NOT invoked, stripping NOT validated)");
             report.AppendLine("Selected pointer AOT references: generated=" + pointerSelected + ", expected=" + pointerTotal +
                 " (Burst/NoBurst/Factory selection, not merely wrapper availability)");
             return selected;
+        }
+
+        internal static string[] ReadPublishedAotPlan(string[] rows, bool editor, Assembly[] candidates, StringBuilder report, List<string> issues) {
+            var profile = editor ? "Editor" : "Runtime";
+            if (!rows.Any(row => row.StartsWith("system-publication-schema\t", StringComparison.Ordinal)) ||
+                !rows.Any(row => row.StartsWith("type-publication-schema\t", StringComparison.Ordinal))) {
+                issues.Add("AOT publication selection unavailable; regenerate inputs after compiling publication owners.");
+                return Array.Empty<string>();
+            }
+            var assemblies = candidates.Where(assembly => !assembly.IsDynamic).ToArray();
+            var rootCount = 0;
+            var publishedSystems = new SortedDictionary<int, string>();
+            try {
+                foreach (var system in new[] { true, false }) {
+                    var documents = system ? SourceGeneratorSystemFragments.Documents(rows, editor) :
+                        CodeGeneration.SourceGeneratorTypeFragmentFormat.Documents(rows, editor);
+                    foreach (var document in documents) {
+                        var owners = assemblies.Where(assembly => assembly.GetName().Name == document.Owner).ToArray();
+                        var key = system ? CodeGeneration.SourceGeneratorSystemFragmentFormat.MetadataKey : CodeGeneration.SourceGeneratorTypeFragmentFormat.MetadataKey;
+                        var content = system ? CodeGeneration.SourceGeneratorSystemFragmentFormat.Serialize(document) : CodeGeneration.SourceGeneratorTypeFragmentFormat.Serialize(document);
+                        var receipt = CodeGeneration.SourceGeneratorSystemFragmentFormat.Metadata(document, content);
+                        var metadata = owners.Length == 1 ? owners[0].GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>().ToArray() : Array.Empty<AssemblyMetadataAttribute>();
+                        var catalog = owners.Length == 1 ? owners[0].GetType("ME.BECS.SourceGenerated." + (system ? "System" : "Type") + "Fragment_" + profile, false) : null;
+                        if (metadata.Count(attribute => attribute.Key == key && attribute.Value == receipt) != 1 || !SourceGeneratorBridge.IsPreservationRoot(catalog)) {
+                            issues.Add("Selected AOT publication unavailable/stale: " + document.Owner + " / " + key); continue;
+                        }
+                        ++rootCount;
+                        if (!system) continue;
+                        var masks = metadata.Where(attribute => attribute.Key == "ME.BECS.SystemAotPublication." + profile + ".v1").Select(attribute => attribute.Value).ToArray();
+                        if (masks.Length != document.Entries.Length) { issues.Add("System AOT publication count differs: " + document.Owner); continue; }
+                        foreach (var entry in document.Entries) {
+                            var matches = masks.Where(mask => mask != null && mask.StartsWith(entry.Value + "\n", StringComparison.Ordinal)).ToArray();
+                            if (matches.Length != 1) { issues.Add("System AOT publication missing/ambiguous: " + entry.Value); continue; }
+                            // Assembly attribute order is not the registration order.
+                            publishedSystems.Add(entry.Key, matches[0]);
+                        }
+                    }
+                }
+                var selectedSystems = rows.Where(row => row.StartsWith("system-registration\t", StringComparison.Ordinal)).Select(row => row.Split('\t'))
+                    .OrderBy(row => int.Parse(row[1], System.Globalization.CultureInfo.InvariantCulture))
+                    .Select(row => CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(row[2])).ToArray();
+                if (!publishedSystems.Keys.SequenceEqual(Enumerable.Range(0, selectedSystems.Length)) ||
+                    !publishedSystems.Values.Select(value => value.Split('\n')[0]).SequenceEqual(selectedSystems, StringComparer.Ordinal))
+                    issues.Add("Owner-local AOT masks do not cover the exact selected system order.");
+            } catch (FormatException exception) { issues.Add("Invalid AOT publication data: " + exception.Message); }
+            catch (InvalidOperationException exception) { issues.Add("Invalid AOT publication selection: " + exception.Message); }
+            report.AppendLine("Owner-local AOT roots: " + rootCount + " (preserved methods NOT invoked; Player/Burst stripping NOT validated)");
+            return publishedSystems.Values.ToArray();
         }
 
         private static string Name(Type type) => type.FullName + " [" + type.Assembly.GetName().Name + "]";

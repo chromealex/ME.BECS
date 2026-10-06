@@ -93,25 +93,34 @@ namespace ME.BECS.Editor {
             }
 
             internal MethodBase Resolve() {
-                var type = Type.GetType(this.owner, false);
+                var type = ResolveType(this.owner);
                 if (type == null) return null;
                 var inventory = ILAnalysisSession.Get((typeof(MethodReference), type), () => Methods(type).GroupBy(Signature)
                     .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.Ordinal));
                 if (!inventory.TryGetValue(this.signature, out var candidates) || candidates.Length != 1) return null;
                 var result = candidates[0];
                 if (this.arguments?.Length > 0) {
-                    var args = this.arguments.Select(name => Type.GetType(name, false)).ToArray();
+                    var args = this.arguments.Select(ResolveType).ToArray();
                     if (args.Any(argument => argument == null)) return null;
                     result = ((MethodInfo)result).MakeGenericMethod(args);
                 }
                 return result;
             }
+
+            // Assembly-qualified generic names are expensive to resolve repeatedly.
+            // The memo belongs to this analysis snapshot; a new domain/session
+            // cannot inherit a missing type from an earlier compilation.
+            private static Type ResolveType(string identity) =>
+                ILAnalysisSession.Get((typeof(MethodReference), identity), () => Type.GetType(identity, false));
         }
 
         internal static IEnumerable<MethodBase> Methods(Type type) => type.GetMethods(Declared).Cast<MethodBase>()
             .Concat(type.GetConstructors(Declared)).Concat(type.TypeInitializer == null ? Array.Empty<MethodBase>() : new[] { type.TypeInitializer }).Distinct();
 
-        internal static string TypeName(Type type) {
+        internal static string TypeName(Type type) => type == null ? "<null>" :
+            ILAnalysisSession.Get((typeof(ILContentFingerprint), type), () => TypeNameCore(type));
+
+        private static string TypeNameCore(Type type) {
             if (type == null) return "<null>";
             if (type.IsGenericParameter) return (type.DeclaringMethod == null ? "!" : "!!") + type.GenericParameterPosition;
             if (type.IsByRef) return TypeName(type.GetElementType()) + "&";
@@ -126,7 +135,10 @@ namespace ME.BECS.Editor {
             " required(" + string.Join(";", parameter.GetRequiredCustomModifiers().Select(TypeName)) + ") optional(" +
             string.Join(";", parameter.GetOptionalCustomModifiers().Select(TypeName)) + ")";
 
-        internal static string Signature(MethodBase method) => method.Name + "`" + (method is MethodInfo generic ? generic.GetGenericArguments().Length : 0) +
+        internal static string Signature(MethodBase method) =>
+            ILAnalysisSession.Get((typeof(ILContentFingerprint), method), () => SignatureCore(method));
+
+        private static string SignatureCore(MethodBase method) => method.Name + "`" + (method is MethodInfo generic ? generic.GetGenericArguments().Length : 0) +
             "|" + method.IsStatic + "|" + method.CallingConvention + "|" + (method is MethodInfo info ? Parameter(info.ReturnParameter) : "ctor") +
             "(" + string.Join(";", method.GetParameters().Select(Parameter)) + ")";
 
@@ -139,6 +151,7 @@ namespace ME.BECS.Editor {
         }
 
         internal static string Body(MethodBase method) {
+            ILAnalysisSession.Checkpoint(method);
             var body = method.GetMethodBody();
             if (body == null) return "no-body";
             var text = new StringBuilder().Append(body.InitLocals).Append('|').Append(body.MaxStackSize).Append('\n');
@@ -253,11 +266,16 @@ namespace ME.BECS.Editor {
                 var text = new StringBuilder(assembly.FullName).Append('\n');
                 // Use supported, known framework attributes on Assembly. Unity's
                 // Assembly.GetCustomAttributesData is not universally implemented.
-                foreach (var include in assembly.GetCustomAttributes<CodeGeneratorInclude>().Select(item => TypeName(item.type)).OrderBy(value => value, StringComparer.Ordinal))
+                var metadata = ILAnalysisSession.ReadMetadata(() => (
+                    includes: assembly.GetCustomAttributes<CodeGeneratorInclude>().Select(item => TypeName(item.type)).OrderBy(value => value, StringComparer.Ordinal).ToArray(),
+                    values: assembly.GetCustomAttributes<AssemblyMetadataAttribute>().OrderBy(item => item.Key, StringComparer.Ordinal)
+                        .ThenBy(item => item.Value, StringComparer.Ordinal).Select(item => (item.Key, item.Value)).ToArray()));
+                foreach (var include in metadata.includes)
                     text.Append("include:").Append(include).Append('\n');
-                foreach (var attribute in assembly.GetCustomAttributes<AssemblyMetadataAttribute>().OrderBy(item => item.Key, StringComparer.Ordinal).ThenBy(item => item.Value, StringComparer.Ordinal))
+                foreach (var attribute in metadata.values)
                     text.Append("metadata:").Append(attribute.Key).Append(':').Append(attribute.Value).Append('\n');
                 foreach (var type in assembly.GetTypes().OrderBy(TypeName, StringComparer.Ordinal)) {
+                    ILAnalysisSession.Checkpoint();
                     text.Append(TypeName(type)).Append('|').Append((int)type.Attributes).Append('|').Append(TypeName(type.BaseType)).Append('\n');
                     if (type.StructLayoutAttribute is var layout && layout != null)
                         text.Append("layout:").Append(layout.Value).Append('|').Append(layout.Size).Append('|').Append(layout.Pack).Append('|').Append(layout.CharSet).Append('\n');

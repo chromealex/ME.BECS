@@ -10,23 +10,17 @@ internal static class DebugJobInputEmitter {
     private static string TypeName(ITypeSymbol type) => type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
     private static string FieldName(ITypeSymbol type) => "safety_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(TypeName(type));
 
-    internal static void AppendMetadata(StringBuilder source, IReadOnlyList<DebugJobInputPlan> plans) {
+    internal static void AppendMetadata(StringBuilder source, IReadOnlyList<DebugJobInputPlan> plans, string key = "ME.BECS.DebugJobSafety.v1") {
         foreach (var plan in plans) {
             var payload = "v1\n" + plan.JobIdentity + "\n" + plan.ContractIdentity + "\n" + plan.SafetyOrigin +
                 string.Concat(plan.Safety.Select(dependency => "\nS\t" + dependency.Mode + "\t" + JobSafetySummary.ReflectionIdentity(dependency.Type)));
-            source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.DebugJobSafety.v1\", ")
+            source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(")
+                .Append(Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(key, true)).Append(", ")
                 .Append(Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(payload, true)).Append(")]\n");
         }
     }
 
     internal static string InitializerName(DebugJobInputPlan plan) => "Initialize_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(plan.JobIdentity + "\n" + plan.ContractIdentity);
-
-    internal static void AppendAdapter(StringBuilder source, string ns, bool editor) {
-        source.Append("namespace ").Append(ns).Append(" { public unsafe partial class DebugJobs {\n")
-            .Append("#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS\n")
-            .Append("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\npublic static void InitializeJobsDebug() => global::ME.BECS.BootstrapRuntime.InitializeJobDebug(editor: ")
-            .Append(editor ? "true" : "false").Append(");\n#endif\n} }\n");
-    }
 
     internal static void Append(StringBuilder source, string ns, IReadOnlyList<DebugJobInputPlan> plans, string owner = "DebugJobs", bool individual = false) {
         // Preserve the public owner even when collection checks are disabled. It

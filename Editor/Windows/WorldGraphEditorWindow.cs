@@ -790,7 +790,7 @@ namespace ME.BECS.Editor {
     }
     #endif
 
-    public unsafe class WorldGraphEditorWindow : EditorWindow {
+    public unsafe partial class WorldGraphEditorWindow : EditorWindow {
 
         public const string NONE_OPTION = "- None -";
         
@@ -800,7 +800,7 @@ namespace ME.BECS.Editor {
         
         public static void ShowWindow() {
             var win = WorldGraphEditorWindow.CreateInstance<WorldGraphEditorWindow>();
-            win.titleContent = new GUIContent("World Graph", EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/icon-worldviewer.png"));
+            win.titleContent = new GUIContent("Worlds Viewer", EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/icon-worldviewer.png"));
             win.LoadStyle();
             win.wantsMouseMove = true;
             win.Show();
@@ -830,7 +830,7 @@ namespace ME.BECS.Editor {
             
         }
         
-        private void Update() {
+        private void UpdateLegacy() {
 
             this.UpdateWorlds();
             
@@ -968,7 +968,7 @@ namespace ME.BECS.Editor {
         private VisualElement newRootContainer;
         private VisualElement toolbarContainer;
         private VisualElement worldsSelectionContainer;
-        public void CreateGUI() {
+        private void CreateLegacyGUI() {
 
             this.LoadStyle();
             this.rootVisualElement.Clear();
@@ -1062,6 +1062,10 @@ namespace ME.BECS.Editor {
 
             var toolbar = new UnityEditor.UIElements.Toolbar();
             toolbar.AddToClassList("toolbar");
+            toolbar.Add(new UnityEditor.UIElements.ToolbarButton(() => {
+                this.dashboardLegacy = false;
+                this.CreateGUI();
+            }) { text = "Dashboard" });
             {
                 var selectedId = this.world.id;
                 var list = new System.Collections.Generic.List<string>();
@@ -1144,6 +1148,8 @@ namespace ME.BECS.Editor {
             
             this.allocatorWindow = null;
             this.world = world;
+            this.dashboardSelectedWorld = world.id;
+            if (!this.dashboardWorldTabs.Contains(world.id)) this.dashboardWorldTabs.Add(world.id);
             #if !ENABLE_BECS_FLAT_QUERIES
             this.currentNode = null;
             #endif

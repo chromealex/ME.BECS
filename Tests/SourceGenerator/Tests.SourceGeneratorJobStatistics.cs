@@ -9,9 +9,7 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void JobStatisticsExportUsesILWithoutSourceCatalogSelection(string profile) {
-            var assembly = Assembly.Load("ME.BECS.Gen." + profile);
-            var records = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1").Select(attribute => attribute.Value.Split('\t')).ToArray();
+            var records = Tests_SourceGeneratorInputCatalog.Rows(profile == "Editor").Select(row => (profile.ToLowerInvariant() + "\t" + row).Split('\t')).ToArray();
             Assert.IsFalse(records.Any(row => row.Length > 1 && row[1] == "job-entity-initializer"),
                 "Fresh exports must not select a source entity-count initializer.");
             var ilPlans = records.Where(row => row.Length == 4 && row[1] == "job-entity-il")
@@ -45,14 +43,10 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void EntityFallbackPlansPreserveExportedILSnapshot(string profile) {
-            var attributes = Assembly.Load("ME.BECS.Gen." + profile).GetCustomAttributes(typeof(AssemblyMetadataAttribute), false)
-                .Cast<AssemblyMetadataAttribute>().ToArray();
-            var plans = attributes.Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1")
-                .Select(attribute => attribute.Value.Split('\t'))
-                .Where(row => row.Length == 4 && row[1] == "job-entity-fallback")
-                .Select(row => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(row[3])).Split('\n')).ToArray();
-            var selections = attributes.Where(attribute => attribute.Key == "ME.BECS.JobEntitySelection.v1")
-                .Select(attribute => attribute.Value.Split('\n')).ToArray();
+            var plans = Tests_SourceGeneratorInputCatalog.Rows(profile == "Editor").Select(row => row.Split('\t'))
+                .Where(row => row.Length == 3 && row[0] == "job-entity-fallback")
+                .Select(row => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(row[2])).Split('\n')).ToArray();
+            var selections = Tests_SourceGeneratorJobSetupPublications.Selected(profile, "JobEntitySelection");
             foreach (var plan in plans) {
                 var selected = selections.Single(row => row[1] == plan[1]);
                 Assert.AreEqual("v1", plan[0]);
@@ -67,23 +61,18 @@ namespace ME.BECS.Tests {
         [TestCase(typeof(Tests_ILJobEntityCounts.MixedLoops))]
         [TestCase(typeof(Tests_ILJobEntityCounts.UnboundedLoop))]
         public void CoveredEntityJobsExportILWithoutASourceInitializer(Type job) {
-            var selected = Assembly.Load("ME.BECS.Gen.Editor").GetCustomAttributes(typeof(AssemblyMetadataAttribute), false)
-                .Cast<AssemblyMetadataAttribute>().Where(attribute => attribute.Key == "ME.BECS.JobEntitySelection.v1")
-                .Select(attribute => attribute.Value.Split('\n')).Single(plan => plan[1] == job.AssemblyQualifiedName);
+            var selected = Tests_SourceGeneratorJobSetupPublications.Selected("Editor", "JobEntitySelection").Single(plan => plan[1] == job.AssemblyQualifiedName);
             Assert.AreEqual("il", selected[2], "A complete fresh IL count must not be overridden by source metadata.");
         }
 
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void CompilerEntityStatisticsPreserveLimitsAndCanonicalGroupOrder(string profile) {
-            var assembly = Assembly.Load("ME.BECS.Gen." + profile);
-            var selected = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Where(attribute => attribute.Key == "ME.BECS.JobEntitySelection.v1").Select(attribute => attribute.Value.Split('\n'))
+            var selected = Tests_SourceGeneratorJobSetupPublications.Selected(profile, "JobEntitySelection")
                 .Where(rows => rows[2] == "il").ToArray();
             Assert.IsNotEmpty(selected);
-            var entityInputs = assembly.GetType("ME.BECS.SourceGenerated.EntityInputs", true);
-            var hash = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.CodeGeneration.SourceGeneratorNames", true)
-                .GetMethod("Hash", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            var groups = Tests_SourceGeneratorJobSetupPublications.EntityGroups(profile == "Editor");
+            var groupCount = Tests_SourceGeneratorInputCatalog.Rows(profile == "Editor").Count(row => row.StartsWith("entity-registration\t", StringComparison.Ordinal));
             foreach (var plan in selected) {
                 var job = Type.GetType(plan[1], true);
                 var countType = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.Jobs.ILJobEntityCounts", true);
@@ -94,8 +83,9 @@ namespace ME.BECS.Tests {
                     .Where(row => row[2] != "0").Select(row => string.Join("\t", row.Take(3)))), plan.Skip(3));
                 foreach (var group in il.Skip(5).Select(row => row.Split('\t'))) {
                     var key = group[0] + "\t" + group[1];
-                    Assert.IsNotNull(entityInputs.GetField("Id_" + (string)hash.Invoke(null, new object[] { key })),
+                    Assert.IsTrue(groups.ContainsKey(key),
                         "IL loop-only groups must remain in the selected global entity catalog.");
+                    Assert.Less(groups[key], (uint)groupCount);
                 }
             }
         }
@@ -103,9 +93,7 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void CompilerWeightStatisticsPreserveFreshILValue(string profile) {
-            var selected = Assembly.Load("ME.BECS.Gen." + profile).GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Where(attribute => attribute.Key == "ME.BECS.JobWeightSelection.v1").Select(attribute => attribute.Value.Split('\n'))
-                .ToArray();
+            var selected = Tests_SourceGeneratorJobSetupPublications.Selected(profile, "JobWeightSelection");
             Assert.IsNotEmpty(selected);
             var analyzer = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.Jobs.ILJobWeights", true)
                 .GetMethod("Analyze", BindingFlags.NonPublic | BindingFlags.Static);

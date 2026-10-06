@@ -37,6 +37,38 @@ namespace ME.BECS {
                                                     System.Action validateInputs, bool editor) =>
             plans.InstallWithPreflight(owner, initializeTypes, registerMethods, validateInputs, editor);
 
+        // Selected feeder order and repeated job-slot mapping are immutable data.
+        // No generated class owns executable initialization/registration plans.
+        public static void InstallPhasePlan(string owner, System.Action<bool>[] initialize, System.Action<bool>[] register,
+                                            System.Action<bool>[] preflight, int[] jobSetupOrdinals, bool editor, bool jobDebug) =>
+            plans.InstallPhases(owner, initialize, register, preflight, jobSetupOrdinals, editor, jobDebug);
+
+        public static void NoopPhase(bool editor) { }
+
+        // Callable migration adapters can request a phase, but cannot replace its
+        // selected order or inject another generated initialization body.
+        public static void InitializeInstalledTypes(bool editor) {
+            RequireInstalledPlan(editor);
+            plans.Get(editor).initializeTypes();
+        }
+
+        internal static void ValidateJobSequence(BootstrapPhases phases, bool editor) =>
+            phases.ValidateJobs((editor ? editorJobSetup : runtimeJobSetup).Count, (editor ? editorJobInit : runtimeJobInit).Count);
+
+        public static void InitializeInstalledJobs(bool editor) {
+            var phases = plans.Get(editor).phases ?? throw new System.InvalidOperationException("ME.BECS job phase plan is unavailable.");
+            ValidateJobSequence(phases, editor);
+            // Use the publishing profile's compiler flags, not this assembly's
+            // defines: an addon/project may have a different compiler surface.
+            if (phases.jobDebug) InitializeJobDebug(editor);
+            phases.InitializeJobs(editor ? editorJobSetup : runtimeJobSetup, editor ? editorJobInit : runtimeJobInit);
+        }
+
+        public static void RegisterInstalledConfigCallbacks(bool editor) {
+            RegisterInstalledConfigMasks(editor);
+            RegisterInstalledConfigCollections(editor);
+        }
+
         public static void InstallTypeFragment(string identity, string owner, int count, int[] ordinals, System.Action[] callbacks, bool editor) =>
             (editor ? editorTypes : runtimeTypes).Install(identity, owner, count, ordinals, callbacks);
 

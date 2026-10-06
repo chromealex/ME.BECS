@@ -89,42 +89,4 @@ internal sealed class NetworkMethodInputEmitter {
         return true;
     }
 
-    internal void AppendMetadata(StringBuilder source) {
-        if (!this.HasSchema) return;
-        var payload = new StringBuilder("v1\n").Append(this.methods.Count.ToString(CultureInfo.InvariantCulture));
-        for (var index = 0; index < this.methods.Count; ++index)
-            payload.Append('\n').Append((index + 1).ToString(CultureInfo.InvariantCulture)).Append('\t')
-                .Append(this.methods[index].Owner).Append('\t').Append(this.methods[index].Method.Name);
-        source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.NetworkMethodInputs.v1\", ")
-            .Append(SymbolDisplay.FormatLiteral(payload.ToString(), true)).Append(")]\n");
-    }
-
-    internal void Append(StringBuilder source, NetworkRegistrationOwners owners, bool editor) {
-        var profile = editor ? "true" : "false";
-        source.Append("namespace ME.BECS.SourceGenerated { internal static class BootstrapNetworkSelection { public static void Publish() {");
-        if (this.HasSchema && owners.Distributed)
-            source.Append("global::ME.BECS.Network.BootstrapNetworkMethods.ExpectPlan(").Append(SymbolDisplay.FormatLiteral(owners.Plan, true))
-                .Append(", ").Append(owners.Count.ToString(CultureInfo.InvariantCulture)).Append(", editor: ").Append(profile).Append(");");
-        source.Append("} public static void Validate() {");
-        if (this.HasSchema && owners.Distributed)
-            source.Append("global::ME.BECS.Network.BootstrapNetworkMethods.RequireComplete(editor: ").Append(profile).Append(");");
-        source.Append("} } }\n");
-        if (!this.HasSchema) return;
-        if (owners.Distributed) {
-            source.Append("namespace ME.BECS.SourceGenerated { internal static class NetworkMethodInputs {\n")
-                .Append("[global::UnityEngine.Scripting.PreserveAttribute] public static void Initialize() => ")
-                .Append("global::ME.BECS.Network.BootstrapNetworkMethods.RegisterInstalled(editor: ").Append(profile).Append(");\n} }\n");
-            return;
-        }
-        // Transitional old snapshot: normal Editor export supplies owner rows.
-        source.Append("namespace ME.BECS.SourceGenerated { internal static class NetworkMethodInputs {\n")
-            .Append("[global::UnityEngine.Scripting.PreserveAttribute] public static void Initialize() {\n")
-            .Append("global::ME.BECS.WorldStaticCallbacks.RegisterCallback<global::ME.BECS.Network.UnsafeNetworkModule.MethodsStorage>(Register);\n}\n")
-            .Append("private static void Register(ref global::ME.BECS.Network.UnsafeNetworkModule.MethodsStorage methods) {\n");
-        foreach (var entry in this.methods)
-            source.Append("methods.Add((global::ME.BECS.Network.NetworkMethodDelegate)")
-                .Append(entry.Method.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
-                .Append(".@").Append(entry.Method.Name).Append(");\n");
-        source.Append("}\n} }\n");
-    }
 }

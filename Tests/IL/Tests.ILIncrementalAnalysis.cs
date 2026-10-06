@@ -130,7 +130,46 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void ParallelDeclarationIndexMatchesSequentialOrder() {
+            Assembly MakeAssembly(string name) {
+                var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(name + Guid.NewGuid().ToString("N")), AssemblyBuilderAccess.Run);
+                assembly.DefineDynamicModule(name).DefineType("Fixture", TypeAttributes.Public).CreateType();
+                return assembly;
+            }
+            var assemblies = new[] { MakeAssembly("Second"), MakeAssembly("First") };
+            var sessionType = EditorType("ILAnalysisSession");
+            var index = sessionType.GetMethod("IndexDeclarations", HiddenStatic);
+            var expected = (string[])index.Invoke(null, new object[] { assemblies });
+            var actual = System.Threading.Tasks.Task.Run(() => {
+                // This fixture has no user attributes or Unity API calls.
+                Func<Func<object>, object> metadata = read => read();
+                using var session = (IDisposable)Activator.CreateInstance(sessionType,
+                    BindingFlags.Instance | BindingFlags.NonPublic, null,
+                    new object[] { System.Threading.CancellationToken.None, null, metadata }, null);
+                return (string[])index.Invoke(null, new object[] { assemblies });
+            }).GetAwaiter().GetResult();
+            CollectionAssert.AreEqual(expected, actual);
+        }
+
+        [Test]
+        public void MemoizedMetadataNamesMatchUncachedFingerprintText() {
+            var fingerprint = EditorType("ILContentFingerprint");
+            var name = fingerprint.GetMethod("TypeName", HiddenStatic);
+            var signature = fingerprint.GetMethod("Signature", HiddenStatic);
+            var types = new[] { typeof(GenericOwner<int>), typeof(int).MakeByRefType(), typeof(string[,]), typeof(int).MakeArrayType(1) };
+            var methods = new MethodBase[] { Method(nameof(One)), typeof(GenericOwner<int>).GetMethod("Echo").MakeGenericMethod(typeof(string)) };
+            var names = types.Select(type => name.Invoke(null, new object[] { type })).ToArray();
+            var signatures = methods.Select(method => signature.Invoke(null, new object[] { method })).ToArray();
+            using var session = (IDisposable)Activator.CreateInstance(EditorType("ILAnalysisSession"), true);
+            for (var pass = 0; pass < 2; ++pass) {
+                CollectionAssert.AreEqual(names, types.Select(type => name.Invoke(null, new object[] { type })).ToArray());
+                CollectionAssert.AreEqual(signatures, methods.Select(method => signature.Invoke(null, new object[] { method })).ToArray());
+            }
+        }
+
+        [Test]
         public void PersistedMethodReferencesRestoreClosedGenericsAndConstructors() {
+            using var session = (IDisposable)Activator.CreateInstance(EditorType("ILAnalysisSession"), true);
             var reference = EditorType("ILContentFingerprint").GetNestedType("MethodReference", BindingFlags.NonPublic);
             var capture = reference.GetMethod("From", HiddenStatic);
             var resolve = reference.GetMethod("Resolve", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -138,7 +177,11 @@ namespace ME.BECS.Tests {
                 typeof(GenericOwner<int>).GetConstructor(Type.EmptyTypes),
                 typeof(GenericOwner<int>).GetMethod("Echo").MakeGenericMethod(typeof(string)),
                 typeof(GenericOwner<long>).GetMethod("Echo").MakeGenericMethod(typeof(float)),
-            }) Assert.AreEqual(method, resolve.Invoke(capture.Invoke(null, new object[] { method }), null));
+            }) {
+                var stored = capture.Invoke(null, new object[] { method });
+                Assert.AreEqual(method, resolve.Invoke(stored, null));
+                Assert.AreEqual(method, resolve.Invoke(stored, null), "Cached type resolution must preserve the closed generic method.");
+            }
         }
 
         [Test]
@@ -223,6 +266,20 @@ namespace ME.BECS.Tests {
             record.GetType().GetField("dependencies").SetValue(record, new[] { invalidIndex });
             var exception = Assert.Throws<TargetInvocationException>(() => fixture.Unpack(fixture.RoundTrip(packed)));
             Assert.IsInstanceOf<FormatException>(exception.InnerException);
+        }
+
+        [Test]
+        public void NestedDependencySetsMergeWithoutSharingMutableStorage() {
+            var type = EditorType("ILDependencyCapture");
+            var observe = type.GetMethod("Observe", HiddenStatic, null, new[] { typeof(MethodBase) }, null);
+            var property = type.GetProperty("Methods", BindingFlags.Instance | BindingFlags.NonPublic);
+            using var outer = (IDisposable)Activator.CreateInstance(type, true);
+            var inner = (IDisposable)Activator.CreateInstance(type, true);
+            observe.Invoke(null, new object[] { Method(nameof(One)) });
+            inner.Dispose();
+            observe.Invoke(null, new object[] { Method(nameof(Two)) });
+            CollectionAssert.AreEquivalent(new[] { Method(nameof(One)), Method(nameof(Two)) }, (MethodBase[])property.GetValue(outer));
+            CollectionAssert.AreEqual(new[] { Method(nameof(One)) }, (MethodBase[])property.GetValue(inner));
         }
 
         [Test]

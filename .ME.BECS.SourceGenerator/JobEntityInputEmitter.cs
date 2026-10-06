@@ -209,13 +209,14 @@ internal sealed class JobEntityInputEmitter {
         return true;
     }
 
-    internal void AppendMetadata(StringBuilder source) {
+    internal void AppendMetadata(StringBuilder source, string key = "ME.BECS.JobEntitySelection.v1") {
         foreach (var plan in plans) {
             var payload = plan.Initializer == null ? "v1\n" + plan.Identity + (ilJobs.Contains(plan.Job) ? "\nil\n" : "\nlegacy\n") +
                 plan.Maximum.ToString(CultureInfo.InvariantCulture) + "\n" + plan.Loops.ToString(CultureInfo.InvariantCulture) + "\n" +
                 (plan.Allocate ? "1" : "0") + string.Concat(plan.Groups.Select((group, index) => "\n" + group + "\t" + plan.Counts[index].ToString(CultureInfo.InvariantCulture))) :
                 "v1\n" + plan.Identity + "\nsource\n" + JobSafetySummary.ReflectionIdentity(plan.Initializer) + string.Concat(plan.Groups.Select(group => "\n" + group));
-            source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.JobEntitySelection.v1\", ")
+            source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(")
+                .Append(Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(key, true)).Append(", ")
                 .Append(Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(payload, true)).Append(")]\n");
         }
     }

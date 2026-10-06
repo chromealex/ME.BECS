@@ -15,11 +15,12 @@ namespace ME.BECS.Tests {
         private static T Field<T>(object value, string name) => (T)value.GetType().GetField(name, Instance).GetValue(value);
         private static string Decode(string value) => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(value));
         private static string Encode(string value) => Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(value));
-        private static Assembly Aggregate => Assembly.Load("ME.BECS.Gen.Runtime");
         private static AssemblyMetadataAttribute[] Metadata(Assembly assembly) => assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>().ToArray();
-        private static string[] Rows() => Metadata(Aggregate).Where(item => item.Key == "ME.BECS.TypeInput.v1" && item.Value.StartsWith("runtime\t", StringComparison.Ordinal))
-            .Select(item => item.Value.Substring("runtime\t".Length)).ToArray();
+        private static string[] Rows() => Tests_SourceGeneratorInputCatalog.Rows(false);
         private static object[] Documents() => ((Array)Call("Documents", Rows(), false)).Cast<object>().ToArray();
+        internal static AssemblyMetadataAttribute[] PublishedMetadata() => Documents().Select(doc => Field<string>(doc, "Owner"))
+            .Distinct(StringComparer.Ordinal).Select(Assembly.Load).SelectMany(Metadata)
+            .Where(attribute => attribute.Key.StartsWith("ME.BECS.PublishedGraph", StringComparison.Ordinal)).ToArray();
         private static MethodInfo[] Calls(MethodInfo method) => ME.BECS.Mono.Reflection.Disassembler.GetInstructions(method)
             .Where(instruction => instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt).Select(instruction => (MethodInfo)instruction.Operand).ToArray();
 
@@ -38,7 +39,8 @@ namespace ME.BECS.Tests {
             var seen = new System.Collections.Generic.HashSet<int>();
             foreach (var doc in Documents()) {
                 var owner = Assembly.Load(Field<string>(doc, "Owner"));
-                Assert.AreNotEqual(Aggregate, owner);
+                Assert.IsFalse(owner.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal));
+                Assert.IsFalse(owner.GetReferencedAssemblies().Any(reference => reference.Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal)));
                 var publisher = owner.GetType("ME.BECS.SourceGenerated.GraphFragment_Runtime", true);
                 var publish = publisher.GetMethod("Publish", Static);
                 CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("InstallGraphFragment") }, Calls(publish));
@@ -60,7 +62,6 @@ namespace ME.BECS.Tests {
                     var prefix = Decode(graph[2]);
                     var suffix = System.Math.Abs(int.Parse(graph[3], CultureInfo.InvariantCulture)).ToString(CultureInfo.InvariantCulture) + "_SystemsCodeGenerator";
                     foreach (var phase in new[] { "Initialize", "Awake", "Start", "Update", "Destroy", "DrawGizmos" }) {
-                        Assert.IsNull(Aggregate.GetType(prefix + phase));
                         Assert.IsNotNull(owner.GetType(prefix + phase, true));
                     }
                     var initialize = owner.GetType(prefix + "Initialize", true);
@@ -77,31 +78,67 @@ namespace ME.BECS.Tests {
                 }
             }
             CollectionAssert.AreEquivalent(Enumerable.Range(0, original.Length), seen);
-            Assert.IsNull(Aggregate.GetType("ME.BECS.SourceGenerated.GenericJobDeltaInputs"));
         }
 
         [Test]
-        public void PublishedLifecycleAndInjectionPlansExactlyMatchTheDiagnosticSnapshot() {
-            var original = Metadata(Aggregate);
-            foreach (var doc in Documents()) {
-                var owner = Assembly.Load(Field<string>(doc, "Owner"));
-                var ids = Field<KeyValuePair<int, string>[]>(doc, "Entries").Select(entry => Decode(entry.Value).Split('\n')[0].Split('\t')[3]).ToArray();
-                foreach (var key in new[] { "GraphSystemInjectionPlan", "GraphJobSelection", "GraphJobInjectionPlan", "GraphInjectionActions", "GraphLifecyclePlan", "GraphSyncComparison" }) {
-                    var payloads = original.Where(item => item.Key == "ME.BECS." + key + ".v1")
-                        .Select(item => item.Value).Where(value => ids.Contains(value.Split('\n')[key == "GraphLifecyclePlan" || key == "GraphSyncComparison" ? 0 : 1])).ToArray();
-                    CollectionAssert.AreEquivalent(payloads, Metadata(owner).Where(item => item.Key == "ME.BECS.Published" + key + ".v1").Select(item => item.Value), key);
+        public void PublishedLifecyclePlansMatchCompiledCallsAndBurstGroups() {
+            var plans = PublishedMetadata().Where(item => item.Key == "ME.BECS.PublishedGraphLifecyclePlan.v1")
+                .Select(item => item.Value.Split('\n')).ToArray();
+            var graphs = Rows().Where(row => row.StartsWith("graph-registration\t", StringComparison.Ordinal)).Select(row => row.Split('\t')).ToArray();
+            Assert.IsNotEmpty(graphs);
+            Assert.AreEqual(graphs.Length * 5, plans.Length);
+            foreach (var graph in graphs) {
+                foreach (var phase in new[] { "Awake", "Start", "Update", "Destroy", "DrawGizmos" }) {
+                    var plan = plans.Single(value => value[0] == graph[3] && value[1] == phase);
+                    Assert.AreEqual("ME.BECS.GraphLifecyclePlan.v1", plan[2]);
+                    var steps = plan.Skip(3).Where(row => row.Length != 0 && !row.StartsWith("result\t", StringComparison.Ordinal))
+                        .Select(row => row.Split('\t')).ToArray();
+                    var lifecycle = Owner(graph[3]).GetType(Decode(graph[2]) + phase, true).GetNestedType("PlannedLifecycle", BindingFlags.NonPublic);
+                    Assert.IsNotNull(lifecycle);
+                    var groups = new System.Collections.Generic.List<(bool burst, System.Collections.Generic.List<string> calls)>();
+                    for (var index = 0; index < steps.Length; ++index) {
+                        var step = steps[index];
+                        Assert.AreEqual(11, step.Length);
+                        Assert.AreEqual(index.ToString(CultureInfo.InvariantCulture), step[0]);
+                        var invoke = step[4] == "invoke";
+                        var burst = step[10] == "1";
+                        if (groups.Count == 0 || invoke && burst != groups[groups.Count - 1].burst)
+                            groups.Add((invoke && burst, new System.Collections.Generic.List<string>()));
+                        var calls = groups[groups.Count - 1].calls;
+                        var dependencies = step[3].Split(',').Where(value => value.Length != 0).Select(value => int.Parse(value, CultureInfo.InvariantCulture)).ToArray();
+                        Assert.IsTrue(dependencies.All(value => value >= -1 && value < index));
+                        calls.AddRange(Enumerable.Repeat("CombineDependencies", System.Math.Max(0, dependencies.Length - 1)));
+                        if (step[8] == "1") calls.Add("Apply");
+                        if (invoke) {
+                            if (step[7] == "ordinary") {
+                                calls.Add("Create");
+                                calls.Add("InvokeSystem_" + step[5]);
+                            } else {
+                                calls.Add((step[7] == "parallel" ? "InvokeParallel_" : "InvokeSequential_") + step[5] + "_" + step[6]);
+                            }
+                        }
+                        if (step[9] == "1") calls.Add("Apply");
+                    }
+                    var methods = Enumerable.Range(0, groups.Count).Select(index => lifecycle.GetMethod("PlannedLifecycleGroup_" + index, Static)).ToArray();
+                    CollectionAssert.AreEqual(methods, Calls(lifecycle.GetMethod("Execute", Static)).Where(method => method.DeclaringType == lifecycle).ToArray());
+                    Assert.AreEqual(groups.Count, lifecycle.GetMethods(Static).Count(method => method.Name.StartsWith("PlannedLifecycleGroup_", StringComparison.Ordinal)));
+                    for (var index = 0; index < groups.Count; ++index) {
+                        Assert.IsNotNull(methods[index]);
+                        Assert.AreEqual(groups[index].burst, methods[index].IsDefined(typeof(Unity.Burst.BurstCompileAttribute), false));
+                        CollectionAssert.AreEqual(groups[index].calls, Calls(methods[index]).Select(method => method.Name).ToArray(), graph[3] + " / " + phase);
+                    }
                 }
             }
         }
 
         [Test]
         public void OwnerInjectionCallsRetainRepeatedRegistrationOrder() {
-            var metadata = Metadata(Aggregate);
+            var metadata = PublishedMetadata();
             foreach (var graph in Rows().Where(row => row.StartsWith("graph-registration\t", StringComparison.Ordinal)).Select(row => row.Split('\t'))) {
                 var owner = Owner(graph[3]);
                 var initialize = owner.GetType(Decode(graph[2]) + "Initialize", true);
                 var actual = Calls(initialize.GetMethod("ApplyInjections", Static));
-                var actions = metadata.Single(item => item.Key == "ME.BECS.GraphInjectionActions.v1" && item.Value.Split('\n')[1] == graph[3]).Value.Split('\n')[2];
+                var actions = metadata.Single(item => item.Key == "ME.BECS.PublishedGraphInjectionActions.v1" && item.Value.Split('\n')[1] == graph[3]).Value.Split('\n')[2];
                 var expected = actions.Split(',').Where(value => value.Length != 0).Select(action =>
                     (action[0] == 's' ? "InjectSystem_" : action[0] == 'j' ? "RegisterJob_" : "Register_") + action.Substring(2))
                     .Where(name => !name.StartsWith("InjectSystem_", StringComparison.Ordinal) || initialize.GetMethod(name, Static) != null).ToArray();
@@ -112,14 +149,14 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void GraphPreflightAndFirstPassDispatcherDoNotOwnTypedState() {
-            var selection = Aggregate.GetType("ME.BECS.SourceGenerated.BootstrapGraphSelection", true);
-            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("ExpectGraphPlan") }, Calls(selection.GetMethod("Publish")));
-            var adapter = Aggregate.GetType("ME.BECS.SourceGenerated.GraphInputs", true);
-            Assert.IsEmpty(adapter.GetFields(Static));
-            Assert.IsEmpty(adapter.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic));
-            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("RegisterInstalledGraphs") }, Calls(adapter.GetMethod("Register")));
+            var composition = Tests_SourceGeneratorBootstrapPublications.Owner(Tests_SourceGeneratorInputCatalog.Owner(false))
+                .GetType("ME.BECS.SourceGenerated.BootstrapProfile_Runtime", true);
+            Assert.IsEmpty(composition.GetFields(Static));
+            Assert.IsEmpty(composition.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic));
+            Assert.AreEqual(1, Calls(composition.GetMethod("Publish", Static)).Count(method => method == typeof(BootstrapRuntime).GetMethod("ExpectGraphPlan")));
+            new Tests_SourceGeneratorBootstrapPublications().GraphFirstPassLivesWithRuntimeCompositionAndKeepsItsDelegate();
             Assert.AreEqual(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen,
-                adapter.GetMethod("Initialize", Static).GetCustomAttribute<UnityEngine.RuntimeInitializeOnLoadMethodAttribute>().loadType);
+                composition.GetMethod("PublishGraphPass", Static).GetCustomAttribute<UnityEngine.RuntimeInitializeOnLoadMethodAttribute>().loadType);
             var fields = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(typeof(BootstrapRuntime).GetMethod("RequireInstalledPlan"))
                 .Where(instruction => instruction.Operand is FieldInfo).Select(instruction => ((FieldInfo)instruction.Operand).Name);
             CollectionAssert.Contains(fields, "runtimeGraphs");

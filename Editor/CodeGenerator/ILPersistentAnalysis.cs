@@ -46,6 +46,29 @@ namespace ME.BECS.Editor {
             public string payload;
         }
         [Serializable] private sealed class Envelope { public string data; public string checksum; }
+        private const string CacheHeader = "ME.BECS.ILCache.v3";
+
+        internal static string ReadCacheData(TextReader reader) {
+            var first = reader.ReadLine();
+            string data, checksum;
+            if (first == CacheHeader) {
+                checksum = reader.ReadLine();
+                data = reader.ReadToEnd();
+            } else {
+                // Read previous installations without forcing a full IL rebuild.
+                var envelope = UnityEngine.JsonUtility.FromJson<Envelope>((first ?? "") + "\n" + reader.ReadToEnd());
+                data = envelope?.data;
+                checksum = envelope?.checksum;
+            }
+            if (data == null || checksum != Names.Hash(data)) throw new FormatException("Invalid incremental IL cache checksum.");
+            return data;
+        }
+
+        internal static void WriteCacheData(TextWriter writer, string data) {
+            writer.WriteLine(CacheHeader);
+            writer.WriteLine(Names.Hash(data));
+            writer.Write(data);
+        }
 
         [ThreadStatic] private static ILPersistentAnalysis current;
         private const int DeclarationFormat = 2;
@@ -62,6 +85,7 @@ namespace ME.BECS.Editor {
         private readonly Dictionary<string, int> missReasons = new Dictionary<string, int>(StringComparer.Ordinal);
         private readonly string path;
         private readonly bool rebuild;
+        private readonly ILAnalysisEnvironment environment;
         private string context;
         private string previousContext;
         private string scheduledImplementation;
@@ -69,10 +93,41 @@ namespace ME.BECS.Editor {
         private bool loaded;
         internal static bool Active => current != null;
 
-        internal ILPersistentAnalysis(bool rebuild) {
+        internal ILPersistentAnalysis(bool rebuild) : this(rebuild, ILAnalysisEnvironment.Capture()) { }
+
+        // Consumed only after the producing worker has completed (including Dispose).
+        // No mutable cache is concurrently shared with the publishing Editor thread.
+        internal sealed class Snapshot {
+            private ILPersistentAnalysis source;
+            internal Snapshot(ILPersistentAnalysis source) { this.source = source; }
+            internal ILPersistentAnalysis Take() => System.Threading.Interlocked.Exchange(ref this.source, null)
+                ?? throw new InvalidOperationException("Persistent IL snapshot has already been consumed.");
+        }
+
+        internal Snapshot CaptureSnapshot() => new Snapshot(this);
+
+        internal ILPersistentAnalysis(bool rebuild, Snapshot snapshot) : this(rebuild, ILAnalysisEnvironment.Capture()) {
+            try {
+            var source = snapshot.Take();
+            if (rebuild || source.path != this.path || source.environment.target != this.environment.target) return;
+            foreach (var pair in source.records) this.records.Add(pair.Key, pair.Value);
+            foreach (var pair in source.assemblies) this.assemblies.Add(pair.Key, pair.Value);
+            foreach (var pair in source.dependencyVersions) this.dependencyVersions.Add(pair.Key, pair.Value);
+            this.loaded = source.loaded;
+            this.previousContext = source.context ?? source.previousContext;
+            // Recompute context against the current captured environment. Record
+            // dependency validation remains active; the handoff only replaces IO/JSON.
+            } catch {
+                current = this.previous;
+                throw;
+            }
+        }
+
+        internal ILPersistentAnalysis(bool rebuild, ILAnalysisEnvironment environment) {
+            this.environment = environment ?? throw new ArgumentNullException(nameof(environment));
             this.previous = current;
             this.rebuild = rebuild;
-            this.path = Path.GetFullPath(Path.Combine(UnityEngine.Application.dataPath, "../Library/ME.BECS.SourceGenerator/IncrementalIL.v2.json"));
+            this.path = environment.cachePath;
             current = this;
         }
 
@@ -201,16 +256,26 @@ namespace ME.BECS.Editor {
         private string Context() {
             if (this.context != null) return this.context;
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            var scriptAssemblies = UnityEditor.Compilation.CompilationPipeline.GetAssemblies(UnityEditor.Compilation.AssembliesType.Editor)
-                .Where(assembly => !SourceGeneratorCodeIdentity.IsConsumer(assembly.name)).ToArray();
+            var scriptAssemblies = this.environment.scripts;
             var scripts = new HashSet<string>(scriptAssemblies.Select(assembly => assembly.name), StringComparer.Ordinal);
-            var dependants = SourceGeneratorCodeIdentity.ConsumerDependants(scriptAssemblies);
-            var parts = new List<string> { "IL-analysis-v4", UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString() };
+            var dependants = SourceGeneratorCodeIdentity.FindConsumerDependants(scriptAssemblies
+                .Select(assembly => new KeyValuePair<string, string[]>(assembly.name, assembly.references)));
+            var parts = new List<string> { "IL-analysis-v4", this.environment.target };
             var changedDeclarations = new List<string>();
-            parts.AddRange(SourceGeneratorCodeIdentity.Libraries(scriptAssemblies));
+            parts.AddRange(SourceGeneratorCodeIdentity.Libraries(scriptAssemblies.SelectMany(assembly => assembly.libraries), scripts));
             foreach (var script in scriptAssemblies) parts.Add(script.name + ":" + string.Join(";", script.defines.OrderBy(value => value, StringComparer.Ordinal)));
-            foreach (var assembly in SourceGeneratorCodeIdentity.LoadedScripts(AppDomain.CurrentDomain.GetAssemblies(), scripts)
-                         .OrderBy(assembly => assembly.FullName, StringComparer.Ordinal)) {
+            var loaded = SourceGeneratorCodeIdentity.LoadedScripts(this.environment.loaded, scripts)
+                .OrderBy(assembly => assembly.FullName, StringComparer.Ordinal).ToArray();
+            var changed = loaded.Where(assembly => assembly != typeof(ILPersistentAnalysis).Assembly &&
+                !dependants.Contains(assembly.GetName().Name) &&
+                (!this.assemblies.TryGetValue(assembly.FullName, out var previous) ||
+                 previous.mvid != assembly.ManifestModule.ModuleVersionId.ToString("D") || previous.declarationFormat != DeclarationFormat)).ToArray();
+            var fingerprints = ILAnalysisSession.IndexDeclarations(changed);
+            var declarations = changed.Select((assembly, index) => (assembly, index))
+                .ToDictionary(item => item.assembly, item => fingerprints[item.index]);
+            // Workers write only their result slot; mutate the persistent cache
+            // here in the same ordinal assembly order as sequential indexing.
+            foreach (var assembly in loaded) {
                 var mvid = assembly.ManifestModule.ModuleVersionId.ToString("D");
                 if (assembly == typeof(ILPersistentAnalysis).Assembly) {
                     if (!this.assemblies.TryGetValue(assembly.FullName, out var analyzer) || analyzer.mvid != mvid ||
@@ -228,7 +293,7 @@ namespace ME.BECS.Editor {
                 }
                 if (dependants.Contains(assembly.GetName().Name)) {
                     var script = scriptAssemblies.Single(item => item.name == assembly.GetName().Name);
-                    parts.Add(assembly.FullName + ":" + SourceGeneratorCodeIdentity.Stamp(assembly, script, dependants));
+                    parts.Add(assembly.FullName + ":" + SourceGeneratorCodeIdentity.Stamp(assembly, script.sources, dependants));
                     continue;
                 }
                 // Precompiled libraries have a conservative file-content boundary
@@ -238,7 +303,7 @@ namespace ME.BECS.Editor {
                     CodeGeneratorTimings.Subject("Index declarations: " + assembly.GetName().Name);
                     var previousDeclarations = stamp?.declarations;
                     stamp = new AssemblyRecord { name = assembly.FullName, mvid = mvid,
-                        declarations = ILContentFingerprint.Declarations(assembly), declarationFormat = DeclarationFormat };
+                        declarations = declarations[assembly], declarationFormat = DeclarationFormat };
                     if (previousDeclarations != null && previousDeclarations != stamp.declarations) changedDeclarations.Add(assembly.GetName().Name);
                     this.assemblies[assembly.FullName] = stamp;
                     this.dirty = true;
@@ -266,9 +331,8 @@ namespace ME.BECS.Editor {
             var watch = System.Diagnostics.Stopwatch.StartNew();
             try {
                 if (!File.Exists(this.path)) return;
-                var envelope = UnityEngine.JsonUtility.FromJson<Envelope>(File.ReadAllText(this.path));
-                if (envelope?.data == null || envelope.checksum != Names.Hash(envelope.data)) return;
-                var data = UnityEngine.JsonUtility.FromJson<Database>(envelope.data);
+                using var reader = new StreamReader(this.path, Encoding.UTF8);
+                var data = UnityEngine.JsonUtility.FromJson<Database>(ReadCacheData(reader));
                 var restored = Unpack(data);
                 this.previousContext = data.context;
                 foreach (var record in restored) this.records.Add(record.key, record);
@@ -330,7 +394,10 @@ namespace ME.BECS.Editor {
                 .OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => "  " + pair.Key + ": reused=" + pair.Value.hits + ", analyzed=" + pair.Value.misses)) +
                 (this.missReasons.Count == 0 ? "" : "\n  Miss reasons: " + string.Join(", ", this.missReasons.OrderBy(pair => pair.Key, StringComparer.Ordinal)
                     .Select(pair => pair.Key + "=" + pair.Value))));
-            if (!this.dirty) return;
+            // Cancellation while indexing declarations has no complete context.
+            // Preserve the last valid cache instead of replacing it with a partial
+            // database whose null context would be rejected on the next attempt.
+            if (!this.dirty || string.IsNullOrEmpty(this.context)) return;
             var temporary = this.path + ".tmp";
             try {
                 // Drop obsolete declaration universes; changed bodies replace their
@@ -338,7 +405,7 @@ namespace ME.BECS.Editor {
                 var database = Pack(this.records.Values, this.assemblies.Values, this.context);
                 var data = UnityEngine.JsonUtility.ToJson(database);
                 Directory.CreateDirectory(Path.GetDirectoryName(this.path));
-                File.WriteAllText(temporary, UnityEngine.JsonUtility.ToJson(new Envelope { data = data, checksum = Names.Hash(data) }), new UTF8Encoding(false));
+                using (var writer = new StreamWriter(temporary, false, new UTF8Encoding(false))) WriteCacheData(writer, data);
                 if (File.Exists(this.path)) File.Replace(temporary, this.path, null); else File.Move(temporary, this.path);
                 UnityEngine.Debug.Log("[ME.BECS] Incremental IL cache saved: " + database.records.Length + " summaries, " + database.methods.Length +
                     " method versions, " + new FileInfo(this.path).Length + " bytes.");

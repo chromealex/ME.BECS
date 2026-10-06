@@ -14,9 +14,10 @@ namespace ME.BECS.Tests {
             var identity = Snapshot.Assembly.GetType("ME.BECS.Editor.SourceGeneratorCodeIdentity", true);
             var select = identity.GetMethod("LoadedScripts", BindingFlags.Static | BindingFlags.NonPublic);
             var owner = typeof(Tests_SourceGeneratorGraphRefresh).Assembly;
-            var names = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal) { owner.GetName().Name, "ME.BECS.Gen.Editor" };
+            var consumer = Tests_SourceGeneratorInputCatalog.Owner(true);
+            var names = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal) { owner.GetName().Name, consumer.GetName().Name };
             var before = new[] { owner };
-            var after = new[] { typeof(object).Assembly, owner, Assembly.Load("ME.BECS.Gen.Editor") };
+            var after = new[] { typeof(object).Assembly, owner, consumer };
             CollectionAssert.AreEqual(before, (Assembly[])select.Invoke(null, new object[] { before, names }));
             CollectionAssert.AreEqual(before, (Assembly[])select.Invoke(null, new object[] { after, names }),
                 "Loading a library or rebuilding a consumer must not add script inputs.");
@@ -66,6 +67,20 @@ namespace ME.BECS.Tests {
             Assert.IsFalse(Retry("new", "new", "new", false, true));
             Assert.IsTrue(Retry("changed", "old", "new", true, true));
             Assert.IsTrue(Retry("new", "old", "", true, true), "Explicit retry clears the attempt stamp.");
+        }
+
+        [Test]
+        public void BackgroundPublicationRejectsCancelledChangedAndBusySnapshots() {
+            var method = Snapshot.Assembly.GetType("ME.BECS.Editor.SourceGeneratorInputRefresh", true)
+                .GetMethod("CanPublishAnalysis", BindingFlags.Static | BindingFlags.NonPublic);
+            bool Ready(uint before, uint after, bool discarded, string expected, string actual, bool busy) =>
+                (bool)method.Invoke(null, new object[] { before, after, discarded, expected, actual, busy });
+            Assert.IsTrue(Ready(1, 1, false, "current", "current", false));
+            Assert.IsFalse(Ready(1, 2, false, "current", "current", false), "New request supersedes the result even before compilation.");
+            Assert.IsFalse(Ready(1, 1, true, "current", "current", false), "Late cancellation must win over task completion.");
+            Assert.IsFalse(Ready(1, 1, false, "old", "new", false));
+            Assert.IsFalse(Ready(1, 1, false, "current", "current", true));
+            Assert.IsFalse(Ready(1, 1, false, null, null, false));
         }
 
         [Test]
@@ -187,8 +202,8 @@ namespace ME.BECS.Tests {
         public void SuccessfulExportAloneCannotProveCompiledGraphInputsCurrent() {
             var method = Snapshot.GetMethod("ValidateCompiled", BindingFlags.Static | BindingFlags.NonPublic);
             var fingerprint = new string('A', 64);
-            var runtime = new KeyValuePair<string, string[]>("ME.BECS.Gen.Runtime", new[] { fingerprint });
-            var editor = new KeyValuePair<string, string[]>("ME.BECS.Gen.Editor", new[] { fingerprint });
+            var runtime = new KeyValuePair<string, string[]>("runtime", new[] { fingerprint });
+            var editor = new KeyValuePair<string, string[]>("editor", new[] { fingerprint });
             bool Valid(KeyValuePair<string, string[]>[] snapshots, out string reason) {
                 var args = new object[] { fingerprint, snapshots, null };
                 var result = (bool)method.Invoke(null, args);
@@ -212,7 +227,7 @@ namespace ME.BECS.Tests {
         [TestCase("Runtime")]
         [TestCase("Editor")]
         public void CompiledGraphSnapshotMatchesItsManifestRecord(string profile) {
-            var assembly = Assembly.Load("ME.BECS.Gen." + profile);
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor");
             var metadata = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>().ToArray();
             Assert.IsFalse(metadata.Any(item => item.Key == "ME.BECS.InputRecovery.v1"),
                 "Recovery is incomplete compilation, never a usable bootstrap alongside a freshness snapshot.");

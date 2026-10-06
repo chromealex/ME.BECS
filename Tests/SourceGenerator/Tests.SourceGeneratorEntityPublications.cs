@@ -18,9 +18,6 @@ namespace ME.BECS.Tests {
         private static object[] Documents(IEnumerable<string> rows, bool editor) => ((Array)Call(Format, "Documents", rows, editor)).Cast<object>().ToArray();
         private static string Serialize(object doc) => (string)Call(Format, "Serialize", doc);
         private static string Row(int id, string entity, string owner) => "entity-registration-owner\t" + id + "\t" + Encode(entity) + "\t" + Encode(owner);
-        private static string[] Rows(Assembly assembly, string profile) => assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-            .Where(item => item.Key == "ME.BECS.TypeInput.v1" && item.Value.StartsWith(profile.ToLowerInvariant() + "\t", StringComparison.Ordinal))
-            .Select(item => item.Value.Substring(profile.Length + 1)).ToArray();
         private static MethodInfo[] Calls(MethodInfo method) => ME.BECS.Mono.Reflection.Disassembler.GetInstructions(method)
             .Where(item => item.OpCode == OpCodes.Call || item.OpCode == OpCodes.Callvirt).Select(item => (MethodInfo)item.Operand).ToArray();
 
@@ -88,23 +85,21 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void TypedEntityRegistrationsLiveInOwnersAndRetainExactSelectedIds(string profile) {
-            var aggregate = Assembly.Load("ME.BECS.Gen." + profile);
-            var selection = aggregate.GetType("ME.BECS.SourceGenerated.BootstrapEntitySelection", true);
+            var catalog = Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor");
+            var selection = Tests_SourceGeneratorBootstrapPublications.Owner(catalog).GetType("ME.BECS.SourceGenerated.BootstrapProfile_" + profile, true);
             Assert.IsEmpty(selection.GetFields(Static));
-            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("ExpectEntityPlan") }, Calls(selection.GetMethod("Publish")));
-            var inputs = aggregate.GetType("ME.BECS.SourceGenerated.EntityInputs", true);
-            CollectionAssert.AreEqual(new[] { "Initialize" }, inputs.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly).Select(method => method.Name));
-            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("RegisterInstalledEntities") }, Calls(inputs.GetMethod("Initialize")));
-            var rows = Rows(aggregate, profile);
+            Assert.AreEqual(1, Calls(selection.GetMethod("Publish", Static)).Count(method => method == typeof(BootstrapRuntime).GetMethod("ExpectEntityPlan")));
+            Tests_SourceGeneratorBootstrapPhases.AssertFeederSequence(catalog);
+            var rows = Tests_SourceGeneratorInputCatalog.Rows(profile == "Editor");
             var selected = rows.Where(row => row.StartsWith("entity-registration\t", StringComparison.Ordinal))
                 .Select(row => row.Split('\t')).OrderBy(row => int.Parse(row[1])).Select(row => Type.GetType(Decode(row[2]), true)).ToArray();
             Assert.IsNotEmpty(selected);
-            Assert.AreEqual((uint)selected.Length, inputs.GetField("GroupCount").GetRawConstantValue());
             var seen = new System.Collections.Generic.HashSet<int>();
             foreach (var document in Documents(rows, profile == "Editor")) {
                 var owner = Field<string>(document, "Owner");
                 var publisher = Assembly.Load(owner).GetType("ME.BECS.SourceGenerated.EntityFragment_" + profile, true);
-                Assert.AreNotEqual(aggregate, publisher.Assembly);
+                Assert.IsFalse(publisher.Assembly.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal));
+                Assert.AreEqual(selected.Length, Field<int>(document, "Count"));
                 var publish = publisher.GetMethod("Publish", Static);
                 CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("InstallEntityFragment") }, Calls(publish));
                 Assert.IsTrue(Attribute.IsDefined(publish, typeof(UnityEngine.Scripting.PreserveAttribute)));
@@ -155,7 +150,7 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void RepeatedEditorBootstrapKeepsTheSameGroupIdsAndCount() {
-            var selected = Rows(Assembly.Load("ME.BECS.Gen.Editor"), "Editor").Where(row => row.StartsWith("entity-registration\t", StringComparison.Ordinal))
+            var selected = Tests_SourceGeneratorInputCatalog.Rows(true).Where(row => row.StartsWith("entity-registration\t", StringComparison.Ordinal))
                 .Select(row => row.Split('\t')).OrderBy(row => int.Parse(row[1])).Select(row => Type.GetType(Decode(row[2]), true)).ToArray();
             for (var repeat = 0; repeat < 2; ++repeat) {
                 AllTests.Start();

@@ -18,9 +18,6 @@ namespace ME.BECS.Tests {
         private static object[] Documents(IEnumerable<string> rows, bool editor) => ((Array)Call(Format, "Documents", rows, editor)).Cast<object>().ToArray();
         private static string Serialize(object doc) => (string)Call(Format, "Serialize", doc);
         private static string Row(int id, string aspect, string owner) => "aspect-registration-owner\t" + id + "\t" + Encode(aspect) + "\t" + Encode(owner);
-        private static string[] Rows(Assembly assembly, string profile) => assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-            .Where(item => item.Key == "ME.BECS.TypeInput.v1" && item.Value.StartsWith(profile.ToLowerInvariant() + "\t", StringComparison.Ordinal))
-            .Select(item => item.Value.Substring(profile.Length + 1)).ToArray();
         private static MethodInfo[] Calls(MethodInfo method) => ME.BECS.Mono.Reflection.Disassembler.GetInstructions(method)
             .Where(item => item.OpCode == OpCodes.Call || item.OpCode == OpCodes.Callvirt).Select(item => (MethodInfo)item.Operand).ToArray();
         private static void Install(object registry, string owner, int count, int[] indices, Action[] initialize,
@@ -123,15 +120,12 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void TypedCallbacksLiveInOwnersAndMatchBothSelections(string profile) {
-            var aggregate = Assembly.Load("ME.BECS.Gen." + profile);
-            var selection = aggregate.GetType("ME.BECS.SourceGenerated.BootstrapAspectSelection", true);
+            var catalog = Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor");
+            var selection = Tests_SourceGeneratorBootstrapPublications.Owner(catalog).GetType("ME.BECS.SourceGenerated.BootstrapProfile_" + profile, true);
             Assert.IsEmpty(selection.GetFields(Static));
-            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("ExpectAspectPlan") }, Calls(selection.GetMethod("Publish")));
-            var facade = aggregate.GetType("ME.BECS.SourceGenerated.AspectInputs", true);
-            CollectionAssert.AreEquivalent(new[] { "Initialize", "RegisterConstruction" }, facade.GetMethods(Static | BindingFlags.Public | BindingFlags.DeclaredOnly).Select(method => method.Name));
-            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("RegisterInstalledAspects") }, Calls(facade.GetMethod("Initialize")));
-            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("RegisterInstalledAspectConstruction") }, Calls(facade.GetMethod("RegisterConstruction")));
-            var rows = Rows(aggregate, profile);
+            Assert.AreEqual(1, Calls(selection.GetMethod("Publish", Static)).Count(method => method == typeof(BootstrapRuntime).GetMethod("ExpectAspectPlan")));
+            Tests_SourceGeneratorBootstrapPhases.AssertFeederSequence(catalog);
+            var rows = Tests_SourceGeneratorInputCatalog.Rows(profile == "Editor");
             Type[] Selected(string kind) => rows.Where(row => row.StartsWith(kind + "\t", StringComparison.Ordinal))
                 .Select(row => row.Split('\t')).OrderBy(row => int.Parse(row[1])).Select(row => Type.GetType(Decode(row[2]), true)).ToArray();
             var selected = Selected("aspect-registration");
@@ -141,7 +135,8 @@ namespace ME.BECS.Tests {
             foreach (var document in Documents(rows, profile == "Editor")) {
                 var owner = Field<string>(document, "Owner");
                 var publisher = Assembly.Load(owner).GetType("ME.BECS.SourceGenerated.AspectFragment_" + profile, true);
-                Assert.AreNotEqual(aggregate, publisher.Assembly);
+                Assert.IsFalse(publisher.Assembly.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal));
+                Assert.AreEqual(selected.Length, Field<int>(document, "Count"));
                 var publish = publisher.GetMethod("Publish", Static);
                 CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("InstallAspectFragment") }, Calls(publish));
                 Assert.IsTrue(Attribute.IsDefined(publish, typeof(UnityEngine.Scripting.PreserveAttribute)));
@@ -181,7 +176,7 @@ namespace ME.BECS.Tests {
             for (var repeat = 0; repeat < 2; ++repeat) {
                 AllTests.Start();
                 try {
-                    var selected = Rows(Assembly.Load("ME.BECS.Gen.Editor"), "Editor").Where(row => row.StartsWith("aspect-registration\t", StringComparison.Ordinal))
+                    var selected = Tests_SourceGeneratorInputCatalog.Rows(true).Where(row => row.StartsWith("aspect-registration\t", StringComparison.Ordinal))
                         .Select(row => row.Split('\t')).OrderBy(row => int.Parse(row[1])).Select(row => Type.GetType(Decode(row[2]), true)).ToArray();
                     var current = selected.Select(type => AspectTypeInfoLoadedManaged.typeToId[type]).ToArray();
                     if (ids != null) CollectionAssert.AreEqual(ids, current);

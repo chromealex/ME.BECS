@@ -350,6 +350,14 @@ namespace ME.BECS.Editor {
 
         // Reports export completion only, not the result of Unity's later compilation.
         public static bool TryRegenerateBurstAOT(bool forced = false, bool cleanCache = false) {
+            if (SourceGeneratorInputRefresh.IsAnalyzing) return false;
+            return TryRegenerateInputs(forced, cleanCache, null);
+        }
+
+        internal static bool PublishPreparedInputs(SourceGeneratorInputAnalysis.Result prepared) =>
+            TryRegenerateInputs(true, prepared.rebuild, prepared);
+
+        private static bool TryRegenerateInputs(bool forced, bool cleanCache, SourceGeneratorInputAnalysis.Result prepared) {
             if (exportingInputs) return false;
             
             // Skip if project creation is in progress
@@ -362,22 +370,25 @@ namespace ME.BECS.Editor {
                 return false;
             }
 
-            Logger.Editor.Log($"[ ME.BECS ] Regenerating assemblies {(forced == true ? "(forced)" : "")}");
+            Logger.Editor.Log($"[ ME.BECS ] Publishing source generator inputs {(forced == true ? "(forced)" : "")}");
 
             var exported = false;
             exportingInputs = true;
             try {
                 using var publicationBridges = SourceGeneratorPublicationBridges.BeginPlanning();
-                SourceGeneratorAnalysisReceipt.Invalidate();
                 var codeFingerprint = SourceGeneratorGraphSnapshot.GetCodeFingerprint();
-                using var analysis = new ILAnalysisSession(codeFingerprint, cleanCache);
-                using var incremental = new ILPersistentAnalysis(cleanCache);
                 var graphSnapshot = SourceGeneratorGraphSnapshot.GetCurrent();
+                if (prepared != null && (prepared.codeFingerprint != codeFingerprint || prepared.fingerprint != graphSnapshot))
+                    throw new System.InvalidOperationException("Background IL analysis is stale; no inputs were published. Retry export.");
+                SourceGeneratorAnalysisReceipt.Invalidate();
+                using var analysis = prepared == null ? new ILAnalysisSession(codeFingerprint, cleanCache) :
+                    new ILAnalysisSession(codeFingerprint, cleanCache, prepared.memo);
+                using var incremental = prepared == null ? new ILPersistentAnalysis(cleanCache) :
+                    new ILPersistentAnalysis(false, prepared.persistent);
                 var compilerSnapshot = SourceGeneratorGraphSnapshot.GetCompilerSnapshot();
-                var list = EditorUtils.GetAssembliesInfo();
-                var runtimeExported = Build(list, $"Assets/{ECS}.Gen/Runtime", out var runtimeContent);
+                var runtimeExported = Build(out var runtimeContent, prepared: prepared?.runtime);
                 if (!runtimeExported) return false;
-                var editorExported = Build(list, $"Assets/{ECS}.Gen/Editor", out var editorContent, editorAssembly: true);
+                var editorExported = Build(out var editorContent, editorAssembly: true, prepared: prepared?.editor);
                 if (runtimeExported && editorExported && (codeFingerprint != SourceGeneratorGraphSnapshot.GetCodeFingerprint() ||
                     graphSnapshot != SourceGeneratorGraphSnapshot.GetCurrent())) {
                     throw new System.InvalidOperationException("Input assets or loaded script assemblies changed between Runtime and Editor exports. Retry input generation.");
@@ -401,7 +412,8 @@ namespace ME.BECS.Editor {
 
         public const string PROGRESS_BAR_CAPTION = "[ ME.BECS ] CodeGenerator";
 
-        private static bool Build(System.Collections.Generic.List<AssemblyInfo> asms, string dir, out string publishedContent, bool editorAssembly = false) {
+        private static bool Build(out string publishedContent, bool editorAssembly = false,
+            Systems.SystemDependenciesCodeGenerator.UsedObjects? prepared = null) {
             publishedContent = null;
             using var sourceGeneratorLookup = SourceGeneratorBridge.BeginLookupScope();
             using var timings = new CodeGeneratorTimings(editorAssembly);
@@ -415,98 +427,28 @@ namespace ME.BECS.Editor {
 
             var generators = SourceGeneratorInputManifest.CreateFeeders();
 
-            if (System.IO.Directory.Exists(dir) == false) {
-                System.IO.Directory.CreateDirectory(dir);
-            }
-
-            UnityEditor.EditorUtility.DisplayProgressBar(PROGRESS_BAR_CAPTION, $"Build {dir}", 0f);
-            var componentTypes = new System.Collections.Generic.List<System.Type>();
             var exportSucceeded = false;
-            string inputResponse = null;
             try {
-                var path = @$"{dir}/{ECS}.Gen.cs";
-                var filesPath = @$"{dir}/{ECS}.Files";
-                // One discovery snapshot supplies both compiler inputs and references.
-                // Validate the retirement plan before publishing any new inputs.
-                var inputManifest = SourceGeneratorInputManifest.PrepareActiveInputs($"{ECS}.Gen.{postfix}", editorAssembly, generators, out _, componentTypes);
+                CodeGeneratorTimings.Stage("Prepare input export", 0f);
+                // The header retains its transport identity for existing snapshots.
+                // Executable output belongs to independent owner fragments, not an
+                // aggregate host. Never create/read/retire files in the former host.
+                var inputManifest = SourceGeneratorInputManifest.PrepareActiveInputs($"{ECS}.Gen.{postfix}", editorAssembly, generators, out _, prepared: prepared);
                 publishedContent = inputManifest;
-                var retiredFiles = SourceGeneratorExportContract.GetRetiredFileNames(generators);
-                componentTypes.AddRange(generators.Select(generator => generator.GetType()));
-                CodeGeneratorTimings.Stage("Write inputs / retire legacy output", 0.95f);
-                var inputPath = SourceGeneratorInputTransport.Publish(editorAssembly, inputManifest);
-                inputResponse = SourceGeneratorInputTransport.CompilerResponse(inputPath, inputManifest);
-                var newContent = SourceGeneratorExportContract.RetirementComment;
-                {
-                    var prevContent = System.IO.File.Exists(path) == true ? System.IO.File.ReadAllText(path) : string.Empty;
-                    if (prevContent != newContent) {
-                        System.IO.File.WriteAllText(path, newContent);
-                        UnityEditor.AssetDatabase.ImportAsset(path);
-                    }
-                }
-
-                // Retire only explicitly declared old outputs. Preserve their .meta
-                // files and any unrelated content; fresh projects need no extra stubs.
-                foreach (var filename in retiredFiles) {
-                    var filepath = $"{filesPath}/{filename}.cs";
-                    if (!System.IO.File.Exists(filepath) || System.IO.File.ReadAllText(filepath) == newContent) continue;
-                    System.IO.File.WriteAllText(filepath, newContent);
-                    UnityEditor.AssetDatabase.ImportAsset(filepath);
-                }
+                // Cancellation is safe during analysis, not between publishing
+                // fragments, their compilation hosts and the completed receipt.
+                CodeGeneratorTimings.Stage("Publish owner inputs", 0.95f, cancellable: false);
+                SourceGeneratorInputTransport.Publish(editorAssembly, inputManifest);
                 exportSucceeded = true;
             } catch (System.OperationCanceledException) {
+                timings.Cancelled();
                 Logger.Editor.Log("[ ME.BECS ] Input export cancelled during analysis; no inputs were published for this target.");
             } catch (System.Exception ex) {
                 UnityEngine.Debug.LogException(ex);
-            } finally {
-                UnityEditor.EditorUtility.ClearProgressBar();
             }
-            // A failed analysis must not publish an asmdef built from a partial
-            // reference set, nor create a consumer without its input manifest.
-            // Preserve the last complete consumer and the original export error.
             if (!exportSucceeded) return false;
-            CodeGeneratorTimings.Stage("Assembly references", 0.98f, cancellable: false);
-            {
-                var csc = @$"{dir}/csc.rsp";
-                var path = @$"{dir}/{ECS}.Gen.{postfix}.asmdef";
-                var template = string.Empty;
-                if (editorAssembly == true) {
-                    template = @"{
-                        ""name"": """ + ECS + @".Gen." + postfix + @""",
-                        ""references"": [
-                            ""{{CONTENT}}""
-                            ],
-                        ""includePlatforms"": [
-                            ""Editor""
-                        ],
-                        ""allowUnsafeCode"": true
-                    }";
-                } else {
-                    template = @"{
-                        ""name"": """ + ECS + @".Gen." + postfix + @""",
-                        ""references"": [
-                            ""{{CONTENT}}""
-                            ],
-                        ""allowUnsafeCode"": true
-                    }";
-                }
 
-                var references = SourceGeneratorInputManifest.GetAssemblyReferenceNames(asms,
-                    UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem)).Concat(componentTypes), editorAssembly);
-                var newContent = template.Replace("{{CONTENT}}", string.Join(@""",""", references));
-                var prevContent = System.IO.File.Exists(path) == true ? System.IO.File.ReadAllText(path) : string.Empty;
-                if (prevContent != newContent) {
-                    System.IO.File.WriteAllText(path, newContent);
-                    UnityEditor.AssetDatabase.ImportAsset(path);
-                }
-                // Native project-owned additional files carry the compiler inputs.
-                // Do not put project selection paths or hashes into response files.
-                var response = inputResponse;
-                if (!System.IO.File.Exists(csc) || System.IO.File.ReadAllText(csc) != response) {
-                    System.IO.File.WriteAllText(csc, response);
-                    UnityEditor.AssetDatabase.ImportAsset(csc);
-                }
-            }
-
+            timings.Complete();
             return exportSucceeded;
         }
 

@@ -66,7 +66,7 @@ namespace ME.BECS.Tests {
         [TestCase(typeof(HiddenRuntimeUsageSystem), typeof(HiddenUsageComponent))]
         [TestCase(typeof(HiddenArgumentRuntimeUsageSystem), typeof(GenericUsageComponent<HiddenUsageComponent>))]
         public void EditorSystemDependencyTablesRetainInaccessibleComponentTypes(Type system, Type component) {
-            var bootstrap = Assembly.Load("ME.BECS.Gen.Editor").GetType("ME.BECS.Editor.StaticMethods", true);
+            var bootstrap = SystemDependencyPublisher;
             var entries = ((System.Collections.IEnumerable)bootstrap.GetMethod("GetSystemComponentsDependencies")
                 .Invoke(null, new object[] { system })).Cast<object>().ToArray();
             Assert.AreEqual(1, entries.Length, "Inaccessible component dependencies must not be dropped from the IL snapshot.");

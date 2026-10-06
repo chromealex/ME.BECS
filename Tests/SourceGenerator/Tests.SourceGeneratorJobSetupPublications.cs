@@ -16,20 +16,30 @@ namespace ME.BECS.Tests {
         private static string Decode(string value) => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(value));
         private static string Hash(string value) => (string)Format.Assembly.GetType("ME.BECS.CodeGeneration.SourceGeneratorNames", true)
             .GetMethod("Hash", Static).Invoke(null, new object[] { value });
-        private static string[] Rows(Assembly assembly) => assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-            .Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Substring(item.Value.IndexOf('\t') + 1)).ToArray();
         private static object[] Documents(string[] rows, bool editor) => ((Array)Call("Documents", rows, editor)).Cast<object>().ToArray();
         private static string Serialize(object doc) => (string)Call("Serialize", doc);
         private static string[] Unpack(string entry) => entry.Split('|').Select(Decode).ToArray();
+        internal static Dictionary<string, uint> EntityGroups(bool editor) =>
+            Documents(Tests_SourceGeneratorInputCatalog.Rows(editor), editor)
+                .SelectMany(doc => Field<KeyValuePair<int, string>[]>(doc, "Entries"))
+                .SelectMany(entry => Unpack(entry.Value)[6].Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                .Select(row => row.Split('\t')).GroupBy(row => row[2] + "\t" + row[3], StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.Select(row => uint.Parse(row[0], System.Globalization.CultureInfo.InvariantCulture)).Distinct().Single(), StringComparer.Ordinal);
+        internal static string[][] Selected(string profile, string kind) =>
+            Documents(Tests_SourceGeneratorInputCatalog.Rows(profile == "Editor"), profile == "Editor")
+                .Select(doc => Field<string>(doc, "Owner")).Distinct(StringComparer.Ordinal).Select(Assembly.Load)
+                .SelectMany(owner => owner.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>())
+                .Where(item => item.Key == "ME.BECS.Published" + kind + "." + profile + ".v1")
+                .Select(item => item.Value.Split('\n')).ToArray();
         private static MethodInfo[] Calls(MethodInfo method) => ME.BECS.Mono.Reflection.Disassembler.GetInstructions(method)
             .Where(instruction => instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt).Select(instruction => (MethodInfo)instruction.Operand).ToArray();
 
         internal static Dictionary<string, MethodInfo> Methods(string profile, string kind) {
-            var aggregate = Assembly.Load("ME.BECS.Gen." + profile);
-            Assert.IsNull(aggregate.GetType("ME.BECS.SourceGenerated." + kind), "Typed statistics must no longer be emitted in the aggregate assembly.");
             var result = new Dictionary<string, MethodInfo>(StringComparer.Ordinal);
-            foreach (var doc in Documents(Rows(aggregate), profile == "Editor")) {
-                var owner = Assembly.Load(Field<string>(doc, "Owner")).GetType("ME.BECS.SourceGenerated." + kind + "_" + profile, true);
+            foreach (var doc in Documents(Tests_SourceGeneratorInputCatalog.Rows(profile == "Editor"), profile == "Editor")) {
+                var name = Field<string>(doc, "Owner");
+                var owner = Assembly.Load(name).GetType("ME.BECS.SourceGenerated." + kind + "_" + profile + "_" + Hash(name), true);
+                Assert.IsFalse(owner.Assembly.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal));
                 var entries = Field<KeyValuePair<int, string>[]>(doc, "Entries");
                 Assert.AreEqual(entries.Length, owner.GetMethods(Static | BindingFlags.DeclaredOnly).Length);
                 foreach (var entry in entries) {
@@ -45,8 +55,7 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void OwnerCallbacksKeepExactStatisticsAndGlobalEntityGroups(string profile) {
-            var aggregate = Assembly.Load("ME.BECS.Gen." + profile);
-            var rows = Rows(aggregate);
+            var rows = Tests_SourceGeneratorInputCatalog.Rows(profile == "Editor");
             CollectionAssert.Contains(rows, "jobsetup-publication-schema\t0\tdjE=");
             var weights = rows.Where(row => row.StartsWith("job-weight\t", StringComparison.Ordinal)).Select(row => row.Split('\t'))
                 .OrderBy(row => int.Parse(row[1])).ToArray();
@@ -65,7 +74,8 @@ namespace ME.BECS.Tests {
             var seen = new System.Collections.Generic.HashSet<int>();
             foreach (var doc in Documents(rows, profile == "Editor")) {
                 var owner = Assembly.Load(Field<string>(doc, "Owner"));
-                Assert.AreNotEqual(aggregate, owner);
+                Assert.IsFalse(owner.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal));
+                Assert.IsFalse(owner.GetReferencedAssemblies().Any(reference => reference.Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal)));
                 var publisher = owner.GetType("ME.BECS.SourceGenerated.JobSetupFragment_" + profile, true);
                 var publish = publisher.GetMethod("Publish", Static);
                 CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("InstallJobSetupFragment") }, Calls(publish));
@@ -101,35 +111,21 @@ namespace ME.BECS.Tests {
             }
             Assert.IsNotEmpty(seen);
             CollectionAssert.AreEquivalent(Enumerable.Range(0, weights.Length), seen);
-            var selection = aggregate.GetType("ME.BECS.SourceGenerated.BootstrapJobSetupSelection", true);
+            var selection = Tests_SourceGeneratorBootstrapPublications.Owner(Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor"))
+                .GetType("ME.BECS.SourceGenerated.BootstrapProfile_" + profile, true);
             Assert.IsEmpty(selection.GetFields(Static));
-            CollectionAssert.AreEqual(new[] { typeof(BootstrapRuntime).GetMethod("ExpectJobSetupPlan") }, Calls(selection.GetMethod("Publish")));
+            Assert.AreEqual(1, Calls(selection.GetMethod("Publish", Static)).Count(method => method == typeof(BootstrapRuntime).GetMethod("ExpectJobSetupPlan")));
         }
 
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void DispatchInterleavesEveryOriginalSlotWithItsStatistics(string profile) {
-            var aggregate = Assembly.Load("ME.BECS.Gen." + profile);
-            var rows = Rows(aggregate);
-            var setup = rows.Where(row => row.StartsWith("job-weight\t", StringComparison.Ordinal)).Select(row => row.Split('\t'))
-                .ToDictionary(row => Decode(row[2]), row => int.Parse(row[1]));
-            var slots = rows.Where(row => row.StartsWith("job-early-init\t", StringComparison.Ordinal)).Select(row => row.Split('\t'))
-                .OrderBy(row => int.Parse(row[1])).Select(row => Decode(row[2]).Split('\n')[1]).ToArray();
-            var setupCall = typeof(BootstrapRuntime).GetMethod("InvokeJobSetup");
-            var initCall = typeof(BootstrapRuntime).GetMethod("InvokeJobEarlyInit");
-            var il = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(aggregate.GetType("ME.BECS.SourceGenerated.JobBootstrapInputs", true).GetMethod("Initialize")).ToArray();
-            var actual = new System.Collections.Generic.List<(MethodInfo, int)>();
-            for (var i = 2; i < il.Length; ++i) {
-                if (!(il[i].Operand is MethodInfo method) || method != setupCall && method != initCall) continue;
-                Assert.AreEqual(profile == "Editor" ? 1 : 0, Constant(il[i - 1].OpCode, il[i - 1].Operand));
-                actual.Add((method, Constant(il[i - 2].OpCode, il[i - 2].Operand)));
-            }
-            CollectionAssert.AreEqual(slots.SelectMany((job, index) => new[] { (setupCall, setup[job]), (initCall, index) }), actual);
+            Tests_SourceGeneratorBootstrapPhases.AssertJobSequence(Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor"));
         }
 
         [Test]
         public void FormatRoundTripsRetirementAndRejectsMalformedRows() {
-            var rows = Rows(Assembly.Load("ME.BECS.Gen.Editor"));
+            var rows = Tests_SourceGeneratorInputCatalog.Rows(true);
             var docs = Documents(rows, true);
             CollectionAssert.AreEqual(docs.Select(Serialize), Documents(rows.Reverse().ToArray(), true).Select(Serialize));
             foreach (var doc in docs) {
@@ -161,11 +157,5 @@ namespace ME.BECS.Tests {
             Assert.DoesNotThrow(() => BootstrapRuntime.RequireInstalledPlan(editor: true));
         }
 
-        private static int Constant(OpCode opcode, object operand) {
-            if (opcode == OpCodes.Ldc_I4 || opcode == OpCodes.Ldc_I4_S) return Convert.ToInt32(operand);
-            if (opcode == OpCodes.Ldc_I4_M1) return -1;
-            if (opcode.Value >= OpCodes.Ldc_I4_0.Value && opcode.Value <= OpCodes.Ldc_I4_8.Value) return opcode.Value - OpCodes.Ldc_I4_0.Value;
-            throw new InvalidOperationException("Expected an explicit job/profile integer.");
-        }
     }
 }

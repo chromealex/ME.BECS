@@ -26,11 +26,18 @@ namespace ME.BECS.Editor {
 
         internal static IEnumerable<string> Libraries(UnityEditor.Compilation.Assembly[] scripts) {
             var names = new HashSet<string>(scripts.Select(script => script.name), StringComparer.Ordinal);
-            foreach (var path in LibraryPaths(scripts.SelectMany(script => script.compiledAssemblyReferences), names)) {
-                if (!libraryContents.TryGetValue(path, out var hash)) {
+            return Libraries(scripts.SelectMany(script => script.compiledAssemblyReferences), names);
+        }
+
+        internal static IEnumerable<string> Libraries(IEnumerable<string> paths, ISet<string> names) {
+            foreach (var path in LibraryPaths(paths, names)) {
+                string hash;
+                lock (libraryContents) libraryContents.TryGetValue(path, out hash);
+                if (hash == null) {
                     using var stream = System.IO.File.OpenRead(path);
                     using var sha = System.Security.Cryptography.SHA256.Create();
-                    libraryContents[path] = hash = Convert.ToBase64String(sha.ComputeHash(stream));
+                    hash = Convert.ToBase64String(sha.ComputeHash(stream));
+                    lock (libraryContents) libraryContents[path] = hash;
                 }
                 // Relocation of a project/package does not change its contents.
                 yield return "reference:" + System.IO.Path.GetFileName(path) + "\t" + hash;
@@ -61,26 +68,31 @@ namespace ME.BECS.Editor {
         internal static bool IsConsumer(string name) => name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal) ||
             SourceGeneratorPublicationBridges.IsBridge(name);
 
-        internal static string Stamp(Assembly assembly, UnityEditor.Compilation.Assembly script, ISet<string> dependants) {
+        internal static string Stamp(Assembly assembly, UnityEditor.Compilation.Assembly script, ISet<string> dependants) =>
+            Stamp(assembly, script.sourceFiles, dependants);
+
+        internal static string Stamp(Assembly assembly, IEnumerable<string> sources, ISet<string> dependants) {
             if (!dependants.Contains(assembly.GetName().Name)) return assembly.ManifestModule.ModuleVersionId.ToString("D");
-            if (contents.TryGetValue(assembly, out var cached)) return cached;
+            lock (contents) if (contents.TryGetValue(assembly, out var cached)) return cached;
             // Hash the owning compiled declarations and IL, not the bodies of its
             // generated dependencies. Changes to real code still invalidate input.
             var text = new StringBuilder(ILContentFingerprint.AssemblyContent(assembly));
             // Source content also covers RVA/static initializer data, which is not
             // exposed by MethodBody. This is a byte hash, not source analysis.
-            foreach (var path in script.sourceFiles.OrderBy(path => path, StringComparer.Ordinal)) {
+            foreach (var path in sources.OrderBy(path => path, StringComparer.Ordinal)) {
                 var normalized = path.Replace('\\', '/');
                 if (normalized.StartsWith("Assets/ME.BECS.Gen/", StringComparison.Ordinal) ||
                     normalized.IndexOf("/Assets/ME.BECS.Gen/", StringComparison.Ordinal) >= 0)
-                    throw new InvalidOperationException("Generated consumer source cannot belong to input assembly " + script.name);
+                    throw new InvalidOperationException("Generated consumer source cannot belong to input assembly " + assembly.GetName().Name);
                 using var stream = System.IO.File.OpenRead(path);
                 using var sha = System.Security.Cryptography.SHA256.Create();
                 text.Append('\n').Append(normalized).Append('\t').Append(Convert.ToBase64String(sha.ComputeHash(stream)));
             }
             foreach (var reference in assembly.GetReferencedAssemblies().OrderBy(reference => reference.FullName, StringComparer.Ordinal))
                 text.Append("\nreference:").Append(reference.FullName);
-            return contents[assembly] = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(text.ToString());
+            var result = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(text.ToString());
+            lock (contents) contents[assembly] = result;
+            return result;
         }
     }
 }

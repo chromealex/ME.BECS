@@ -34,19 +34,6 @@ internal sealed class ConfigMaskInputEmitter {
         return true;
     }
 
-    internal static void Append(StringBuilder source, IReadOnlyList<ConfigMaskInputEmitter> entries) {
-        source.Append("namespace ME.BECS.SourceGenerated { [global::Unity.Burst.BurstCompile] internal static unsafe class ConfigMaskInputs {\n")
-            .Append("public static void Initialize() {\n");
-        for (var index = 0; index < entries.Count; ++index)
-            source.Append("global::ME.BECS.WorldStaticCallbacks.RegisterConfigComponentMaskCallback<")
-                .Append(entries[index].type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append(">(Apply_")
-                .Append(index.ToString(CultureInfo.InvariantCulture)).Append(");\n");
-        source.Append("}\n");
-        for (var index = 0; index < entries.Count; ++index)
-            entries[index].AppendEntry(source, source, index.ToString(CultureInfo.InvariantCulture), "");
-        source.Append("} }\n");
-    }
-
     internal void AppendEntry(StringBuilder source, StringBuilder registrations, string key, string callbackOwner) {
         var entry = this;
         var name = entry.type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);

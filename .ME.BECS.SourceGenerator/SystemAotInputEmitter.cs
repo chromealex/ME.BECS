@@ -13,14 +13,20 @@ internal sealed class SystemAotInputEmitter {
     internal readonly StringBuilder Body = new();
 
     internal static SystemAotInputEmitter? Create(Compilation compilation,
-        IReadOnlyList<(string Identity, INamedTypeSymbol Type)> registrations, out string error) {
+        IReadOnlyList<(string Identity, INamedTypeSymbol Type)> registrations, out string error,
+        string owner = "SystemAotInputs", IReadOnlyList<string>? registrationTargets = null,
+        string metadataKey = "ME.BECS.SystemAotPlan.v1", bool emitBody = true) {
         error = "";
         var result = new SystemAotInputEmitter();
         var phases = new[] { "Awake", "Start", "Update", "Destroy", "DrawGizmos" };
-        result.Body.Append("namespace ME.BECS.SourceGenerated { internal static class SystemAotInputs {\n")
+        if (registrationTargets != null && registrationTargets.Count != registrations.Count) {
+            error = "System AOT targets do not match selected registrations"; return null;
+        }
+        if (emitBody) result.Body.Append("namespace ME.BECS.SourceGenerated { internal static partial class ").Append(owner).Append(" {\n")
             .Append("[global::UnityEngine.Scripting.PreserveAttribute] public static void PreserveReferences() {\n")
             .Append("var context = new global::ME.BECS.SystemContext();\n");
-        foreach (var registration in registrations) {
+        for (var index = 0; index < registrations.Count; ++index) {
+            var registration = registrations[index];
             var type = registration.Type;
             var name = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             var present = 0;
@@ -37,10 +43,13 @@ internal sealed class SystemAotInputEmitter {
                 if (!HasAttribute(method, "ME.BECS.WithoutBurstAttribute")) factories |= 1 << i;
             }
             var burst = HasAttribute(type, "Unity.Burst.BurstCompileAttribute") ? factories : 0;
-            result.Metadata.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.SystemAotPlan.v1\", ")
+            result.Metadata.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(")
+                .Append(SymbolDisplay.FormatLiteral(metadataKey, true)).Append(", ")
                 .Append(SymbolDisplay.FormatLiteral(registration.Identity + "\n" + present.ToString(CultureInfo.InvariantCulture) + "\n" +
                     burst.ToString(CultureInfo.InvariantCulture) + "\n" + factories.ToString(CultureInfo.InvariantCulture), true)).Append(")]\n");
-            result.Body.Append("SystemInputs.Register_").Append(ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(registration.Identity)).Append("();\n");
+            if (!emitBody) continue;
+            result.Body.Append(registrationTargets == null ? "SystemInputs.Register_" +
+                ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(registration.Identity) : registrationTargets[index]).Append("();\n");
             void Pointers(string kind, int mask) {
                 for (var i = 0; i < phases.Length; ++i) {
                     if ((mask & (1 << i)) == 0) continue;
@@ -62,7 +71,7 @@ internal sealed class SystemAotInputEmitter {
             }
             Pointers("Factory", factories);
         }
-        result.Body.Append("} } }\n");
+        if (emitBody) result.Body.Append("} } }\n");
         return result;
     }
 

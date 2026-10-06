@@ -1,0 +1,311 @@
+.becs-graph-studio { flex-grow: 1; }
+.becs-graph-studio .studio-projects { height: 30px; }
+.becs-graph-studio .studio-projects Label { font-size: 11px; margin-left: 8px; margin-right: 8px; }
+.becs-graph-studio .studio-project-button { font-size: 11px; margin-top: 2px; margin-bottom: 2px; padding-left: 8px; padding-right: 8px; }
+.becs-graph-studio .studio-inspector { border-left-width: 1px; border-left-color: rgb(75, 75, 75); padding: 12px; }
+.becs-graph-studio .studio-inspector > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container > Label { white-space: normal; margin-top: 5px; margin-bottom: 5px; }
+.becs-graph-studio .studio-inspector-title { font-size: 16px; -unity-font-style: bold; }
+.becs-graph-studio .studio-status { font-size: 11px; padding: 6px 10px; white-space: normal; }
+.becs-graph-studio .studio-method { flex-direction: row; justify-content: space-between; padding: 5px 8px; }
+.becs-graph-studio .studio-method-active { background-color: rgba(82, 138, 197, 0.2); }
+.becs-graph-studio .studio-burst { color: rgb(95, 170, 110); }
+.becs-graph-studio .studio-muted { opacity: 0.65; }
+.becs-graph-studio .studio-field-summary { white-space: normal; font-size: 11px; padding: 8px; border-top-width: 1px; border-top-color: rgba(128, 128, 128, 0.4); }
+.becs-graph-studio .studio-disabled { opacity: 0.5; }
+.becs-graph-studio .studio-node .extension-container { padding-bottom: 6px; }
+.becs-graph-studio .studio-node #studio-kind { font-size: 11px; opacity: 0.65; padding: 4px 8px; }
+.becs-graph-studio .studio-compiler-plan .unity-text-field__input { white-space: normal; }
+.becs-graph-studio .studio-card { border-width: 1px; border-radius: 5px; overflow: hidden; }
+.becs-graph-studio.studio-dark .studio-canvas { background-color: rgb(32, 32, 32); }
+.becs-graph-studio.studio-light .studio-canvas { background-color: rgb(231, 231, 231); }
+.becs-graph-studio.studio-dark .studio-card { background-color: rgb(48, 48, 48); border-color: rgb(76, 76, 76); }
+.becs-graph-studio.studio-light .studio-card { background-color: rgb(248, 248, 248); border-color: rgb(185, 185, 185); }
+.becs-graph-studio .studio-card.studio-card-selected { border-color: rgb(74, 143, 213); border-width: 1px; }
+.becs-graph-studio .studio-card-title { -unity-font-style: bold; padding: 9px 10px; white-space: normal; border-bottom-width: 1px; border-bottom-color: rgba(128, 128, 128, 0.4); }
+.becs-graph-studio .studio-card > Label { white-space: normal; }
+.becs-graph-studio .studio-kind { font-size: 11px; opacity: 0.65; padding: 5px 8px; }
+.becs-graph-studio .studio-ports { flex-direction: row; padding: 4px; }
+.becs-graph-studio .studio-ports Button { font-size: 11px; padding: 4px; margin: 1px; border-width: 0; background-color: transparent; }
+.becs-graph-studio .studio-input-port { -unity-text-align: middle-left; }
+.becs-graph-studio .studio-output-port { -unity-text-align: middle-right; }
+.becs-graph-studio .studio-node-actions { flex-direction: row; border-top-width: 1px; border-top-color: rgba(128, 128, 128, 0.4); padding: 4px; }
+.becs-graph-studio .studio-node-actions Button { flex-grow: 1; font-size: 11px; }
+.becs-graph-studio .studio-project-button.studio-project-active { border-bottom-width: 2px; border-bottom-color: rgb(74, 143, 213); }
+
+/* Use the same palette and BECS button variables as Dashboard/Replays/Hierarchy. */
+.becs-graph-studio { min-height: 0; }
+.becs-graph-studio .studio-projects { height: auto; min-height: 30px; flex-shrink: 0; border-bottom-width: 1px; }
+.becs-graph-studio .studio-toolbar { height: auto; min-height: 36px; flex-wrap: wrap; padding: 4px 8px; flex-shrink: 0; }
+.becs-graph-studio .studio-graph-field { margin: 6px 12px; flex-shrink: 0; }
+.becs-graph-studio Button {
+    min-height: 24px;
+    padding: 4px 8px;
+    border-width: var(--toolbar-buttons-border-width);
+    border-radius: var(--toolbar-buttons-radius);
+    border-color: var(--toolbar-buttons-border-color);
+    background-color: var(--toolbar-buttons-background-color);
+}
+.becs-graph-studio Button:hover { background-color: var(--toolbar-buttons-background-color-hover); }
+.becs-graph-studio.dark Button { color: #e8eaf0; }
+.becs-graph-studio.light Button { color: #242831; }
+.becs-graph-studio Button:disabled { opacity: 0.45; }
+.becs-graph-studio .studio-project-button.studio-project-active { background-color: #395f85; color: white; border-bottom-color: #7196ff; }
+.becs-graph-studio .studio-canvas, .becs-graph-studio .studio-inspector { min-height: 0; }
+.becs-graph-studio.studio-dark .studio-canvas { background-color: #202226; }
+.becs-graph-studio.studio-light .studio-canvas { background-color: #f4f5f7; }
+.becs-graph-studio.studio-dark .studio-card { background-color: #292c31; border-color: #3c424c; }
+.becs-graph-studio.studio-light .studio-card { background-color: white; border-color: #d9dee6; }
+.becs-graph-studio .studio-card.studio-card-selected { border-color: #7196ff; }
+.becs-graph-studio.dark .studio-projects, .becs-graph-studio.dark .studio-toolbar,
+.becs-graph-studio.dark .studio-inspector { background-color: #292c31; border-color: #3c424c; }
+.becs-graph-studio.light .studio-projects, .becs-graph-studio.light .studio-toolbar,
+.becs-graph-studio.light .studio-inspector { background-color: white; border-color: #d9dee6; }
+.becs-graph-studio .studio-status { border-top-width: 1px; flex-shrink: 0; }
+.becs-graph-studio.dark .studio-status { color: #aab3c1; border-top-color: #3c424c; }
+.becs-graph-studio.light .studio-status { color: #596373; border-top-color: #d9dee6; }
+.becs-graph-studio .studio-kind, .becs-graph-studio .studio-muted { opacity: 1; }
+.becs-graph-studio.dark .studio-kind, .becs-graph-studio.dark .studio-muted { color: #aab3c1; }
+.becs-graph-studio.light .studio-kind, .becs-graph-studio.light .studio-muted { color: #596373; }
+.becs-graph-studio.light .studio-burst { color: #387850; }
+.becs-graph-studio .studio-ports Button { border-width: 0; background-color: transparent; }
+.becs-graph-studio .studio-ports Button:hover { background-color: rgba(113,150,255,0.18); }
+.becs-graph-studio .studio-card > Button { margin: 6px 8px; }
+
+.becs-graph-studio .studio-after-action, .becs-graph-studio .studio-parallel-action { font-size: 11px; margin: 0; padding: 2px 6px; border-radius: 12px; }
+.becs-graph-studio .studio-ports Button { min-height: 20px; width: 20px; padding: 0; font-size: 13px; }
+.becs-graph-studio .studio-output-port { align-self: flex-end; }
+
+/* Header panels deliberately use ordinary elements, like Dashboard's header. */
+.becs-graph-studio .studio-projects { flex-direction: row; align-items: center; padding: 4px 12px; min-height: 34px; }
+.becs-graph-studio .studio-navigation-caption { width: 94px; flex-shrink: 0; font-size: 11px; margin: 0 8px 0 0; }
+.becs-graph-studio .studio-navigation-scroll { min-width: 0; }
+.becs-graph-studio .studio-navigation-scroll .unity-scroll-view__content-container { align-items: center; }
+.becs-graph-studio .studio-project-button { min-height: 26px; margin: 0 5px 0 0; padding: 4px 10px; border-radius: 4px; }
+.becs-graph-studio .studio-toolbar { flex-direction: row; align-items: center; padding: 8px 12px; min-height: 44px; border-bottom-width: 1px; }
+.becs-graph-studio .studio-toolbar > Button { margin: 2px 4px; min-height: 28px; padding: 5px 10px; }
+.becs-graph-studio .studio-toolbar > Toggle { margin: 2px 4px; }
+.becs-graph-studio .studio-breadcrumbs { flex-shrink: 1; min-width: 100px; margin-right: 12px; background-color: transparent; border-width: 0; }
+.becs-graph-studio .studio-breadcrumbs Button { padding: 5px 10px; margin: 2px 0; background-image: none; border-radius: 4px; }
+.becs-graph-studio.dark .studio-navigation-caption { color: #aab3c1; }
+.becs-graph-studio.light .studio-navigation-caption { color: #596373; }
+.becs-graph-studio.dark .studio-toolbar { border-bottom-color: #3c424c; }
+.becs-graph-studio.light .studio-toolbar { border-bottom-color: #d9dee6; }
+
+.becs-graph-studio .studio-after-action {
+    width: 24px;
+    height: 24px;
+    min-height: 24px;
+    min-width: 24px;
+    padding: 0;
+    margin: 0;
+    border-width: 1px;
+    border-radius: 12px;
+    font-size: 17px;
+    -unity-text-align: middle-center;
+}
+.becs-graph-studio.dark .studio-after-action { background-color: #292c31; border-color: #536071; color: #c4cddb; }
+.becs-graph-studio.light .studio-after-action { background-color: #ffffff; border-color: #b5bfce; color: #596373; }
+.becs-graph-studio .studio-after-action:hover { background-color: #395f85; border-color: #7196ff; color: white; }
+.becs-graph-studio .studio-after-action:focus { border-color: #7196ff; }
+
+.becs-graph-studio .studio-canvas > ScrollView { flex-grow: 1; flex-basis: 0; min-height: 0; }
+.becs-graph-studio .studio-canvas .unity-scroll-view__content-viewport { flex-grow: 1; min-height: 0; }
+
+.becs-graph-studio .studio-search-row { flex-direction: row; align-items: center; flex-shrink: 0; padding: 8px 12px; }
+.becs-graph-studio .studio-system-search { flex-grow: 1; max-width: 460px; height: 26px; }
+.becs-graph-studio .studio-search-results { max-height: 180px; flex-shrink: 0; margin: 0 12px 6px 12px; }
+.becs-graph-studio .studio-search-count { font-size: 11px; padding: 4px 0; }
+.becs-graph-studio .studio-search-result { flex-direction: row; align-items: center; justify-content: space-between; padding: 7px 10px; margin: 2px 0; }
+.becs-graph-studio .studio-result-title { -unity-font-style: bold; flex-shrink: 0; margin-right: 12px; }
+.becs-graph-studio .studio-result-path { font-size: 11px; flex-shrink: 1; white-space: normal; }
+.becs-graph-studio .studio-project-button.studio-search-match { border-color: #e5bf57; border-bottom-width: 2px; }
+.becs-graph-studio .studio-card.studio-system-match { border-color: #e5bf57; }
+.becs-graph-studio .studio-inspector { padding: 0; }
+.becs-graph-studio .studio-inspector-heading { padding: 16px 14px 12px 14px; }
+.becs-graph-studio .studio-inspector-title { font-size: 15px; white-space: normal; margin-top: 5px; }
+.becs-graph-studio .studio-inspector-section { margin: 0 12px 12px 12px; padding: 12px; border-width: 1px; border-radius: 6px; }
+.becs-graph-studio.dark .studio-inspector-section { background-color: #202226; border-color: #3c424c; }
+.becs-graph-studio.light .studio-inspector-section { background-color: #f4f5f7; border-color: #d9dee6; }
+.becs-graph-studio .studio-section-title { -unity-font-style: bold; font-size: 12px; margin-bottom: 10px; }
+.becs-graph-studio .studio-note { font-size: 11px; white-space: normal; }
+.becs-graph-studio.dark .studio-note, .becs-graph-studio.dark .studio-result-path { color: #aab3c1; }
+.becs-graph-studio.light .studio-note, .becs-graph-studio.light .studio-result-path { color: #596373; }
+.becs-graph-studio .studio-inspector-method { flex-direction: row; justify-content: space-between; margin: 2px 0; padding: 6px 8px; }
+.becs-graph-studio .studio-inspector-empty { padding: 24px 16px; }
+.becs-graph-studio .studio-inspector-empty > Label { margin-bottom: 10px; white-space: normal; }
+.becs-graph-studio .studio-system-selection .subclass-selector-container,
+.becs-graph-studio .studio-system-selection .open-button,
+.becs-graph-studio .studio-system-selection .subclass-selector-label { display: none; }
+.becs-graph-studio .studio-system-selection .subclass-selector { flex-direction: column; }
+.becs-graph-studio .studio-system-selection .button-selector { width: auto; min-height: 28px; margin: 0 0 6px 0; flex-grow: 1; }
+.becs-graph-studio .studio-system-selection .button-text { white-space: normal; }
+.becs-graph-studio .studio-inspector-section .unity-base-field { margin: 3px 0; }
+.becs-graph-studio .studio-inspector-section .unity-base-field__label { min-width: 88px; width: 100px; white-space: normal; }
+
+.becs-graph-studio .studio-system-search .unity-text-field__input { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+.becs-graph-studio .studio-search-clear { width: 26px; height: 26px; margin-left: 6px; padding: 0; font-size: 16px; }
+.becs-graph-studio .studio-system-selection > .studio-note { margin-top: 6px; }
+.becs-graph-studio .studio-card.studio-system-match.studio-card-selected { border-color: #7196ff; }
+.becs-graph-studio .studio-inspector-method.studio-method-active { background-color: #395f85; }
+
+.becs-graph-studio .studio-system-selection .subclass-button-selector {
+    position: relative;
+    top: auto;
+    right: auto;
+    min-width: 0;
+    width: 100%;
+    flex-shrink: 0;
+}
+.becs-graph-studio .studio-system-selection .subclass-selector { background-color: transparent; padding: 0; }
+
+.becs-graph-studio .studio-system-search { position: relative; }
+.becs-graph-studio .studio-system-search .unity-text-field__input { padding-right: 26px; }
+.becs-graph-studio .studio-search-clear { position: absolute; right: 4px; top: 3px; width: 20px; height: 20px; min-height: 20px; margin: 0; padding: 0; font-size: 13px; border-width: 0; background-color: transparent; }
+.becs-graph-studio .studio-phase-filter { min-width: 86px; }
+.becs-graph-studio .studio-card-header { flex-direction: row; align-items: center; padding: 8px 10px; border-bottom-width: 1px; border-bottom-color: rgba(128,128,128,0.3); }
+.becs-graph-studio .studio-card-header .studio-card-title { flex-grow: 1; flex-shrink: 1; padding: 0; border-bottom-width: 0; margin-right: 8px; }
+.becs-graph-studio .studio-node-enabled { margin: 0 8px 0 0; flex-shrink: 0; }
+.becs-graph-studio .studio-card-fields { padding: 10px 8px; border-top-width: 1px; border-top-color: rgba(128,128,128,0.3); }
+.becs-graph-studio .studio-card-fields .unity-base-field { margin: 3px 0; }
+.becs-graph-studio .studio-card-fields .unity-base-field__label { min-width: 80px; width: 90px; white-space: normal; }
+.becs-graph-studio .studio-card-fields .studio-section-title { font-size: 11px; margin-bottom: 6px; }
+.becs-graph-studio .studio-card.studio-phase-inactive { opacity: 0.45; }
+.becs-graph-studio .studio-card.studio-execution-active { border-color: #536e91; }
+.becs-graph-studio .studio-card.studio-card-selected { border-color: #7196ff; }
+.becs-graph-studio .studio-card.studio-system-match { border-color: #e5bf57; }
+.becs-graph-studio .studio-card.studio-system-match.studio-card-selected { border-color: #7196ff; }
+
+.becs-graph-studio .studio-boundary-card { padding: 8px; min-height: 0; }
+.becs-graph-studio .studio-card.studio-start-card { background-color: rgb(37, 73, 62); border-top-color: rgb(85, 166, 130); border-bottom-color: rgb(85, 166, 130); border-left-color: rgb(85, 166, 130); border-right-color: rgb(85, 166, 130); }
+.becs-graph-studio .studio-card.studio-end-card { background-color: rgb(77, 48, 57); border-top-color: rgb(174, 99, 122); border-bottom-color: rgb(174, 99, 122); border-left-color: rgb(174, 99, 122); border-right-color: rgb(174, 99, 122); }
+.becs-graph-studio .studio-card.studio-subgraph-card { background-color: rgb(48, 45, 70); }
+.becs-graph-studio .studio-parallel-action { min-width: 24px; min-height: 24px; padding: 0; margin: 0; border-radius: 12px; font-size: 16px; -unity-text-align: middle-center; }
+.studio-input-port, .studio-output-port { height: 24px; min-width: 24px; justify-content: center; }
+.studio-input-port > Label, .studio-output-port > Label { -unity-text-align: middle-center; margin: 0; padding: 0; color: rgb(143, 180, 220); }
+
+.becs-graph-studio .studio-input-port { align-self: flex-start; width: 24px; }
+.becs-graph-studio .studio-output-port { width: 24px; }
+
+/* Compact corner action; reserve space so it never covers the enabled toggle. */
+.becs-graph-studio .studio-card-header-deletable { padding-right: 25px; }
+.becs-graph-studio .studio-card .studio-node-delete {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    min-height: 16px;
+    max-width: 16px;
+    max-height: 16px;
+    padding: 0;
+    margin: 0;
+    border-width: 0;
+    border-radius: 8px;
+    background-image: none;
+    background-color: rgba(128, 128, 128, 0.16);
+    font-size: 12px;
+    -unity-font-style: normal;
+    -unity-text-align: middle-center;
+}
+.becs-graph-studio .studio-card .studio-node-delete:hover {
+    background-color: rgba(190, 95, 105, 0.35);
+}
+.becs-graph-studio .studio-card .studio-node-delete:active {
+    background-color: rgba(190, 95, 105, 0.5);
+}
+
+.becs-graph-studio .studio-breadcrumbs { flex-direction: row; align-items: center; flex-wrap: wrap; min-height: 28px; }
+.becs-graph-studio .studio-breadcrumbs .studio-breadcrumb-item { background-color: transparent; border-width: 0; border-radius: 3px; padding: 3px 6px; margin: 0; font-size: 11px; min-height: 24px; }
+.becs-graph-studio .studio-breadcrumbs .studio-breadcrumb-item:hover { background-color: rgba(100, 140, 180, 0.18); }
+.becs-graph-studio .studio-breadcrumbs .studio-breadcrumb-current { -unity-font-style: bold; color: rgb(114, 169, 223); }
+.becs-graph-studio .studio-breadcrumb-separator { font-size: 13px; opacity: 0.45; padding: 0 2px; }
+
+.becs-graph-studio .studio-card-fields .unity-base-field__label,
+.becs-graph-studio .studio-card-fields .studio-field-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+/* Vector component labels must not inherit the 90px property-label width. */
+.becs-graph-studio .studio-card-fields .studio-vector-field { flex-direction: column; align-items: stretch; }
+.becs-graph-studio .studio-card-fields .studio-vector-field > .unity-base-field__label { width: auto; min-width: 0; margin-bottom: 3px; }
+.becs-graph-studio .studio-card-fields .studio-vector-field > .unity-base-field__input { width: auto; min-width: 0; flex-grow: 1; }
+.becs-graph-studio .studio-card-fields .studio-vector-field .unity-base-vector-field__field { min-width: 0; flex-basis: 0; flex-grow: 1; margin-left: 2px; margin-right: 2px; }
+.becs-graph-studio .studio-card-fields .studio-vector-field .unity-base-vector-field__field .unity-base-field__label { width: 12px; min-width: 12px; flex-grow: 0; flex-shrink: 0; margin-left: 0; margin-right: 2px; padding: 0; }
+.becs-graph-studio .studio-card-fields .studio-vector-field .unity-base-vector-field__field .unity-base-field__input { min-width: 0; flex-grow: 1; }
+
+.becs-graph-studio .studio-readonly-vector { margin-top: 4px; margin-bottom: 8px; }
+.becs-graph-studio .studio-readonly-vector-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+.becs-graph-studio .studio-readonly-vector-row { flex-direction: row; align-items: center; min-height: 20px; }
+.becs-graph-studio .studio-readonly-vector-axis { width: 16px; min-width: 16px; opacity: 0.65; }
+.becs-graph-studio .studio-readonly-vector-value { flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 2px 6px; background-color: rgba(128,128,128,0.12); border-radius: 3px; }
+
+/* Minimal scrollbars: transparent track, 2px rectangular thumb. */
+.becs-graph-studio .unity-scroller { background-color: transparent; border-width: 0; padding: 0; margin: 0; }
+.becs-graph-studio .unity-scroller #unity-low-button,
+.becs-graph-studio .unity-scroller #unity-high-button { display: none; }
+.becs-graph-studio #unity-vertical-scroller { width: 2px; min-width: 2px; max-width: 2px; }
+.becs-graph-studio #unity-horizontal-scroller { height: 2px; min-height: 2px; max-height: 2px; }
+.becs-graph-studio .unity-scroller #unity-slider { flex-grow: 1; margin: 0; padding: 0; }
+.becs-graph-studio .unity-scroller .unity-base-slider__tracker { background-color: transparent; border-width: 0; border-radius: 0; }
+.becs-graph-studio .unity-scroller .unity-base-slider__dragger { background-color: rgb(190,190,190); border-width: 0; border-radius: 0; }
+.becs-graph-studio .unity-scroller .unity-base-slider__dragger-border { border-width: 0; background-color: transparent; }
+.becs-graph-studio #unity-vertical-scroller .unity-base-slider__dragger { width: 2px; min-width: 2px; max-width: 2px; left: 0; }
+.becs-graph-studio #unity-horizontal-scroller .unity-base-slider__dragger { height: 2px; min-height: 2px; max-height: 2px; top: 0; }
+.becs-graph-studio .unity-scroller:hover .unity-base-slider__dragger { background-color: rgb(210,210,210); }
+.becs-graph-studio .unity-scroller .unity-base-slider__dragger:active { background-color: rgb(225,225,225); }
+
+/* Clear native/theme images as well as background colors on every track layer. */
+.becs-graph-studio .unity-scroller,
+.becs-graph-studio .unity-scroller #unity-slider,
+.becs-graph-studio .unity-scroller .unity-base-slider__input,
+.becs-graph-studio .unity-scroller .unity-base-slider__drag-container,
+.becs-graph-studio .unity-scroller .unity-base-slider__tracker,
+.becs-graph-studio .unity-scroller .unity-base-slider__dragger-border {
+    background-color: transparent;
+    background-image: none;
+    border-width: 0;
+    border-radius: 0;
+    margin: 0;
+    padding: 0;
+}
+.becs-graph-studio .unity-scroller .unity-base-slider__dragger { background-image: none; }
+.becs-graph-studio #unity-vertical-scroller #unity-slider,
+.becs-graph-studio #unity-vertical-scroller .unity-base-slider__input { width: 2px; min-width: 0; max-width: 2px; }
+.becs-graph-studio #unity-horizontal-scroller #unity-slider,
+.becs-graph-studio #unity-horizontal-scroller .unity-base-slider__input { height: 2px; min-height: 0; max-height: 2px; }
+
+/* Ports sit on the border and take no space in the card's vertical layout. */
+.becs-graph-studio .studio-card { overflow: visible; }
+.becs-graph-studio .studio-card .studio-ports { padding: 0; margin: 0; }
+.becs-graph-studio .studio-card-header { padding-left: 14px; padding-right: 14px; }
+.becs-graph-studio .studio-card-header-deletable { padding-right: 25px; }
+
+.becs-graph-studio .studio-boundary-card .studio-card-header,
+.becs-graph-studio .studio-boundary-card .studio-card-title { border-bottom-width: 0; }
+
+.becs-graph-studio .studio-card-fields .studio-editable-vector .unity-base-field__label { width: 16px; min-width: 16px; margin-right: 4px; white-space: nowrap; }
+.becs-graph-studio .studio-editable-vector .unity-base-field { min-width: 0; }
+.becs-graph-studio .studio-editable-vector .unity-base-field__input { flex-grow: 1; min-width: 0; }
+
+/* Fixed-point drawers use their own vector/quaternion/container classes. */
+.becs-graph-studio .studio-card-fields .vector-field,
+.becs-graph-studio .studio-card-fields .quaternion-field,
+.becs-graph-studio .studio-card-fields .root > .container { flex-direction: column; align-items: stretch; min-width: 0; }
+.becs-graph-studio .studio-card-fields .vector-field FloatField,
+.becs-graph-studio .studio-card-fields .quaternion-field FloatField { width: auto; min-width: 0; flex-grow: 1; }
+.becs-graph-studio .studio-card-fields .vector-field .unity-base-field__label,
+.becs-graph-studio .studio-card-fields .quaternion-field .unity-base-field__label { width: 16px; min-width: 16px; margin-right: 4px; }
+.becs-graph-studio .studio-card-fields .vector-field > Label,
+.becs-graph-studio .studio-card-fields .quaternion-field > Label { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.becs-graph-studio .studio-card-fields .fp-field .unity-base-field__input,
+.becs-graph-studio .studio-card-fields .root .unity-base-field__input { min-width: 0; flex-grow: 1; }
+.becs-graph-studio .studio-fixedpoint-composite { margin-top: 4px; margin-bottom: 8px; padding-left: 4px; }
+
+.becs-graph-studio .studio-card-fields .studio-inline-vector { flex-direction: row; align-items: center; margin: 3px 0; min-width: 0; }
+.becs-graph-studio .studio-inline-vector > .studio-readonly-vector-title { width: 64px; min-width: 0; flex-shrink: 0; margin: 0 4px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.becs-graph-studio .studio-inline-vector > .studio-inline-component,
+.becs-graph-studio .studio-inline-vector > .studio-readonly-vector-row { flex-grow: 1; flex-shrink: 1; flex-basis: 0; min-width: 0; margin: 0 1px; }
+.becs-graph-studio .studio-card-fields .studio-inline-component .unity-base-field { margin: 0; min-width: 0; }
+.becs-graph-studio .studio-card-fields .studio-inline-component .unity-base-field__label { width: 10px; min-width: 10px; margin: 0 1px 0 0; padding: 0; }
+.becs-graph-studio .studio-inline-component .unity-base-field__input { min-width: 0; flex-grow: 1; padding-left: 2px; padding-right: 2px; }
+.becs-graph-studio .studio-inline-vector .studio-readonly-vector-axis { width: 10px; min-width: 10px; }
+.becs-graph-studio .studio-inline-vector .studio-readonly-vector-value { padding: 2px; }

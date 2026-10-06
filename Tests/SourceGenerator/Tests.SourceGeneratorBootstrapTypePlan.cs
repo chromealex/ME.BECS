@@ -18,7 +18,7 @@ namespace ME.BECS.Tests {
         // Read emitted typed delegate targets without running any registration,
         // Default getter, world initialization, or preservation-only AOT method.
         internal static MethodInfo[] SelectedSystems(Assembly assembly) {
-            var profile = assembly.GetName().Name.EndsWith(".Editor", StringComparison.Ordinal) ? "Editor" : "Runtime";
+            var profile = Tests_SourceGeneratorAotPublications.Profile(assembly);
             var owners = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
                 .Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t'))
                 .Where(row => row.Length == 5 && row[0] == profile.ToLowerInvariant() && row[1] == "system-registration-owner")
@@ -38,7 +38,7 @@ namespace ME.BECS.Tests {
         internal static MethodInfo[] Selected(Assembly assembly) => SelectedSystems(assembly).Concat(SelectedTypes(assembly)).ToArray();
 
         internal static MethodInfo[] SelectedTypes(Assembly assembly) {
-            var profile = assembly.GetName().Name.EndsWith(".Editor", StringComparison.Ordinal) ? "Editor" : "Runtime";
+            var profile = Tests_SourceGeneratorAotPublications.Profile(assembly);
             var owners = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
                 .Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t'))
                 .Where(row => row.Length == 5 && row[0] == profile.ToLowerInvariant() && row[1] == "type-registration-owner")
@@ -156,13 +156,14 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void PublishedPlanHasTypedCallbacksAndRuntimeOwnsTheirExecution(string profile) {
-            var assembly = Assembly.Load("ME.BECS.Gen." + profile);
+            var assembly = Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor");
             var selected = Selected(assembly);
             Assert.IsNotEmpty(selected);
             Assert.IsTrue(selected.All(method => method.IsStatic && !method.ContainsGenericParameters && method.ReturnType == typeof(void) && method.GetParameters().Length == 0));
-            Assert.Greater(selected.Count(method => method.DeclaringType.Assembly != assembly), 0,
-                "Selected owner callbacks must be direct typed delegates, not aggregate forwarding methods.");
-            var dispatch = assembly.GetType("ME.BECS.SourceGenerated.CoreTypeInputs", true).GetMethod("Initialize");
+            Assert.IsTrue(selected.All(method => !method.DeclaringType.Assembly.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal)),
+                "Selected callbacks must belong to independent publications.");
+            var phases = typeof(BootstrapRuntime).Assembly.GetType("ME.BECS.BootstrapPhases", true);
+            var dispatch = phases.GetMethod("RegisterTypes", BindingFlags.Instance | BindingFlags.NonPublic);
             var calls = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(dispatch)
                 .Where(instruction => instruction.OpCode == System.Reflection.Emit.OpCodes.Call)
                 .Select(instruction => (MethodInfo)instruction.Operand).ToArray();
@@ -180,7 +181,7 @@ namespace ME.BECS.Tests {
             var systemRegistry = (BootstrapCallbackRegistry<Action>)Registry.GetField("callbacks", Hidden).GetValue(systems);
             var systemCallbacks = new Action[systemRegistry.Count];
             for (var i = 0; i < systemCallbacks.Length; ++i) systemCallbacks[i] = systemRegistry.Get(i);
-            CollectionAssert.AreEqual(Selected(Assembly.Load("ME.BECS.Gen.Editor")), systemCallbacks.Concat(callbacks).Select(action => action.Method).ToArray());
+            CollectionAssert.AreEqual(Selected(Tests_SourceGeneratorInputCatalog.Owner(true)), systemCallbacks.Concat(callbacks).Select(action => action.Method).ToArray());
             var firstCall = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(typeof(BootstrapRuntime).GetMethod("LoadInstalled"))
                 .First(instruction => instruction.OpCode == System.Reflection.Emit.OpCodes.Call).Operand;
             Assert.AreEqual(typeof(BootstrapRuntime).GetMethod("RequireInstalledPlan"), firstCall,

@@ -63,11 +63,12 @@ internal sealed class JobWeightInputEmitter {
         return true;
     }
 
-    internal void AppendMetadata(StringBuilder source) {
+    internal void AppendMetadata(StringBuilder source, string key = "ME.BECS.JobWeightSelection.v1") {
         foreach (var plan in plans) {
             var payload = "v1\n" + plan.Identity + "\n" + (ilJobs.Contains(plan.Job) ? "il" : plan.Initializer == null ? "legacy" : "source") + "\n" +
                 (plan.Initializer == null ? "" : JobSafetySummary.ReflectionIdentity(plan.Initializer)) + "\n" + plan.Weight.ToString(CultureInfo.InvariantCulture);
-            source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.JobWeightSelection.v1\", ")
+            source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(")
+                .Append(Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(key, true)).Append(", ")
                 .Append(Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(payload, true)).Append(")]\n");
         }
     }

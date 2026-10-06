@@ -159,7 +159,7 @@ internal static class GraphInputEmitter {
                         .Append("public static void Patch_").Append(job.Key).Append("(void* jobPtr, ushort worldId) { var job = (").Append(name).Append("*)jobPtr;\n");
                     foreach (var field in job.Fields) {
                         if (field.DeclaredAccessibility != Accessibility.Public) {
-                            source.Append(name).Append('.').Append(InputManifestGenerator.DeltaSetterName(field)).Append("(ref *job, worldId);\n");
+                            source.Append(name).Append('.').Append(GraphDeltaSetterContract.Name(field)).Append("(ref *job, worldId);\n");
                             continue;
                         }
                         source.Append("{ var dtMs = global::ME.BECS.Worlds.GetWorldDeltaTime(worldId);\nvar context = global::ME.BECS.SystemContext.Create(dtMs, default, default);\njob->@")

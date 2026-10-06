@@ -114,15 +114,13 @@ namespace ME.BECS.Tests {
         [TestCase("Runtime")]
         public void EveryCompiledSelectionHasAnEligibleOwnerAndKeepsItsOrdinal(string profile) {
             var editor = profile == "Editor";
-            var assembly = Assembly.Load("ME.BECS.Gen." + profile);
-            var records = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t')).ToArray();
+            var records = Tests_SourceGeneratorInputCatalog.Rows(editor).Select(row => row.Split('\t')).ToArray();
             string Decode(string value) => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(value));
-            var selection = records.Where(row => row[0] == profile.ToLowerInvariant() && row[1] == "system-registration")
-                .OrderBy(row => int.Parse(row[2])).Select(row => Decode(row[3])).ToArray();
-            var owners = records.Where(row => row[0] == profile.ToLowerInvariant() && row[1] == "system-registration-owner")
-                .OrderBy(row => int.Parse(row[2])).ToArray();
-            CollectionAssert.AreEqual(selection, owners.Select(row => Decode(row[3])).ToArray());
+            var selection = records.Where(row => row[0] == "system-registration")
+                .OrderBy(row => int.Parse(row[1])).Select(row => Decode(row[2])).ToArray();
+            var owners = records.Where(row => row[0] == "system-registration-owner")
+                .OrderBy(row => int.Parse(row[1])).ToArray();
+            CollectionAssert.AreEqual(selection, owners.Select(row => Decode(row[2])).ToArray());
             Assert.IsNotEmpty(owners);
             var candidates = Planner.GetMethod("CurrentCandidates", Hidden).Invoke(null, null);
             var playerAssemblies = UnityEditor.Compilation.CompilationPipeline.GetAssemblies(UnityEditor.Compilation.AssembliesType.Player)
@@ -130,14 +128,15 @@ namespace ME.BECS.Tests {
             var crossAssemblyGenerics = 0;
             for (var ordinal = 0; ordinal < owners.Length; ++ordinal) {
                 var row = owners[ordinal];
-                var type = Type.GetType(Decode(row[3]), true);
+                var type = Type.GetType(Decode(row[2]), true);
                 var required = (string[])Planner.GetMethod("RequiredAssemblies", Hidden).Invoke(null, new object[] { type });
                 var expected = (string)Planner.GetMethod("Choose", Hidden).Invoke(null, new object[] {
                     type.Assembly.GetName().Name, required, editor, candidates });
-                Assert.AreEqual(expected, Decode(row[4]), type.ToString());
+                Assert.AreEqual(expected, Decode(row[3]), type.ToString());
                 if (!editor) CollectionAssert.Contains(playerAssemblies, expected, "Runtime ownership must survive player define constraints.");
                 var publisher = Assembly.Load(expected).GetType("ME.BECS.SourceGenerated.SystemFragment_" + profile, true);
-                Assert.AreNotEqual(assembly, publisher.Assembly, "Publication itself must leave the aggregate assembly.");
+                Assert.IsFalse(publisher.Assembly.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal));
+                Assert.IsFalse(publisher.Assembly.GetReferencedAssemblies().Any(reference => reference.Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal)));
                 var indices = (int[])publisher.GetField("Ordinals", Hidden).GetValue(null);
                 CollectionAssert.Contains(indices, ordinal, "The compiled fragment must use the planned owner without changing the system's global ordinal.");
                 if (type.IsGenericType && expected != type.Assembly.GetName().Name) ++crossAssemblyGenerics;

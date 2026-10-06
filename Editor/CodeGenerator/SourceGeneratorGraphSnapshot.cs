@@ -10,7 +10,7 @@ namespace ME.BECS.Editor {
     public static class SourceGeneratorGraphSnapshot {
         public const string MetadataKey = "ME.BECS.GraphInputSnapshot.v1";
         private const string RecoveryMetadataKey = "ME.BECS.InputRecovery.v1";
-        private static readonly string[] Consumers = { "ME.BECS.Gen.Runtime", "ME.BECS.Gen.Editor" };
+        private static readonly string[] Consumers = { "runtime", "editor" };
 
         public static string GetCurrent() {
             return Combine(GetCompilerSnapshot(), "analysis", new[] { GetCodeFingerprint() });
@@ -61,10 +61,24 @@ namespace ME.BECS.Editor {
                 string.Join("\n", changes.Take(20)) + (changes.Length > 20 ? "\n..." : ""));
         }
 
-        internal static bool HasRecoveryInputs() => AppDomain.CurrentDomain.GetAssemblies()
-            .Where(assembly => !assembly.IsDynamic && Consumers.Contains(assembly.GetName().Name, StringComparer.Ordinal))
+        private static bool HasCompilerRecovery(Assembly[] assemblies) => assemblies
+            .Where(assembly => !assembly.IsDynamic && assembly.GetType("ME.BECS.SourceGenerated.IncompleteInputGuard", false) != null)
             .Any(assembly => assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Any(attribute => attribute.Key == RecoveryMetadataKey)) || !SourceGeneratorSystemFragments.ValidateCompiled(out _);
+                .Any(attribute => attribute.Key == RecoveryMetadataKey));
+
+        internal static bool HasRecoveryInputs() {
+            try {
+                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+                return HasCompilerRecovery(assemblies) ||
+                    !SourceGeneratorInputCatalog.TryGet(false, assemblies, out _, out _) ||
+                    !SourceGeneratorInputCatalog.TryGet(true, assemblies, out _, out _) ||
+                    !SourceGeneratorSystemFragments.ValidateCompiledAssemblies(assemblies, out _);
+            } catch (Exception) {
+                // Bad/stale compiled evidence requires an export. It must not
+                // throw before automatic recovery can reach the exporter.
+                return true;
+            }
+        }
 
         private static string GetAssetFingerprint() {
             var configurationTypes = new HashSet<string>(StringComparer.Ordinal);
@@ -129,14 +143,18 @@ namespace ME.BECS.Editor {
 
         public static bool IsCompiledCurrent(string expected, out string reason) {
             try {
-                var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => !assembly.IsDynamic &&
-                    Consumers.Contains(assembly.GetName().Name, StringComparer.Ordinal)).ToArray();
+                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+                if (HasCompilerRecovery(assemblies)) {
+                    reason = "Compiler input recovery is incomplete. Wait for input export and successful compilation.";
+                    return false;
+                }
                 if (!SourceGeneratorAnalysisReceipt.TryValidateCompiled(expected, assemblies, out var compilerSnapshot, out reason)) return false;
-                var snapshots = assemblies
-                    .Select(assembly => new KeyValuePair<string, string[]>(assembly.GetName().Name,
-                        assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                            .Where(attribute => attribute.Key == MetadataKey).Select(attribute => attribute.Value).ToArray())).ToArray();
-                return ValidateCompiled(compilerSnapshot, snapshots, out reason) && SourceGeneratorSystemFragments.ValidateCompiled(out reason);
+                var snapshots = new KeyValuePair<string, string[]>[2];
+                foreach (var editor in new[] { false, true }) {
+                    if (!SourceGeneratorInputCatalog.TryGet(editor, assemblies, out var catalog, out reason)) return false;
+                    snapshots[editor ? 1 : 0] = new KeyValuePair<string, string[]>(catalog.Profile, new[] { catalog.Snapshot });
+                }
+                return ValidateCompiled(compilerSnapshot, snapshots, out reason) && SourceGeneratorSystemFragments.ValidateCompiledAssemblies(assemblies, out reason);
             } catch (Exception exception) { reason = "Cannot inspect compiled graph input snapshots: " + exception.Message; return false; }
         }
 

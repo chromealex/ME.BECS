@@ -1,8 +1,9 @@
+using System;
 using System.Collections.Generic;
-using Unity.Collections;
-using UnityEngine;
+using System.Reflection;
 using UnityEditor;
 using UnityEditor.UIElements;
+using UnityEngine;
 using UnityEngine.UIElements;
 using static ME.BECS.Cuts;
 
@@ -10,808 +11,398 @@ namespace ME.BECS.Editor {
 
     [CustomPropertyDrawer(typeof(Ent))]
     public unsafe class EntityDrawer : PropertyDrawer {
-
-        private struct MethodsCache {
-
-            private static readonly System.Reflection.MethodInfo methodRead = typeof(Components).GetMethod(nameof(Components.ReadDirect));
-            private static readonly System.Reflection.MethodInfo methodHas = typeof(Components).GetMethod(nameof(Components.HasDirectEnabled));
-            
-            private static readonly Dictionary<System.Type, System.Reflection.MethodInfo> read = new Dictionary<System.Type, System.Reflection.MethodInfo>();
-            private static readonly Dictionary<System.Type, System.Reflection.MethodInfo> has = new Dictionary<System.Type, System.Reflection.MethodInfo>();
-
-            private object[] entParams;
-            
-            public object Read(System.Type type) {
-
-                if (read.TryGetValue(type, out var methodInfo) == true) {
-                    return methodInfo.Invoke(null, this.entParams);
-                } else {
-                    methodInfo = methodRead.MakeGenericMethod(type);
-                    read.Add(type, methodInfo);
-                    return methodInfo.Invoke(null, this.entParams);
-                }
-
+        // A controller belongs to a visual tree, not to the cached PropertyDrawer instance.
+        private View view;
+        private static WorldEntityEditorWindow.TempObject selectedEntity;
+        private static void SelectEntity(Ent entity) {
+            if (selectedEntity == null) {
+                selectedEntity = ScriptableObject.CreateInstance<WorldEntityEditorWindow.TempObject>();
+                selectedEntity.hideFlags = HideFlags.HideAndDontSave;
+                AssemblyReloadEvents.beforeAssemblyReload -= ReleaseSelection;
+                AssemblyReloadEvents.beforeAssemblyReload += ReleaseSelection;
             }
-
-            public bool Has(System.Type type) {
-                
-                if (has.TryGetValue(type, out var methodInfo) == true) {
-                    return (bool)methodInfo.Invoke(null, this.entParams);
-                } else {
-                    methodInfo = methodHas.MakeGenericMethod(type);
-                    has.Add(type, methodInfo);
-                    return (bool)methodInfo.Invoke(null, this.entParams);
-                }
-
-            }
-
-            public void SetEntity(Ent ent) {
-                if (this.entParams == null) this.entParams = new object[1] { null };
-                this.entParams[0] = ent;
-            }
-
+            selectedEntity.entity = entity;
+            Selection.activeObject = selectedEntity;
         }
-
-        private static readonly Dictionary<ulong, TempObject> tempObjects = new Dictionary<ulong, TempObject>();
-        private MethodsCache cache = new MethodsCache();
-        
-        private static StyleSheet styleSheetBase;
-        private static StyleSheet styleSheet;
-        private static StyleSheet styleSheetTooltip;
-
-        private TempObject tempObject {
-            get {
-                if (tempObjects.TryGetValue(this.entity.ToULong(), out var temp) == true) {
-                    if (temp == null) tempObjects.Remove(this.entity.ToULong());
-                    return temp;
-                }
-
-                return null;
-            }
+        private static void ReleaseSelection() {
+            if (selectedEntity != null) UnityEngine.Object.DestroyImmediate(selectedEntity);
+            selectedEntity = null;
         }
-
-        private void CreateTempObject() {
-            var c = TempObject.CreateInstance<TempObject>();
-            tempObjects.Add(this.entity.ToULong(), c);
+        // Optional network addon supplies replay state without a runtime Network dependency.
+        public static Func<World, bool> ReplayModeResolver { get; set; }
+        public static bool CanEditComponents(Ent entity) {
+            if (entity.IsEmpty() || !entity.World.isCreated || !entity.IsAlive()) return false;
+            return CanEditWorld(entity.World);
         }
-        
-        protected void LoadStyle() {
-            if (EntityDrawer.styleSheetBase == null) {
-                EntityDrawer.styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Entity.uss");
-            }
-            if (EntityDrawer.styleSheetTooltip == null) {
-                EntityDrawer.styleSheetTooltip = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Tooltip.uss");
-            }
-            if (EntityDrawer.styleSheet == null) {
-                EntityDrawer.styleSheet = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/EntityConfig.uss");
-            }
+        public static bool CanEditWorld(World world) {
+            return world.isCreated && (world.state.ptr->Mode != WorldMode.Logic || ReplayModeResolver?.Invoke(world) == true);
         }
-
-        ~EntityDrawer() {
-
-            this.propertyPath = null;
-            this.property = null;
-            this.propertySerializedObject = null;
-
-            if (tempObjects.TryGetValue(this.entity.ToULong(), out var temp) == true) {
-                if (temp != null) EditorApplication.delayCall += () => Object.DestroyImmediate(temp);
-                tempObjects.Remove(this.entity.ToULong());
-            }
-
-        }
-        
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
-            
-            this.LoadStyle();
+            var controller = new View(property);
+            this.view = controller;
+            return controller.root;
+        }
+        public void SetFoldoutState(bool value) { this.view?.SetExpanded(value); }
+        public void OnUpdate() { this.view?.Refresh(); }
 
-            var rootVisualElement = new VisualElement();
-            EditorUIUtils.ApplyDefaultStyles(rootVisualElement);
-            rootVisualElement.AddToClassList("entity-mini");
-            rootVisualElement.Clear();
-            rootVisualElement.styleSheets.Add(EntityDrawer.styleSheetBase);
-            rootVisualElement.styleSheets.Add(EntityDrawer.styleSheetTooltip);
-            rootVisualElement.styleSheets.Add(EntityDrawer.styleSheet);
-            this.rootVisualElement = rootVisualElement;
+        private sealed class Access {
+            public bool tag;
+            public Func<Ent, bool> has, enabled;
+            public Func<Ent, object> read;
+            public Action<Ent, object> write;
+            public Func<object, object, bool> equal;
+            public Func<object, object> clone;
+        }
+        private static readonly Dictionary<Type, Access> normalAccess = new Dictionary<Type, Access>();
+        private static readonly Dictionary<Type, Access> sharedAccess = new Dictionary<Type, Access>();
+        private static Access GetAccess(Type type, bool shared) {
+            var cache = shared ? sharedAccess : normalAccess;
+            if (cache.TryGetValue(type, out var access)) return access;
+            var factory = typeof(EntityDrawer).GetMethod(shared ? nameof(SharedAccess) : nameof(NormalAccess), BindingFlags.NonPublic | BindingFlags.Static);
+            access = (Access)factory.MakeGenericMethod(type).Invoke(null, null);
+            cache.Add(type, access);
+            return access;
+        }
+        private static Access NormalAccess<T>() where T : unmanaged, IComponent {
+            return new Access { tag = StaticTypes<T>.isTag, has = Components.HasDirect<T>, enabled = Components.HasDirectEnabled<T>,
+                read = ent => Components.ReadDirect<T>(ent), write = (ent, value) => Components.SetDirect(ent, (T)value),
+                equal = (a, b) => StructCopy((T)a, (T)b), clone = value => (T)value };
+        }
+        private static Access SharedAccess<T>() where T : unmanaged, IComponentShared {
+            return new Access { tag = StaticTypes<T>.isTag, has = Components.HasSharedDirect<T>, enabled = Components.HasSharedDirect<T>,
+                read = ent => Components.ReadSharedDirect<T>(ent), write = (ent, value) => Components.SetSharedDirect(ent, (T)value),
+                equal = (a, b) => StructCopy((T)a, (T)b), clone = value => (T)value };
+        }
+        public static bool StructCopy<T>(T a, T b) where T : unmanaged {
+            return _memcmp(_address(ref a), _address(ref b), TSize<T>.size) == 0;
+        }
+        public static bool StructsAreEqual(object a, object b) {
+            if (a == null || b == null) return a == b;
+            if (a.GetType() != b.GetType()) return false;
+            var method = typeof(EntityDrawer).GetMethod(nameof(StructCopy)).MakeGenericMethod(a.GetType());
+            return (bool)method.Invoke(null, new[] { a, b });
+        }
 
-            this.propertyPath = property.propertyPath;
-            this.propertySerializedObject = property.serializedObject;
-            this.property = property;
-            
-            var entObj = PropertyEditorUtils.GetTargetObjectOfProperty(property);
-            if (entObj is Ent ent) {
-                
-                this.entity = ent;
-                this.DrawEntity(rootVisualElement, this.entity.World, property.displayName);
+        private sealed class Row : IDisposable {
+            public readonly Type type;
+            public readonly Access access;
+            public readonly VisualElement element;
+            private readonly Foldout foldout;
+            private readonly View owner;
+            private TempObject buffer, mergeBuffer;
+            private SerializedObject serialized, mergeSerialized;
+            private object snapshot;
+            private bool syncing, built, disposed;
+            private bool? editable;
+            private readonly System.Collections.Generic.List<PropertyField> controls = new System.Collections.Generic.List<PropertyField>();
+            public Row(View owner, Type type, bool shared) {
+                this.owner = owner; this.type = type; this.access = GetAccess(type, shared);
+                if (this.access.tag) {
+                    this.element = new Label(EditorUtils.GetComponentName(type));
+                    this.element.AddToClassList("config-component-row");
+                    this.element.AddToClassList("config-tag-row");
+                    return;
+                }
+                this.foldout = new Foldout { text = EditorUtils.GetComponentName(type), value = owner.IsExpanded(type, shared) };
+                this.element = this.foldout;
+                this.element.AddToClassList("config-component-row");
+                this.element.AddToClassList("config-component-foldout");
+                this.foldout.RegisterValueChangedCallback(evt => {
+                    if (evt.target != this.element) return;
+                    owner.RememberExpanded(type, shared, evt.newValue);
+                    if (evt.newValue) this.Refresh();
+                });
+            }
+            public void Refresh() {
+                if (this.disposed || !this.owner.Alive || !this.access.has(this.owner.entity)) return;
+                this.element.EnableInClassList("runtime-component-disabled", !this.access.enabled(this.owner.entity));
+                if (this.editable != this.owner.Editable) {
+                    this.editable = this.owner.Editable;
+                    foreach (var control in this.controls) this.ApplyEditability(control);
+                }
+                if (this.access.tag || !this.foldout.value || this.element.resolvedStyle.display == DisplayStyle.None) return;
+                // Keep a user's in-progress text intact; other components continue updating.
+                var focus = this.element.panel?.focusController.focusedElement as VisualElement;
+                if (focus != null && this.foldout.contentContainer.Contains(focus)) return;
+                var value = this.access.read(this.owner.entity);
+                if (this.snapshot != null && this.access.equal(this.snapshot, value)) return;
+                this.syncing = true;
+                try {
+                    if (this.buffer == null) {
+                        this.buffer = ScriptableObject.CreateInstance<TempObject>();
+                        this.buffer.hideFlags = HideFlags.HideAndDontSave;
+                        this.buffer.data = new[] { value };
+                        this.serialized = new SerializedObject(this.buffer);
+                    } else {
+                        this.buffer.data[0] = value;
+                        this.serialized.Update();
+                    }
+                    this.snapshot = this.access.clone(value);
+                    if (!this.built) this.BuildFields();
+                } finally { this.syncing = false; }
+            }
+            private void BuildFields() {
+                this.built = true;
+                var component = this.serialized.FindProperty("data").GetArrayElementAtIndex(0);
+                var iterator = component.Copy();
+                var end = iterator.GetEndProperty();
+                if (!iterator.NextVisible(true)) return;
+                do {
+                    if (SerializedProperty.EqualContents(iterator, end) || iterator.depth <= component.depth) break;
+                    var field = iterator.Copy();
+                    var row = new VisualElement(); row.AddToClassList("config-field-row");
+                    var control = new PropertyField(field);
+                    this.controls.Add(control);
+                    control.RegisterCallback<GeometryChangedEvent>(evt => this.ApplyEditability(control));
+                    control.RegisterCallback<AttachToPanelEvent>(evt => control.schedule.Execute(() => this.ApplyEditability(control)));
+                    row.Add(control); this.element.Add(row);
+                    control.BindProperty(field);
+                    control.RegisterCallback<SerializedPropertyChangeEvent>(evt => this.Commit(evt.changedProperty));
+                } while (iterator.NextVisible(false));
+            }
+            private void ApplyEditability(PropertyField control) {
+                // Disable value inputs, never their containers: foldouts and entity navigation stay usable.
+                control.Query<VisualElement>(className: "unity-base-field").ForEach(input => {
+                    var foldout = input.GetFirstAncestorOfType<Foldout>();
+                    if (input is Foldout || input.Q<Foldout>() != null || input.ClassListContains("unity-foldout__toggle") || (foldout != null && foldout.Q<Toggle>() == input)) {
+                        input.SetEnabled(true);
+                        return;
+                    }
+                    if (input.Q(className: "runtime-entity-inspector") != null) { input.SetEnabled(true); return; }
+                    var navigation = input;
+                    while (navigation != null && navigation != control) {
+                        if (navigation.ClassListContains("runtime-entity-navigation") || navigation.ClassListContains("runtime-entity-inspector")) return;
+                        navigation = navigation.parent;
+                    }
+                    input.SetEnabled(this.owner.Editable);
+                });
+                control.Query<Button>().ForEach(button => {
+                    var parent = button.parent;
+                    while (parent != null && parent != control) {
+                        if (parent.ClassListContains("runtime-entity-navigation") || parent.ClassListContains("runtime-entity-inspector")) return;
+                        parent = parent.parent;
+                    }
+                    button.SetEnabled(this.owner.Editable);
+                });
+            }
+            private void Commit(SerializedProperty changed) {
+                if (this.disposed || this.syncing || changed == null || changed.serializedObject.targetObject != this.buffer || !CanEditComponents(this.owner.entity) || !this.access.has(this.owner.entity)) return;
+                var edited = this.serialized.FindProperty("data").GetArrayElementAtIndex(0).managedReferenceValue;
+                // Binding notifications from a runtime refresh are not user edits.
+                if (edited == null || this.snapshot == null || this.access.equal(edited, this.snapshot)) return;
+                const string prefix = "data.Array.data[0].";
+                if (!changed.propertyPath.StartsWith(prefix, StringComparison.Ordinal)) return;
+                if (this.mergeBuffer == null) {
+                    this.mergeBuffer = ScriptableObject.CreateInstance<TempObject>();
+                    this.mergeBuffer.hideFlags = HideFlags.HideAndDontSave;
+                    this.mergeBuffer.data = new object[1];
+                    this.mergeSerialized = new SerializedObject(this.mergeBuffer);
+                }
+                // Merge only the changed property into freshly read runtime data.
+                this.mergeBuffer.data[0] = this.access.read(this.owner.entity);
+                this.mergeSerialized.Update();
+                this.mergeSerialized.CopyFromSerializedProperty(changed);
+                this.mergeSerialized.ApplyModifiedPropertiesWithoutUndo();
+                if (CanEditComponents(this.owner.entity) && this.access.has(this.owner.entity)) this.access.write(this.owner.entity, this.mergeBuffer.data[0]);
+                this.snapshot = this.access.clone(edited);
+            }
+            public void Dispose() {
+                this.disposed = true;
+                this.element.Unbind(); this.element.RemoveFromHierarchy();
+                this.serialized?.Dispose(); this.mergeSerialized?.Dispose();
+                if (this.buffer != null) UnityEngine.Object.DestroyImmediate(this.buffer);
+                if (this.mergeBuffer != null) UnityEngine.Object.DestroyImmediate(this.mergeBuffer);
+                this.buffer = null; this.mergeBuffer = null;
+            }
+        }
 
-            } else {
-                
+        private sealed class View {
+            public readonly VisualElement root = new VisualElement();
+            public Ent entity;
+            public bool Editable { get; private set; }
+            public bool Alive => !this.entity.IsEmpty() && this.entity.World.isCreated && this.entity.IsAlive();
+            private SerializedObject source;
+            private readonly UnityEngine.Object[] sourceTargets;
+            private readonly string path, caption;
+            private readonly Foldout header, journal;
+            private readonly Button inlineButton, selectButton;
+            private readonly Label metadata;
+            private readonly VisualElement normal, shared, journalContent;
+            private readonly Label normalTitle, sharedTitle;
+            private readonly Dictionary<Type, Row> normalRows = new Dictionary<Type, Row>();
+            private readonly Dictionary<Type, Row> sharedRows = new Dictionary<Type, Row>();
+            private readonly Dictionary<string, bool> expanded = new Dictionary<string, bool>();
+            private readonly System.Collections.Generic.HashSet<Type> present = new System.Collections.Generic.HashSet<Type>();
+            private readonly System.Collections.Generic.List<Type> types = new System.Collections.Generic.List<Type>();
+            private readonly System.Collections.Generic.List<Type> removed = new System.Collections.Generic.List<Type>();
+            private IVisualElementScheduledItem timer;
+            private string search = "";
+            private JournalEditorWindow.VisualElementData[] journalItems;
+            private double nextJournal;
+            private Label popup;
+            public View(SerializedProperty property) {
+                this.sourceTargets = property.serializedObject.targetObjects;
+                this.source = new SerializedObject(this.sourceTargets);
+                this.path = property.propertyPath; this.caption = property.displayName;
+                this.root.AddToClassList("compact-config-inspector");
+                this.root.AddToClassList("runtime-entity-inspector");
+                this.ApplyTheme();
+                this.header = new Foldout { text = this.caption, value = EditorPrefs.GetBool("ME.BECS.Foldouts.Entity." + this.path, false) };
+                var navigation = new VisualElement();
+                navigation.AddToClassList("runtime-entity-navigation");
+                this.root.Add(navigation);
+                var reference = new Label(this.caption);
+                reference.AddToClassList("runtime-entity-reference");
+                navigation.Add(reference);
+                this.inlineButton = new Button(() => { this.SetExpanded(!this.header.value); this.Refresh(); }) { text = "Show Inline" };
+                this.selectButton = new Button(() => { if (this.Alive) SelectEntity(this.entity); }) { text = "Select Entity" };
+                navigation.Add(this.inlineButton); navigation.Add(this.selectButton);
+                this.root.Add(this.header);
+                this.header.style.display = this.header.value ? DisplayStyle.Flex : DisplayStyle.None;
+                this.metadata = new Label(); this.metadata.AddToClassList("runtime-entity-metadata");
+                this.header.Add(this.metadata);
+                var searchField = new ToolbarSearchField(); searchField.AddToClassList("config-search");
+                this.header.Add(searchField);
+                searchField.RegisterValueChangedCallback(evt => { this.search = evt.newValue.Trim(); this.Filter(); });
+                this.normal = this.Section("Components", out this.normalTitle);
+                this.shared = this.Section("Shared Components", out this.sharedTitle);
+                this.journal = new Foldout { text = "Journal", value = false };
+                this.journal.AddToClassList("config-component-foldout"); this.header.Add(this.journal);
+                this.journalContent = new VisualElement(); this.journal.Add(this.journalContent);
+                this.journal.styleSheets.Add(EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Journal.uss"));
+                this.header.RegisterValueChangedCallback(evt => { if (evt.target == this.header) { this.SetExpanded(evt.newValue); this.Refresh(); } });
+                this.root.RegisterCallback<AttachToPanelEvent>(evt => {
+                    if (this.source == null && this.HasSourceTargets()) this.source = new SerializedObject(this.sourceTargets);
+                    Themes.Changed -= this.ApplyTheme; Themes.Changed += this.ApplyTheme;
+                    this.timer?.Pause(); this.timer = this.root.schedule.Execute(this.Refresh).Every(100);
+                    this.Refresh();
+                });
+                this.root.RegisterCallback<DetachFromPanelEvent>(evt => {
+                    this.StopUpdates();
+                });
+                this.root.RegisterCallback<PointerOverEvent>(this.Tooltip);
+                this.root.RegisterCallback<PointerOutEvent>(evt => this.HideTooltip());
+                this.root.RegisterCallback<WheelEvent>(evt => this.HideTooltip());
+                this.root.RegisterCallback<TooltipEvent>(evt => { if (this.popup != null) evt.StopImmediatePropagation(); });
+            }
+            private void ApplyTheme() {
+                this.root.styleSheets.Clear();
+                this.root.styleSheets.Add(EditorUtils.LoadResource<StyleSheet>(Themes.CurrentTheme));
+                this.root.styleSheets.Add(EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/EntityConfigCompact.uss"));
+            }
+            private VisualElement Section(string name, out Label title) {
+                var section = new VisualElement(); section.AddToClassList("entity-components"); this.header.Add(section);
+                title = new Label(name + " · 0"); title.AddToClassList("entity-components-label"); section.Add(title);
+                var list = new VisualElement(); list.AddToClassList("fields-container"); section.Add(list); return list;
+            }
+            public bool IsExpanded(Type type, bool shared) => this.expanded.TryGetValue((shared ? "s:" : "c:") + type.FullName, out var value) && value;
+            public void RememberExpanded(Type type, bool shared, bool value) { this.expanded[(shared ? "s:" : "c:") + type.FullName] = value; }
+            public void SetExpanded(bool value) { this.header.SetValueWithoutNotify(value); this.header.style.display = value ? DisplayStyle.Flex : DisplayStyle.None; this.inlineButton.text = value ? "Hide Inline" : "Show Inline"; EditorPrefs.SetBool("ME.BECS.Foldouts.Entity." + this.path, value); }
+            private bool HasSourceTargets() {
+                foreach (var target in this.sourceTargets) if (target == null) return false;
+                return this.sourceTargets.Length > 0;
+            }
+            private void StopUpdates() {
+                this.timer?.Pause();
+                Themes.Changed -= this.ApplyTheme;
+                this.HideTooltip(); this.ClearRows();
                 this.entity = default;
-                
+                var oldSource = this.source; this.source = null;
+                oldSource?.Dispose();
             }
-
-            EditorApplication.update += this.OnUpdate;
-
-            return this.rootVisualElement;
-
-        }
-        
-        private bool prevState;
-        private SerializedProperty property;
-        private string propertyPath;
-        private SerializedObject propertySerializedObject;
-        public void OnUpdate() {
-
-            EditorApplication.update -= this.OnUpdate;
-            if (PropertyEditorUtils.IsValid(this.property) == false) {
-                return;
-            }
-
-            var obj = PropertyEditorUtils.GetTargetObjectOfProperty(this.property ?? this.propertySerializedObject.FindProperty(this.propertyPath));
-            if (obj == null || obj is not Ent ent) return;
-            
-            this.entity = ent;
-            var world = this.entity.World;
-            if (this.entity.IsAlive() == true && this.version != this.entity.Version) {
-                this.FetchDataFromEntity(world);
-            }
-            var newState = this.GetState(world);
-            if (this.prevState != newState
-                #if !ENABLE_BECS_FLAT_QUERIES 
-                || (newState == true && this.archId != this.GetArchId())
-                #endif
-                ) {
-                this.DrawEntity(this.rootVisualElement, world, this.property.displayName);
-            } else if (newState == true) {
-                this.UpdateData();
-            }
-            
-            EditorApplication.update += this.OnUpdate;
-            
-        }
-
-        private bool GetState(World world) {
-
-            return world.isCreated == true &&
-                   this.entity.IsAlive() == true;
-            
-        }
-
-        private uint version;
-        protected Ent entity;
-        private uint archId;
-        private VisualElement rootVisualElement;
-        private SerializedObject serializedObj;
-
-        private Label versionLabel;
-
-        #if !ENABLE_BECS_FLAT_QUERIES
-        private uint GetArchId() {
-            var world = this.entity.World;
-            return world.state.ptr->archetypes.entToArchetypeIdx[world.state.ptr->allocator, this.entity.id];
-        }
-        #endif
-
-        private void UpdateData() {
-
-            this.versionLabel.text = this.entity.Version.ToString();
-            if (this.journalRoot != null) {
-                this.journalRoot.Clear();
-                JournalEditorWindow.UpdateEntityJournal(this.journalRoot, ref this.journalItems, this.entity);
-            }
-
-        }
-
-        private void DrawEntity(VisualElement root, World world, string displayName = null) {
-            
-            var container = root;
-            container.userData = this.entity;
-            container.Clear();
-
-            var idString = "-";
-            var genString = "-";
-            var worldString = "-";
-            var editorNameString = string.Empty;
-            var versionString = string.Empty;
-            var drawComponents = true;
-
-            if (this.GetState(world) == true) {
-                
-                idString = this.entity.id.ToString();
-                genString = this.entity.gen.ToString();
-                worldString = this.entity.worldId.ToString();
-                versionString = this.entity.Version.ToString();
-                editorNameString = this.entity.EditorName.ToString();
-
-            } else {
-
-                drawComponents = false;
-
-            }
-
-            if (this.property.serializedObject.targetObjects.Length > 1) {
-
-                idString = "-";
-                genString = "-";
-                worldString = "-";
-                versionString = "-";
-                editorNameString = string.Empty;
-                drawComponents = false;
-
-            }
-
-            var rootComponents = new VisualElement();
-            var toggleContainer = new VisualElement();
-            var header = new Toggle();
-            header.RegisterValueChangedCallback((evt) => {
-                toggleContainer.style.display = new StyleEnum<DisplayStyle>(evt.newValue == true ? DisplayStyle.Flex : DisplayStyle.None);
-                header.RemoveFromClassList("toggle-checked");
-                if (evt.newValue == true) {
-                    header.AddToClassList("toggle-checked");
-                    if (drawComponents == true && header.value == true) this.DrawComponents(rootComponents, world);
-                } else {
-                    rootComponents.Clear();
-                }
-                this.SetFoldoutState(evt.newValue);
-            });
-            header.value = EditorPrefs.GetBool($"ME.BECS.Foldouts.Entity.{this.propertyPath}", false);
-            toggleContainer.style.display = new StyleEnum<DisplayStyle>(header.value == true ? DisplayStyle.Flex : DisplayStyle.None);
-            header.RemoveFromClassList("toggle-checked");
-            if (header.value == true) header.AddToClassList("toggle-checked");
-            header.AddToClassList("entity-header");
-            container.Add(header);
-            container.Add(toggleContainer);
-            
-            if (drawComponents == true && header.value == true) this.DrawComponents(rootComponents, world);
-            toggleContainer.Add(rootComponents);
-
-            if (displayName != null) {
-                var idContainer = new VisualElement();
-                idContainer.AddToClassList("entity-name-container");
-                header.Add(idContainer);
-                var entityIdLabel = new Label(displayName);
-                entityIdLabel.AddToClassList("entity-name-label");
-                entityIdLabel.AddToClassList("label-header");
-                idContainer.Add(entityIdLabel);
-            }
-
-            {
-                var nameContainer = new VisualElement();
-                nameContainer.style.display = new StyleEnum<DisplayStyle>(string.IsNullOrEmpty(editorNameString) == true ? DisplayStyle.None : DisplayStyle.Flex);
-                nameContainer.AddToClassList("entity-name-container");
-                header.Add(nameContainer);
-                var entityNameLabel = new Label("Name");
-                entityNameLabel.AddToClassList("entity-name-label");
-                entityNameLabel.AddToClassList("label-header");
-                nameContainer.Add(entityNameLabel);
-                var entityName = new Label(editorNameString);
-                entityName.AddToClassList("entity-name");
-                entityName.AddToClassList("label-value");
-                nameContainer.Add(entityName);
-            }
-
-            {
-                var idContainer = new VisualElement();
-                idContainer.AddToClassList("entity-id-container");
-                header.Add(idContainer);
-                var entityIdLabel = new Label("ID");
-                entityIdLabel.AddToClassList("entity-id-label");
-                entityIdLabel.AddToClassList("label-header");
-                idContainer.Add(entityIdLabel);
-                var entityId = new Label(idString);
-                entityId.AddToClassList("entity-id");
-                entityId.AddToClassList("label-value");
-                idContainer.Add(entityId);
-            }
-
-            {
-                var genContainer = new VisualElement();
-                genContainer.AddToClassList("entity-gen-container");
-                header.Add(genContainer);
-                var entityGenLabel = new Label("Generation");
-                entityGenLabel.AddToClassList("entity-gen-label");
-                entityGenLabel.AddToClassList("label-header");
-                genContainer.Add(entityGenLabel);
-                var entityGen = new Label(genString);
-                entityGen.AddToClassList("entity-gen");
-                entityGen.AddToClassList("label-value");
-                genContainer.Add(entityGen);
-            }
-
-            {
-                var genContainer = new VisualElement();
-                genContainer.AddToClassList("entity-world-container");
-                header.Add(genContainer);
-                var entityGenLabel = new Label("World");
-                entityGenLabel.AddToClassList("entity-world-label");
-                entityGenLabel.AddToClassList("label-header");
-                genContainer.Add(entityGenLabel);
-                var entityGen = new Label(worldString);
-                entityGen.AddToClassList("entity-world");
-                entityGen.AddToClassList("label-value");
-                genContainer.Add(entityGen);
-            }
-
-            if (this.GetState(world) == false) {
-
-                this.prevState = false;
-                root.AddToClassList("entity-not-alive");
-                
-                if (this.entity.IsEmpty() == true) {
-
-                    var notAliveContainer = new Label("Entity is empty");
-                    notAliveContainer.AddToClassList("entity-not-alive");
-                    header.Add(notAliveContainer);
-
-                } else {
-
-                    var notAliveContainer = new Label("Entity is not alive");
-                    notAliveContainer.AddToClassList("entity-not-alive");
-                    header.Add(notAliveContainer);
-                    
-                }
-
-            } else {
-
-                {
-                    var versionContainer = new VisualElement();
-                    versionContainer.AddToClassList("entity-version-container");
-                    header.Add(versionContainer);
-                    var entityGenLabel = new Label("Version");
-                    entityGenLabel.AddToClassList("entity-version-label");
-                    entityGenLabel.AddToClassList("label-header");
-                    versionContainer.Add(entityGenLabel);
-                    var entityVersion = new Label(versionString);
-                    this.versionLabel = entityVersion;
-                    entityVersion.AddToClassList("entity-version");
-                    entityVersion.AddToClassList("label-value");
-                    versionContainer.Add(entityVersion);
-                }
-
-                this.prevState = true;
-                root.RemoveFromClassList("entity-not-alive");
-        
-                #if !ENABLE_BECS_FLAT_QUERIES
-                {
-                    var archContainer = new VisualElement();
-                    archContainer.AddToClassList("entity-arch-container");
-                    header.Add(archContainer);
-                    var entityArchLabel = new Label("Archetype");
-                    entityArchLabel.AddToClassList("entity-arch-label");
-                    entityArchLabel.AddToClassList("label-header");
-                    archContainer.Add(entityArchLabel);
-                    var archId = this.GetArchId();
-                    this.archId = archId;
-                    var entityArch = new Label(drawComponents == true ? $"#{archId}" : "-");
-                    entityArch.AddToClassList("entity-arch");
-                    entityArch.AddToClassList("label-value");
-                    archContainer.Add(entityArch);
-                }
-                #endif
-
-                {
-                    var genContainer = new VisualElement();
-                    genContainer.AddToClassList("entity-type-container");
-                    header.Add(genContainer);
-                    var entityGenLabel = new Label("Type");
-                    entityGenLabel.AddToClassList("entity-type-label");
-                    entityGenLabel.AddToClassList("label-header");
-                    genContainer.Add(entityGenLabel);
-                    var entityGen = new Label(EditorUtils.GetComponentName(EntityTypesManaged.typeByGroupId[Ents.GetEntityGroupId(world.state, this.entity.id)]));
-                    entityGen.AddToClassList("entity-type");
-                    entityGen.AddToClassList("label-value");
-                    genContainer.Add(entityGen);
-                }
-
-            }
-
-        }
-        
-        private static readonly System.Reflection.MethodInfo methodSetComponent = typeof(Components).GetMethod(nameof(Components.SetDirect));
-        private static readonly System.Reflection.MethodInfo methodSetSharedComponent = typeof(Components).GetMethod(nameof(Components.SetSharedDirect));
-        private static readonly System.Reflection.MethodInfo methodReadComponent = typeof(Components).GetMethod(nameof(Components.ReadDirect));
-        private static readonly System.Reflection.MethodInfo methodReadSharedComponent = typeof(Components).GetMethod(nameof(Components.ReadSharedDirect));
-        private VisualElement componentContainerComponents;
-        private VisualElement componentContainerSharedComponents;
-        private VisualElement componentContainerComponentsRoot;
-        private VisualElement componentContainerSharedComponentsRoot;
-        private void DrawComponents(VisualElement root, World world) {
-
-            root.Clear();
-            
-            this.cachedFieldsComponents.Clear();
-            this.cachedFieldsSharedComponents.Clear();
-            
-            var container = root;
-
-            this.FetchDataFromEntity(world);
-            
-            var scrollView = new ScrollView(ScrollViewMode.Vertical);
-            container.Add(scrollView);
-            var componentsContainer = new VisualElement();
-            scrollView.contentContainer.Add(componentsContainer);
-            {
-                var components = new VisualElement();
-                this.componentContainerComponentsRoot = components;
-                components.AddToClassList("entity-components");
-                componentsContainer.Add(components);
-
-                var componentsLabel = new Label("Components");
-                componentsLabel.AddToClassList("entity-components-label");
-                components.Add(componentsLabel);
-
-                var componentsList = new VisualElement();
-                componentsList.AddToClassList("entity-components-list");
-                components.Add(componentsList);
-                {
-                    var componentContainer = new VisualElement();
-                    componentContainer.AddToClassList("fields-container");
-                    componentsList.Add(componentContainer);
-                    this.componentContainerComponents = componentContainer;
-                }
-            }
-            {
-                var components = new VisualElement();
-                this.componentContainerSharedComponentsRoot = components;
-                components.AddToClassList("entity-components");
-                components.AddToClassList("entity-shared-components");
-                componentsContainer.Add(components);
-
-                var componentsLabel = new Label("Shared Components");
-                componentsLabel.AddToClassList("entity-components-label");
-                components.Add(componentsLabel);
-
-                var componentsList = new VisualElement();
-                componentsList.AddToClassList("entity-components-list");
-                components.Add(componentsList);
-                {
-                    var componentContainer = new VisualElement();
-                    componentContainer.AddToClassList("fields-container");
-                    componentsList.Add(componentContainer);
-                    this.componentContainerSharedComponents = componentContainer;
-                }
-            }
-            {
-                var components = new Foldout();
-                components.text = "Journal";
-                components.value = false;
-                components.AddToClassList("entity-journal");
-                componentsContainer.Add(components);
-
-                components.styleSheets.Add(EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Journal.uss"));
-
-                var componentsList = new VisualElement();
-                componentsList.AddToClassList("entity-components-list");
-                components.Add(componentsList);
-                this.journalRoot = JournalEditorWindow.DrawEntityJournal(componentsList, ref this.journalItems, this.entity);
-            }
-            
-            this.serializedObj = new SerializedObject(this.tempObject);
-
-            this.RedrawComponents(world);
-            
-        }
-
-        private VisualElement journalRoot;
-        private JournalEditorWindow.VisualElementData[] journalItems;
-
-        private readonly System.Collections.Generic.List<VisualElement> cachedFieldsComponents = new System.Collections.Generic.List<VisualElement>();
-        private readonly System.Collections.Generic.List<VisualElement> cachedFieldsSharedComponents = new System.Collections.Generic.List<VisualElement>();
-
-        private void RedrawComponents(World world) {
-            
-            DrawFields(this.entity, this.componentContainerComponentsRoot, this.componentContainerComponents, this.cachedFieldsComponents, world, this.tempObject.data, this.tempObject.dataHas, this.serializedObj, nameof(TempObject.data), methodSetComponent, methodReadComponent);
-            DrawFields(this.entity, this.componentContainerSharedComponentsRoot, this.componentContainerSharedComponents, this.cachedFieldsSharedComponents, world, this.tempObject.dataShared, this.tempObject.dataSharedHas, this.serializedObj, nameof(TempObject.dataShared), methodSetSharedComponent, methodReadSharedComponent);
-            
-        }
-
-        private static bool fetchDataState;
-        private void FetchDataFromEntity(World world) {
-
-            this.version = this.entity.Version;
-            
-            if (this.tempObject == null) {
-                this.CreateTempObject();
-                this.serializedObj = new SerializedObject(this.tempObject);
-            }
-
-            fetchDataState = true;
-            this.FetchComponentsFromEntity(world);
-            this.FetchSharedComponentsFromEntity(world);
-            EditorApplication.delayCall += () => { fetchDataState = false; };
-
-        }
-        
-        private void FetchComponentsFromEntity(World world) {
-            
-            #if !ENABLE_BECS_FLAT_QUERIES
-            var archId = world.state.ptr->archetypes.entToArchetypeIdx[world.state.ptr->allocator, this.entity.id];
-            var arch = world.state.ptr->archetypes.list[world.state.ptr->allocator, archId];
-            #endif
-            
-            var cnt = 0;
-            {
+            public void Refresh() {
+                if (this.source == null) return;
+                if (!this.HasSourceTargets()) { this.StopUpdates(); return; }
+                this.source.Update();
+                var property = this.source.FindProperty(this.path);
+                if (property == null) { this.StopUpdates(); return; }
+                var value = PropertyEditorUtils.GetTargetObjectOfProperty(property);
+                if (value is not Ent ent) return;
+                if (ent.ToULong() != this.entity.ToULong()) { this.ClearRows(); this.entity = ent; this.nextJournal = 0; }
+                var alive = this.Alive;
+                this.Editable = CanEditComponents(this.entity);
+                this.selectButton.SetEnabled(alive);
+                this.inlineButton.SetEnabled(alive);
+                this.inlineButton.text = this.header.value ? "Hide Inline" : "Show Inline";
+                this.header.text = alive && !string.IsNullOrEmpty(this.entity.EditorName.ToString()) ? this.entity.EditorName.ToString() : this.caption;
+                this.metadata.text = alive ? $"ID {ent.id}  ·  Gen {ent.gen}  ·  World {ent.worldId}  ·  Version {ent.Version}" + (this.Editable ? "" : "  ·  Read only") : (ent.IsEmpty() ? "Entity is empty" : "Entity is not alive");
+                if (!alive) { this.ClearRows(); return; }
+                if (!this.header.value) return;
+                this.types.Clear();
+                var world = ent.World;
                 #if ENABLE_BECS_FLAT_QUERIES
-                ref var componentsLock = ref world.state.ptr->entities.GetEntityComponentsLock(world.state, this.entity.id);
+                ref var componentsLock = ref world.state.ptr->entities.GetEntityComponentsLock(world.state, ent.id);
                 componentsLock.Lock();
-                var e = world.state.ptr->entities.GetEntityComponentsEnumerator(world.state, this.entity.id);
+                try {
+                    var iterator = world.state.ptr->entities.GetEntityComponentsEnumerator(world.state, ent.id);
+                    while (iterator.MoveNext()) if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(iterator.Current, out var type)) this.types.Add(type);
+                } finally { componentsLock.Unlock(); }
                 #else
-                var components = arch.components;
-                var e = components.GetEnumerator(world);
+                var archId = world.state.ptr->archetypes.entToArchetypeIdx[world.state.ptr->allocator, ent.id];
+                var arch = world.state.ptr->archetypes.list[world.state.ptr->allocator, archId];
+                var iterator = arch.components.GetEnumerator(world);
+                while (iterator.MoveNext()) if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(iterator.Current, out var type)) this.types.Add(type);
                 #endif
-                while (e.MoveNext() == true) {
-                    var cId = e.Current;
-                    if (StaticTypesLoadedManaged.loadedTypes.ContainsKey(cId) == true) ++cnt;
-                }
-                #if ENABLE_BECS_FLAT_QUERIES
-                componentsLock.Unlock();
-                #endif
-            }
-
-            this.cache.SetEntity(this.entity);
-
-            if (this.tempObject.data != null &&
-                this.tempObject.data.Length == cnt) {
-                
-                {
-                    var i = 0;
-                    #if ENABLE_BECS_FLAT_QUERIES
-                    ref var componentsLock = ref world.state.ptr->entities.GetEntityComponentsLock(world.state, this.entity.id);
-                    componentsLock.Lock();
-                    var e = world.state.ptr->entities.GetEntityComponentsEnumerator(world.state, this.entity.id);
-                    #else
-                    var components = arch.components;
-                    var e = components.GetEnumerator(world);
-                    #endif
-                    while (e.MoveNext() == true) {
-                        var cId = e.Current;
-                        if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(cId, out var type) == true) {
-                            {
-                                this.tempObject.data[i] = this.cache.Read(type);
-                                this.tempObject.dataHas[i] = this.cache.Has(type);
-                            }
-                            ++i;
-                        }
-                    }
-                    #if ENABLE_BECS_FLAT_QUERIES
-                    componentsLock.Unlock();
-                    #endif
-                }
-            } else {
-                
-                this.tempObject.data = new object[cnt];
-                this.tempObject.dataHas = new bool[cnt];
-                {
-                    var i = 0;
-                    #if ENABLE_BECS_FLAT_QUERIES
-                    ref var componentsLock = ref world.state.ptr->entities.GetEntityComponentsLock(world.state, this.entity.id);
-                    componentsLock.Lock();
-                    var e = world.state.ptr->entities.GetEntityComponentsEnumerator(world.state, this.entity.id);
-                    #else
-                    var components = arch.components;
-                    var e = components.GetEnumerator(world);
-                    #endif
-                    while (e.MoveNext() == true) {
-                        var cId = e.Current;
-                        if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(cId, out var type) == true) {
-                            {
-                                this.tempObject.data[i] = this.cache.Read(type);
-                                this.tempObject.dataHas[i] = this.cache.Has(type);
-                            }
-                            ++i;
-                        }
-                    }
-                    #if ENABLE_BECS_FLAT_QUERIES
-                    componentsLock.Unlock();
-                    #endif
+                this.Reconcile(this.normalRows, this.normal, this.normalTitle, false);
+                this.types.Clear();
+                foreach (var pair in StaticTypesLoadedManaged.loadedSharedTypes) if (GetAccess(pair.Value, true).has(ent)) this.types.Add(pair.Value);
+                this.Reconcile(this.sharedRows, this.shared, this.sharedTitle, true);
+                if (this.journal.value && EditorApplication.timeSinceStartup >= this.nextJournal) {
+                    this.nextJournal = EditorApplication.timeSinceStartup + 0.5;
+                    this.journalContent.Clear();
+                    JournalEditorWindow.DrawEntityJournal(this.journalContent, ref this.journalItems, ent);
                 }
             }
-
+            private void Reconcile(Dictionary<Type, Row> rows, VisualElement list, Label title, bool shared) {
+                this.present.Clear(); foreach (var type in this.types) this.present.Add(type);
+                this.removed.Clear(); foreach (var pair in rows) if (!this.present.Contains(pair.Key)) this.removed.Add(pair.Key);
+                foreach (var type in this.removed) { rows[type].Dispose(); rows.Remove(type); }
+                var added = false;
+                foreach (var type in this.types) {
+                    if (rows.ContainsKey(type)) continue;
+                    var row = new Row(this, type, shared); rows.Add(type, row); list.Add(row.element); added = true;
+                }
+                if (added) {
+                    this.types.Sort((a, b) => string.Compare(EditorUtils.GetComponentName(a), EditorUtils.GetComponentName(b), StringComparison.Ordinal));
+                    for (var i = 0; i < this.types.Count; ++i) { var element = rows[this.types[i]].element; if (list.IndexOf(element) != i) list.Insert(i, element); }
+                    this.Filter();
+                }
+                title.text = (shared ? "Shared Components" : "Components") + " · " + rows.Count;
+                foreach (var pair in rows) pair.Value.Refresh();
+            }
+            private void Filter() {
+                this.Filter(this.normalRows); this.Filter(this.sharedRows);
+            }
+            private void Filter(Dictionary<Type, Row> rows) {
+                foreach (var pair in rows) {
+                    var matches = string.IsNullOrEmpty(this.search) || EditorUtils.GetComponentName(pair.Key).IndexOf(this.search, StringComparison.OrdinalIgnoreCase) >= 0 || pair.Key.FullName.IndexOf(this.search, StringComparison.OrdinalIgnoreCase) >= 0;
+                    pair.Value.element.style.display = matches ? DisplayStyle.Flex : DisplayStyle.None;
+                }
+            }
+            private void ClearRows() {
+                foreach (var pair in this.normalRows) pair.Value.Dispose(); this.normalRows.Clear();
+                foreach (var pair in this.sharedRows) pair.Value.Dispose(); this.sharedRows.Clear();
+                this.normalTitle.text = "Components · 0"; this.sharedTitle.text = "Shared Components · 0";
+                this.journalContent.Clear(); this.journalItems = null;
+            }
+            private void Tooltip(PointerOverEvent evt) {
+                var target = evt.target as VisualElement;
+                var decorator = target;
+                while (decorator != null && !decorator.ClassListContains("has-tooltip")) decorator = decorator.parent;
+                var text = decorator?.Q<Label>(className: "tooltip-text")?.text;
+                if (string.IsNullOrEmpty(text) || this.root.panel == null) return;
+                this.HideTooltip();
+                var overlay = this.root.panel.visualTree;
+                this.popup = new Label(text) { pickingMode = PickingMode.Ignore, enableRichText = true };
+                this.popup.AddToClassList("config-tooltip-popup");
+                this.popup.styleSheets.Add(EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/EntityConfigCompact.uss"));
+                this.popup.style.width = Mathf.Min(360, overlay.worldBound.width - 16);
+                var position = overlay.WorldToLocal(decorator.worldBound.position);
+                this.popup.style.left = Mathf.Max(8, position.x);
+                this.popup.style.bottom = overlay.worldBound.height - position.y + 4;
+                overlay.Add(this.popup); this.popup.BringToFront();
+            }
+            private void HideTooltip() { this.popup?.RemoveFromHierarchy(); this.popup = null; }
         }
-
-        private void FetchSharedComponentsFromEntity(World world) {
-            var methodRead = typeof(Components).GetMethod(nameof(Components.ReadSharedDirect));
-            var methodHas = typeof(Components).GetMethod(nameof(Components.HasSharedDirect));
-            var count = 0;
-            foreach (var kv in StaticTypesLoadedManaged.loadedSharedTypes) {
-                var type = kv.Value;
-                {
-                    var gHas = methodHas.MakeGenericMethod(type);
-                    var has = (bool)gHas.Invoke(world.state.ptr->components, new object[] { this.entity });
-                    if (has == true) {
-                        ++count;
-                    }
-
-                }
-            }
-
-            if (this.tempObject.dataShared != null &&
-                this.tempObject.dataShared.Length == count) {
-                var i = 0;
-                foreach (var kv in StaticTypesLoadedManaged.loadedSharedTypes) {
-                    var type = kv.Value;
-                    {
-                        var gHas = methodHas.MakeGenericMethod(type);
-                        var has = (bool)gHas.Invoke(world.state.ptr->components, new object[] { this.entity });
-                        if (has == true) {
-                            var gMethod = methodRead.MakeGenericMethod(type);
-                            var val = gMethod.Invoke(world.state.ptr->components, new object[] { this.entity });
-                            this.tempObject.dataShared[i++] = val;
-                        }
-                    }
-                }
-            } else {
-                var list = new System.Collections.Generic.List<object>(count);
-                foreach (var kv in StaticTypesLoadedManaged.loadedSharedTypes) {
-                    var type = kv.Value;
-                    {
-                        var gHas = methodHas.MakeGenericMethod(type);
-                        var has = (bool)gHas.Invoke(world.state.ptr->components, new object[] { this.entity });
-                        if (has == true) {
-                            var gMethod = methodRead.MakeGenericMethod(type);
-                            var val = gMethod.Invoke(world.state.ptr->components, new object[] { this.entity });
-                            list.Add(val);
-                        }
-                    }
-                }
-                this.tempObject.dataShared = list.ToArray();
-                this.tempObject.dataSharedHas = new bool[list.Count];
-                for (int i = 0; i < this.tempObject.dataSharedHas.Length; ++i) {
-                    this.tempObject.dataSharedHas[i] = true;
-                }
-            }
-
-        }
-
-        public static void DrawFields(Ent entity, VisualElement root, VisualElement rootContainer, System.Collections.Generic.List<VisualElement> fields, World world, object[] arrData, bool[] arrDataHas, SerializedObject serializedObject, string fieldName, System.Reflection.MethodInfo methodSet, System.Reflection.MethodInfo methodRead) {
-
-            var dataArr = serializedObject.FindProperty(fieldName);
-            var delta = dataArr.arraySize - fields.Count;
-            var isDirty = false;
-            if (delta > 0) {
-                isDirty = true;
-                // add new items
-                for (int i = 0; i < delta; ++i) {
-
-                    var it = dataArr.GetArrayElementAtIndex(i);
-                    var copy = it.Copy();
-                    var type = arrData[i].GetType();
-                    var label = EditorUtils.GetComponentName(type);
-                    if (copy.hasVisibleChildren == true) {
-                        var propertyField = new PropertyField(copy, label) {
-                            name = $"PropertyField:{it.propertyPath}",
-                        };
-                        propertyField.userData = i;
-                        propertyField.AddToClassList("field");
-                        propertyField.BindProperty(copy);
-                        propertyField.Bind(serializedObject);
-                        if (EditorUtils.TryGetComponentGroupColor(type, out var color) == true) {
-                            color.a = 0.1f;
-                            propertyField.style.backgroundColor = new StyleColor(color);
-                        }
-                        System.Action rebuild = () => {
-                            var allChilds = propertyField.Query<PropertyField>().ToList();
-                            foreach (var child in allChilds) {
-                                child.userData = propertyField.userData;
-                                child.RegisterValueChangeCallback((evt) => {
-
-                                    if (fetchDataState == true) return;
-                                    if (evt.target == null) return;
-                                    if (world.isCreated == false || entity.IsAlive() == false) return;
-                                    var userData = ((PropertyField)evt.target).userData;
-                                    if (userData == null) return;
-                                    var idx = (int)userData;
-                                    if (idx >= dataArr.arraySize) return;
-
-                                    var newValue = dataArr.GetArrayElementAtIndex(idx)?.managedReferenceValue;
-                                    {
-                                        arrData[idx] = newValue;
-                                        var value = arrData[idx];
-                                        if (value == null) {
-                                            Logger.Editor.Error($"Value is null at index {idx} in entity {entity}");
-                                            return;
-                                        }
-
-                                        object prevData;
-                                        {
-                                            var gMethod = methodRead.MakeGenericMethod(value.GetType());
-                                            prevData = gMethod.Invoke(world.state.ptr->components, new object[] { entity });
-                                        }
-                                        var hasChanged = StructsAreEqual(prevData, newValue) == false;
-                                        if (hasChanged == true) {
-                                            var gMethod = methodSet.MakeGenericMethod(value.GetType());
-                                            gMethod.Invoke(world.state.ptr->components, new object[] { entity, value });
-                                        }
-                                    }
-
-                                });
-                            }
-                        };
-                        if (entity.IsAlive() == true) {
-                            propertyField.RegisterCallback<UnityEngine.UIElements.GeometryChangedEvent>((evt) => { rebuild.Invoke(); });
-                            propertyField.RegisterCallback<AttachToPanelEvent>(new EventCallback<AttachToPanelEvent>((evt) => { rebuild.Invoke(); }));
-                        }
-                        rootContainer.Add(propertyField);
-                        fields.Add(propertyField);
-                    } else {
-                        
-                        var labelField = new Label();
-                        if (EditorUtils.TryGetComponentGroupColor(type, out var color) == true) {
-                            color.a = 0.1f;
-                            labelField.style.backgroundColor = new StyleColor(color);
-                        }
-                        labelField.text = label;
-                        labelField.AddToClassList("field");
-                        labelField.AddToClassList("no-children");
-                        rootContainer.Add(labelField);
-                        fields.Add(labelField);
-                    }
-
-                }
-            } else if (delta < 0) {
-                isDirty = true;
-                // remove items
-                delta = -delta;
-                for (int i = 0; i < delta; ++i) {
-                    rootContainer.RemoveAt(0);
-                    fields.RemoveAtSwapBack(0);
-                }
-            }
-
-            if (dataArr.arraySize == 0) {
-                root.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.None);
-            } else {
-                root.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
-            }
-
-            if (isDirty == true) {
-                // redraw all items
-                for (int i = 0; i < dataArr.arraySize; ++i) {
-
-                    var field = fields[i];
-                    var it = dataArr.GetArrayElementAtIndex(i);
-                    if (arrDataHas[i] == true) {
-                        field.RemoveFromClassList("disabled");
-                        field.AddToClassList("enabled");
-                    } else {
-                        field.RemoveFromClassList("enabled");
-                        field.AddToClassList("disabled");
-                    }
-                    if (field is PropertyField propertyField) {
-                        var copy = it.Copy();
-                        propertyField.name = $"PropertyField:{it.propertyPath}";
-                        propertyField.bindingPath = it.propertyPath;
-                        propertyField.userData = i;
-                        propertyField.BindProperty(copy);
-                        propertyField.Bind(serializedObject);
-                        var allChilds = field.Query<PropertyField>().ToList();
-                        foreach (var child in allChilds) {
-                            child.userData = propertyField.userData;
-                        }
-                    }
-
-                }
-            }
-
-        }
-
-        public static bool StructCopy<T>(T data, T data2) where T : unmanaged {
-            var size = TSize<T>.size;
-            var addr1 = _address(ref data);
-            var addr2 = _address(ref data2);
-            return _memcmp(addr1, addr2, size) == 0;
-        }
-
-        public static bool StructsAreEqual(object s1, object s2) {
-            var method = typeof(EntityDrawer).GetMethod("StructCopy");
-            var gMethod = method.MakeGenericMethod(s1.GetType());
-            var res = (bool)gMethod.Invoke(null, new object[] { s1, s2 });
-            return res;
-        }
-
-        public void SetFoldoutState(bool value) {
-            EditorPrefs.SetBool($"ME.BECS.Foldouts.Entity.{this.propertyPath}", value);
-        }
-
     }
-
 }

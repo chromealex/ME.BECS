@@ -9,10 +9,8 @@ namespace ME.BECS.Tests {
     public partial class Tests_SourceGeneratorContracts {
         [Test]
         public void CompilerGraphJobInjectionsMatchFieldsAndRepeatedOwnerOrder() {
-            var assembly = Assembly.Load("ME.BECS.Gen.Runtime");
-            var attributes = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>().ToArray();
-            var inputs = attributes.Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1")
-                .Select(attribute => attribute.Value.Split('\t')).Where(row => row[0] == "runtime").ToArray();
+            var attributes = Tests_SourceGeneratorGraphPublications.PublishedMetadata();
+            var inputs = Tests_SourceGeneratorInputCatalog.Rows(false).Select(row => ("runtime\t" + row).Split('\t')).ToArray();
             string Decode(string value) => Encoding.UTF8.GetString(Convert.FromBase64String(value));
             string Hash(string value) {
                 using (var sha = System.Security.Cryptography.SHA256.Create())
@@ -22,9 +20,9 @@ namespace ME.BECS.Tests {
             Assert.AreEqual("v1", Decode(inputs.Single(row => row[1] == "graph-injection-schema")[3]));
             Assert.IsFalse(inputs.Any(row => row[1] == "graph-job" || row[1] == "job-delta-registration" || row[1] == "graph-apply"),
                 "Editor must transport job identities only, never fields, callback kinds or apply actions.");
-            var plans = attributes.Where(attribute => attribute.Key == "ME.BECS.GraphJobInjectionPlan.v1").Select(attribute => attribute.Value.Split('\n')).ToArray();
-            var actions = attributes.Where(attribute => attribute.Key == "ME.BECS.GraphInjectionActions.v1").Select(attribute => attribute.Value.Split('\n')).ToArray();
-            var effective = attributes.Where(attribute => attribute.Key == "ME.BECS.GraphJobSelection.v1").Select(attribute => attribute.Value.Split('\n')).ToArray();
+            var plans = attributes.Where(attribute => attribute.Key == "ME.BECS.PublishedGraphJobInjectionPlan.v1").Select(attribute => attribute.Value.Split('\n')).ToArray();
+            var actions = attributes.Where(attribute => attribute.Key == "ME.BECS.PublishedGraphInjectionActions.v1").Select(attribute => attribute.Value.Split('\n')).ToArray();
+            var effective = attributes.Where(attribute => attribute.Key == "ME.BECS.PublishedGraphJobSelection.v1").Select(attribute => attribute.Value.Split('\n')).ToArray();
             var count = 0;
             foreach (var graph in inputs.Where(row => row[1] == "graph-registration")) {
                 var id = graph[4];

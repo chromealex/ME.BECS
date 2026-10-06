@@ -47,8 +47,8 @@ public sealed class GraphPublicationGenerator : IIncrementalGenerator {
                         plans.Add(plan);
                     }
                     if (!valid) continue;
-                    // Metadata precedes declarations. Plans are also compared with
-                    // the aggregate's diagnostic snapshot during this migration.
+                    // Metadata precedes declarations; diagnostics and tests inspect
+                    // the same owner that emits the executable graph callbacks.
                     foreach (var plan in plans) plan.AppendMetadata(source);
                     for (var index = 0; index < plans.Count; ++index) plans[index].Append(source, compilation, resolver, document.Entries[index].Key);
                     GraphInputEmitter.AppendDeltas(source, plans.SelectMany(plan => plan.Deltas).GroupBy(item => item.Key).Select(group => group.First()).ToArray());

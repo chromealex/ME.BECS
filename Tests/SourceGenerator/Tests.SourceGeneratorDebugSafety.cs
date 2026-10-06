@@ -5,9 +5,10 @@ using NUnit.Framework;
 
 namespace ME.BECS.Tests {
     public partial class Tests_SourceGeneratorContracts {
-        private static string[][] CompiledDebugSafetyPlans(Assembly assembly) =>
-            assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Where(attribute => attribute.Key == "ME.BECS.DebugJobSafety.v1")
+        private static string[][] CompiledDebugSafetyPlans(string profile) =>
+            Tests_SourceGeneratorJobDebugPublications.Owners(profile).Values.Select(type => type.Assembly).Distinct()
+                .SelectMany(assembly => assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>())
+                .Where(attribute => attribute.Key == "ME.BECS.PublishedDebugJobSafety." + profile + ".v1")
                 .Select(attribute => attribute.Value.Split('\n')).ToArray();
 
         [TestCase(typeof(SafetyCatalogJob))]
@@ -18,8 +19,7 @@ namespace ME.BECS.Tests {
         [TestCase(typeof(GenericAotSystem<AotMarker>.UnannotatedSafetyJob))]
         [TestCase(typeof(GenericAotSystem<AotMarker>.ReadOnlySafetyJob))]
         public void DebugSafetySelectionUsesExportedILSnapshot(Type job) {
-            var assembly = Assembly.Load("ME.BECS.Gen.Editor");
-            var plans = CompiledDebugSafetyPlans(assembly).Where(plan => plan[1] == job.AssemblyQualifiedName).ToArray();
+            var plans = CompiledDebugSafetyPlans("Editor").Where(plan => plan[1] == job.AssemblyQualifiedName).ToArray();
             Assert.IsNotEmpty(plans, "Regenerate inputs with IL debug safety selection.");
             var analyzer = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.Jobs.JobsEarlyInitCodeGenerator", true);
             var dependencies = analyzer.GetMethod("GetJobTypesInfo").Invoke(null, new object[] { job, null });
@@ -34,10 +34,9 @@ namespace ME.BECS.Tests {
                 Assert.AreEqual("il", plan[3]);
                 CollectionAssert.AreEqual(expected, plan.Skip(4).ToArray());
             }
-            var exported = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
-                .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1").Select(attribute => attribute.Value.Split('\t'))
-                .Where(row => row.Length == 4 && row[1] == "job-debug")
-                .Select(row => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(row[3])).Split('\n'))
+            var exported = Tests_SourceGeneratorInputCatalog.Rows(true).Select(row => row.Split('\t'))
+                .Where(row => row.Length == 3 && row[0] == "job-debug")
+                .Select(row => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(row[2])).Split('\n'))
                 .Where(plan => plan[1] == job.AssemblyQualifiedName).ToArray();
             Assert.AreEqual(plans.Length, exported.Length);
             foreach (var plan in exported) {
