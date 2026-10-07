@@ -84,11 +84,14 @@ namespace ME.BECS.Editor.FeaturesGraph {
         internal static List<string> GetFieldNames(SerializedProperty system) {
             var names = new List<string>();
             if (system == null) return names;
+            var systemType = system.managedReferenceValue?.GetType();
             var iterator = system.Copy();
             var end = iterator.GetEndProperty();
             if (!iterator.NextVisible(true)) return names;
             do {
                 if (SerializedProperty.EqualContents(iterator, end) || iterator.depth <= system.depth) break;
+                // Entity handles are runtime state, not editable graph configuration.
+                if (systemType?.GetField(iterator.name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.FieldType == typeof(Ent)) continue;
                 if (iterator.depth == system.depth + 1) names.Add(iterator.name);
             } while (iterator.NextVisible(false));
             return names;
