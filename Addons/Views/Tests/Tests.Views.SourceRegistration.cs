@@ -82,7 +82,7 @@ namespace ME.BECS.Views.Tests {
             protected internal override void OnUpdateParallel(in ViewData data, float dt) { GC.KeepAlive(this); }
         }
 
-        private static string[] Plan(string profile) => Assembly.Load("ME.BECS.Gen." + profile)
+        private static string[] Plan(string profile) => Tests_Views_Publications.SelectionAssembly(profile)
             .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
             .Single(attribute => attribute.Key == "ME.BECS.ViewTypeInputs.v1").Value.Split('\n');
 
@@ -116,10 +116,7 @@ namespace ME.BECS.Views.Tests {
         [TestCase("Editor")]
         [TestCase("Runtime")]
         public void ViewRegistrationPlanMatchesSelectedTypesAndTrackers(string profile) {
-            var assembly = Assembly.Load("ME.BECS.Gen." + profile);
-            var attributes = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>().ToArray();
-            var inputs = attributes.Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1")
-                .Select(attribute => attribute.Value.Split('\t')).Where(row => row[0] == profile.ToLowerInvariant()).ToArray();
+            var inputs = Tests_Views_Publications.Rows(profile).Select(row => (profile.ToLowerInvariant() + "\t" + row).Split('\t')).ToArray();
             string Decode(string value) => Encoding.UTF8.GetString(Convert.FromBase64String(value));
             var selections = inputs.Where(row => row[1] == "view-type").ToArray();
             var schema = Decode(inputs.Single(row => row[1] == "view-type-schema")[3]);
@@ -131,19 +128,13 @@ namespace ME.BECS.Views.Tests {
             CollectionAssert.AreEqual(selections.Select(row => row[2] + "\n" + Decode(row[3])).ToArray(),
                 types.Select(row => row[1] + "\n" + row[2]).ToArray());
             CollectionAssert.AreEqual(types.Select(row => row[2]).OrderBy(value => value, StringComparer.Ordinal).ToArray(), types.Select(row => row[2]).ToArray());
-            var trackers = attributes.Where(attribute => attribute.Key == "ME.BECS.ViewTrackerInputs.v1")
+            var trackers = Tests_Views_Publications.SelectionAssembly(profile).GetCustomAttributes(typeof(AssemblyMetadataAttribute), false)
+                .Cast<AssemblyMetadataAttribute>().Where(attribute => attribute.Key == "ME.BECS.ViewTrackerInputs.v1")
                 .Select(attribute => attribute.Value.Split('\t')).Where(row => row[0] == "view-tracker-view")
                 .Select(row => Decode(row[2]).Split('\n')[0]).ToArray();
             foreach (var row in types) CollectionAssert.Contains(trackers, row[2]);
             Assert.AreEqual(1, inputs.Count(row => row.Length == 6 && row[1] == "bootstrap-feeder" && row[5] == "view-types"));
-            var owner = assembly.GetType("ME.BECS.SourceGenerated.ViewTypeInputs", true);
-            var initialize = owner.GetMethod("Initialize", BindingFlags.Public | BindingFlags.Static);
-            Assert.IsNotNull(initialize);
-            Assert.IsTrue(initialize.IsDefined(typeof(UnityEngine.Scripting.PreserveAttribute), false));
-            Assert.AreEqual(typeof(void), initialize.ReturnType);
-            Assert.IsEmpty(initialize.GetParameters());
-            var register = owner.GetMethod("Register", BindingFlags.NonPublic | BindingFlags.Static);
-            Assert.IsNull(register, "Typed view registration belongs to its owner, not the aggregate.");
+            Tests_Views_Publications.AssertPhases(profile);
         }
     }
 }

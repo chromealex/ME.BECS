@@ -584,7 +584,6 @@ namespace ME.BECS.Tests {
 
         }
 
-        #if ENABLE_BECS_FLAT_QUERIES
         [Test]
         public void FlatQueryEntityComponents() {
 
@@ -622,7 +621,6 @@ namespace ME.BECS.Tests {
             Assert.AreEqual(0u, world.state.ptr->entities.GetEntityComponentsCount(world.state, reusedEnt.id));
 
         }
-        #endif
 
         [Unity.Burst.BurstCompileAttribute]
         public partial struct TestJobSetParallel : IJobParallelFor {

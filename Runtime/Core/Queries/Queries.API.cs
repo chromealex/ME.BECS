@@ -78,7 +78,7 @@ namespace ME.BECS {
                     state = queryContext.state,
                     worldId = queryContext.worldId,
                 }, allocator),
-                compose = new ArchetypeQueries.QueryCompose().Initialize(allocator),
+                compose = new FlatQueries.QueryCompose().Initialize(allocator),
                 isCreated = true,
                 allocator = allocator,
                 scheduleMode = Unity.Jobs.LowLevel.Unsafe.ScheduleMode.Single,
@@ -86,27 +86,6 @@ namespace ME.BECS {
             };
             if (withInactive == false) builder.Without<IsInactive>();
             
-            return builder;
-            
-        }
-
-        [IgnoreProfiler]
-        internal static QueryBuilder MakeStaticQuery(in QueryContext queryContext, JobHandle dependsOn) {
-
-            var allocator = WorldsPersistentAllocator.allocatorPersistent.Get(queryContext.worldId).Allocator.ToAllocator;
-            var builder = new QueryBuilder {
-                queryData = _makeDefault(new QueryData(), allocator),
-                commandBuffer = _makeDefault(new CommandBuffer {
-                    state = queryContext.state,
-                    worldId = queryContext.worldId,
-                }, allocator),
-                compose = new ArchetypeQueries.QueryCompose().Initialize(allocator),
-                isCreated = true,
-                builderDependsOn = dependsOn,
-                allocator = allocator,
-                scheduleMode = Unity.Jobs.LowLevel.Unsafe.ScheduleMode.Single,
-            };
-            builder.Without<IsInactive>();
             return builder;
             
         }

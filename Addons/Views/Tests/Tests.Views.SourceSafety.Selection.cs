@@ -60,7 +60,7 @@ namespace ME.BECS.Views.Tests {
 
         [Test]
         public void BootstrapRetainsSeparateTrackingRecordsForBothViewRoles() {
-            var inputs = Assembly.Load("ME.BECS.Gen.Editor").GetCustomAttributes(typeof(AssemblyMetadataAttribute), false)
+            var inputs = Tests_Views_Publications.SelectionAssembly("Editor").GetCustomAttributes(typeof(AssemblyMetadataAttribute), false)
                 .Cast<AssemblyMetadataAttribute>().Where(attribute => attribute.Key == "ME.BECS.ViewTrackerSelection.v1")
                 .Select(attribute => attribute.Value.Split('\t')).Where(row => row.Length == 3 &&
                     (row[0] == "view-tracker-view" || row[0] == "view-tracker-module"))
@@ -77,7 +77,7 @@ namespace ME.BECS.Views.Tests {
         public void BootstrapExcludesIgnoredPrivateComponentFromTrackerInputs() {
             // Inspect the exported catalog, not just the marker interface: the owner
             // must remain registered, but neither tracker table may retain its dependency.
-            var inputs = Assembly.Load("ME.BECS.Gen.Editor").GetCustomAttributes(typeof(AssemblyMetadataAttribute), false)
+            var inputs = Tests_Views_Publications.SelectionAssembly("Editor").GetCustomAttributes(typeof(AssemblyMetadataAttribute), false)
                 .Cast<AssemblyMetadataAttribute>().Where(attribute => attribute.Key == "ME.BECS.ViewTrackerSelection.v1")
                 .Select(attribute => attribute.Value.Split('\t')).Where(row => row.Length == 3)
                 .Select(row => (kind: row[0], values: System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(row[2])).Split('\n'))).ToArray();

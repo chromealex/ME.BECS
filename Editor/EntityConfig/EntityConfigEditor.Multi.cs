@@ -13,6 +13,7 @@ namespace ME.BECS.Editor {
         private EntityConfig[] multiSources;
         private EntityConfig[] multiProxies;
         private SerializedObject multiSerializedObject;
+        private EntityConfig multiBaseline;
         private readonly Dictionary<string, Type[]> commonTypes = new();
         private bool committingMulti;
 
@@ -26,6 +27,7 @@ namespace ME.BECS.Editor {
                     UnityEngine.Object.DestroyImmediate(proxy);
                 }
             }
+            this.DestroyBaseline();
             this.multiProxies = null;
             this.multiSources = null;
             this.commonTypes.Clear();
@@ -90,6 +92,7 @@ namespace ME.BECS.Editor {
                     proxyOwner.ApplyModifiedPropertiesWithoutUndo();
                 }
             }
+            this.RefreshBaseline();
             this.multiSerializedObject = new SerializedObject(this.multiProxies);
             var content = new VisualElement();
             content.AddToClassList("config-content");
@@ -124,7 +127,6 @@ namespace ME.BECS.Editor {
             search.SetValueWithoutNotify(this.searchText);
             search.AddToClassList("config-search");
             search.RegisterValueChangedCallback(evt => { this.searchText = evt.newValue; this.ApplySearch(); });
-            toolbar.Add(search);
             var maskProperty = this.serializedObject.FindProperty("maskable");
             var maskable = new Toggle("Maskable Config") { showMixedValue = maskProperty.hasMultipleDifferentValues };
             maskable.SetValueWithoutNotify(maskProperty.boolValue);
@@ -138,6 +140,7 @@ namespace ME.BECS.Editor {
                 root.schedule.Execute(this.RebuildInspector);
             });
             toolbar.Add(maskable);
+            content.Add(search);
             for (var s = 0; s < MultiStorages.Length; ++s) {
                 var storage = MultiStorages[s];
                 var section = new VisualElement();
@@ -235,6 +238,23 @@ namespace ME.BECS.Editor {
             }
         }
 
+        private void DestroyBaseline() {
+            if (this.multiBaseline != null) UnityEngine.Object.DestroyImmediate(this.multiBaseline);
+            this.multiBaseline = null;
+        }
+
+        private void RefreshBaseline() {
+            this.DestroyBaseline();
+            this.multiBaseline = UnityEngine.Object.Instantiate(this.multiProxies[0]);
+            this.multiBaseline.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+        }
+
+        // Unity resolves [SerializeReference] children of a multi-object edit through the FIRST
+        // target's managed reference ids. When configs list components in different orders the
+        // other proxies resolve the same path to another component (or none), so their copy of
+        // the edit is missing or lands on the wrong slot. Only the first proxy is reliable: take
+        // the fields that changed there (against a baseline) and apply them by type to every
+        // config, keeping their other values; then resync all proxies from the configs.
         private void CommitCommonComponent(SerializedObject owner, string componentPath) {
             if (this.committingMulti || owner != this.multiSerializedObject || this.multiSources == null) return;
             var storage = componentPath.Substring(0, componentPath.IndexOf('.'));
@@ -244,25 +264,111 @@ namespace ME.BECS.Editor {
             this.committingMulti = true;
             try {
                 Undo.SetCurrentGroupName("Edit Entity Config Components");
-                for (var i = 0; i < this.multiSources.Length; ++i) {
-                    using var sourceOwner = new SerializedObject(this.multiSources[i]);
-                    var indices = GetComponentIndices(sourceOwner, storage);
-                    if (!indices.TryGetValue(type, out var entries) || entries.Count != 1) continue;
-                    using var proxyOwner = new SerializedObject(this.multiProxies[i]);
-                    var destination = sourceOwner.FindProperty(storage);
-                    var proxy = proxyOwner.FindProperty(storage);
-                    destination.FindPropertyRelative("components").GetArrayElementAtIndex(entries[0]).managedReferenceValue =
-                        proxy.FindPropertyRelative("components").GetArrayElementAtIndex(proxyIndex).managedReferenceValue;
-                    var masks = destination.FindPropertyRelative("masks");
-                    if (masks.arraySize < destination.FindPropertyRelative("components").arraySize) masks.arraySize = destination.FindPropertyRelative("components").arraySize;
-                    var targetMask = masks.GetArrayElementAtIndex(entries[0]).FindPropertyRelative("mask");
-                    var sourceMask = proxy.FindPropertyRelative("masks").GetArrayElementAtIndex(proxyIndex).FindPropertyRelative("mask");
-                    targetMask.arraySize = sourceMask.arraySize;
-                    for (var k = 0; k < sourceMask.arraySize; ++k) targetMask.GetArrayElementAtIndex(k).boolValue = sourceMask.GetArrayElementAtIndex(k).boolValue;
-                    sourceOwner.CopyFromSerializedProperty(proxyOwner.FindProperty("collectionsData"));
-                    sourceOwner.ApplyModifiedProperties();
+                var changed = new System.Collections.Generic.List<string>();
+                using (var editedOwner = new SerializedObject(this.multiProxies[0]))
+                using (var baselineOwner = new SerializedObject(this.multiBaseline)) {
+                    CollectChanged(editedOwner.FindProperty(componentPath), baselineOwner.FindProperty(componentPath), changed);
+                    for (var i = 0; i < this.multiSources.Length; ++i) {
+                        using var sourceOwner = new SerializedObject(this.multiSources[i]);
+                        var indices = GetComponentIndices(sourceOwner, storage);
+                        if (!indices.TryGetValue(type, out var entries) || entries.Count != 1) continue;
+                        using var proxyOwner = new SerializedObject(this.multiProxies[i]);
+                        var destination = sourceOwner.FindProperty(storage);
+                        var proxy = proxyOwner.FindProperty(storage);
+                        var target = destination.FindPropertyRelative("components").GetArrayElementAtIndex(entries[0]);
+                        var edited = editedOwner.FindProperty(componentPath);
+                        foreach (var relative in changed) {
+                            var from = edited.FindPropertyRelative(relative);
+                            var to = target.FindPropertyRelative(relative);
+                            if (from != null && to != null) CopyValue(from, to);
+                        }
+                        // Masks are plain arrays (no managed references): multi-edit reaches every proxy.
+                        var masks = destination.FindPropertyRelative("masks");
+                        if (masks.arraySize < destination.FindPropertyRelative("components").arraySize) masks.arraySize = destination.FindPropertyRelative("components").arraySize;
+                        var targetMask = masks.GetArrayElementAtIndex(entries[0]).FindPropertyRelative("mask");
+                        var sourceMask = proxy.FindPropertyRelative("masks").GetArrayElementAtIndex(proxyIndex).FindPropertyRelative("mask");
+                        targetMask.arraySize = sourceMask.arraySize;
+                        for (var k = 0; k < sourceMask.arraySize; ++k) targetMask.GetArrayElementAtIndex(k).boolValue = sourceMask.GetArrayElementAtIndex(k).boolValue;
+                        sourceOwner.CopyFromSerializedProperty(proxyOwner.FindProperty("collectionsData"));
+                        sourceOwner.ApplyModifiedProperties();
+                    }
+                }
+                // Resync only after a real field edit: the refreshed bindings raise change
+                // events again, and an unchanged commit must not start another round.
+                if (changed.Count > 0) {
+                    this.SyncProxies(storage);
+                    this.RefreshBaseline();
+                    this.multiSerializedObject.Update();
                 }
             } finally { this.committingMulti = false; }
+        }
+
+        private void SyncProxies(string storage) {
+            var common = this.commonTypes[storage];
+            for (var i = 0; i < this.multiSources.Length; ++i) {
+                using var sourceOwner = new SerializedObject(this.multiSources[i]);
+                using var proxyOwner = new SerializedObject(this.multiProxies[i]);
+                var indices = GetComponentIndices(sourceOwner, storage);
+                var sources = sourceOwner.FindProperty(storage).FindPropertyRelative("components");
+                var proxies = proxyOwner.FindProperty(storage).FindPropertyRelative("components");
+                for (var j = 0; j < common.Length && j < proxies.arraySize; ++j) {
+                    if (!indices.TryGetValue(common[j], out var entries) || entries.Count != 1) continue;
+                    CopyValue(sources.GetArrayElementAtIndex(entries[0]), proxies.GetArrayElementAtIndex(j));
+                }
+                proxyOwner.ApplyModifiedPropertiesWithoutUndo();
+            }
+        }
+
+        private static void CollectChanged(SerializedProperty edited, SerializedProperty baseline, System.Collections.Generic.List<string> changed) {
+            if (edited == null) return;
+            var prefix = edited.propertyPath.Length + 1;
+            var it = edited.Copy();
+            var end = edited.GetEndProperty();
+            var enter = true;
+            while (it.Next(enter) && !SerializedProperty.EqualContents(it, end)) {
+                var relative = it.propertyPath.Substring(prefix);
+                var other = baseline?.FindPropertyRelative(relative);
+                if (other != null && SerializedProperty.DataEquals(it, other)) { enter = false; continue; }
+                if (other != null && it.propertyType == SerializedPropertyType.Generic && !it.isArray && it.hasChildren) { enter = true; continue; }
+                changed.Add(relative);
+                enter = false;
+            }
+        }
+
+        private static void CopyChildren(SerializedProperty from, SerializedProperty to) {
+            var it = from.Copy();
+            var end = from.GetEndProperty();
+            if (!it.Next(true)) return;
+            while (!SerializedProperty.EqualContents(it, end)) {
+                var target = to.FindPropertyRelative(it.name);
+                if (target != null) CopyValue(it, target);
+                if (!it.Next(false)) break;
+            }
+        }
+
+        private static void CopyValue(SerializedProperty from, SerializedProperty to) {
+            switch (from.propertyType) {
+                case SerializedPropertyType.ManagedReference:
+                    var value = from.managedReferenceValue;
+                    if (value != null && from.managedReferenceFullTypename == to.managedReferenceFullTypename) CopyChildren(from, to);
+                    else to.managedReferenceValue = value == null ? null : UnityEngine.JsonUtility.FromJson(UnityEngine.JsonUtility.ToJson(value), value.GetType());
+                    return;
+                case SerializedPropertyType.Generic when from.isArray:
+                    to.arraySize = from.arraySize;
+                    for (var i = 0; i < from.arraySize; ++i) CopyValue(from.GetArrayElementAtIndex(i), to.GetArrayElementAtIndex(i));
+                    return;
+                case SerializedPropertyType.Generic:
+                    CopyChildren(from, to);
+                    return;
+                default:
+                    if (from.isArray && from.propertyType != SerializedPropertyType.String) {
+                        to.arraySize = from.arraySize;
+                        for (var i = 0; i < from.arraySize; ++i) CopyValue(from.GetArrayElementAtIndex(i), to.GetArrayElementAtIndex(i));
+                        return;
+                    }
+                    to.boxedValue = from.boxedValue;
+                    return;
+            }
         }
 
         private void AddMissingComponents(string storage, Type type, EntityConfig source, int index) {

@@ -40,7 +40,7 @@ namespace ME.BECS.Tests {
             .Select(instruction => instruction.Operand).OfType<MethodInfo>().ToArray();
 
         private static Type[] Selected(Assembly assembly, string profile) => assembly
-            .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            .BecsInputMetadata()
             .Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t'))
             .Where(row => row.Length == 4 && row[0] == profile.ToLowerInvariant() && row[1] == "system-registration")
             .OrderBy(row => int.Parse(row[2], System.Globalization.CultureInfo.InvariantCulture))
@@ -84,7 +84,7 @@ namespace ME.BECS.Tests {
                 var root = group.Key.GetMethod("PreserveReferences");
                 Assert.IsTrue(Attribute.IsDefined(root, typeof(UnityEngine.Scripting.PreserveAttribute)));
                 Assert.IsFalse(Attribute.IsDefined(root, typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute)));
-                var masks = group.Key.Assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                var masks = group.Key.Assembly.BecsInputMetadata()
                     .Where(item => item.Key == "ME.BECS.SystemAotPublication." + profile + ".v1").Select(item => item.Value).ToArray();
                 CollectionAssert.AreEquivalent(group.Select(entry => string.Join("\n", plans[entry.Selected])).ToArray(), masks);
                 var expected = new System.Collections.Generic.List<MethodInfo>();

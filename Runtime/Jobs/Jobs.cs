@@ -86,6 +86,12 @@ namespace ME.BECS {
 
     }
 
+    public struct JobStaticInfoInlineCapacity<TJob> {
+        
+        public static readonly Unity.Burst.SharedStatic<uint> data = Unity.Burst.SharedStatic<uint>.GetOrCreate<JobStaticInfoInlineCapacity<TJob>>();
+
+    }
+
     public struct JobStaticInfoWeights<TJob> {
         
         public static readonly Unity.Burst.SharedStatic<uint> data = Unity.Burst.SharedStatic<uint>.GetOrCreate<JobStaticInfoWeights<TJob>>();
@@ -116,6 +122,23 @@ namespace ME.BECS {
         public static ref uint loopCount => ref JobStaticInfoLoopCount<TJob>.data.Data;
         public static ref uint entitiesMaxCount => ref JobStaticInfoEntitiesMaxCount<TJob>.data.Data;
         public static ref safe_ptr<uint> inlineCount => ref JobStaticInfoInlineCount<TJob>.data.Data;
+
+        // Called by generated job initializers on every bootstrap load. Domain memory is
+        // only released on domain unload and Unity tracks each block in a fixed-size table
+        // (DomainUnloadAutoFree, 262144 entries): allocating per load overflows it and
+        // crashes the Editor after enough reloads (e.g. a test run calling LoadInstalled
+        // in every SetUp). Reuse the block for this job instead.
+        [INLINE(256)]
+        public static safe_ptr<uint> AllocateInlineCount(uint groupCount) {
+            ref var capacity = ref JobStaticInfoInlineCapacity<TJob>.data.Data;
+            var current = inlineCount;
+            if (current.ptr != null && capacity >= groupCount) {
+                if (groupCount > 0u) Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemClear(current.ptr, TSize<uint>.size * capacity);
+                return current;
+            }
+            capacity = groupCount;
+            return _makeArray<uint>(groupCount, Unity.Collections.Allocator.Domain);
+        }
         public static ref uint opsWeight => ref JobStaticInfoWeights<TJob>.data.Data;
         public static ref uint maxStructSize => ref JobStaticInfoMaxStructSize<TJob>.data.Data;
         public static bool IsParallelSupport => loopCount == 0u || entitiesMaxCount > 0u;

@@ -197,6 +197,12 @@ namespace ME.BECS.Editor.Jobs {
             var result = node.local;
             if (method.IsDefined(typeof(CodeGeneratorIgnoreAttribute), false)) return;
             if (ILInfrastructure.IsLeaf(method)) return;
+            // Unresolved delegate/abstract dispatch can reach user code: report it as such
+            // before the BCL boundary would classify System.Action.Invoke as a framework call.
+            if (method.IsAbstract || method.DeclaringType != null && typeof(Delegate).IsAssignableFrom(method.DeclaringType) && method.Name == "Invoke") {
+                result.gaps.Add("UnresolvedDispatch: " + method);
+                return;
+            }
             if (ILInfrastructure.IsOpaque(method)) {
                 result.gaps.Add("OpaqueFrameworkCall: " + method.DeclaringType + "." + method.Name);
                 return;
@@ -218,10 +224,6 @@ namespace ME.BECS.Editor.Jobs {
                 // `new T()` has no user body for a value type without an explicit constructor.
                 if (constructor != null) { this.AddCall(node, constructor, false); return; }
                 if (type.IsValueType) { this.AddInitializer(node, type); return; }
-            }
-            if (method.IsAbstract || method.DeclaringType != null && typeof(Delegate).IsAssignableFrom(method.DeclaringType) && method.Name == "Invoke") {
-                result.gaps.Add("UnresolvedDispatch: " + method);
-                return;
             }
             var body = method.GetMethodBody();
             // Native/extern methods without IL retain their existing framework contract.

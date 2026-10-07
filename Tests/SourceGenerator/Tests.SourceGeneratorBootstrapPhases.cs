@@ -14,7 +14,7 @@ namespace ME.BECS.Tests {
         private static object NewPhases(int[] map) => Activator.CreateInstance(Phases, Hidden, null,
             new object[] { Array.Empty<Action<bool>>(), Array.Empty<Action<bool>>(), Array.Empty<Action<bool>>(), map, false, false }, null);
         private static string Decode(string value) => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(value));
-        private static string[][] Rows(Assembly assembly) => assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+        private static string[][] Rows(Assembly assembly) => assembly.BecsInputMetadata()
             .Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t')).ToArray();
 
         internal static void AssertJobSequence(Assembly assembly) {

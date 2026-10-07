@@ -7,6 +7,175 @@ using NUnit.Framework;
 
 namespace ME.BECS.Tests {
     public partial class Tests_SourceGeneratorContracts {
+        [Test]
+        public void RefAccessStackCountsCoverEveryFixedStackBehavior() {
+            var analyzer = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.Jobs.JobsEarlyInitCodeGenerator", true);
+            var count = analyzer.GetMethod("FixedStackCount", BindingFlags.NonPublic | BindingFlags.Static);
+            foreach (System.Reflection.Emit.StackBehaviour behavior in Enum.GetValues(typeof(System.Reflection.Emit.StackBehaviour))) {
+                var name = behavior.ToString();
+                var expected = name == "Varpop" || name == "Varpush" ? -1 :
+                    name == "Pop0" || name == "Push0" ? 0 : name.Split('_').Length;
+                Assert.AreEqual(expected, count.Invoke(null, new object[] { behavior }), name);
+            }
+            Assert.AreEqual(-1, count.Invoke(null, new object[] { (System.Reflection.Emit.StackBehaviour)int.MaxValue }));
+        }
+
+        private partial struct ILUnusedComponentArgumentJob : IJobForComponents<TestComponent> {
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent value) {
+                ent.Read<Test1Component>();
+            }
+        }
+
+        private partial struct ILUnusedRefHelperJob : IJobForComponents<TestComponent> {
+            private static void Ignore(ref TestComponent value) { }
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent value) {
+                Ignore(ref value);
+                ent.Read<Test1Component>();
+            }
+        }
+
+        private partial struct ILReadRefComponentJob : IJobForComponents<TestComponent> {
+            public int result;
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent value) => this.result = value.data;
+        }
+
+        private struct ILNestedArgumentComponent : IComponent {
+            public TestComponent nested;
+        }
+
+        private partial struct ILNestedReadRefJob : IJobForComponents<ILNestedArgumentComponent> {
+            public int result;
+            public void Execute(in JobInfo info, in Ent ent, ref ILNestedArgumentComponent value) => this.result = value.nested.data;
+        }
+
+        [Test]
+        public void ILNestedFieldAddressUsedForReadDoesNotInventWrite() {
+            var analyzer = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.Jobs.JobsEarlyInitCodeGenerator", true);
+            var result = (System.Collections.IEnumerable)analyzer.GetMethod("GetJobTypesInfo")
+                .Invoke(null, new object[] { typeof(ILNestedReadRefJob), null });
+            var rows = result.Cast<object>().ToArray();
+            Assert.AreEqual(1, rows.Length);
+            Assert.AreEqual(typeof(ILNestedArgumentComponent), rows[0].GetType().GetField("type").GetValue(rows[0]));
+            Assert.AreEqual(RefOp.ReadOnly, rows[0].GetType().GetField("op").GetValue(rows[0]));
+        }
+
+        private partial struct ILWriteRefComponentJob : IJobForComponents<TestComponent> {
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent value) => value.data = 42;
+        }
+
+        private partial struct ILResetRefComponentJob : IJobForComponents<TestComponent> {
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent value) => value = default;
+        }
+
+        private partial struct ILLocalReadRefComponentJob : IJobForComponents<TestComponent> {
+            public int result;
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent value) {
+                ref var alias = ref value;
+                this.result = alias.data;
+            }
+        }
+
+        private partial struct ILLocalWriteRefComponentJob : IJobForComponents<TestComponent> {
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent value) {
+                ref var alias = ref value;
+                alias.data = 42;
+            }
+        }
+
+        private partial struct ILResetThenReadRefComponentJob : IJobForComponents<TestComponent> {
+            public int result;
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent value) {
+                value = default;
+                this.result = value.data;
+            }
+        }
+
+        private partial struct ILReadRefHelperJob : IJobForComponents<TestComponent> {
+            public int result;
+            private static int Read(ref TestComponent value) => value.data;
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent value) => this.result = Read(ref value);
+        }
+
+        private partial struct ILWriteRefHelperJob : IJobForComponents<TestComponent> {
+            private static void Write(ref TestComponent value) => value.data = 42;
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent value) => Write(ref value);
+        }
+
+        private partial struct ILReadLastRefHelperJob : IJobForComponents<TestComponent> {
+            public int result;
+            private static int Read(int offset, ref TestComponent value) => offset + value.data;
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent value) => this.result = Read(42, ref value);
+        }
+
+        private partial struct ILWriteLastRefHelperJob : IJobForComponents<TestComponent> {
+            private static void Write(int data, ref TestComponent value) => value.data = data;
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent value) => Write(42, ref value);
+        }
+
+        private partial struct ILReadFirstRefHelperJob : IJobForComponents<TestComponent> {
+            public int result;
+            private static int Read(ref TestComponent value, int offset) => value.data + offset;
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent value) => this.result = Read(ref value, 42);
+        }
+
+        private partial struct ILWriteFirstRefHelperJob : IJobForComponents<TestComponent> {
+            private static void Write(ref TestComponent value, int data) => value.data = data;
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent value) => Write(ref value, 42);
+        }
+
+        private partial struct ILBranchRefComponentJob : IJobForComponents<TestComponent> {
+            public bool write;
+            public int result;
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent value) {
+                if (this.write) value.data = 42;
+                else this.result = value.data;
+            }
+        }
+
+        private partial struct ILReadThenWriteRefComponentJob : IJobForComponents<TestComponent> {
+            public int result;
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent value) {
+                this.result = value.data;
+                value.data = 42;
+            }
+        }
+
+        [TestCase(typeof(ILReadRefComponentJob), RefOp.ReadOnly)]
+        [TestCase(typeof(ILWriteRefComponentJob), RefOp.WriteOnly)]
+        [TestCase(typeof(ILResetRefComponentJob), RefOp.WriteOnly)]
+        [TestCase(typeof(ILLocalReadRefComponentJob), RefOp.ReadOnly)]
+        [TestCase(typeof(ILLocalWriteRefComponentJob), RefOp.WriteOnly)]
+        [TestCase(typeof(ILResetThenReadRefComponentJob), RefOp.ReadWrite)]
+        [TestCase(typeof(ILReadRefHelperJob), RefOp.ReadOnly)]
+        [TestCase(typeof(ILWriteRefHelperJob), RefOp.WriteOnly)]
+        [TestCase(typeof(ILReadLastRefHelperJob), RefOp.ReadOnly)]
+        [TestCase(typeof(ILWriteLastRefHelperJob), RefOp.WriteOnly)]
+        [TestCase(typeof(ILReadFirstRefHelperJob), RefOp.ReadOnly)]
+        [TestCase(typeof(ILWriteFirstRefHelperJob), RefOp.WriteOnly)]
+        [TestCase(typeof(ILBranchRefComponentJob), RefOp.ReadWrite)]
+        [TestCase(typeof(ILReadThenWriteRefComponentJob), RefOp.ReadWrite)]
+        public void ILRefComponentDirectReadDoesNotInventWrite(Type job, RefOp expected) {
+            var analyzer = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.Jobs.JobsEarlyInitCodeGenerator", true);
+            var result = (System.Collections.IEnumerable)analyzer.GetMethod("GetJobTypesInfo")
+                .Invoke(null, new object[] { job, null });
+            var rows = result.Cast<object>().ToArray();
+            Assert.AreEqual(1, rows.Length);
+            Assert.AreEqual(typeof(TestComponent), rows[0].GetType().GetField("type").GetValue(rows[0]));
+            Assert.AreEqual(expected, rows[0].GetType().GetField("op").GetValue(rows[0]));
+        }
+
+        [TestCase(typeof(ILUnusedComponentArgumentJob))]
+        [TestCase(typeof(ILUnusedRefHelperJob))]
+        public void ILUnusedRefComponentDoesNotInventWriteDependency(Type job) {
+            var analyzer = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.Jobs.JobsEarlyInitCodeGenerator", true);
+            var result = (System.Collections.IEnumerable)analyzer.GetMethod("GetJobTypesInfo")
+                .Invoke(null, new object[] { job, null });
+            var rows = result.Cast<object>().ToArray();
+            Assert.AreEqual(1, rows.Length, "The unused ref argument is not a component access; the body read must remain.");
+            Assert.AreEqual(typeof(Test1Component), rows[0].GetType().GetField("type").GetValue(rows[0]));
+            Assert.AreEqual(RefOp.ReadOnly, rows[0].GetType().GetField("op").GetValue(rows[0]));
+        }
+
         // Metadata/IL fixtures only. Never run default queries or these job bodies.
         // Private to keep deliberately multi-contract jobs out of runtime EarlyInit:
         // its one-wrapper-per-job-family contract is a separate limitation.

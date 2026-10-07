@@ -20,7 +20,7 @@ internal sealed class GraphLifecyclePlan {
     internal string SyncDifferences = "";
 
     internal static bool TryCreate(GraphTopologyInput topology, InputManifestTypes resolver, string phase,
-        int phaseIndex, bool flatQueries, out GraphLifecyclePlan? plan, out string reason) {
+        int phaseIndex, out GraphLifecyclePlan? plan, out string reason) {
         plan = null;
         reason = "";
         var result = new GraphLifecyclePlan();
@@ -62,13 +62,6 @@ internal sealed class GraphLifecyclePlan {
         }
         bool Apply((int Graph, int Node) key) {
             if (!Sync(key)) return false;
-            if (!flatQueries) {
-                var occurrence = topology.Occurrences[key.Graph];
-                while (occurrence.Parent >= 0) {
-                    if (!Sync((occurrence.Parent, occurrence.ParentNode))) return false;
-                    occurrence = topology.Occurrences[occurrence.Parent];
-                }
-            }
             return true;
         }
         try {

@@ -189,7 +189,7 @@ namespace ME.BECS {
         public bbool builderSort;
 
         public safe_ptr<QueryData> builderQueryData;
-        public ArchetypeQueries.QueryCompose builderCompose;
+        public FlatQueries.QueryCompose builderCompose;
 
         [INLINE(256)]
         public void SetBuilder(ref QueryBuilder builder) {
@@ -205,9 +205,8 @@ namespace ME.BECS {
         
         [INLINE(256)]
         public void SetEntities(CommandBuffer* ptr) {
-            var composeJob = this.builderCompose.Build(ref this);
             var job = new QueryBuilder.SetEntitiesJob() {
-                composeJob = composeJob,
+                compose = this.builderCompose,
                 buffer = new safe_ptr<CommandBuffer>(ptr),
                 queryData = this.builderQueryData,
                 state = this.state,

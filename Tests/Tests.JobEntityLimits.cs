@@ -93,6 +93,7 @@ namespace ME.BECS.Tests {
             var previousInline = JobStaticInfo<TJob>.inlineCount;
             var previousLoops = JobStaticInfo<TJob>.loopCount;
             var previousMaximum = JobStaticInfo<TJob>.entitiesMaxCount;
+            var previousCapacity = JobStaticInfoInlineCapacity<TJob>.data.Data;
             JobStaticInfo<TJob>.inlineCount = default;
             try {
                 apply.MakeGenericMethod(typeof(TJob)).Invoke(null, new object[] { 1u, 0u });
@@ -105,6 +106,7 @@ namespace ME.BECS.Tests {
                 JobStaticInfo<TJob>.inlineCount = previousInline;
                 JobStaticInfo<TJob>.loopCount = previousLoops;
                 JobStaticInfo<TJob>.entitiesMaxCount = previousMaximum;
+                JobStaticInfoInlineCapacity<TJob>.data.Data = previousCapacity;
                 if (allocated.ptr != null) _free(allocated, Unity.Collections.Allocator.Domain);
             }
         }

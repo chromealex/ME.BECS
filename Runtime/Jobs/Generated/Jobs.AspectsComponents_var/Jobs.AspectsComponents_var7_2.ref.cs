@@ -14,13 +14,6 @@ namespace ME.BECS.Jobs {
         
         public static partial JobHandle Schedule<T, A0,A1,A2,A3,A4,A5,A6, C0,C1>(this QueryBuilder builder, in T job = default) where T : struct, IJobFor7Aspects2Components<A0,A1,A2,A3,A4,A5,A6, C0,C1> where A0 : unmanaged, IAspect where A1 : unmanaged, IAspect where A2 : unmanaged, IAspect where A3 : unmanaged, IAspect where A4 : unmanaged, IAspect where A5 : unmanaged, IAspect where A6 : unmanaged, IAspect where C0 : unmanaged, IComponentBase where C1 : unmanaged, IComponentBase;
         
-        #if !ENABLE_BECS_FLAT_QUERIES
-        public static partial JobHandle Schedule<T, A0,A1,A2,A3,A4,A5,A6, C0,C1>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobFor7Aspects2Components<A0,A1,A2,A3,A4,A5,A6, C0,C1> where A0 : unmanaged, IAspect where A1 : unmanaged, IAspect where A2 : unmanaged, IAspect where A3 : unmanaged, IAspect where A4 : unmanaged, IAspect where A5 : unmanaged, IAspect where A6 : unmanaged, IAspect where C0 : unmanaged, IComponentBase where C1 : unmanaged, IComponentBase;
-        
-        public static partial JobHandle Schedule<T, A0,A1,A2,A3,A4,A5,A6, C0,C1>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobFor7Aspects2Components<A0,A1,A2,A3,A4,A5,A6, C0,C1> where A0 : unmanaged, IAspect where A1 : unmanaged, IAspect where A2 : unmanaged, IAspect where A3 : unmanaged, IAspect where A4 : unmanaged, IAspect where A5 : unmanaged, IAspect where A6 : unmanaged, IAspect where C0 : unmanaged, IComponentBase where C1 : unmanaged, IComponentBase;
-
-        public static partial JobHandle Schedule<T, A0,A1,A2,A3,A4,A5,A6, C0,C1>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobFor7Aspects2Components<A0,A1,A2,A3,A4,A5,A6, C0,C1> where A0 : unmanaged, IAspect where A1 : unmanaged, IAspect where A2 : unmanaged, IAspect where A3 : unmanaged, IAspect where A4 : unmanaged, IAspect where A5 : unmanaged, IAspect where A6 : unmanaged, IAspect where C0 : unmanaged, IComponentBase where C1 : unmanaged, IComponentBase;
-        #endif
         
     }
     

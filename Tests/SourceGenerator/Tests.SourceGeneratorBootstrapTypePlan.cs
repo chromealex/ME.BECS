@@ -19,7 +19,7 @@ namespace ME.BECS.Tests {
         // Default getter, world initialization, or preservation-only AOT method.
         internal static MethodInfo[] SelectedSystems(Assembly assembly) {
             var profile = Tests_SourceGeneratorAotPublications.Profile(assembly);
-            var owners = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            var owners = assembly.BecsInputMetadata()
                 .Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t'))
                 .Where(row => row.Length == 5 && row[0] == profile.ToLowerInvariant() && row[1] == "system-registration-owner")
                 .Select(row => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(row[4]))).Distinct().ToArray();
@@ -39,7 +39,7 @@ namespace ME.BECS.Tests {
 
         internal static MethodInfo[] SelectedTypes(Assembly assembly) {
             var profile = Tests_SourceGeneratorAotPublications.Profile(assembly);
-            var owners = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            var owners = assembly.BecsInputMetadata()
                 .Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t'))
                 .Where(row => row.Length == 5 && row[0] == profile.ToLowerInvariant() && row[1] == "type-registration-owner")
                 .Select(row => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(row[4]))).Distinct().ToArray();

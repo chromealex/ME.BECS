@@ -42,11 +42,17 @@ namespace ME.BECS.Editor {
         }
 
         internal static void Append(CustomCodeGenerator feeder, StringBuilder manifest) {
+            var steps = AppendSteps(feeder, manifest);
+            while (steps.MoveNext()) { }
+        }
+
+        internal static System.Collections.IEnumerator AppendSteps(CustomCodeGenerator feeder, StringBuilder manifest) {
             feeder.preparedInputReferences = null;
             var code = ILAnalysisSession.CodeFingerprint;
             if (!feeder.CacheCompiledInputs || string.IsNullOrEmpty(code)) {
-                feeder.AppendSourceGeneratorInputs(manifest);
-                return;
+                var direct = feeder.AppendSourceGeneratorInputsSteps(manifest);
+                while (direct.MoveNext()) yield return null;
+                yield break;
             }
             var key = SelectionKey(feeder);
             // One slot per feeder/profile; a new selection replaces the previous
@@ -60,11 +66,12 @@ namespace ME.BECS.Editor {
                 feeder.preparedInputReferences = references.Length != 0 ? references : null;
                 manifest.Append(cached);
                 CodeGeneratorTimings.Subject("Reused compiled inputs: " + feeder.GetType().Name);
-                return;
+                yield break;
             }
 
             var text = new StringBuilder();
-            feeder.AppendSourceGeneratorInputs(text);
+            var analyzed = feeder.AppendSourceGeneratorInputsSteps(text);
+            while (analyzed.MoveNext()) yield return null;
             var record = new Record {
                 key = key, code = code, text = text.ToString(),
                 references = Array.Empty<string>(),

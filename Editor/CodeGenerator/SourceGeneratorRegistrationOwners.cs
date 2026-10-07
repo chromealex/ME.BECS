@@ -5,17 +5,55 @@ namespace ME.BECS.Editor {
     using System.Linq;
     using System.Text;
 
+    // The input manifest is ~20 MB and only ever appended to while owners are
+    // selected. Each owner step used to copy and split the whole builder again
+    // (about ten times per profile); split only the newly appended tail instead.
+    internal static class ManifestRows {
+        [ThreadStatic] private static StringBuilder owner;
+        [ThreadStatic] private static int length;
+        [ThreadStatic] private static List<string> complete;
+        [ThreadStatic] private static string tail;
+
+        // Type.GetType(assembly-qualified name) parses and binds the name every time;
+        // owner selection resolves the same few thousand names repeatedly.
+        // Assembly.GetName() builds a new AssemblyName each call (Mono parses it).
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<System.Reflection.Assembly, string> assemblyNames =
+            new System.Collections.Concurrent.ConcurrentDictionary<System.Reflection.Assembly, string>();
+        internal static string NameOf(System.Reflection.Assembly assembly) => assemblyNames.GetOrAdd(assembly, item => item.GetName().Name);
+
+        internal static Type ResolveType(string name) =>
+            ILAnalysisSession.Get((typeof(ManifestRows), "type", name), () => Type.GetType(name, true));
+
+        internal static string[] Of(StringBuilder manifest) {
+            if (!ReferenceEquals(owner, manifest) || manifest.Length < length || complete == null ||
+                (length > 0 && tail.Length > 0 && manifest[length - 1] != tail[tail.Length - 1])) {
+                owner = manifest; length = 0; complete = new List<string>(); tail = "";
+            }
+            if (manifest.Length > length) {
+                var added = tail + manifest.ToString(length, manifest.Length - length);
+                var parts = added.Split('\n');
+                for (var i = 0; i < parts.Length - 1; ++i) complete.Add(parts[i]);
+                tail = parts[parts.Length - 1];
+                length = manifest.Length;
+            }
+            var rows = new string[complete.Count + 1];
+            complete.CopyTo(rows);
+            rows[rows.Length - 1] = tail;
+            return rows;
+        }
+    }
+
     // Ownership is a compilation property, not just Type.Assembly. A closed
     // System<Component> can require references to two otherwise unrelated asmdefs.
     internal static class SourceGeneratorRegistrationOwners {
         internal static void AppendThemeMenus(StringBuilder manifest, bool editor) {
             if (!editor) return;
-            var entry = CodeGeneration.SourceGeneratorThemeMenuFragmentFormat.EntryValue(manifest.ToString().Split('\n'));
+            var entry = CodeGeneration.SourceGeneratorThemeMenuFragmentFormat.EntryValue(ManifestRows.Of(manifest));
             // Themes already owns the Editor API; no bridge or gameplay reference
             // is needed. The additional file remains a project asset.
             manifest.Append("thememenu-publication-schema\t0\tdjE=\nthememenu-registration-owner\t0\t")
                 .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(entry)).Append('\t')
-                .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(typeof(Themes).Assembly.GetName().Name)).Append('\n');
+                .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(ManifestRows.NameOf(typeof(Themes).Assembly))).Append('\n');
         }
 
         internal static void AppendInputCatalog(StringBuilder manifest, bool editor) {
@@ -27,16 +65,16 @@ namespace ME.BECS.Editor {
 
         internal static void AppendSystemDependencies(StringBuilder manifest, bool editor) {
             if (!editor) return;
-            var entry = CodeGeneration.SourceGeneratorSystemDependencyFragmentFormat.EntryValue(manifest.ToString().Split('\n'));
+            var entry = CodeGeneration.SourceGeneratorSystemDependencyFragmentFormat.EntryValue(ManifestRows.Of(manifest));
             var types = new HashSet<Type> { typeof(ComponentDependencyGraphInfo) };
             foreach (var record in CodeGeneration.SourceGeneratorSystemDependencyFragmentFormat.Rows(entry)) {
                 var fields = record.Split('\t');
                 if (fields[0] != "system-dependencies") continue;
                 var rows = CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(fields[2]).Split('\n');
-                types.Add(Type.GetType(rows[1], true));
+                types.Add(ManifestRows.ResolveType(rows[1]));
                 foreach (var row in rows.Skip(2).Select(value => value.Split('\t')))
-                    if (row[0] == "M" || row[0] == "D") types.Add(Type.GetType(row[1], true));
-                    else if (row[0] == "C") types.Add(Type.GetType(row[2], true));
+                    if (row[0] == "M" || row[0] == "D") types.Add(ManifestRows.ResolveType(row[1]));
+                    else if (row[0] == "C") types.Add(ManifestRows.ResolveType(row[2]));
             }
             var required = types.SelectMany(type => RequiredAssembliesCore(type, allowOpen: true)).Distinct(StringComparer.Ordinal).ToArray();
             var owner = SourceGeneratorPublicationBridges.Select(required, editor: true);
@@ -46,28 +84,28 @@ namespace ME.BECS.Editor {
         }
 
         internal static void AppendViewSelection(StringBuilder manifest, bool editor) {
-            var rows = manifest.ToString().Split('\n');
+            var rows = ManifestRows.Of(manifest);
             if (!rows.Any(row => row.StartsWith("view-type-schema\t", StringComparison.Ordinal))) return;
             var payload = CodeGeneration.SourceGeneratorViewSelectionFragmentFormat.EntryValue(rows);
-            var types = new HashSet<Type> { Type.GetType("ME.BECS.Views.BootstrapViews, ME.BECS.Views", true) };
+            var types = new HashSet<Type> { ManifestRows.ResolveType("ME.BECS.Views.BootstrapViews, ME.BECS.Views") };
             foreach (var row in CodeGeneration.SourceGeneratorViewSelectionFragmentFormat.Rows(payload).Select(row => row.Split('\t'))) {
                 if (row[0] == "views-registration-owner") {
                     if (!CodeGeneration.SourceGeneratorViewsFragmentFormat.TryEntry(CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(row[2]), out var entry))
                         throw new InvalidOperationException("Invalid Views registration selection.");
-                    types.Add(Type.GetType(entry.Component, true));
+                    types.Add(ManifestRows.ResolveType(entry.Component));
                 } else if (row[0] == "view-tracker-view" || row[0] == "view-tracker-module") {
                     var lines = CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(row[2]).Split('\n');
-                    types.Add(Type.GetType(lines[0], true));
+                    types.Add(ManifestRows.ResolveType(lines[0]));
                     // Include IL dependencies even when filtered out later. Private
                     // metadata is inspected, never emitted as inaccessible C#.
                     foreach (var dependency in lines.Skip(1).Where(line => line.StartsWith("C\t", StringComparison.Ordinal)))
-                        types.Add(Type.GetType(dependency.Split('\t')[2], true));
+                        types.Add(ManifestRows.ResolveType(dependency.Split('\t')[2]));
                 }
             }
             var required = types.SelectMany(RequiredAssemblies).Concat(new[] {
-                typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly.GetName().Name,
-                typeof(UnityEngine.Scripting.PreserveAttribute).Assembly.GetName().Name,
-            }).Concat(editor ? new[] { typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly.GetName().Name } : Array.Empty<string>()).Distinct(StringComparer.Ordinal).ToArray();
+                ManifestRows.NameOf(typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly),
+                ManifestRows.NameOf(typeof(UnityEngine.Scripting.PreserveAttribute).Assembly),
+            }).Concat(editor ? new[] { ManifestRows.NameOf(typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly) } : Array.Empty<string>()).Distinct(StringComparer.Ordinal).ToArray();
             var owner = SourceGeneratorPublicationBridges.Select(required, editor);
             manifest.Append("viewselection-publication-schema\t0\tdjE=\nviewselection-registration-owner\t0\t")
                 .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(payload)).Append('\t')
@@ -75,14 +113,14 @@ namespace ME.BECS.Editor {
         }
 
         internal static void AppendBootstrap(StringBuilder manifest, bool editor) {
-            var profile = CodeGeneration.SourceGeneratorBootstrapFragmentFormat.Create(manifest.ToString().Split('\n'), editor);
+            var profile = CodeGeneration.SourceGeneratorBootstrapFragmentFormat.Create(ManifestRows.Of(manifest), editor);
             var required = new HashSet<string>(RequiredAssemblies(typeof(BootstrapRuntime)), StringComparer.Ordinal) {
-                typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly.GetName().Name,
-                typeof(UnityEngine.Scripting.PreserveAttribute).Assembly.GetName().Name,
+                ManifestRows.NameOf(typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly),
+                ManifestRows.NameOf(typeof(UnityEngine.Scripting.PreserveAttribute).Assembly),
             };
-            if (editor) required.Add(typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly.GetName().Name);
-            if (profile.Selections.Any(item => item.Kind == "Network")) required.UnionWith(RequiredAssemblies(Type.GetType("ME.BECS.Network.BootstrapNetworkMethods, ME.BECS.Network", true)));
-            if (profile.Initialize.Contains("views")) required.UnionWith(RequiredAssemblies(Type.GetType("ME.BECS.Views.BootstrapViews, ME.BECS.Views", true)));
+            if (editor) required.Add(ManifestRows.NameOf(typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly));
+            if (profile.Selections.Any(item => item.Kind == "Network")) required.UnionWith(RequiredAssemblies(ManifestRows.ResolveType("ME.BECS.Network.BootstrapNetworkMethods, ME.BECS.Network")));
+            if (profile.Initialize.Contains("views")) required.UnionWith(RequiredAssemblies(ManifestRows.ResolveType("ME.BECS.Views.BootstrapViews, ME.BECS.Views")));
             var owner = SourceGeneratorPublicationBridges.Select(required.ToArray(), editor);
             manifest.Append("bootstrap-publication-schema\t0\tdjE=\nbootstrap-registration-owner\t0\t")
                 .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(CodeGeneration.SourceGeneratorBootstrapFragmentFormat.EntryValue(profile)))
@@ -111,15 +149,22 @@ namespace ME.BECS.Editor {
 
         internal static string[] RequiredAssemblies(Type type) => RequiredAssembliesCore(type, false);
 
-        private static string[] RequiredAssembliesCore(Type type, bool allowOpen) {
+        // A concrete type's assembly/constraint closure is immutable for the
+        // loaded compilation. Reuse it across publication slots in this analysis
+        // session; never retain it across unrelated compilation snapshots.
+        private static string[] RequiredAssembliesCore(Type type, bool allowOpen) =>
+            ILAnalysisSession.Get((typeof(SourceGeneratorRegistrationOwners), type, allowOpen),
+                () => CollectRequiredAssemblies(type, allowOpen));
+
+        private static string[] CollectRequiredAssemblies(Type type, bool allowOpen) {
             if (type == null) throw new ArgumentNullException(nameof(type));
             if (!allowOpen && type.ContainsGenericParameters) throw new ArgumentException("A registration needs a closed type.", nameof(type));
-            var names = new HashSet<string>(StringComparer.Ordinal) { typeof(ISystem).Assembly.GetName().Name };
+            var names = new HashSet<string>(StringComparer.Ordinal) { ManifestRows.NameOf(typeof(ISystem).Assembly) };
             var visited = new HashSet<Type>();
             void Add(Type value) {
                 if (value.HasElementType) { Add(value.GetElementType()); return; }
                 if (value.IsGenericParameter || !visited.Add(value)) return;
-                names.Add(value.Assembly.GetName().Name);
+                names.Add(ManifestRows.NameOf(value.Assembly));
                 if (value.IsGenericType) {
                     foreach (var argument in value.GetGenericArguments()) Add(argument);
                     // Naming a concrete argument is not enough when binding the
@@ -144,15 +189,35 @@ namespace ME.BECS.Editor {
             // Prefer the definition's own compilation when it can name the full
             // specialization. Otherwise prefer an argument owner, then the smallest
             // existing reference surface. All ties are ordinal and explicit.
-            return candidates.Where(item => !item.name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal) &&
-                    (editor || !item.editorOnly) && required.All((editor ? item.references : item.playerReferences).Contains))
-                .OrderBy(item => item.name == declaringAssembly ? 0 : required.Contains(item.name, StringComparer.Ordinal) ? 1 : 2)
-                .ThenBy(item => item.editorOnly ? 1 : 0)
-                .ThenBy(item => (editor ? item.references : item.playerReferences).Count)
-                .ThenBy(item => item.name, StringComparer.Ordinal).FirstOrDefault();
+            // Single pass (same order as OrderBy/ThenBy/FirstOrDefault): this runs
+            // for thousands of registrations against ~200 candidates.
+            Candidate best = null;
+            int bestRank = 0, bestEditor = 0, bestCount = 0;
+            foreach (var item in candidates) {
+                if (item.name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal) || !editor && item.editorOnly) continue;
+                var references = editor ? item.references : item.playerReferences;
+                var eligible = true;
+                foreach (var name in required) if (!references.Contains(name)) { eligible = false; break; }
+                if (!eligible) continue;
+                var rank = item.name == declaringAssembly ? 0 : Array.IndexOf(required, item.name) >= 0 ? 1 : 2;
+                var editorRank = item.editorOnly ? 1 : 0;
+                var count = references.Count;
+                if (best != null) {
+                    var order = rank.CompareTo(bestRank);
+                    if (order == 0) order = editorRank.CompareTo(bestEditor);
+                    if (order == 0) order = count.CompareTo(bestCount);
+                    if (order == 0) order = string.CompareOrdinal(item.name, best.name);
+                    if (order >= 0) continue;
+                }
+                best = item; bestRank = rank; bestEditor = editorRank; bestCount = count;
+            }
+            return best;
         }
 
-        internal static Candidate[] CurrentCandidates() {
+        internal static Candidate[] CurrentCandidates() =>
+            ILAnalysisSession.Get((typeof(SourceGeneratorRegistrationOwners), "publication-candidates"), CollectCandidates);
+
+        private static Candidate[] CollectCandidates() {
             // EditorAssembly alone does not cover asmdefs excluded from the player
             // by define constraints. A Runtime publisher must exist in that target's
             // actual player compilation inventory as well.
@@ -179,7 +244,7 @@ namespace ME.BECS.Editor {
             var ordinal = 0;
             foreach (var system in systems) {
                 string owner;
-                try { owner = ChoosePublication(system.Assembly.GetName().Name, RequiredAssemblies(system), editor, candidates); }
+                try { owner = ChoosePublication(ManifestRows.NameOf(system.Assembly), RequiredAssemblies(system), editor, candidates); }
                 catch (InvalidOperationException error) { throw new InvalidOperationException(system.AssemblyQualifiedName + ": " + error.Message, error); }
                 manifest.Append("system-registration-owner\t").Append((ordinal++).ToString(System.Globalization.CultureInfo.InvariantCulture))
                     .Append('\t').Append(Convert.ToBase64String(Encoding.UTF8.GetBytes(system.AssemblyQualifiedName)))
@@ -191,7 +256,7 @@ namespace ME.BECS.Editor {
             manifest.Append("graph-publication-schema\t0\tdjE=\n");
             if (editor) return;
             var ordinal = 0;
-            foreach (var entry in CodeGeneration.SourceGeneratorGraphFragmentFormat.Entries(manifest.ToString().Split('\n'))) {
+            foreach (var entry in CodeGeneration.SourceGeneratorGraphFragmentFormat.Entries(ManifestRows.Of(manifest))) {
                 if (!CodeGeneration.SourceGeneratorGraphFragmentFormat.ValidEntry(entry)) throw new InvalidOperationException("Invalid graph publication snapshot.");
                 var types = new HashSet<Type> {
                     typeof(ME.BECS.FeaturesGraph.SystemsGraph), typeof(Unity.Burst.BurstCompileAttribute),
@@ -200,14 +265,14 @@ namespace ME.BECS.Editor {
                 };
                 foreach (var row in CodeGeneration.SourceGeneratorGraphFragmentFormat.Rows(entry).Select(value => value.Split('\t'))) {
                     string Decode(string value) => CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(value);
-                    if (row[0] == "graph-system" || row[0] == "graph-job-selection") types.Add(Type.GetType(Decode(row[2]), true));
+                    if (row[0] == "graph-system" || row[0] == "graph-job-selection") types.Add(ManifestRows.ResolveType(Decode(row[2])));
                     if (row[0] == "graph-job-selection") {
-                        foreach (var job in Decode(row[4]).Split('\n').Skip(2).Where(value => value.Length != 0)) types.Add(Type.GetType(job, true));
+                        foreach (var job in Decode(row[4]).Split('\n').Skip(2).Where(value => value.Length != 0)) types.Add(ManifestRows.ResolveType(job));
                     } else if (row[0] == "graph-topology") {
                         foreach (var node in Decode(row[4]).Split('\n').Where(value => value.StartsWith("node\t", StringComparison.Ordinal)).Select(value => value.Split('\t'))) {
-                            types.Add(Type.GetType(Decode(node[3]), true));
+                            types.Add(ManifestRows.ResolveType(Decode(node[3])));
                             var system = Decode(node[6]);
-                            if (system.Length != 0) types.Add(Type.GetType(system, true));
+                            if (system.Length != 0) types.Add(ManifestRows.ResolveType(system));
                         }
                     }
                 }
@@ -227,7 +292,7 @@ namespace ME.BECS.Editor {
             manifest.Append("entity-publication-schema\t0\tdjE=\n");
             var ordinal = 0;
             foreach (var entity in entities) {
-                var owner = ChoosePublication(entity.Assembly.GetName().Name, RequiredAssemblies(entity), editor, candidates);
+                var owner = ChoosePublication(ManifestRows.NameOf(entity.Assembly), RequiredAssemblies(entity), editor, candidates);
                 manifest.Append("entity-registration-owner\t").Append((ordinal++).ToString(System.Globalization.CultureInfo.InvariantCulture))
                     .Append('\t').Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(entity.AssemblyQualifiedName))
                     .Append('\t').Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(owner)).Append('\n');
@@ -239,7 +304,7 @@ namespace ME.BECS.Editor {
             manifest.Append("aspect-publication-schema\t0\tdjE=\n");
             var ordinal = 0;
             foreach (var aspect in aspects) {
-                var owner = ChoosePublication(aspect.Assembly.GetName().Name, RequiredAssemblies(aspect), editor, candidates);
+                var owner = ChoosePublication(ManifestRows.NameOf(aspect.Assembly), RequiredAssemblies(aspect), editor, candidates);
                 manifest.Append("aspect-registration-owner\t").Append((ordinal++).ToString(System.Globalization.CultureInfo.InvariantCulture))
                     .Append('\t').Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(aspect.AssemblyQualifiedName))
                     .Append('\t').Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(owner)).Append('\n');
@@ -254,7 +319,14 @@ namespace ME.BECS.Editor {
             // surface, not whichever older generated bridge happens to sort first.
             var ordinary = candidates.Where(item => !SourceGeneratorPublicationBridges.IsBridge(item.name) &&
                 (!unsafeCode || (editor ? item.editorUnsafe : item.playerUnsafe)));
-            return FindCandidate(declaringAssembly, required, editor, ordinary)?.name ?? SourceGeneratorPublicationBridges.Select(required, editor);
+            // Thousands of types share a few (assembly, required) surfaces: memoize the
+            // pure ordinary-owner choice for the session inventory. Bridge selection
+            // stays uncached because it records the plan in the current planning scope.
+            var owner = candidates is Candidate[] inventory
+                ? ILAnalysisSession.Get((typeof(SourceGeneratorRegistrationOwners), "ordinary-owner", inventory, declaringAssembly,
+                    string.Join("\n", required), editor, unsafeCode), () => FindCandidate(declaringAssembly, required, editor, ordinary)?.name)
+                : FindCandidate(declaringAssembly, required, editor, ordinary)?.name;
+            return owner ?? SourceGeneratorPublicationBridges.Select(required, editor);
         }
 
         internal static void AppendDestroy(StringBuilder manifest, IEnumerable<Type> components, bool editor) {
@@ -263,13 +335,13 @@ namespace ME.BECS.Editor {
             var ordinal = 0;
             foreach (var component in components) {
                 var required = RequiredAssemblies(component).Concat(new[] {
-                    typeof(Unity.Burst.BurstCompileAttribute).Assembly.GetName().Name,
-                    typeof(AOT.MonoPInvokeCallbackAttribute).Assembly.GetName().Name,
-                    typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly.GetName().Name,
-                    typeof(UnityEngine.Scripting.PreserveAttribute).Assembly.GetName().Name,
-                }).Concat(editor ? new[] { typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly.GetName().Name } : Array.Empty<string>())
+                    ManifestRows.NameOf(typeof(Unity.Burst.BurstCompileAttribute).Assembly),
+                    ManifestRows.NameOf(typeof(AOT.MonoPInvokeCallbackAttribute).Assembly),
+                    ManifestRows.NameOf(typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly),
+                    ManifestRows.NameOf(typeof(UnityEngine.Scripting.PreserveAttribute).Assembly),
+                }).Concat(editor ? new[] { ManifestRows.NameOf(typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly) } : Array.Empty<string>())
                     .Distinct(StringComparer.Ordinal).ToArray();
-                var owner = ChoosePublication(component.Assembly.GetName().Name, required, editor, candidates, unsafeCode: true);
+                var owner = ChoosePublication(ManifestRows.NameOf(component.Assembly), required, editor, candidates, unsafeCode: true);
                 manifest.Append("destroy-registration-owner\t").Append((ordinal++).ToString(System.Globalization.CultureInfo.InvariantCulture))
                     .Append('\t').Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(component.AssemblyQualifiedName))
                     .Append('\t').Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(owner)).Append('\n');
@@ -285,7 +357,7 @@ namespace ME.BECS.Editor {
                 if (group != null || !owners.TryGetValue(component, out _)) {
                     var required = RequiredAssemblies(component).AsEnumerable();
                     if (group != null) required = required.Concat(RequiredAssembliesCore(group, true));
-                    var owner = ChoosePublication(component.Assembly.GetName().Name, required.Distinct(StringComparer.Ordinal).ToArray(), editor, candidates);
+                    var owner = ChoosePublication(ManifestRows.NameOf(component.Assembly), required.Distinct(StringComparer.Ordinal).ToArray(), editor, candidates);
                     AppendRow(owner);
                     if (group == null) owners.Add(component, owner);
                 } else AppendRow(owners[component]);
@@ -313,7 +385,7 @@ namespace ME.BECS.Editor {
         internal static void AppendNetwork(StringBuilder manifest, bool editor) {
             // Consume the optional feeder's existing ordered selection, without a
             // compile-time reference from core Editor to the Network addon.
-            var rows = manifest.ToString().Split('\n');
+            var rows = ManifestRows.Of(manifest);
             if (!rows.Any(row => row.StartsWith("network-method-schema\t", StringComparison.Ordinal))) return;
             var candidates = CurrentCandidates();
             var contract = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => !assembly.IsDynamic)
@@ -322,13 +394,13 @@ namespace ME.BECS.Editor {
             foreach (var row in rows.Where(row => row.StartsWith("network-method\t", StringComparison.Ordinal))) {
                 var fields = row.Split('\t');
                 var identity = CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(fields[2]).Split('\n');
-                var type = Type.GetType(identity[0], true);
+                var type = ManifestRows.ResolveType(identity[0]);
                 var required = RequiredAssemblies(type).Concat(RequiredAssemblies(contract)).Concat(new[] {
-                    typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly.GetName().Name,
-                    typeof(UnityEngine.Scripting.PreserveAttribute).Assembly.GetName().Name,
-                }).Concat(editor ? new[] { typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly.GetName().Name } : Array.Empty<string>())
+                    ManifestRows.NameOf(typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly),
+                    ManifestRows.NameOf(typeof(UnityEngine.Scripting.PreserveAttribute).Assembly),
+                }).Concat(editor ? new[] { ManifestRows.NameOf(typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly) } : Array.Empty<string>())
                     .Distinct(StringComparer.Ordinal).ToArray();
-                var owner = ChoosePublication(type.Assembly.GetName().Name, required, editor, candidates);
+                var owner = ChoosePublication(ManifestRows.NameOf(type.Assembly), required, editor, candidates);
                 manifest.Append("network-registration-owner\t").Append(fields[1]).Append('\t')
                     .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(CodeGeneration.SourceGeneratorNetworkFragmentFormat.EntryValue(identity[0], identity[1])))
                     .Append('\t').Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(owner)).Append('\n');
@@ -336,27 +408,33 @@ namespace ME.BECS.Editor {
         }
 
         internal static void AppendJobInit(StringBuilder manifest, bool editor) {
-            var rows = manifest.ToString().Split('\n').Where(row => row.StartsWith("job-early-init\t", StringComparison.Ordinal)).ToArray();
+            string[] rows;
+            using (CodeGeneratorTimings.Measure("JobInit owners: manifest rows"))
+                rows = ManifestRows.Of(manifest).Where(row => row.StartsWith("job-early-init\t", StringComparison.Ordinal)).ToArray();
             var candidates = CurrentCandidates();
             manifest.Append("jobinit-publication-schema\t0\tdjE=\n");
             foreach (var row in rows) {
                 var fields = row.Split('\t');
                 var payload = CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(fields[2]);
                 var values = payload.Split('\n');
-                var job = Type.GetType(values[1], true);
+                var job = ManifestRows.ResolveType(values[1]);
                 var targets = new System.Collections.Generic.List<Type> { job };
                 if (values[2].Length != 0) {
-                    targets.Add(Type.GetType(values[2], true));
-                    targets.AddRange(values.Skip(4).Select(identity => Type.GetType(identity, true)));
+                    targets.Add(ManifestRows.ResolveType(values[2]));
+                    targets.AddRange(values.Skip(4).Select(identity => ManifestRows.ResolveType(identity)));
                 }
+                var requiredScope = CodeGeneratorTimings.Measure("JobInit owners: required assemblies");
                 var required = targets.SelectMany(RequiredAssemblies).Concat(new[] {
-                    typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly.GetName().Name,
-                    typeof(UnityEngine.Scripting.PreserveAttribute).Assembly.GetName().Name,
-                }).Concat(editor ? new[] { typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly.GetName().Name } : Array.Empty<string>())
+                    ManifestRows.NameOf(typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly),
+                    ManifestRows.NameOf(typeof(UnityEngine.Scripting.PreserveAttribute).Assembly),
+                }).Concat(editor ? new[] { ManifestRows.NameOf(typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly) } : Array.Empty<string>())
                     .Distinct(StringComparer.Ordinal).ToArray();
+                requiredScope.Dispose();
                 string owner;
-                try { owner = ChoosePublication(job.Assembly.GetName().Name, required, editor, candidates); }
+                using (CodeGeneratorTimings.Measure("JobInit owners: choose"))
+                try { owner = ChoosePublication(ManifestRows.NameOf(job.Assembly), required, editor, candidates); }
                 catch (InvalidOperationException error) { throw new InvalidOperationException("EarlyInit slot " + fields[1] + " (" + job.AssemblyQualifiedName + "): " + error.Message, error); }
+                using (CodeGeneratorTimings.Measure("JobInit owners: append entry"))
                 manifest.Append("jobinit-registration-owner\t").Append(fields[1]).Append('\t')
                     .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(CodeGeneration.SourceGeneratorJobInitFragmentFormat.EntryValue(payload)))
                     .Append('\t').Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(owner)).Append('\n');
@@ -364,28 +442,31 @@ namespace ME.BECS.Editor {
         }
 
         internal static void AppendJobDebug(StringBuilder manifest, bool editor) {
-            var rows = manifest.ToString().Split('\n').Where(row => row.StartsWith("job-debug\t", StringComparison.Ordinal)).ToArray();
+            var rows = ManifestRows.Of(manifest).Where(row => row.StartsWith("job-debug\t", StringComparison.Ordinal)).ToArray();
             var candidates = CurrentCandidates();
             manifest.Append("jobdebug-publication-schema\t0\tdjE=\n");
             foreach (var row in rows) {
                 var fields = row.Split('\t');
                 var payload = CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(fields[2]);
                 var debug = payload.Split('\n');
-                var job = Type.GetType(debug[1], true);
-                var dependencies = new HashSet<Type> { job, Type.GetType(debug[2], true) };
-                if (debug[3].Length != 0) dependencies.Add(Type.GetType(debug[3], true));
+                var job = ManifestRows.ResolveType(debug[1]);
+                var dependencies = new HashSet<Type> { job, ManifestRows.ResolveType(debug[2]) };
+                if (debug[3].Length != 0) dependencies.Add(ManifestRows.ResolveType(debug[3]));
                 foreach (var dependency in debug.Skip(5).Select(value => value.Split('\t'))) {
                     if (dependency[0] == "S" && dependency.Length == 2) continue;
-                    dependencies.Add(Type.GetType(dependency[dependency.Length - 1], true));
+                    dependencies.Add(ManifestRows.ResolveType(dependency[dependency.Length - 1]));
                 }
                 var required = dependencies.SelectMany(RequiredAssemblies).Concat(new[] {
-                    typeof(Unity.Burst.BurstCompiler).Assembly.GetName().Name,
-                    typeof(Unity.Collections.Allocator).Assembly.GetName().Name,
-                    typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly.GetName().Name,
-                    typeof(UnityEngine.Scripting.PreserveAttribute).Assembly.GetName().Name,
-                }).Concat(editor ? new[] { typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly.GetName().Name } : Array.Empty<string>())
+                    ManifestRows.NameOf(typeof(Unity.Burst.BurstCompiler).Assembly),
+                    ManifestRows.NameOf(typeof(Unity.Collections.Allocator).Assembly),
+                    // Allocator lives in UnityEngine.CoreModule, not the Collections
+                    // package. Cuts allocation overloads expose UnsafeList<T> too.
+                    ManifestRows.NameOf(typeof(Unity.Collections.LowLevel.Unsafe.UnsafeList<>).Assembly),
+                    ManifestRows.NameOf(typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly),
+                    ManifestRows.NameOf(typeof(UnityEngine.Scripting.PreserveAttribute).Assembly),
+                }).Concat(editor ? new[] { ManifestRows.NameOf(typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly) } : Array.Empty<string>())
                     .Distinct(StringComparer.Ordinal).ToArray();
-                var owner = ChoosePublication(job.Assembly.GetName().Name, required, editor, candidates, unsafeCode: true);
+                var owner = ChoosePublication(ManifestRows.NameOf(job.Assembly), required, editor, candidates, unsafeCode: true);
                 manifest.Append("jobdebug-registration-owner\t").Append(fields[1]).Append('\t')
                     .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(CodeGeneration.SourceGeneratorJobDebugFragmentFormat.EntryValue(payload)))
                     .Append('\t').Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(owner)).Append('\n');
@@ -393,11 +474,11 @@ namespace ME.BECS.Editor {
         }
 
         internal static void AppendJobSetup(StringBuilder manifest, bool editor) {
-            var rows = manifest.ToString().Split('\n');
+            var rows = ManifestRows.Of(manifest);
             var entities = rows.Where(row => row.StartsWith("entity-registration\t", StringComparison.Ordinal)).Select(row => row.Split('\t'))
                 .OrderBy(row => int.Parse(row[1], System.Globalization.CultureInfo.InvariantCulture)).ToArray();
             var groups = entities.ToDictionary(row => {
-                var type = Type.GetType(CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(row[2]), true);
+                var type = ManifestRows.ResolveType(CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(row[2]));
                 return type.Assembly.FullName + "\tT:" + type.FullName.Replace('+', '.');
             }, row => new KeyValuePair<int, string>(int.Parse(row[1], System.Globalization.CultureInfo.InvariantCulture),
                 CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(row[2])), StringComparer.Ordinal);
@@ -406,26 +487,27 @@ namespace ME.BECS.Editor {
             manifest.Append("jobsetup-publication-schema\t0\tdjE=\n");
             for (var ordinal = 0; ordinal < entries.Length; ++ordinal) {
                 var fields = CodeGeneration.SourceGeneratorJobSetupFragmentFormat.Unpack(entries[ordinal]);
-                var job = Type.GetType(fields[1], true);
+                var job = ManifestRows.ResolveType(fields[1]);
                 var dependencies = new HashSet<Type> { job };
                 foreach (var row in fields[5].Split('\n')) {
                     var debug = CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(row.Split('\t')[2]).Split('\n');
-                    dependencies.Add(Type.GetType(debug[2], true));
-                    if (debug[3].Length != 0) dependencies.Add(Type.GetType(debug[3], true));
+                    dependencies.Add(ManifestRows.ResolveType(debug[2]));
+                    if (debug[3].Length != 0) dependencies.Add(ManifestRows.ResolveType(debug[3]));
                     foreach (var dependency in debug.Skip(5).Select(value => value.Split('\t'))) {
                         if (dependency[0] == "S" && dependency.Length == 2) continue;
-                        dependencies.Add(Type.GetType(dependency[dependency.Length - 1], true));
+                        dependencies.Add(ManifestRows.ResolveType(dependency[dependency.Length - 1]));
                     }
                 }
                 foreach (var row in fields[6].Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries))
-                    dependencies.Add(Type.GetType(row.Split('\t')[1], true));
+                    dependencies.Add(ManifestRows.ResolveType(row.Split('\t')[1]));
                 var required = dependencies.SelectMany(RequiredAssemblies).Concat(new[] {
-                    typeof(Unity.Collections.Allocator).Assembly.GetName().Name, typeof(Unity.Mathematics.math).Assembly.GetName().Name,
-                    typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly.GetName().Name,
-                    typeof(UnityEngine.Scripting.PreserveAttribute).Assembly.GetName().Name,
-                }).Concat(editor ? new[] { typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly.GetName().Name } : Array.Empty<string>())
+                    ManifestRows.NameOf(typeof(Unity.Collections.Allocator).Assembly), ManifestRows.NameOf(typeof(Unity.Mathematics.math).Assembly),
+                    ManifestRows.NameOf(typeof(Unity.Collections.LowLevel.Unsafe.UnsafeList<>).Assembly),
+                    ManifestRows.NameOf(typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly),
+                    ManifestRows.NameOf(typeof(UnityEngine.Scripting.PreserveAttribute).Assembly),
+                }).Concat(editor ? new[] { ManifestRows.NameOf(typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly) } : Array.Empty<string>())
                     .Distinct(StringComparer.Ordinal).ToArray();
-                var owner = ChoosePublication(job.Assembly.GetName().Name, required, editor, candidates, unsafeCode: true);
+                var owner = ChoosePublication(ManifestRows.NameOf(job.Assembly), required, editor, candidates, unsafeCode: true);
                 manifest.Append("jobsetup-registration-owner\t").Append(ordinal.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\t')
                     .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(entries[ordinal])).Append('\t')
                     .Append(CodeGeneration.SourceGeneratorSystemFragmentFormat.Encode(owner)).Append('\n');
@@ -441,11 +523,11 @@ namespace ME.BECS.Editor {
             void Add(string phase, Type type) {
                 if (!owners.TryGetValue(type, out var owner)) {
                     var required = RequiredAssemblies(type).Concat(RequiredAssemblies(addonContract)).Concat(new[] {
-                        typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly.GetName().Name,
-                        typeof(UnityEngine.Scripting.PreserveAttribute).Assembly.GetName().Name,
-                    }).Concat(editor ? new[] { typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly.GetName().Name } : Array.Empty<string>())
+                        ManifestRows.NameOf(typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly),
+                        ManifestRows.NameOf(typeof(UnityEngine.Scripting.PreserveAttribute).Assembly),
+                    }).Concat(editor ? new[] { ManifestRows.NameOf(typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly) } : Array.Empty<string>())
                         .Distinct(StringComparer.Ordinal).ToArray();
-                    owner = ChoosePublication(type.Assembly.GetName().Name, required, editor, candidates);
+                    owner = ChoosePublication(ManifestRows.NameOf(type.Assembly), required, editor, candidates);
                     owners.Add(type, owner);
                 }
                 manifest.Append("views-registration-owner\t").Append((ordinal++).ToString(System.Globalization.CultureInfo.InvariantCulture))
@@ -467,13 +549,13 @@ namespace ME.BECS.Editor {
                     if (!owners.TryGetValue(component, out var owner)) {
                         var required = RequiredAssemblies(component).Concat(component.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
                             .SelectMany(field => RequiredAssemblies(field.FieldType))).Concat(new[] {
-                                typeof(Unity.Burst.BurstCompileAttribute).Assembly.GetName().Name,
-                                typeof(AOT.MonoPInvokeCallbackAttribute).Assembly.GetName().Name,
-                                typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly.GetName().Name,
-                                typeof(UnityEngine.Scripting.PreserveAttribute).Assembly.GetName().Name,
-                            }).Concat(editor ? new[] { typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly.GetName().Name } : Array.Empty<string>())
+                                ManifestRows.NameOf(typeof(Unity.Burst.BurstCompileAttribute).Assembly),
+                                ManifestRows.NameOf(typeof(AOT.MonoPInvokeCallbackAttribute).Assembly),
+                                ManifestRows.NameOf(typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute).Assembly),
+                                ManifestRows.NameOf(typeof(UnityEngine.Scripting.PreserveAttribute).Assembly),
+                            }).Concat(editor ? new[] { ManifestRows.NameOf(typeof(UnityEditor.InitializeOnLoadMethodAttribute).Assembly) } : Array.Empty<string>())
                             .Distinct(StringComparer.Ordinal).ToArray();
-                        owner = ChoosePublication(component.Assembly.GetName().Name, required, editor, candidates, unsafeCode: true);
+                        owner = ChoosePublication(ManifestRows.NameOf(component.Assembly), required, editor, candidates, unsafeCode: true);
                         owners.Add(component, owner);
                     }
                     manifest.Append("config-registration-owner\t").Append((ordinal++).ToString(System.Globalization.CultureInfo.InvariantCulture))

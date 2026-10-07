@@ -12,7 +12,7 @@ namespace ME.BECS.Tests {
             public void Execute(int unused) => default(Ent).Set(new Test1Component());
         }
 
-        [TestCase(typeof(SafetyExplicitSelectionJob), typeof(TestComponent), RefOp.ReadWrite)]
+        [TestCase(typeof(SafetyExplicitSelectionJob), typeof(TestComponent), RefOp.WriteOnly)]
         [TestCase(typeof(WriteOnlyQueryArgumentJob), typeof(TestComponent), RefOp.WriteOnly)]
         [TestCase(typeof(GenericAotSystem<AotMarker>.ReadOnlySafetyJob), typeof(AotMarker), RefOp.ReadOnly)]
         public void ILSafetyUsesExactExecuteContract(Type job, Type component, RefOp mode) {

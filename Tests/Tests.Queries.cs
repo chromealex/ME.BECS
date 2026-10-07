@@ -1011,6 +1011,46 @@ namespace ME.BECS.Tests {
 
         }
 
+        [TestCase(false, false)]
+        [TestCase(true, false)]
+        [TestCase(false, true)]
+        [TestCase(true, true)]
+        public void GeneratedDebugJobsValidateComponentDependencies(bool supplyDependency, bool inferredAccess) {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+            var world = World.Create();
+            JobHandle first = default, second = default;
+            try {
+                var ent = Ent.New();
+                ent.Set(new TestComponent { data = 1 });
+                ent.Set(new Test2Component());
+                ent.Set(new Test3Component());
+                Batches.Apply(world);
+                JobHandle ScheduleSecond(JobHandle dependency) => inferredAccess
+                    ? API.Query(world, dependency).With<TestComponent>().AsParallel().Schedule<Job1>()
+                    : API.Query(world, dependency).AsParallel().Schedule<Job2Unsafe, TestComponent>();
+                // Job1 has no typed component arguments. Its Test2Component
+                // write must reach Unity exclusively through the IL safety plan.
+                first = inferredAccess
+                    ? API.Query(world).With<TestComponent>().AsParallel().Schedule<Job1>()
+                    : API.Query(world).AsParallel().Schedule<Job1Unsafe, TestComponent>();
+                if (supplyDependency) {
+                    // Despite their historical names, these jobs only bypass
+                    // container checks when the query explicitly uses AsUnsafe().
+                    second = ScheduleSecond(first);
+                } else {
+                    Assert.Throws<System.InvalidOperationException>(() => {
+                        second = ScheduleSecond(default);
+                    }, "Generated debug fields must expose typed and IL-inferred component safety handles to Unity.");
+                }
+            } finally {
+                JobHandle.CombineDependencies(first, second).Complete();
+                world.Dispose();
+            }
+#else
+            Assert.Ignore("Requires ENABLE_UNITY_COLLECTIONS_CHECKS and ENABLE_BECS_COLLECTIONS_CHECKS.");
+#endif
+        }
+
         [Test]
         public void ComponentsDisableSafetyCheck() {
 

@@ -37,6 +37,10 @@ public sealed class JobSetupPublicationGenerator : IIncrementalGenerator {
                 source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(").Append(SymbolDisplay.FormatLiteral(Format.MetadataKey, true)).Append(", ")
                     .Append(SymbolDisplay.FormatLiteral(Envelope.Metadata(document, file.Content!), true)).Append(")]\n");
                 if (document.Entries.Length != 0) {
+                    if (compilation.GetTypeByMetadataName("Unity.Collections.LowLevel.Unsafe.UnsafeList`1") == null) {
+                        Fail("The statistics owner requires a direct Unity.Collections reference; regenerate inputs to select a compatible owner");
+                        continue;
+                    }
                     if (compilation.GetTypeByMetadataName("ME.BECS.BootstrapRuntime") == null ||
                         compilation.GetTypeByMetadataName("UnityEngine.Scripting.PreserveAttribute") == null ||
                         compilation.GetTypeByMetadataName(editor ? "UnityEditor.InitializeOnLoadMethodAttribute" : "UnityEngine.RuntimeInitializeOnLoadMethodAttribute") == null) {

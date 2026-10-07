@@ -13,7 +13,7 @@ namespace ME.BECS.Tests {
         private static T Field<T>(object value, string name) => (T)value.GetType().GetField(name, Hidden).GetValue(value);
         private static string Decode(string text) => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(text));
         private static string Encode(string text) => Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(text));
-        private static string[] Rows(Assembly assembly) => assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+        private static string[] Rows(Assembly assembly) => assembly.BecsInputMetadata()
             .Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Substring(item.Value.IndexOf('\t') + 1)).ToArray();
         internal static Assembly Owner(Assembly aggregate) {
             var row = Rows(aggregate).Single(value => value.StartsWith("bootstrap-registration-owner\t", StringComparison.Ordinal)).Split('\t');
@@ -38,7 +38,7 @@ namespace ME.BECS.Tests {
             var content = (string)Call("Serialize", document);
             var envelope = Format.Assembly.GetType("ME.BECS.CodeGeneration.SourceGeneratorSystemFragmentFormat", true);
             var receipt = (string)envelope.GetMethod("Metadata", Static).Invoke(null, new[] { document, content });
-            Assert.AreEqual(1, owner.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            Assert.AreEqual(1, owner.BecsInputMetadata()
                 .Count(item => item.Key == "ME.BECS.BootstrapFragment.v1" && item.Value == receipt));
             var root = owner.GetType("ME.BECS.SourceGenerated.BootstrapProfile_" + profile, true);
             var publish = root.GetMethod("Publish", Static);

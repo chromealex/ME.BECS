@@ -20,10 +20,11 @@ namespace ME.BECS.Tests {
         }
         private static object Read(object queue, Func<object> read) => Call(queue, "Read", read);
         private static int Pump(object queue, int budget = 1) => (int)Call(queue, "Pump", budget);
-        private static bool Pending(object queue) {
+        private static int PendingCount(object queue) {
             var requests = QueueType.GetField("requests", Hidden).GetValue(queue);
-            return (int)requests.GetType().GetProperty("Count").GetValue(requests) > 0;
+            return (int)requests.GetType().GetProperty("Count").GetValue(requests);
         }
+        private static bool Pending(object queue) => PendingCount(queue) > 0;
         private static IEnumerator Until(Func<bool> ready, CancellationTokenSource cancellation, Action tick = null) {
             var watch = System.Diagnostics.Stopwatch.StartNew();
             while (!ready()) {
@@ -70,6 +71,29 @@ namespace ME.BECS.Tests {
                 Assert.AreEqual(cancellation.Token, error.CancellationToken, "Parallel workers must propagate the owning export token.");
                 Assert.AreEqual(1, Pump(queue));
                 Assert.AreEqual(0, invoked, "A later Editor Update must not execute a cancelled request.");
+            } finally { cancellation.Cancel(); }
+        }
+
+        [UnityTest]
+        public IEnumerator CancellationDrainsBothAnalysisWorkersWithoutExecutingQueuedMetadata() {
+            using var cancellation = new CancellationTokenSource();
+            var queue = Create(cancellation.Token);
+            var invoked = 0;
+            Func<object> getter = () => { Interlocked.Increment(ref invoked); return 42; };
+            var first = AsyncTask.Run(() => Read(queue, getter));
+            var second = AsyncTask.Run(() => Read(queue, getter));
+            try {
+                yield return Until(() => PendingCount(queue) == 2, cancellation);
+                cancellation.Cancel();
+                yield return Until(() => first.IsCompleted && second.IsCompleted, cancellation);
+                foreach (var worker in new[] { first, second }) {
+                    var error = Assert.Catch<OperationCanceledException>(() => worker.GetAwaiter().GetResult());
+                    Assert.AreEqual(cancellation.Token, error.CancellationToken);
+                }
+                Assert.AreEqual(0, invoked, "Joining cancelled workers must not require running their getters.");
+                Assert.AreEqual(2, Pump(queue, 4));
+                Assert.AreEqual(0, PendingCount(queue));
+                Assert.AreEqual(0, invoked, "A later Editor update must discard both stale callbacks.");
             } finally { cancellation.Cancel(); }
         }
 

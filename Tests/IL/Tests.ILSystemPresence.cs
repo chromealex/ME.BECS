@@ -52,7 +52,7 @@ namespace ME.BECS.Tests {
             AssertILPresenceOnly(ILPresenceUpdate(typeof(QueryFilterSummarySystem)), typeof(TestComponent), typeof(Test1Component), typeof(Test2Component), typeof(Test3Component), typeof(Test4Component));
             AssertILPresenceOnly(ILPresenceUpdate(typeof(QueryAnyOnlySummarySystem)), typeof(Test2Component), typeof(Test3Component), typeof(Test4Component));
             var reader = ILPresenceReader();
-            var any = typeof(ArchetypeQueries.QueryCompose).GetMethod("WithAny").MakeGenericMethod(typeof(TestComponent), typeof(TNull));
+            var any = typeof(FlatQueries.QueryCompose).GetMethod("WithAny").MakeGenericMethod(typeof(TestComponent), typeof(TNull));
             Assert.IsTrue(ILPresenceFilter(reader, any, out var components));
             CollectionAssert.AreEqual(new[] { typeof(TestComponent) }, components);
         }
@@ -127,7 +127,7 @@ namespace ME.BECS.Tests {
         [Test]
         public void ILPresenceBindsAllAvailableBuilderFilterOverloads() {
             var reader = ILPresenceReader();
-            var owners = new[] { typeof(QueryBuilder), typeof(ArchetypeQueries.QueryCompose), typeof(QueryBuilder).Assembly.GetType("ME.BECS.QueryBuilderStatic", false) };
+            var owners = new[] { typeof(QueryBuilder), typeof(FlatQueries.QueryCompose) };
             var arguments = new[] { typeof(TestComponent), typeof(Test1Component), typeof(Test2Component), typeof(Test3Component) };
             var tested = 0;
             foreach (var owner in owners.Where(type => type != null)) {

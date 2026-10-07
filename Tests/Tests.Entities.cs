@@ -392,7 +392,6 @@ namespace ME.BECS.Tests {
                 using var world = World.Create(new WorldProperties() {
                     stateProperties = new StateProperties() {
                         entitiesCapacity = 10,
-                        archetypesCapacity = 1,
                     },
                     allocatorProperties = new AllocatorProperties() {
                         sizeInBytesCapacity = 1024 * 1024,
@@ -474,9 +473,6 @@ namespace ME.BECS.Tests {
             }
             Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
             Assert.AreEqual(16u, world.state.ptr->entities.FreeCount);
-            #if !ENABLE_BECS_FLAT_QUERIES
-            Assert.AreEqual(0, world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Count);
-            #endif
 
             {
                 DestroyHugeAmountBurstMethod(ref world, amount);
@@ -503,9 +499,6 @@ namespace ME.BECS.Tests {
             }
             Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
             Assert.AreEqual(16u, world.state.ptr->entities.FreeCount);
-            #if !ENABLE_BECS_FLAT_QUERIES
-            Assert.AreEqual(0, world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Count);
-            #endif
             
             {
                 var job = new DestroyEntitiesJob() {

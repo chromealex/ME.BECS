@@ -37,6 +37,13 @@ public sealed class JobDebugPublicationGenerator : IIncrementalGenerator {
                     .Append(SymbolDisplay.FormatLiteral(Format.MetadataKey, true)).Append(", ")
                     .Append(SymbolDisplay.FormatLiteral(Envelope.Metadata(document, file.Content!), true)).Append(")]\n");
                 if (document.Entries.Length != 0) {
+                    var checks = compilation.SyntaxTrees.Any(tree =>
+                        tree.Options.PreprocessorSymbolNames.Contains("ENABLE_UNITY_COLLECTIONS_CHECKS") &&
+                        tree.Options.PreprocessorSymbolNames.Contains("ENABLE_BECS_COLLECTIONS_CHECKS"));
+                    if (checks && compilation.GetTypeByMetadataName("Unity.Collections.LowLevel.Unsafe.UnsafeList`1") == null) {
+                        Fail("The debug owner requires a direct Unity.Collections reference; regenerate inputs to select a compatible owner");
+                        continue;
+                    }
                     if (compilation.GetTypeByMetadataName("ME.BECS.BootstrapRuntime") == null ||
                         compilation.GetTypeByMetadataName("UnityEngine.Scripting.PreserveAttribute") == null ||
                         compilation.GetTypeByMetadataName(editor ? "UnityEditor.InitializeOnLoadMethodAttribute" : "UnityEngine.RuntimeInitializeOnLoadMethodAttribute") == null) {

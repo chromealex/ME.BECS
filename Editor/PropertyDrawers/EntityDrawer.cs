@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -101,12 +102,16 @@ namespace ME.BECS.Editor {
                     this.element = new Label(EditorUtils.GetComponentName(type));
                     this.element.AddToClassList("config-component-row");
                     this.element.AddToClassList("config-tag-row");
+                    EditorUIUtils.ApplyComponentGroupColor(this.element, type);
+                    owner.BindTooltip(this.element, FieldTooltip.Get(type));
                     return;
                 }
                 this.foldout = new Foldout { text = EditorUtils.GetComponentName(type), value = owner.IsExpanded(type, shared) };
                 this.element = this.foldout;
                 this.element.AddToClassList("config-component-row");
                 this.element.AddToClassList("config-component-foldout");
+                EditorUIUtils.ApplyComponentGroupColor(this.element, type);
+                owner.BindTooltip(this.foldout.Q<Toggle>(), FieldTooltip.Get(type));
                 this.foldout.RegisterValueChangedCallback(evt => {
                     if (evt.target != this.element) return;
                     owner.RememberExpanded(type, shared, evt.newValue);
@@ -155,31 +160,50 @@ namespace ME.BECS.Editor {
                     this.controls.Add(control);
                     control.RegisterCallback<GeometryChangedEvent>(evt => this.ApplyEditability(control));
                     control.RegisterCallback<AttachToPanelEvent>(evt => control.schedule.Execute(() => this.ApplyEditability(control)));
+                    var fieldInfo = this.type.GetField(field.name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    var hasAttribute = fieldInfo != null && (Attribute.IsDefined(fieldInfo, typeof(ME.BECS.TooltipAttribute)) == true || Attribute.IsDefined(fieldInfo, typeof(UnityEngine.TooltipAttribute)) == true);
+                    var tooltip = hasAttribute == false && string.IsNullOrEmpty(field.tooltip) == true ? FieldTooltip.Get(fieldInfo) : null;
+                    if (string.IsNullOrEmpty(tooltip) == false) {
+                        var hint = new VisualElement();
+                        hint.AddToClassList("runtime-field-tooltip");
+                        EditorUIUtils.DrawTooltip(hint, tooltip);
+                        row.Add(hint);
+                    }
+                    this.owner.BindTooltip(row, FieldTooltip.Get(fieldInfo, field.tooltip));
                     row.Add(control); this.element.Add(row);
                     control.BindProperty(field);
                     control.RegisterCallback<SerializedPropertyChangeEvent>(evt => this.Commit(evt.changedProperty));
                 } while (iterator.NextVisible(false));
             }
             private void ApplyEditability(PropertyField control) {
-                // Disable value inputs, never their containers: foldouts and entity navigation stay usable.
-                control.Query<VisualElement>(className: "unity-base-field").ForEach(input => {
+                // A disabled ancestor also disables every nested foldout. Reset containers first,
+                // then lock only leaf value fields, preserving component/property navigation.
+                control.SetEnabled(true);
+                this.foldout?.SetEnabled(true);
+                var inputs = control.Query<VisualElement>(className: "unity-base-field").ToList();
+                foreach (var input in inputs) input.SetEnabled(true);
+                foreach (var input in inputs) {
                     var foldout = input.GetFirstAncestorOfType<Foldout>();
-                    if (input is Foldout || input.Q<Foldout>() != null || input.ClassListContains("unity-foldout__toggle") || (foldout != null && foldout.Q<Toggle>() == input)) {
-                        input.SetEnabled(true);
-                        return;
-                    }
-                    if (input.Q(className: "runtime-entity-inspector") != null) { input.SetEnabled(true); return; }
+                    if (input is Foldout || input.Q<Foldout>() != null || input.ClassListContains("unity-foldout__toggle") == true || (foldout != null && foldout.Q<Toggle>() == input)) continue;
+                    // Vectors, lists and other compound fields must remain enabled so their
+                    // structural controls work; their individual value fields are handled below.
+                    if (input.Children().Any(child => child.ClassListContains("unity-base-field") == true || child.Q(className: "unity-base-field") != null) == true) continue;
+                    if (input.Q(className: "runtime-entity-inspector") != null) continue;
                     var navigation = input;
+                    var nestedInspector = false;
                     while (navigation != null && navigation != control) {
-                        if (navigation.ClassListContains("runtime-entity-navigation") || navigation.ClassListContains("runtime-entity-inspector")) return;
+                        if (navigation.ClassListContains("runtime-entity-navigation") == true || navigation.ClassListContains("runtime-entity-inspector") == true) {
+                            nestedInspector = true;
+                            break;
+                        }
                         navigation = navigation.parent;
                     }
-                    input.SetEnabled(this.owner.Editable);
-                });
+                    if (nestedInspector == false) input.SetEnabled(this.owner.Editable);
+                }
                 control.Query<Button>().ForEach(button => {
                     var parent = button.parent;
                     while (parent != null && parent != control) {
-                        if (parent.ClassListContains("runtime-entity-navigation") || parent.ClassListContains("runtime-entity-inspector")) return;
+                        if (parent.ClassListContains("runtime-entity-navigation") == true || parent.ClassListContains("runtime-entity-inspector") == true) return;
                         parent = parent.parent;
                     }
                     button.SetEnabled(this.owner.Editable);
@@ -226,7 +250,7 @@ namespace ME.BECS.Editor {
             private readonly string path, caption;
             private readonly Foldout header, journal;
             private readonly Button inlineButton, selectButton;
-            private readonly Label metadata;
+            private readonly Label metadata, reference;
             private readonly VisualElement normal, shared, journalContent;
             private readonly Label normalTitle, sharedTitle;
             private readonly Dictionary<Type, Row> normalRows = new Dictionary<Type, Row>();
@@ -251,16 +275,19 @@ namespace ME.BECS.Editor {
                 var navigation = new VisualElement();
                 navigation.AddToClassList("runtime-entity-navigation");
                 this.root.Add(navigation);
-                var reference = new Label(this.caption);
-                reference.AddToClassList("runtime-entity-reference");
-                navigation.Add(reference);
+                var identity = new VisualElement();
+                identity.AddToClassList("runtime-entity-identity");
+                this.reference = new Label(this.caption);
+                this.reference.AddToClassList("runtime-entity-reference");
+                identity.Add(this.reference);
+                navigation.Add(identity);
                 this.inlineButton = new Button(() => { this.SetExpanded(!this.header.value); this.Refresh(); }) { text = "Show Inline" };
                 this.selectButton = new Button(() => { if (this.Alive) SelectEntity(this.entity); }) { text = "Select Entity" };
                 navigation.Add(this.inlineButton); navigation.Add(this.selectButton);
                 this.root.Add(this.header);
                 this.header.style.display = this.header.value ? DisplayStyle.Flex : DisplayStyle.None;
                 this.metadata = new Label(); this.metadata.AddToClassList("runtime-entity-metadata");
-                this.header.Add(this.metadata);
+                identity.Add(this.metadata);
                 var searchField = new ToolbarSearchField(); searchField.AddToClassList("config-search");
                 this.header.Add(searchField);
                 searchField.RegisterValueChangedCallback(evt => { this.search = evt.newValue.Trim(); this.Filter(); });
@@ -287,6 +314,8 @@ namespace ME.BECS.Editor {
             }
             private void ApplyTheme() {
                 this.root.styleSheets.Clear();
+                EditorUIUtils.ApplyCommonStyles(this.root);
+                this.root.EnableInClassList("config-light", !EditorGUIUtility.isProSkin);
                 this.root.styleSheets.Add(EditorUtils.LoadResource<StyleSheet>(Themes.CurrentTheme));
                 this.root.styleSheets.Add(EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/EntityConfigCompact.uss"));
             }
@@ -324,25 +353,24 @@ namespace ME.BECS.Editor {
                 this.selectButton.SetEnabled(alive);
                 this.inlineButton.SetEnabled(alive);
                 this.inlineButton.text = this.header.value ? "Hide Inline" : "Show Inline";
-                this.header.text = alive && !string.IsNullOrEmpty(this.entity.EditorName.ToString()) ? this.entity.EditorName.ToString() : this.caption;
-                this.metadata.text = alive ? $"ID {ent.id}  ·  Gen {ent.gen}  ·  World {ent.worldId}  ·  Version {ent.Version}" + (this.Editable ? "" : "  ·  Read only") : (ent.IsEmpty() ? "Entity is empty" : "Entity is not alive");
+                var name = alive ? ent.EditorName.ToString() : string.Empty;
+                this.reference.text = string.IsNullOrEmpty(name) ? this.caption : name;
+                this.header.text = this.reference.text;
+                var world = ent.World;
+                var worldName = world.isCreated ? world.Name.ToString() : "Unavailable world";
+                this.metadata.text = ent.IsEmpty() ? "Entity is empty" :
+                    $"ID {ent.id}  ·  Gen {ent.gen}  ·  {worldName} (#{ent.worldId})" +
+                    (alive ? $"  ·  v{ent.Version}" + (this.Editable ? "" : "  ·  Read only") : "  ·  Not alive");
+                this.reference.tooltip = this.reference.text + "\n" + this.metadata.text;
                 if (!alive) { this.ClearRows(); return; }
                 if (!this.header.value) return;
                 this.types.Clear();
-                var world = ent.World;
-                #if ENABLE_BECS_FLAT_QUERIES
                 ref var componentsLock = ref world.state.ptr->entities.GetEntityComponentsLock(world.state, ent.id);
                 componentsLock.Lock();
                 try {
                     var iterator = world.state.ptr->entities.GetEntityComponentsEnumerator(world.state, ent.id);
                     while (iterator.MoveNext()) if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(iterator.Current, out var type)) this.types.Add(type);
                 } finally { componentsLock.Unlock(); }
-                #else
-                var archId = world.state.ptr->archetypes.entToArchetypeIdx[world.state.ptr->allocator, ent.id];
-                var arch = world.state.ptr->archetypes.list[world.state.ptr->allocator, archId];
-                var iterator = arch.components.GetEnumerator(world);
-                while (iterator.MoveNext()) if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(iterator.Current, out var type)) this.types.Add(type);
-                #endif
                 this.Reconcile(this.normalRows, this.normal, this.normalTitle, false);
                 this.types.Clear();
                 foreach (var pair in StaticTypesLoadedManaged.loadedSharedTypes) if (GetAccess(pair.Value, true).has(ent)) this.types.Add(pair.Value);
@@ -391,10 +419,27 @@ namespace ME.BECS.Editor {
                 while (decorator != null && !decorator.ClassListContains("has-tooltip")) decorator = decorator.parent;
                 var text = decorator?.Q<Label>(className: "tooltip-text")?.text;
                 if (string.IsNullOrEmpty(text) || this.root.panel == null) return;
+                this.ShowTooltip(decorator, text);
+            }
+            public void BindTooltip(VisualElement anchor, string text) {
+                if (anchor == null || string.IsNullOrEmpty(text) == true) return;
+                anchor.pickingMode = PickingMode.Position;
+                anchor.RegisterCallback<PointerOverEvent>(evt => { this.ShowTooltip(anchor, text); evt.StopPropagation(); });
+                anchor.RegisterCallback<PointerLeaveEvent>(evt => this.HideTooltip());
+                anchor.RegisterCallback<TooltipEvent>(evt => evt.StopImmediatePropagation());
+            }
+            private void ShowTooltip(VisualElement decorator, string text) {
+                if (this.root.panel == null) return;
                 this.HideTooltip();
                 var overlay = this.root.panel.visualTree;
                 this.popup = new Label(text) { pickingMode = PickingMode.Ignore, enableRichText = true };
+                // The panel root does not inherit the inspector's text font.
+                this.popup.style.unityFont = decorator.resolvedStyle.unityFont;
+                this.popup.style.unityFontDefinition = decorator.resolvedStyle.unityFontDefinition;
                 this.popup.AddToClassList("config-tooltip-popup");
+                this.popup.EnableInClassList("config-tooltip-light", !EditorGUIUtility.isProSkin);
+                EditorUIUtils.ApplyCommonStyles(this.popup);
+                this.popup.styleSheets.Add(EditorUtils.LoadResource<StyleSheet>(Themes.CurrentTheme));
                 this.popup.styleSheets.Add(EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/EntityConfigCompact.uss"));
                 this.popup.style.width = Mathf.Min(360, overlay.worldBound.width - 16);
                 var position = overlay.WorldToLocal(decorator.worldBound.position);

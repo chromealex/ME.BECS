@@ -37,11 +37,18 @@ public sealed class InputCatalogPublicationGenerator : IIncrementalGenerator {
                 if (document.Entries.Length != 0) {
                     Format.TryManifest(Envelope.Decode(document.Entries[0].Value), out var manifest);
                     var profile = editor ? "editor" : "runtime";
-                    foreach (var row in manifest.Rows) Metadata("ME.BECS.TypeInput.v1", profile + "\t" + row);
+                    // Compact catalog: the Editor reads the rows from its own snapshot
+                    // with this hash. Never re-embed the full snapshot as attributes.
+                    var contentHash = Format.ContentHash(manifest);
+                    if (contentHash == null) {
+                        output.ReportDiagnostic(Diagnostic.Create(inEditor ? Recovery : Invalid, Location.None,
+                            "Input catalog " + file.Path + " has no compact content hash. Regenerate inputs."));
+                        continue;
+                    }
                     Metadata("ME.BECS.TypeInputProfile.v1", profile);
-                    Metadata("ME.BECS.InputContentHash.v1", ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(manifest.Content));
+                    Metadata("ME.BECS.InputContentHash.v1", contentHash);
                     Metadata("ME.BECS.GraphInputSnapshot.v1", manifest.Snapshot);
-                    Metadata("ME.BECS.InputTransport.v1", "native-additionalfile");
+                    Metadata("ME.BECS.InputTransport.v1", Format.Transport);
                     source.Append("namespace ME.BECS.SourceGenerated { [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\ninternal static class InputCatalog_")
                         .Append(editor ? "Editor" : "Runtime").Append(" { } }\n");
                 }

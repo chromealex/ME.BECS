@@ -49,10 +49,46 @@ namespace ME.BECS.CodeGeneration {
             } catch (FormatException) { return false; }
             catch (System.Text.DecoderFallbackException) { return false; }
         }
+        internal const string ContentHashRow = "input-content-hash";
+        // v2: compact catalog (hash only). Older compiled catalogs are treated as stale.
+        internal const string Transport = "native-additionalfile-v2";
+
+        // The compiled catalog proves which full snapshot was compiled; it does not
+        // carry the snapshot. Embedding every row (tens of MB) into one assembly made
+        // that compilation, its domain reload and every metadata scan slow. Readers
+        // load the rows from the Editor-side snapshot whose hash matches.
+        internal static string Compact(string content) {
+            if (!TryManifest(content, out var manifest)) throw new InvalidOperationException("Invalid input catalog manifest.");
+            return Compact(content, manifest);
+        }
+
+        // Callers that already validated the manifest must not parse/hash 20 MB again.
+        private static string Compact(string content, Manifest manifest) {
+            var newline = content.IndexOf('\n');
+            var rows = new List<string> { (newline < 0 ? content : content.Substring(0, newline)).TrimEnd('\r') };
+            rows.AddRange(manifest.Rows.Where(row => row.StartsWith("inputcatalog-publication-schema\t", StringComparison.Ordinal) ||
+                row.StartsWith("inputcatalog-registration-owner\t", StringComparison.Ordinal) ||
+                row.StartsWith("graph-input-snapshot\t", StringComparison.Ordinal)));
+            rows.Add(ContentHashRow + "\t0\t" + Envelope.Encode(SourceGeneratorNames.Hash(content)));
+            var body = string.Join("\n", rows) + "\n";
+            return body + "end\t" + (rows.Count - 1).ToString(CultureInfo.InvariantCulture) + "\t" + SourceGeneratorNames.Hash(body) + "\n";
+        }
+
+        // Hash of the full snapshot recorded by Compact; null for a full or invalid manifest.
+        internal static string ContentHash(Manifest manifest) {
+            var rows = manifest.Rows.Where(row => row.StartsWith(ContentHashRow + "\t", StringComparison.Ordinal)).ToArray();
+            if (rows.Length != 1) return null;
+            var fields = rows[0].Split('\t');
+            if (fields.Length != 3 || fields[1] != "0") return null;
+            var hash = Envelope.Decode(fields[2]);
+            return IsHash(hash) ? hash : null;
+        }
+
         internal static Envelope.Document Document(string content, bool editor) {
             if (!TryManifest(content, out var manifest) || manifest.Editor != editor) throw new InvalidOperationException("Invalid input catalog manifest.");
+            var compact = Compact(content, manifest);
             return new Envelope.Document { Owner = manifest.Owner, Editor = editor, Count = 1,
-                Plan = SourceGeneratorNames.Hash(content), Entries = new[] { new KeyValuePair<int, string>(0, Envelope.Encode(content)) } };
+                Plan = SourceGeneratorNames.Hash(compact), Entries = new[] { new KeyValuePair<int, string>(0, Envelope.Encode(compact)) } };
         }
         internal static bool TryParse(string content, out Envelope.Document document) {
             if (!Envelope.TryParseEnvelope(content, MetadataKey, out document)) return false;

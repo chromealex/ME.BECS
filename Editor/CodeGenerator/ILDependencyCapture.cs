@@ -27,6 +27,9 @@ namespace ME.BECS.Editor {
             if (current == null || methods == null) return;
             foreach (var method in methods) Observe(method);
         }
+        // Drop observations that cannot be persisted before they reach the parent.
+        internal void Discard(Predicate<MethodBase> predicate) => this.methods?.RemoveWhere(predicate);
+
         public void Dispose() {
             current = this.previous;
             if (current == null || this.methods == null || this.methods.Count == 0) return;

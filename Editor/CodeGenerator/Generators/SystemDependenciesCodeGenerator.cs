@@ -20,12 +20,17 @@ namespace ME.BECS.Editor.Systems {
             public readonly System.Collections.Generic.List<MethodInfoDependencies.Error> errors = new System.Collections.Generic.List<MethodInfoDependencies.Error>();
         }
 
+        internal System.Action<int, int> analysisProgress;
         internal void PrepareAnalysis() {
-            foreach (var system in this.systems.Distinct()) {
+            var selected = this.systems.Distinct().Where(type => type.IsValueType && type.IsVisible).ToArray();
+            var completed = 0;
+            this.analysisProgress?.Invoke(0, selected.Length * 4);
+            foreach (var system in selected) {
                 if (!system.IsValueType || !system.IsVisible) continue;
                 foreach (var name in new[] { "OnUpdate", "OnAwake", "OnStart", "OnDestroy" }) {
                     ILAnalysisSession.Checkpoint();
                     this.GetLegacyDeps(SourceGeneratorScheduledJobsValidation.GetLifecycleMethod(system, name));
+                    this.analysisProgress?.Invoke(++completed, selected.Length * 4);
                 }
             }
         }
@@ -540,6 +545,12 @@ namespace ME.BECS.Editor.Systems {
         }
 
         internal static UsedObjects AnalyzeRuntimeDiscovery(RuntimeDiscoveryInputs input, bool useSourceCatalogs = false) {
+            return AnalyzeRuntimeDiscoveryWithProgress(input, useSourceCatalogs, null);
+        }
+
+        internal static UsedObjects AnalyzeRuntimeDiscoveryWithProgress(RuntimeDiscoveryInputs input, bool useSourceCatalogs, System.Action<int, int> progress) {
+            var completed = 0;
+            var total = input.modules.Length + input.systems.Length + 1;
             var systemsSet = new System.Collections.Generic.HashSet<System.Type>(10);
             var componentsSet = new System.Collections.Generic.HashSet<System.Type>(10);
             var jobTypesSet = new System.Collections.Generic.HashSet<System.Type>(10);
@@ -552,18 +563,23 @@ namespace ME.BECS.Editor.Systems {
                 else if (typeof(IEntityType).IsAssignableFrom(type)) entityTypesSet.Add(type);
                 else if (typeof(ISystem).IsAssignableFrom(type)) systemsSet.Add(type);
             }
+            progress?.Invoke(0, total);
             foreach (var module in input.modules) {
-                if (module.IsAbstract || module.ContainsGenericParameters) continue;
+                if (module.IsAbstract || module.ContainsGenericParameters) { progress?.Invoke(++completed, total); continue; }
                 lookup.AddMethod(module, nameof(Module.OnAwake), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
                 lookup.AddMethod(module, nameof(Module.OnStart), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
                 lookup.AddMethod(module, nameof(Module.OnUpdate), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
                 lookup.AddMethod(module, nameof(Module.DoDestroy), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
+                progress?.Invoke(++completed, total);
             }
-            foreach (var type in input.systems)
+            foreach (var type in input.systems) {
                 lookup.LookUp(type, systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
+                progress?.Invoke(++completed, total);
+            }
             componentsSet.UnionWith(input.components);
             aspectsSet.UnionWith(input.aspects);
             lookup.LookUpComponents(systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
+            progress?.Invoke(++completed, total);
             return FinishDiscovery(systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
         }
 

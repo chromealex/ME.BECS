@@ -71,7 +71,7 @@ namespace ME.BECS.Editor {
         [MenuItem(MENU_NAME, priority = 100)]
         private static void Run() {
             
-            SourceGeneratorInputRefresh.TryRebuild();
+            SourceGeneratorInputRefresh.RequestExport(rebuild: true);
 
         }
 

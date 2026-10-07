@@ -34,7 +34,7 @@ namespace ME.BECS.Tests {
         public void DirectAccessCatalogBindsExactLifecycleWithoutInvokingIt(Type system) {
             global::ME.BECS.Tests.SourceAnalysisTests.Require();
             var identity = system.IsGenericType ? system.AssemblyQualifiedName : system.FullName;
-            var row = system.Assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            var row = system.Assembly.BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.SystemDirectAccess.v1")
                 .Select(attribute => attribute.Value.Split('\n')).Single(value => value[0] == identity);
             var binding = row.Skip(3).Single(value => value.StartsWith("R\t", StringComparison.Ordinal)).Split('\t');
@@ -189,9 +189,9 @@ namespace ME.BECS.Tests {
                 Assert.IsTrue(Attribute.IsDefined(method, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)));
             }
             string Decode(string value) => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(value));
-            var records = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            var records = assembly.BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1").Select(attribute => attribute.Value.Split('\t')).ToArray();
-            var plans = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            var plans = assembly.BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.SystemDependencySelection.v1").Select(attribute => attribute.Value.Split('\n')).ToArray();
             Assert.IsNotEmpty(plans);
             var bySystem = plans.ToDictionary(plan => Type.GetType(plan[1], true));
@@ -231,7 +231,7 @@ namespace ME.BECS.Tests {
             var assembly = Tests_SourceGeneratorInputCatalog.Owner(true);
             var phases = Tests_SourceGeneratorBootstrapPublications.PhaseInputs(assembly);
             Assert.IsTrue(Attribute.IsDefined(phases, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)));
-            var records = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            var records = assembly.BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1").Select(attribute => attribute.Value.Split('\t')).ToArray();
             Assert.AreEqual(1, records.Count(row => row.Length == 4 && row[1] == "job-early-init-schema" && row[3] == "djE="));
             var slots = records.Where(row => row.Length == 4 && row[1] == "job-early-init")
@@ -268,7 +268,7 @@ namespace ME.BECS.Tests {
                 var target = typeof(JobStaticInfo<>).MakeGenericType(Type.GetType(fallback[1], true));
                 Assert.AreEqual(1, calls.Count(call => call.DeclaringType == target && call.Name == "get_entitiesMaxCount"));
                 Assert.AreEqual(1, calls.Count(call => call.DeclaringType == target && call.Name == "get_loopCount"));
-                Assert.AreEqual(fallback[4] == "1" ? 1 : 0, calls.Count(call => call.DeclaringType == typeof(Cuts) && call.Name == "_makeArray"));
+                Assert.AreEqual(fallback[4] == "1" ? 1 : 0, calls.Count(call => call.DeclaringType == target && call.Name == "AllocateInlineCount"));
                 Assert.AreEqual(fallback.Length - 5 + 1, calls.Count(call => call.DeclaringType == target && call.Name == "get_inlineCount"));
             }
             foreach (var plan in plans) {
@@ -541,7 +541,7 @@ namespace ME.BECS.Tests {
         public void NativeBoolLayoutDoesNotBlockSourceSizeSelection() {
             global::ME.BECS.Tests.SourceAnalysisTests.Require();
             var job = typeof(NativeBoolSizeJob);
-            var summaries = job.Assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            var summaries = job.Assembly.BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.JobSafety.v1" && attribute.Value != null &&
                     attribute.Value.StartsWith(job.FullName + "\n", StringComparison.Ordinal)).ToArray();
             Assert.AreEqual(1, summaries.Length);
@@ -639,13 +639,13 @@ namespace ME.BECS.Tests {
         [TestCase(typeof(CompilerHiddenInterfaceHash), 8)]
         [TestCase(typeof(CompilerOverloadedHash), 8)]
         public void CompilerOwnsComponentRegistrationFlags(Type component, int expected) {
-            var tag = component.Assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            var tag = component.Assembly.BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.ComponentTag.v1" && attribute.Value != null &&
                     attribute.Value.StartsWith("global::" + component.FullName.Replace('+', '.') + "\n", StringComparison.Ordinal)).ToArray();
             Assert.AreEqual(1, tag.Length, "The declaring compilation must preserve tag classification for imported types.");
             Assert.AreEqual("global::" + component.FullName.Replace('+', '.') + "\n" + (expected & 1), tag[0].Value);
             var assembly = Tests_SourceGeneratorInputCatalog.Owner(true);
-            var attributes = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>().ToArray();
+            var attributes = assembly.BecsInputMetadata().ToArray();
             Assert.AreEqual(expected, Tests_SourceGeneratorAotPublications.Flags(assembly, component),
                 "Inspect the constant used by the selected registration owner, not duplicate aggregate metadata.");
             var identity = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(component.AssemblyQualifiedName));
@@ -709,7 +709,7 @@ namespace ME.BECS.Tests {
         [Test]
         public void AspectConstructionSelectionBelongsToCompiler() {
             var records = Tests_SourceGeneratorInputCatalog.Owner(true)
-                .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1" && attribute.Value != null)
                 .Select(attribute => attribute.Value.Split('\t')).ToArray();
             var registrations = records.Where(row => row.Length == 4 && row[1] == "aspect-registration").Select(row => row[3]).ToArray();
@@ -724,7 +724,7 @@ namespace ME.BECS.Tests {
         [Test]
         public void CompilerConfigMasksRetainSerializedBitPositions() {
             var assembly = Tests_SourceGeneratorInputCatalog.Owner(true);
-            var records = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            var records = assembly.BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1" && attribute.Value != null)
                 .Select(attribute => attribute.Value.Split('\t')).ToArray();
             var schemas = records.Where(row => row.Length == 4 && row[1] == "config-mask-schema").ToArray();
@@ -750,7 +750,7 @@ namespace ME.BECS.Tests {
         [Test]
         public void CompilerConfigCollectionFieldsRetainReflectionOrder() {
             var assembly = Tests_SourceGeneratorInputCatalog.Owner(true);
-            var records = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            var records = assembly.BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1" && attribute.Value != null)
                 .Select(attribute => attribute.Value.Split('\t')).ToArray();
             var schemas = records.Where(row => row.Length == 4 && row[1] == "config-collection-callback-schema").ToArray();
@@ -778,7 +778,7 @@ namespace ME.BECS.Tests {
         [Test]
         public void ConfigCollectionCountsAreNoLongerExportedByEditor() {
             var records = Tests_SourceGeneratorInputCatalog.Owner(true)
-                .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1" && attribute.Value != null)
                 .Select(attribute => attribute.Value.Split('\t')).ToArray();
             var schemas = records.Where(row => row.Length >= 4 && row[1] == "config-collection-count-schema").ToArray();
@@ -853,7 +853,7 @@ namespace ME.BECS.Tests {
         [Test]
         public void BootstrapFeederCallsFollowManifestOrderWithoutExecutingInitializers() {
             var assembly = Tests_SourceGeneratorInputCatalog.Owner(true);
-            var records = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            var records = assembly.BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.TypeInput.v1").Select(attribute => attribute.Value.Split('\t'))
                 .Where(row => row.Length >= 4 && row.Length <= 6 && row[0] == "editor" && row[1] == "bootstrap-feeder")
                 .OrderBy(row => int.Parse(row[2], System.Globalization.CultureInfo.InvariantCulture)).ToArray();
@@ -903,7 +903,7 @@ namespace ME.BECS.Tests {
         public void SafetyCatalogParserRejectsMalformedCompleteDependenciesWithoutIL() {
             global::ME.BECS.Tests.SourceAnalysisTests.Require();
             var job = typeof(SafetyCatalogJob);
-            var entries = job.Assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            var entries = job.Assembly.BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.JobSafety.v1" && attribute.Value != null &&
                     attribute.Value.StartsWith(job.FullName + "\n", StringComparison.Ordinal)).ToArray();
             Assert.AreEqual(1, entries.Length);
@@ -932,7 +932,7 @@ namespace ME.BECS.Tests {
         public void CompleteSafetySummaryExportsTypedComponentCatalog() {
             global::ME.BECS.Tests.SourceAnalysisTests.Require();
             var summaries = typeof(SafetyCatalogJob).Assembly
-                .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.JobSafety.v1" && attribute.Value != null &&
                     attribute.Value.StartsWith(typeof(SafetyCatalogJob).FullName + "\n", StringComparison.Ordinal))
                 .Select(attribute => attribute.Value.Split('\n')).ToArray();
@@ -962,7 +962,7 @@ namespace ME.BECS.Tests {
                 .GetMethod("GetJobTypesInfo", BindingFlags.Public | BindingFlags.Static);
             var validate = editor.GetType("ME.BECS.Editor.SourceGeneratorJobSafety", true)
                 .GetMethod("Validate", BindingFlags.NonPublic | BindingFlags.Static);
-            var row = job.Assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            var row = job.Assembly.BecsInputMetadata()
                 .Single(attribute => attribute.Key == "ME.BECS.JobSafety.v1" &&
                     attribute.Value.StartsWith((job.IsGenericType ? job.AssemblyQualifiedName : job.FullName) + "\n", StringComparison.Ordinal)).Value.Split('\n');
             Assert.AreEqual("0", row[2], string.Join("\n", row));
@@ -1078,7 +1078,7 @@ namespace ME.BECS.Tests {
             global::ME.BECS.Tests.SourceAnalysisTests.Require();
             const string owner = "M:ME.BECS.Tests.Tests_SourceGeneratorContracts.";
             var entries = typeof(Tests_SourceGeneratorContracts).Assembly
-                .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.MethodSummary.v2" && attribute.Value != null &&
                     attribute.Value.StartsWith(owner + "MathematicsValues(", StringComparison.Ordinal)).ToArray();
             Assert.AreEqual(1, entries.Length);
@@ -1105,7 +1105,7 @@ namespace ME.BECS.Tests {
             global::ME.BECS.Tests.SourceAnalysisTests.Require();
             const string prefix = "M:ME.BECS.Tests.Tests_SourceGeneratorContracts.MathematicsVectors(";
             var entries = typeof(Tests_SourceGeneratorContracts).Assembly
-                .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.MethodSummary.v2" && attribute.Value != null &&
                     attribute.Value.StartsWith(prefix, StringComparison.Ordinal)).ToArray();
             Assert.AreEqual(1, entries.Length);
@@ -1136,7 +1136,7 @@ namespace ME.BECS.Tests {
             global::ME.BECS.Tests.SourceAnalysisTests.Require();
             const string prefix = "M:ME.BECS.Tests.Tests_SourceGeneratorContracts.FloatVectorArithmetic(";
             var entries = typeof(Tests_SourceGeneratorContracts).Assembly
-                .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.MethodSummary.v2" && attribute.Value != null &&
                     attribute.Value.StartsWith(prefix, StringComparison.Ordinal)).ToArray();
             Assert.AreEqual(1, entries.Length);
@@ -1162,7 +1162,7 @@ namespace ME.BECS.Tests {
             global::ME.BECS.Tests.SourceAnalysisTests.Require();
             const string prefix = "M:ME.BECS.Tests.Tests_SourceGeneratorContracts.FloatVectorConstruction\n";
             var entries = typeof(Tests_SourceGeneratorContracts).Assembly
-                .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.MethodSummary.v2" && attribute.Value != null &&
                     attribute.Value.StartsWith(prefix, StringComparison.Ordinal)).ToArray();
             Assert.AreEqual(1, entries.Length);
@@ -1186,7 +1186,7 @@ namespace ME.BECS.Tests {
             global::ME.BECS.Tests.SourceAnalysisTests.Require();
             const string prefix = "M:ME.BECS.Tests.Tests_SourceGeneratorContracts.MathematicsDistances(";
             var entries = typeof(Tests_SourceGeneratorContracts).Assembly
-                .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.MethodSummary.v2" && attribute.Value != null &&
                     attribute.Value.StartsWith(prefix, StringComparison.Ordinal)).ToArray();
             Assert.AreEqual(1, entries.Length);
@@ -1211,7 +1211,7 @@ namespace ME.BECS.Tests {
             global::ME.BECS.Tests.SourceAnalysisTests.Require();
             const string owner = "M:ME.BECS.Tests.Tests_SourceGeneratorContracts.";
             var summaries = typeof(Tests_SourceGeneratorContracts).Assembly
-                .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                .BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.MethodSummary.v2" && attribute.Value != null &&
                     attribute.Value.StartsWith(owner + "Hints\n", StringComparison.Ordinal))
                 .Select(attribute => attribute.Value.Split('\n')).ToArray();

@@ -13,7 +13,8 @@ namespace ME.BECS.Editor {
 
             var vec = (UnityEngine.Quaternion)(quaternion)property.boxedValue;
             var value = vec.eulerAngles;
-            var root = new Label(property.displayName);
+            var root = new VisualElement();
+            root.Add(new Label(property.displayName));
             root.AddToClassList("quaternion-field");
             {
                 var xField = new FloatField("X:");

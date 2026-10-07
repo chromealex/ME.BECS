@@ -36,7 +36,7 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.1" PrivateAssets="all" />
   </ItemGroup>
   <Target Name="InstallUnityAnalyzer" AfterTargets="Build" Condition="'$(InstallUnityAnalyzer)' == 'true'">
-    <MakeDir Directories="$(MSBuildProjectDirectory)/../SourceGenerator" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MSBuildProjectDirectory)/../SourceGenerator" />
+    <MakeDir Directories="$(MSBuildProjectDirectory)/../Runtime/SourceGenerator" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MSBuildProjectDirectory)/../Runtime/SourceGenerator" />
   </Target>
 </Project>

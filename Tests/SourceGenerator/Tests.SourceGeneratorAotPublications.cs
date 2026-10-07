@@ -5,7 +5,7 @@ using NUnit.Framework;
 
 namespace ME.BECS.Tests {
     public class Tests_SourceGeneratorAotPublications {
-        internal static string Profile(Assembly selection) => selection.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+        internal static string Profile(Assembly selection) => selection.BecsInputMetadata()
             .Single(attribute => attribute.Key == "ME.BECS.TypeInputProfile.v1").Value == "editor" ? "Editor" : "Runtime";
         private static string Decode(string value) => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(value));
 
@@ -13,7 +13,7 @@ namespace ME.BECS.Tests {
         // expected coverage from whichever AOT methods happen to be emitted.
         internal static (int Ordinal, string Phase, Type Selected, Type Publisher)[] Entries(Assembly selection, bool systems) {
             var profile = Profile(selection);
-            return selection.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            return selection.BecsInputMetadata()
                 .Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t'))
                 .Where(row => row.Length == 5 && row[0] == profile.ToLowerInvariant() && row[1] == (systems ? "system" : "type") + "-registration-owner")
                 .Select(row => {
@@ -56,7 +56,7 @@ namespace ME.BECS.Tests {
 
         internal static string SystemPlan(Assembly selection, Type system) {
             var entry = Entries(selection, true).Single(item => item.Selected == system);
-            return entry.Publisher.Assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            return entry.Publisher.Assembly.BecsInputMetadata()
                 .Where(attribute => attribute.Key == "ME.BECS.SystemAotPublication." + Profile(selection) + ".v1")
                 .Select(attribute => attribute.Value).Single(value => value.StartsWith(system.AssemblyQualifiedName + "\n", StringComparison.Ordinal));
         }

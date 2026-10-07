@@ -7,7 +7,9 @@ using ME.BECS.Jobs;
 namespace ME.BECS.Tests {
     public partial class Tests_SourceGeneratorContracts {
         public partial struct QueryModeJob : IJobForComponents<TestComponent> {
-            public void Execute(in JobInfo info, in Ent ent, ref TestComponent component) { }
+            // Query-mode fixtures need an actual read/write effect. A ref
+            // parameter alone intentionally contributes no write dependency.
+            public void Execute(in JobInfo info, in Ent ent, ref TestComponent component) { component.data += 1; }
         }
 
         // Metadata fixtures only: default builders must never be executed.

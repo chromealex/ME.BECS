@@ -148,7 +148,57 @@ namespace ME.BECS.Editor {
             PublishCore(manifest, editor, inputDirectory, types ? SelectionKind.Type : SelectionKind.System);
 
         private static void PublishCore(string manifest, bool editor, string inputDirectory, SelectionKind kind) {
-            var documents = SelectionDocuments(manifest.Split('\n'), editor, kind);
+            ApplyPublication(PreparePublication(manifest.Split('\n'), editor, inputDirectory, kind));
+        }
+
+        internal static KeyValuePair<string, string>[] PrepareProfile(string manifest, bool editor, string inputDirectory) {
+            var rows = manifest.Split('\n');
+            // Keep the established publication order; parse the manifest text once.
+            var kinds = new[] { SelectionKind.System, SelectionKind.Type, SelectionKind.Entity,
+                SelectionKind.Aspect, SelectionKind.Destroy, SelectionKind.Config, SelectionKind.Network,
+                SelectionKind.Views, SelectionKind.ViewSelection, SelectionKind.SystemDependency, SelectionKind.ThemeMenu,
+                SelectionKind.JobInit, SelectionKind.JobSetup, SelectionKind.JobDebug, SelectionKind.Graph, SelectionKind.Bootstrap };
+            // Kinds are independent (own directories, read-only rows, no Unity API):
+            // prepare them in parallel and concatenate in the established order.
+            var prepared = new KeyValuePair<string, string>[kinds.Length][];
+            System.Threading.Tasks.Parallel.For(0, kinds.Length, new System.Threading.Tasks.ParallelOptions {
+                MaxDegreeOfParallelism = Math.Max(1, Math.Min(6, Environment.ProcessorCount - 1)),
+            }, index => prepared[index] = PreparePublication(rows, editor, inputDirectory, kinds[index]));
+            return prepared.SelectMany(items => items).ToArray();
+        }
+
+        internal static void ApplyPublication(KeyValuePair<string, string>[] pending) {
+            WritePublicationFiles(pending);
+            ImportPublicationFiles(pending);
+        }
+
+        // Filesystem-only phase: no Unity API or assembly/asset lookup. Callers
+        // must suppress asset refresh until this phase and the import phase finish.
+        internal static void WritePublicationFiles(KeyValuePair<string, string>[] pending) {
+            WritePublicationFilesWithProgress(pending, null);
+        }
+
+        internal static void WritePublicationFilesWithProgress(KeyValuePair<string, string>[] pending, System.Action<int> completed) {
+            var count = 0;
+            foreach (var pair in pending) {
+                Directory.CreateDirectory(Path.GetDirectoryName(pair.Key));
+                // Keep the rows the currently compiled catalog refers to: the project
+                // snapshot is overwritten here, before Unity compiles the new one.
+                var snapshot = pair.Key.EndsWith(SourceGeneratorInputCatalog.SnapshotStore.Extension, StringComparison.Ordinal);
+                if (snapshot && File.Exists(pair.Key)) SourceGeneratorInputCatalog.SnapshotStore.Remember(File.ReadAllText(pair.Key));
+                File.WriteAllText(pair.Key, pair.Value, new UTF8Encoding(false));
+                if (snapshot) SourceGeneratorInputCatalog.SnapshotStore.Remember(pair.Value);
+                completed?.Invoke(++count);
+            }
+        }
+
+        // Editor thread only, after every file in the publication has been written.
+        internal static void ImportPublicationFiles(KeyValuePair<string, string>[] pending) {
+            foreach (var pair in pending) UnityEditor.AssetDatabase.ImportAsset(pair.Key);
+        }
+
+        private static KeyValuePair<string, string>[] PreparePublication(string[] rows, bool editor, string inputDirectory, SelectionKind kind) {
+            var documents = SelectionDocuments(rows, editor, kind);
             var directory = inputDirectory.Replace('\\', '/') + "/" + kind + "Fragments";
             var pending = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var document in documents) pending.Add(directory + "/" + SelectionFileName(document.Owner, editor, kind), SelectionSerialize(document, kind));
@@ -163,12 +213,7 @@ namespace ME.BECS.Editor {
             }
             // Framework and user response files are not publication destinations.
             // Unity discovers these project assets without compiler path injection.
-            foreach (var pair in pending) {
-                if (File.Exists(pair.Key) && File.ReadAllText(pair.Key) == pair.Value) continue;
-                Directory.CreateDirectory(Path.GetDirectoryName(pair.Key));
-                File.WriteAllText(pair.Key, pair.Value, new UTF8Encoding(false));
-                UnityEditor.AssetDatabase.ImportAsset(pair.Key);
-            }
+            return pending.Where(pair => !File.Exists(pair.Key) || File.ReadAllText(pair.Key) != pair.Value).ToArray();
         }
 
         internal static bool ValidateCompiled(out string reason) => ValidateCompiledAssemblies(AppDomain.CurrentDomain.GetAssemblies(), out reason);

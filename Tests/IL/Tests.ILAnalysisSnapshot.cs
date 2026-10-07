@@ -92,5 +92,36 @@ namespace ME.BECS.Tests {
             while (!task.IsCompleted) yield return null;
             Assert.AreEqual(expected, task.GetAwaiter().GetResult());
         }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void PersistentMergeKeepsCoordinatorResultWhenWorkerChangesSameKey(bool childRemoves) {
+            var type = EditorType("ILPersistentAnalysis");
+            var environment = Environment("merge-fixture");
+            IDisposable Scope() {
+                var scope = (IDisposable)Activator.CreateInstance(type, HiddenInstance, null, new[] { (object)true, environment }, null);
+                // Synthetic cache records only: never load/save a project cache.
+                type.GetField("persist", HiddenInstance).SetValue(scope, false);
+                return scope;
+            }
+            System.Collections.IDictionary Records(object scope) =>
+                (System.Collections.IDictionary)type.GetField("records", HiddenInstance).GetValue(scope);
+            void Changed(object scope) => ((System.Collections.Generic.HashSet<string>)type.GetField("changedRecords", HiddenInstance)
+                .GetValue(scope)).Add("same-key");
+            object Record() => Activator.CreateInstance(type.GetNestedType("Record", BindingFlags.NonPublic), true);
+            using var coordinator = Scope();
+            var expected = Record();
+            Records(coordinator).Add("same-key", expected);
+            Changed(coordinator);
+            object snapshot;
+            using (var worker = Scope()) {
+                if (!childRemoves) Records(worker).Add("same-key", Record());
+                Changed(worker);
+                snapshot = type.GetMethod("CaptureSnapshot", HiddenInstance).Invoke(worker, null);
+            }
+            type.GetMethod("MergeWorker", HiddenInstance).Invoke(coordinator, new[] { snapshot });
+            Assert.AreSame(expected, Records(coordinator)["same-key"],
+                "Persistent and memo merges must both prefer the coordinator's computed result.");
+        }
     }
 }

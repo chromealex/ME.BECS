@@ -17,7 +17,15 @@ namespace ME.BECS.Editor {
         private static uint backgroundVersion;
         private static bool discardBackground, changedDuringAnalysis, reloadLocked, publishing;
         private static int backgroundProgress = -1;
+        // One continuous bar for the whole export: background IL analysis, the
+        // Runtime and Editor publication on the Editor thread, file writes and import.
+        internal const float AnalysisEnd = 0.40f, RuntimeEnd = 0.60f, EditorEnd = 0.95f, WriteEnd = 0.98f;
         private static double nextBackgroundReport;
+        private static CodeGenerator.PendingPublication pendingPublication;
+        private static System.Threading.Tasks.Task publicationTask;
+        private static bool publicationAssetEditing;
+        private static int publicationWritten;
+        private static long publicationWriteMilliseconds;
         internal static bool IsAnalyzing => background != null && !publishing;
 
         internal static bool HasUnfinishedExport => exporting ||
@@ -30,6 +38,18 @@ namespace ME.BECS.Editor {
             CodeGenerator.InputRefreshRequested += Request;
             UnityEditor.Compilation.CompilationPipeline.compilationStarted += _ => {
                 if (IsAnalyzing) Request();
+            };
+            // A domain reload can still interrupt the export (the Test Runner and other
+            // forced synchronous recompiles ignore LockReloadAssemblies). FinishBackground
+            // never runs then, so the attempt stamp of this fingerprint would survive in
+            // SessionState and ShouldExportAutomatically would refuse to retry the very
+            // same, never-completed input until something else changed. Keep the failed
+            // flag (inputs may be partial) but make the next domain retry.
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += () => {
+                if (background == null && publicationTask == null) return;
+                UnityEditor.SessionState.EraseString(AutomaticAttemptKey);
+                UnityEditor.SessionState.SetBool(PendingKey, true);
+                background?.Cancel();
             };
             UnityEditor.EditorApplication.quitting += () => {
                 background?.Cancel();
@@ -100,7 +120,7 @@ namespace ME.BECS.Editor {
         // UI callers receive acceptance immediately; completion means publication,
         // never merely finishing the worker or successfully compiling Unity code.
         public static bool RequestExport(System.Action<bool> completed = null, bool rebuild = false) {
-            if (exporting || UnityEngine.Application.isBatchMode || UnityEditor.EditorApplication.isCompiling ||
+            if (exporting || UnityEditor.BuildPipeline.isBuildingPlayer || UnityEngine.Application.isBatchMode || UnityEditor.EditorApplication.isCompiling ||
                 UnityEditor.EditorApplication.isUpdating || UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode ||
                 UnityEditor.EditorPrefs.HasKey("ME.BECS.Editor.AwaitPackageImportData")) return false;
             UnityEditor.SessionState.EraseString(AutomaticAttemptKey);
@@ -126,8 +146,9 @@ namespace ME.BECS.Editor {
             try {
                 UnityEditor.EditorApplication.LockReloadAssemblies();
                 reloadLocked = true;
-                backgroundProgress = UnityEditor.Progress.Start("ME.BECS IL analysis", "Capture input snapshot",
-                    UnityEditor.Progress.Options.Managed);
+                // Synchronous: the publication phases report while the Editor thread is busy.
+                backgroundProgress = UnityEditor.Progress.Start("ME.BECS source inputs", "Capture input snapshot",
+                    UnityEditor.Progress.Options.Managed | UnityEditor.Progress.Options.Synchronous);
                 UnityEditor.Progress.RegisterCancelCallback(backgroundProgress, () => {
                     if (publishing || background == null) return false;
                     discardBackground = true;
@@ -148,14 +169,20 @@ namespace ME.BECS.Editor {
             !string.IsNullOrEmpty(capturedFingerprint) && capturedFingerprint == currentFingerprint;
 
         private static void PollBackground() {
+            if (publicationSteps != null) { StepPublication(); return; }
+            if (publicationTask != null) { PollPublication(); return; }
             background.PumpMainThread();
             if (!background.IsCompleted) {
                 if (UnityEditor.EditorApplication.timeSinceStartup >= nextBackgroundReport) {
                     nextBackgroundReport = UnityEditor.EditorApplication.timeSinceStartup + 0.15d;
                     if (UnityEditor.Progress.Exists(backgroundProgress) &&
-                        UnityEditor.Progress.GetStatus(backgroundProgress) == UnityEditor.Progress.Status.Running)
-                        UnityEditor.Progress.Report(backgroundProgress, background.Progress, background.Description + "\n" +
-                            background.ElapsedSeconds.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "s");
+                        UnityEditor.Progress.GetStatus(backgroundProgress) == UnityEditor.Progress.Status.Running) {
+                        // Fraction only: per-stage step counts reset the bar on every stage.
+                        // Work-item counts stay in the description text.
+                        var description = "IL analysis: " + background.Description + "\n" +
+                            background.ElapsedSeconds.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + "s";
+                        UnityEditor.Progress.Report(backgroundProgress, AnalysisEnd * System.Math.Min(1f, background.Progress / 0.98f), description);
+                    }
                 }
                 return;
             }
@@ -163,7 +190,9 @@ namespace ME.BECS.Editor {
             var status = UnityEditor.Progress.Status.Failed;
             try {
                 var result = background.TakeResult(); // IsCompleted was checked: no blocking wait.
-                var busy = UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating ||
+                if (UnityEditor.Progress.Exists(backgroundProgress))
+                    UnityEditor.Progress.Report(backgroundProgress, AnalysisEnd, "IL summaries ready. Validating input snapshot before publication.");
+                var busy = UnityEditor.BuildPipeline.isBuildingPlayer || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating ||
                     UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode;
                 var fingerprint = discardBackground || busy ? null : Fingerprint();
                 if (!CanPublishAnalysis(backgroundVersion, requestVersion, discardBackground, result.fingerprint, fingerprint, busy)) {
@@ -173,10 +202,14 @@ namespace ME.BECS.Editor {
                     return;
                 }
                 publishing = true;
-                if (UnityEditor.Progress.Exists(backgroundProgress)) UnityEditor.Progress.UnregisterCancelCallback(backgroundProgress);
-                success = CodeGenerator.PublishPreparedInputs(result);
-                status = success ? UnityEditor.Progress.Status.Succeeded : UnityEditor.Progress.Status.Failed;
-                if (!success) UnityEngine.Debug.LogError("[ME.BECS] Source input publication did not complete. See Console for diagnostics.");
+                if (UnityEditor.Progress.Exists(backgroundProgress)) {
+                    UnityEditor.Progress.UnregisterCancelCallback(backgroundProgress);
+                    UnityEditor.Progress.Report(backgroundProgress, AnalysisEnd, "Publishing Runtime inputs on the Editor thread.");
+                }
+                // The Editor-thread preparation runs as resumable steps across Editor
+                // frames (StepPublication) instead of freezing the Editor for all of it.
+                pendingPublication = null;
+                publicationSteps = CodeGenerator.PrepareBackgroundPublicationSteps(result, value => pendingPublication = value);
             } catch (System.OperationCanceledException) {
                 status = UnityEditor.Progress.Status.Canceled;
                 UnityEngine.Debug.Log("[ME.BECS] Background IL analysis cancelled; no inputs were published.");
@@ -188,7 +221,114 @@ namespace ME.BECS.Editor {
                     UnityEditor.SessionState.SetBool(PendingKey, true);
                     due = UnityEditor.EditorApplication.timeSinceStartup + 0.5d;
                 }
-                FinishBackground(success, status, notify: true);
+                if (publicationTask == null && publicationSteps == null) {
+                    try { EndPublication(false); }
+                    finally { FinishBackground(success, status, notify: true); }
+                }
+            }
+        }
+
+        private static System.Collections.IEnumerator publicationSteps;
+        private const double PublicationSliceMilliseconds = 25d;
+
+        // Advance the Editor-thread publication by a frame-sized slice. Reload is
+        // locked and publication is not cancellable; a stage that changes inputs
+        // midway is detected by the final fingerprint checks and publishes nothing.
+        private static void StepPublication() {
+            var done = false;
+            var failed = false;
+            CodeGeneratorTimings.outerProgress = backgroundProgress + 1;
+            CodeGeneratorTimings.ResumeAll();
+            var slice = System.Diagnostics.Stopwatch.StartNew();
+            try {
+                while (slice.Elapsed.TotalMilliseconds < PublicationSliceMilliseconds) {
+                    if (!publicationSteps.MoveNext()) { done = true; break; }
+                }
+            } catch (System.Exception exception) {
+                UnityEngine.Debug.LogException(exception);
+                failed = true;
+            } finally {
+                CodeGeneratorTimings.SuspendAll();
+                CodeGeneratorTimings.outerProgress = 0;
+            }
+            if (!done && !failed) return;
+            var steps = publicationSteps;
+            publicationSteps = null;
+            try { (steps as System.IDisposable)?.Dispose(); }
+            catch (System.Exception exception) { UnityEngine.Debug.LogException(exception); failed = true; }
+            if (!failed && pendingPublication == null) {
+                UnityEngine.Debug.LogException(new System.InvalidOperationException("Source input preparation did not complete. See Console for diagnostics."));
+                failed = true;
+            }
+            if (!failed) {
+                try {
+                    UnityEditor.AssetDatabase.StartAssetEditing();
+                    publicationAssetEditing = true;
+                    var files = pendingPublication.files;
+                    System.Threading.Interlocked.Exchange(ref publicationWritten, 0);
+                    publicationTask = System.Threading.Tasks.Task.Run(() => {
+                        var watch = System.Diagnostics.Stopwatch.StartNew();
+                        try {
+                            SourceGeneratorSystemFragments.WritePublicationFilesWithProgress(files,
+                                count => System.Threading.Interlocked.Exchange(ref publicationWritten, count));
+                        } finally { System.Threading.Interlocked.Exchange(ref publicationWriteMilliseconds, watch.ElapsedMilliseconds); }
+                    });
+                    if (UnityEditor.Progress.Exists(backgroundProgress))
+                        UnityEditor.Progress.Report(backgroundProgress, EditorEnd, "Writing source inputs on background worker (Runtime / Editor).");
+                    return;
+                } catch (System.Exception exception) {
+                    UnityEngine.Debug.LogException(exception);
+                }
+            }
+            try { EndPublication(false); }
+            finally { FinishBackground(false, UnityEditor.Progress.Status.Failed, notify: true); }
+        }
+
+        private static void EndPublication(bool written) {
+            var pending = pendingPublication;
+            pendingPublication = null;
+            try {
+                if (publicationAssetEditing) {
+                    publicationAssetEditing = false;
+                    UnityEditor.AssetDatabase.StopAssetEditing();
+                }
+            } catch {
+                pending?.Complete(false);
+                throw;
+            }
+            pending?.Complete(written);
+        }
+
+        private static void PollPublication() {
+            if (!publicationTask.IsCompleted) {
+                if (pendingPublication.files.Length > 0 && UnityEditor.EditorApplication.timeSinceStartup >= nextBackgroundReport && UnityEditor.Progress.Exists(backgroundProgress)) {
+                    nextBackgroundReport = UnityEditor.EditorApplication.timeSinceStartup + 0.15d;
+                    var written = System.Threading.Volatile.Read(ref publicationWritten);
+                    var total = pendingPublication.files.Length;
+                    UnityEditor.Progress.Report(backgroundProgress, EditorEnd + (WriteEnd - EditorEnd) * written / (float)total,
+                        "Writing source inputs on background worker: " + written + "/" + total + " files.");
+                }
+                return;
+            }
+            var success = false;
+            try {
+                publicationTask.GetAwaiter().GetResult(); // Completed: never block the Editor.
+                if (UnityEditor.Progress.Exists(backgroundProgress))
+                    UnityEditor.Progress.Report(backgroundProgress, WriteEnd, "Importing source inputs on the Editor thread.");
+                var fileCount = pendingPublication.files.Length;
+                var importWatch = System.Diagnostics.Stopwatch.StartNew();
+                SourceGeneratorSystemFragments.ImportPublicationFiles(pendingPublication.files);
+                EndPublication(true);
+                success = true;
+                UnityEngine.Debug.Log("[ME.BECS] Source input publication: files=" + fileCount +
+                    "; worker write=" + System.Threading.Interlocked.Read(ref publicationWriteMilliseconds) +
+                    " ms; Editor import/validation=" + importWatch.ElapsedMilliseconds + " ms.");
+            } catch (System.Exception exception) {
+                UnityEngine.Debug.LogException(exception);
+            } finally {
+                publicationTask = null;
+                try { EndPublication(false); }
+                finally { FinishBackground(success, success ? UnityEditor.Progress.Status.Succeeded : UnityEditor.Progress.Status.Failed, notify: true); }
             }
         }
 
@@ -217,9 +357,9 @@ namespace ME.BECS.Editor {
 
         private static bool TryExportExplicit(bool rebuild) {
             if (exporting) return false;
-            if (UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating ||
+            if (UnityEditor.BuildPipeline.isBuildingPlayer || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating ||
                 UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) {
-                UnityEngine.Debug.LogWarning("[ME.BECS] Wait for compilation/import to finish and leave Play Mode before exporting inputs.");
+                UnityEngine.Debug.LogWarning("[ME.BECS] Wait for Player build/compilation/import to finish and leave Play Mode before exporting inputs.");
                 return false;
             }
             exporting = true;
@@ -284,7 +424,9 @@ namespace ME.BECS.Editor {
 
         private static void Update() {
             if (background != null) { PollBackground(); return; }
-            if (exporting || HasDeferredGraphs() || !UnityEditor.SessionState.GetBool(PendingKey, false) ||
+            // Keep PendingKey set during a build: asset callbacks may request a refresh,
+            // but publication must not invalidate the inputs used by that build.
+            if (exporting || UnityEditor.BuildPipeline.isBuildingPlayer || HasDeferredGraphs() || !UnityEditor.SessionState.GetBool(PendingKey, false) ||
                 UnityEditor.EditorApplication.timeSinceStartup < due || UnityEditor.EditorApplication.isCompiling ||
                 UnityEditor.EditorApplication.isUpdating || UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode ||
                 UnityEngine.Application.isBatchMode || UnityEditor.EditorPrefs.HasKey("ME.BECS.Editor.AwaitPackageImportData")) return;

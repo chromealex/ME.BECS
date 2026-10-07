@@ -17,6 +17,8 @@ namespace ME.BECS.Editor {
             this.compactStyleSheet = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/EntityConfigCompact.uss");
         }
 
+        public override bool UseDefaultMargins() => false;
+
         public override VisualElement CreateInspectorGUI() {
             
             this.LoadStyle();
@@ -72,6 +74,7 @@ namespace ME.BECS.Editor {
             if (this.rootVisualElement == null) return;
             this.HideTooltip();
             if (this.themeStyleSheet != null) this.rootVisualElement.styleSheets.Remove(this.themeStyleSheet);
+            EditorUIUtils.ApplyCommonStyles(this.rootVisualElement);
             this.themeStyleSheet = EditorUtils.LoadResource<StyleSheet>(Themes.CurrentTheme);
             this.rootVisualElement.styleSheets.Add(this.themeStyleSheet);
             // Keep our layout and scoped control rules after the theme's global selectors.
@@ -178,7 +181,6 @@ namespace ME.BECS.Editor {
                 this.searchText = evt.newValue;
                 this.ApplySearch();
             });
-            toolbar.Add(search);
 
             if (baseProperty.objectReferenceValue != null) {
                 var showBase = new Toggle("Show Base Components");
@@ -205,6 +207,7 @@ namespace ME.BECS.Editor {
                 this.rootVisualElement.schedule.Execute(this.RebuildInspector);
             });
             toolbar.Add(maskable);
+            componentsContainer.Add(search);
 
             this.componentsContainer = this.DrawSection(componentsContainer, "Config Components", nameof(EntityConfig.data), typeof(IConfigComponent), true);
             this.DrawSection(componentsContainer, "Static Components", nameof(EntityConfig.staticData), typeof(IConfigComponentStatic), false);
@@ -240,7 +243,7 @@ namespace ME.BECS.Editor {
                 row.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
                 if (row is Foldout foldout) {
                     if (string.IsNullOrEmpty(this.searchText) && info != null) {
-                        foldout.value = this.expandedComponents.TryGetValue(info.expansionKey, out var expanded) && expanded;
+                        foldout.value = this.IsExpanded(info.expansionKey);
                     } else if (visible) {
                         foldout.value = true;
                     }
@@ -314,7 +317,7 @@ namespace ME.BECS.Editor {
 
         private VisualElement DrawComponent(SerializedProperty component, System.Type type, string label,
                                             SerializedProperty masks, bool useMaskable, string source = null) {
-            var key = component.serializedObject.targetObject.GetInstanceID() + ":" + component.propertyPath;
+            var key = this.ExpansionKey(component.serializedObject, component.propertyPath);
             var names = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
             var search = new SearchInfo {
                 owner = component.serializedObject, path = component.propertyPath,
@@ -327,13 +330,17 @@ namespace ME.BECS.Editor {
                 tag.AddToClassList("config-component-row");
                 tag.AddToClassList("config-tag-row");
                 tag.userData = search;
+                EditorUIUtils.ApplyComponentGroupColor(tag, type);
+                this.BindTooltip(tag, FieldTooltip.Get(type));
                 return tag;
             }
             var foldout = new Foldout { text = title };
             foldout.AddToClassList("config-component-row");
             foldout.AddToClassList("config-component-foldout");
+            EditorUIUtils.ApplyComponentGroupColor(foldout, type);
+            this.BindTooltip(foldout.Q<Toggle>(), FieldTooltip.Get(type));
             foldout.userData = search;
-            foldout.SetValueWithoutNotify(this.expandedComponents.TryGetValue(key, out var expanded) && expanded);
+            foldout.SetValueWithoutNotify(this.IsExpanded(key));
             var built = false;
             void BuildFields() {
                 if (built) return;
@@ -387,13 +394,17 @@ namespace ME.BECS.Editor {
                         propertyField.RegisterCallback<GeometryChangedEvent>(evt => AlignMask());
                         propertyField.RegisterCallback<AttachToPanelEvent>(evt => propertyField.schedule.Execute(AlignMask));
                     }
+                    this.AddFieldTooltip(row, propertyField, field, type);
                     row.Add(propertyField);
+                    this.RestorePropertyExpansion(field);
                     propertyField.BindProperty(field);
                     propertyField.RegisterCallback<GeometryChangedEvent>(evt => {
+                        this.ConfigurePropertyExpansion(propertyField, field.serializedObject);
                         this.ConfigureTooltips(propertyField);
                         if (!string.IsNullOrEmpty(this.searchText)) this.FilterField(row, fieldSearch, MatchesText(search.name, this.searchText));
                     });
                     propertyField.RegisterCallback<AttachToPanelEvent>(evt => propertyField.schedule.Execute(() => {
+                        this.ConfigurePropertyExpansion(propertyField, field.serializedObject);
                         this.ConfigureTooltips(propertyField);
                         this.FilterField(row, fieldSearch, MatchesText(search.name, this.searchText));
                     }));
@@ -408,27 +419,96 @@ namespace ME.BECS.Editor {
             }
             foldout.RegisterValueChangedCallback(evt => {
                 if (evt.target != foldout) return;
-                if (string.IsNullOrEmpty(this.searchText)) this.expandedComponents[key] = evt.newValue;
+                if (string.IsNullOrEmpty(this.searchText)) this.SaveExpanded(key, evt.newValue);
                 if (evt.newValue) BuildFields();
             });
             if (foldout.value) BuildFields();
-            foldout.tooltip = EditorUtils.GetComponent(type)?.GetEditorComment();
             return foldout;
+        }
+
+        private string ExpansionKey(SerializedObject owner, string path) {
+            var asset = owner.targetObject is EntityConfig ? owner.targetObject : this.target;
+            var id = GlobalObjectId.GetGlobalObjectIdSlow(asset);
+            return "ME.BECS.EntityConfig.Expanded." + UnityEngine.Application.dataPath + ":" + id + ":" + path;
+        }
+
+        private bool IsExpanded(string key) {
+            return this.expandedComponents.TryGetValue(key, out var expanded) == true ? expanded : EditorPrefs.GetBool(key, false);
+        }
+
+        private void SaveExpanded(string key, bool expanded) {
+            if (string.IsNullOrEmpty(this.searchText) == false) return;
+            this.expandedComponents[key] = expanded;
+            EditorPrefs.SetBool(key, expanded);
+        }
+
+        private void RestorePropertyExpansion(SerializedProperty property) {
+            var iterator = property.Copy();
+            var end = property.GetEndProperty();
+            do {
+                var key = this.ExpansionKey(iterator.serializedObject, iterator.propertyPath);
+                if (EditorPrefs.HasKey(key) == true) iterator.isExpanded = EditorPrefs.GetBool(key);
+            } while (iterator.NextVisible(true) == true && SerializedProperty.EqualContents(iterator, end) == false);
+        }
+
+        private void ConfigurePropertyExpansion(PropertyField root, SerializedObject owner) {
+            root.Query<Foldout>().ForEach(foldout => {
+                if (foldout.ClassListContains("config-saved-expansion") == true) return;
+                var propertyField = foldout.GetFirstAncestorOfType<PropertyField>();
+                if (propertyField == null || string.IsNullOrEmpty(propertyField.bindingPath) == true) return;
+                var key = this.ExpansionKey(owner, propertyField.bindingPath);
+                foldout.AddToClassList("config-saved-expansion");
+                if (string.IsNullOrEmpty(this.searchText) == true && EditorPrefs.HasKey(key) == true) foldout.value = this.IsExpanded(key);
+                foldout.RegisterValueChangedCallback(evt => {
+                    if (evt.target != foldout) return;
+                    // List virtualization may rebind the same PropertyField to another element.
+                    this.SaveExpanded(this.ExpansionKey(owner, propertyField.bindingPath), evt.newValue);
+                });
+            });
+        }
+
+        private void AddFieldTooltip(VisualElement row, PropertyField propertyField, SerializedProperty field, System.Type componentType) {
+            // BECS TooltipAttribute is independent of Unity's SerializedProperty.tooltip.
+            var fieldInfo = componentType.GetField(field.name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+            var text = FieldTooltip.Get(fieldInfo, field.tooltip);
+            if (string.IsNullOrEmpty(text) == true) return;
+            var question = new Label("?") { pickingMode = PickingMode.Position };
+            question.AddToClassList("config-field-tooltip");
+            propertyField.AddToClassList("config-has-field-tooltip");
+            row.Add(question);
+            this.BindTooltip(row, text);
+        }
+
+        private void BindTooltip(VisualElement anchor, string text) {
+            if (anchor == null || string.IsNullOrEmpty(text) == true) return;
+            anchor.pickingMode = PickingMode.Position;
+            anchor.RegisterCallback<PointerOverEvent>(evt => { this.ShowTooltip(anchor, text); evt.StopPropagation(); });
+            anchor.RegisterCallback<PointerLeaveEvent>(evt => this.HideTooltip());
+            anchor.RegisterCallback<DetachFromPanelEvent>(evt => this.HideTooltip());
+            anchor.RegisterCallback<TooltipEvent>(evt => evt.StopImmediatePropagation());
         }
 
         private void ConfigureTooltips(PropertyField propertyField) {
             propertyField.Query<VisualElement>(className: "has-tooltip").ForEach(decorator => {
-                if (decorator.ClassListContains("config-tooltip-ready")) return;
+                // Unity wraps decorators in a container after binding. Match their owning
+                // property instead of relying on an immediate-child USS selector.
+                var owner = decorator as PropertyField ?? decorator.GetFirstAncestorOfType<PropertyField>();
+                if (owner == propertyField && propertyField.ClassListContains("config-has-field-tooltip") == true) {
+                    if (decorator.ClassListContains("tooltip-decorator") == true) {
+                        decorator.style.display = DisplayStyle.None;
+                    } else {
+                        foreach (var child in decorator.Children()) {
+                            if (child.ClassListContains("tooltip") == true || child.ClassListContains("tooltip-text") == true) child.style.display = DisplayStyle.None;
+                        }
+                    }
+                    return;
+                }
+                if (decorator.ClassListContains("config-tooltip-ready") == true) return;
                 var text = decorator.Q<Label>(className: "tooltip-text")?.text;
-                if (string.IsNullOrEmpty(text)) return;
+                var anchor = decorator.ClassListContains("tooltip-decorator") == true ? decorator.parent : decorator;
+                if (string.IsNullOrEmpty(text) == true || anchor == null) return;
                 decorator.AddToClassList("config-tooltip-ready");
-                var anchor = decorator.ClassListContains("tooltip-decorator") ? decorator.parent : decorator;
-                anchor.AddToClassList("config-tooltip-anchor");
-                anchor.RegisterCallback<PointerEnterEvent>(evt => this.ShowTooltip(anchor, text));
-                anchor.RegisterCallback<PointerLeaveEvent>(evt => this.HideTooltip());
-                anchor.RegisterCallback<DetachFromPanelEvent>(evt => this.HideTooltip());
-                // Avoid the delayed native tooltip appearing on top of the immediate one.
-                anchor.RegisterCallback<TooltipEvent>(evt => evt.StopImmediatePropagation());
+                this.BindTooltip(anchor, text);
             });
         }
 
@@ -442,8 +522,12 @@ namespace ME.BECS.Editor {
             if (anchor.panel == null) return;
             var overlay = anchor.panel.visualTree;
             var popup = new Label(text) { pickingMode = PickingMode.Ignore, enableRichText = true };
+            // The panel root does not inherit the inspector's text font.
+            popup.style.unityFont = anchor.resolvedStyle.unityFont;
+            popup.style.unityFontDefinition = anchor.resolvedStyle.unityFontDefinition;
             popup.AddToClassList("config-tooltip-popup");
             popup.EnableInClassList("config-tooltip-light", !EditorGUIUtility.isProSkin);
+            EditorUIUtils.ApplyCommonStyles(popup);
             popup.styleSheets.Add(this.themeStyleSheet);
             popup.styleSheets.Add(this.compactStyleSheet);
             var width = UnityEngine.Mathf.Min(360f, overlay.worldBound.width - 16f);
@@ -458,14 +542,14 @@ namespace ME.BECS.Editor {
         }
 
         private VisualElement DrawAspect(SerializedProperty component, System.Type type, string label) {
-            var key = component.serializedObject.targetObject.GetInstanceID() + ":" + component.propertyPath;
+            var key = this.ExpansionKey(component.serializedObject, component.propertyPath);
             var foldout = new Foldout { text = label };
             foldout.AddToClassList("config-component-row");
             foldout.AddToClassList("config-component-foldout");
             foldout.userData = label + " " + type.FullName;
-            foldout.SetValueWithoutNotify(this.expandedComponents.TryGetValue(key, out var expanded) && expanded);
+            foldout.SetValueWithoutNotify(this.IsExpanded(key));
             foldout.RegisterValueChangedCallback(evt => {
-                if (evt.target == foldout) this.expandedComponents[key] = evt.newValue;
+                if (evt.target == foldout) this.SaveExpanded(key, evt.newValue);
             });
             foreach (var field in EditorUtils.GetAspectTypes(type)) {
                 var row = new VisualElement();
@@ -594,8 +678,8 @@ namespace ME.BECS.Editor {
                     EditorUtils.ShowPopup(rect, (type) => {
                         {
                             AddComponent(serializedObject, dataContainer, componentsArr, type);
-                            var key = serializedObject.targetObject.GetInstanceID() + ":" + componentsArr.propertyPath + ".Array.data[" + (componentsArr.arraySize - 1) + "]";
-                            this.expandedComponents[key] = true;
+                            var key = this.ExpansionKey(serializedObject, componentsArr.propertyPath + ".Array.data[" + (componentsArr.arraySize - 1) + "]");
+                            this.SaveExpanded(key, true);
                         }
                         if (typeof(IAspect).IsAssignableFrom(type) == true) {
                             // Add missing types
@@ -629,7 +713,7 @@ namespace ME.BECS.Editor {
                         this.DrawFields_INTERNAL(UpdateButtons, drawFieldsContainer, serializedObject.FindProperty(dataContainer.propertyPath), serializedObject.FindProperty(componentsArr.propertyPath), serializedObject, useMaskable);
                     }, type, unmanagedTypes: true, runtimeAssembliesOnly: true, showNullElement: false);
                 });
-                addButton.text = "+ Component";
+                EditorUIUtils.ConfigureAddButton(addButton, "Component");
                 addButton.AddToClassList("add-button");
                 buttons.Add(addButton);
             }

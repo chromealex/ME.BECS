@@ -280,68 +280,6 @@ namespace ME.BECS {
             }
         }
 
-        #if !ENABLE_BECS_FLAT_QUERIES
-        [INLINE(256)]
-        public void Remove(ref MemoryAllocator allocator, in BatchList other) {
-            var slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
-            var bucketsPtr = (safe_ptr<int>)this.buckets.GetUnsafePtrCached(in allocator);
-            var list = other.list;
-            for (int i = 0; i < list.Length; ++i) {
-                if (list.IsSet(i) == true) {
-                    var typeId = (uint)i;
-                    if (this.Contains(typeId, slotsPtr, bucketsPtr) == true) {
-                        this.Remove(ref allocator, typeId);
-                    }
-                }
-            }
-        }
-        
-        [INLINE(256)]
-        public uint Remove(ref MemoryAllocator allocator, in ComponentsFastTrack other) {
-            var slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
-            var list = other.root;
-            var removedCount = 0u;
-            for (int i = 0; i < this.lastIndex; i++) {
-                if ((slotsPtr + i).ptr->hashCode >= 0) {
-                    // cache value in case delegate removes it
-                    var value = (slotsPtr + i).ptr->value;
-                    if (list.IsSet((int)value) == true) {
-                        // check again that remove actually removed it
-                        if (this.Remove(ref allocator, value) == true) {
-                            ++removedCount;
-                        }
-                    }
-                }
-            }
-
-            return removedCount;
-        }
-        
-        /*
-        [INLINE(256)]
-        public void Add(ref MemoryAllocator allocator, in BatchList other) {
-            var bucketsPtr = (int*)this.buckets.GetUnsafePtrCached(in allocator);
-            var slotsPtr = (Slot*)this.slots.GetUnsafePtrCached(in allocator);
-            var node = other.root;
-            while (node != null) {
-                this.Add(ref allocator, node->typeId, ref bucketsPtr, ref slotsPtr);
-                node = node->next;
-            }
-        }*/
-
-        [INLINE(256)]
-        public void Add(ref MemoryAllocator allocator, in ComponentsFastTrack other) {
-            var bucketsPtr = (safe_ptr<int>)this.buckets.GetUnsafePtrCached(in allocator);
-            var slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
-            var list = other.root;
-            for (int i = 0; i < list.Length; ++i) {
-                if (list.IsSet(i) == true) {
-                    var typeId = (uint)i;
-                    this.Add(ref allocator, typeId, ref bucketsPtr, ref slotsPtr);
-                }
-            }
-        }
-        #endif
 
         [INLINE(256)]
         public void Remove(ref MemoryAllocator allocator, in UIntHashSet other) {

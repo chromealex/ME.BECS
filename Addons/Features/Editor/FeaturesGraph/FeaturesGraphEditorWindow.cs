@@ -106,13 +106,17 @@ namespace ME.BECS.Editor.FeaturesGraph {
                     }
                     this.graphView.SaveGraphToDisk();
                     UnityEditor.AssetDatabase.SaveAssetIfDirty(this.graph);
-                    if (SourceGeneratorInputRefresh.TryExport()) {
-                        this.SetCompileDirty(false);
-                        this.hasUnsavedChanges = false;
-                        this.ShowNotification(new GUIContent("Graph inputs exported; check Unity compilation"), 3f);
-                    } else {
-                        this.ShowNotification(new GUIContent("Graph export incomplete; see Console"), 3f);
-                    }
+                    var requestedGraph = this.graph;
+                    if (SourceGeneratorInputRefresh.RequestExport(successful => {
+                        if (this == null || this.graph != requestedGraph) return;
+                        if (successful && !UnityEditor.EditorUtility.IsDirty(requestedGraph)) {
+                            this.SetCompileDirty(false);
+                            this.hasUnsavedChanges = false;
+                        }
+                        this.ShowNotification(new GUIContent(successful ? "Graph inputs exported; check Unity compilation" :
+                            "Graph export cancelled or incomplete; see Console"), 3f);
+                    })) this.ShowNotification(new GUIContent("Analyzing graph inputs in background"), 3f);
+                    else this.ShowNotification(new GUIContent("Export already running or unavailable; retry later"), 3f);
                 });
                 this.UpdateCompileButton();
                 toolbar.Add(this.compileButton);

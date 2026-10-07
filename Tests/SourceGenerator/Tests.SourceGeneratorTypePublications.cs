@@ -136,7 +136,7 @@ namespace ME.BECS.Tests {
             Assert.IsTrue((bool)Call(Transport, "ValidateSelection", check), (string)check[1]);
         }
 
-        private static string[] Rows(Assembly assembly, string profile) => assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+        private static string[] Rows(Assembly assembly, string profile) => assembly.BecsInputMetadata()
             .Where(item => item.Key == "ME.BECS.TypeInput.v1" && item.Value.StartsWith(profile.ToLowerInvariant() + "\t"))
             .Select(item => item.Value.Substring(profile.Length + 1)).ToArray();
         private static MethodInfo[] Calls(MethodInfo method) => ME.BECS.Mono.Reflection.Disassembler.GetInstructions(method)

@@ -69,6 +69,21 @@ namespace ME.BECS.Tests {
             Assert.IsTrue(Retry("new", "old", "", true, true), "Explicit retry clears the attempt stamp.");
         }
 
+        [TestCase("RequestExport")]
+        [TestCase("TryExportExplicit")]
+        [TestCase("Update")]
+        [TestCase("PollBackground")]
+        public void InputExportChecksPlayerBuildBeforeStartingOrPublishing(string name) {
+            var refresh = Snapshot.Assembly.GetType("ME.BECS.Editor.SourceGeneratorInputRefresh", true);
+            var method = refresh.GetMethod(name, BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            Assert.IsNotNull(method);
+            var calls = ME.BECS.Mono.Reflection.Disassembler.GetInstructions(method)
+                .Select(instruction => instruction.Operand).OfType<MethodInfo>().ToArray();
+            Assert.IsTrue(calls.Any(call => call.DeclaringType == typeof(UnityEditor.BuildPipeline) &&
+                call.Name == "get_isBuildingPlayer"), name + " must observe the live Player build state.");
+            // Structural regression coverage only; never start a Player build from EditMode tests.
+        }
+
         [Test]
         public void BackgroundPublicationRejectsCancelledChangedAndBusySnapshots() {
             var method = Snapshot.Assembly.GetType("ME.BECS.Editor.SourceGeneratorInputRefresh", true)
@@ -119,8 +134,9 @@ namespace ME.BECS.Tests {
             var fileName = transport.GetMethod("FileName", BindingFlags.Static | BindingFlags.NonPublic);
             foreach (var editor in new[] { false, true }) {
                 var name = (string)fileName.Invoke(null, new object[] { editor });
-                StringAssert.EndsWith(".ME.BECS.SourceGenerator.additionalfile", name);
-                Assert.AreEqual((editor ? "EditorInputs" : "RuntimeInputs") + ".ME.BECS.SourceGenerator.additionalfile", name);
+                // Full snapshots are Editor-only state, not compiler additional files.
+                StringAssert.EndsWith(".becs-snapshot", name);
+                Assert.AreEqual((editor ? "EditorInputs" : "RuntimeInputs") + ".becs-snapshot", name);
             }
         }
 
@@ -228,7 +244,7 @@ namespace ME.BECS.Tests {
         [TestCase("Editor")]
         public void CompiledGraphSnapshotMatchesItsManifestRecord(string profile) {
             var assembly = Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor");
-            var metadata = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>().ToArray();
+            var metadata = assembly.BecsInputMetadata().ToArray();
             Assert.IsFalse(metadata.Any(item => item.Key == "ME.BECS.InputRecovery.v1"),
                 "Recovery is incomplete compilation, never a usable bootstrap alongside a freshness snapshot.");
             var value = metadata.Single(item => item.Key == "ME.BECS.GraphInputSnapshot.v1").Value;

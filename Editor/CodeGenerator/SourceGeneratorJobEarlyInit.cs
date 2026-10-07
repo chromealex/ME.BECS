@@ -13,7 +13,7 @@ namespace ME.BECS.Editor {
 
         internal bool TryGetMethods(Type job, out scg::KeyValuePair<int, MethodInfo>[] methods, out string reason) {
             if (!this.cache.TryGetValue(job, out var selected)) {
-                var success = Read(job, out var result, out var error);
+                var success = this.Read(job, out var result, out var error);
                 selected = (success, result, error);
                 this.cache.Add(job, selected);
             }
@@ -22,7 +22,42 @@ namespace ME.BECS.Editor {
             return selected.success;
         }
 
-        private static bool Read(Type job, out scg::KeyValuePair<int, MethodInfo>[] methods, out string reason) {
+        // Every job used to rescan (split and inspect) every Selection_ constant and
+        // every method of its assembly catalog: quadratic in jobs per assembly
+        // (~4 s for the Editor profile). Index each catalog once per export snapshot.
+        private sealed class CatalogIndex {
+            internal bool invalidSchema;
+            internal readonly scg::Dictionary<string, scg::List<(string field, string text, string[] row)>> rows =
+                new scg::Dictionary<string, scg::List<(string, string, string[])>>(StringComparer.Ordinal);
+            internal readonly scg::Dictionary<string, scg::List<MethodInfo>> methods =
+                new scg::Dictionary<string, scg::List<MethodInfo>>(StringComparer.Ordinal);
+        }
+        private readonly scg::Dictionary<Type, CatalogIndex> indices = new scg::Dictionary<Type, CatalogIndex>();
+
+        private CatalogIndex Index(Type catalog) {
+            if (this.indices.TryGetValue(catalog, out var index)) return index;
+            index = new CatalogIndex();
+            foreach (var method in catalog.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)) {
+                if (!index.methods.TryGetValue(method.Name, out var list)) index.methods.Add(method.Name, list = new scg::List<MethodInfo>());
+                list.Add(method);
+            }
+            foreach (var field in catalog.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)) {
+                if (!field.Name.StartsWith("Selection_", StringComparison.Ordinal)) continue;
+                var text = field.IsLiteral && field.FieldType == typeof(string) ? field.GetRawConstantValue() as string : null;
+                var row = text?.Split('\t');
+                // Any malformed selection rejected every job of the catalog before; keep that.
+                if (row == null || row.Length != 7 || row[0] != "v2") { index.invalidSchema = true; continue; }
+                if (!index.rows.TryGetValue(row[1], out var entries)) index.rows.Add(row[1], entries = new scg::List<(string, string, string[])>());
+                entries.Add((field.Name, text, row));
+            }
+            this.indices.Add(catalog, index);
+            return index;
+        }
+
+        private MethodInfo[] Named(CatalogIndex index, string name) =>
+            index.methods.TryGetValue(name, out var list) ? list.ToArray() : Array.Empty<MethodInfo>();
+
+        private bool Read(Type job, out scg::KeyValuePair<int, MethodInfo>[] methods, out string reason) {
             methods = null;
             reason = "source EarlyInit requires a visible closed value-type job";
             if (!job.IsValueType || !job.IsVisible || job.ContainsGenericParameters) return false;
@@ -33,16 +68,13 @@ namespace ME.BECS.Editor {
             var definition = job.IsGenericType ? job.GetGenericTypeDefinition() : job;
             var arguments = job.IsGenericType ? job.GetGenericArguments() : Type.EmptyTypes;
             var selected = new scg::Dictionary<int, MethodInfo>();
-            var candidates = catalog.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly);
-            foreach (var field in catalog.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)) {
-                if (!field.Name.StartsWith("Selection_", StringComparison.Ordinal)) continue;
-                var text = field.IsLiteral && field.FieldType == typeof(string) ? field.GetRawConstantValue() as string : null;
-                var row = text?.Split('\t');
-                reason = "invalid source EarlyInit selection schema (requires v2)";
-                if (row == null || row.Length != 7 || row[0] != "v2") return false;
-                if (row[1] != definition.FullName) continue;
+            var index = this.Index(catalog);
+            reason = "invalid source EarlyInit selection schema (requires v2)";
+            if (index.invalidSchema) return false;
+            index.rows.TryGetValue(definition.FullName, out var entries);
+            foreach (var (fieldName, text, row) in entries ?? new scg::List<(string, string, string[])>()) {
                 reason = "invalid source EarlyInit selection identity, phase or arity";
-                if (field.Name != "Selection_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(text) ||
+                if (fieldName != "Selection_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(text) ||
                     !int.TryParse(row[6], NumberStyles.None, CultureInfo.InvariantCulture, out var phase) ||
                     row[6] != phase.ToString(CultureInfo.InvariantCulture) || !MatchesPhase(row[2], phase) ||
                     row[5] != arguments.Length.ToString(CultureInfo.InvariantCulture)) return false;
@@ -52,8 +84,8 @@ namespace ME.BECS.Editor {
                 if (suffix.Length != 64 || suffix.Any(character => !(character >= '0' && character <= '9' || character >= 'A' && character <= 'F')) ||
                     row[4] != (arguments.Length == 0 ? "Args_" : "ArgsGeneric_") + suffix ||
                     arguments.Length != 0 && suffix != ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(definition.FullName + "|" + row[2])) return false;
-                var wrappers = candidates.Where(method => method.Name == row[3]).ToArray();
-                var getters = candidates.Where(method => method.Name == row[4]).ToArray();
+                var wrappers = this.Named(index, row[3]);
+                var getters = this.Named(index, row[4]);
                 reason = "source EarlyInit wrapper/metadata signature missing or ambiguous";
                 if (wrappers.Length != 1 || getters.Length != 1) return false;
                 var wrapper = wrappers[0];

@@ -9,7 +9,7 @@ namespace ME.BECS.Tests {
         [TestCase("Runtime")]
         public void BootstrapUsesManifestWithoutExportedMarkers(string profile) {
             var assembly = Tests_SourceGeneratorInputCatalog.Owner(profile == "Editor");
-            var schema = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            var schema = assembly.BecsInputMetadata()
                 .Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t'))
                 .Single(row => row[0] == profile.ToLowerInvariant() && row[1] == "bootstrap-schema");
             Assert.AreEqual("0", schema[2]);
@@ -132,7 +132,7 @@ namespace ME.BECS.Tests {
         [Test]
         public void GraphInitializersRetainOneBurstAttributeWithoutLegacyPhaseFiles() {
             var assembly = Tests_SourceGeneratorInputCatalog.Owner(false);
-            var graphs = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            var graphs = assembly.BecsInputMetadata()
                 .Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t'))
                 .Where(row => row.Length == 6 && row[0] == "runtime" && row[1] == "graph-registration");
             foreach (var row in graphs) {
@@ -144,12 +144,9 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
-        public void RetirementContentContainsNoExecutableCode() {
-            var source = (string)ExportContract.GetField("RetirementComment", BindingFlags.Static | BindingFlags.NonPublic).GetRawConstantValue();
-            Assert.IsTrue(source.Trim().StartsWith("//", StringComparison.Ordinal));
-            Assert.IsFalse(source.Contains("class "));
-            Assert.IsFalse(source.Contains("namespace "));
-            Assert.IsFalse(source.Contains("SourceBootstrapPlanV1"));
+        public void ExportContractNoLongerProvidesLegacySourceStubs() {
+            Assert.IsNull(ExportContract.GetField("RetirementComment", BindingFlags.Static | BindingFlags.NonPublic),
+                "Input export must not restore the retired aggregate C# stub mechanism.");
         }
 
         [TestCase("ThemesCodeGenerator")]

@@ -19,7 +19,29 @@ namespace ME.BECS.Editor {
         // declaration change. Name/CompilerGenerated alone is NOT sufficient:
         // audit every constructor instruction before using a local content stamp.
         internal static string ExecutableMetadataStamp(Type type, Guid mvid) =>
-            TryCompilerMetadata(type, out var content) ? "compiler:" + content : "assembly:" + mvid.ToString("D");
+            TryCompilerMetadata(type, out var content) ? "compiler:" + content :
+            TryEmptyAttribute(type, out content) ? "empty-attribute:" + content : "assembly:" + mvid.ToString("D");
+
+        // An empty marker cannot observe helpers or mutable state. Audit actual
+        // IL rather than trusting the attribute's name, visibility or provenance.
+        internal static bool TryEmptyAttribute(Type type, out string content) {
+            content = null;
+            if (type.BaseType != typeof(Attribute) || type.ContainsGenericParameters || type.GetFields(Declared).Length != 0) return false;
+            var methods = Methods(type).OrderBy(Signature, StringComparer.Ordinal).ToArray();
+            if (methods.Length == 0) return false;
+            foreach (var method in methods) {
+                if (!(method is ConstructorInfo) || method.IsStatic) return false;
+                var body = method.GetMethodBody();
+                if (body == null || body.ExceptionHandlingClauses.Count != 0) return false;
+                var instructions = method.GetInstructions().Where(instruction => instruction.OpCode != OpCodes.Nop).ToArray();
+                if (instructions.Length != 3 || instructions[0].OpCode != OpCodes.Ldarg_0 ||
+                    instructions[1].OpCode != OpCodes.Call || instructions[2].OpCode != OpCodes.Ret ||
+                    !(instructions[1].Operand is ConstructorInfo constructor) || constructor.DeclaringType != typeof(Attribute) ||
+                    constructor.IsStatic || constructor.GetParameters().Length != 0) return false;
+            }
+            content = Names.Hash(string.Join("\n", methods.Select(Body)));
+            return true;
+        }
 
         internal static bool TryCompilerMetadata(Type type, out string content) {
             content = null;
@@ -78,7 +100,14 @@ namespace ME.BECS.Editor {
             public string[] arguments;
             [NonSerialized] private string key;
 
-            internal string Key => this.key ?? (this.key = owner + "\n" + signature + "\n" + string.Join("\n", arguments ?? Array.Empty<string>()));
+            internal string Key {
+                get {
+                    var cached = System.Threading.Volatile.Read(ref this.key);
+                    if (cached != null) return cached;
+                    var computed = this.owner + "\n" + this.signature + "\n" + string.Join("\n", this.arguments ?? Array.Empty<string>());
+                    return System.Threading.Interlocked.CompareExchange(ref this.key, computed, null) ?? computed;
+                }
+            }
 
             internal static MethodReference From(MethodBase method) {
                 if (method.DeclaringType?.AssemblyQualifiedName == null || method.ContainsGenericParameters)

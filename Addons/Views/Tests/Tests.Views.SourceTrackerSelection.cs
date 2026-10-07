@@ -9,7 +9,7 @@ namespace ME.BECS.Views.Tests {
         public sealed class CompilerIgnoredRead : GenericModule<ComponentA>, IViewTrackIgnore<ComponentA> { }
         public sealed class CompilerExplicitTracking : GenericModule<ComponentA>, IViewTrackIgnore<ComponentA>, IViewTrack<ComponentA>, IViewTrack<ComponentB> { }
 
-        private static (string Kind, string[] Rows)[] TrackerMetadata(string profile, string key) => Assembly.Load("ME.BECS.Gen." + profile)
+        private static (string Kind, string[] Rows)[] TrackerMetadata(string profile, string key) => Tests_Views_Publications.SelectionAssembly(profile)
             .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
             .Where(attribute => attribute.Key == key).Select(attribute => attribute.Value.Split('\t'))
             .Select(row => (row[0], System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(row[2])).Split('\n'))).ToArray();

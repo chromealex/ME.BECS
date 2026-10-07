@@ -14,9 +14,6 @@ namespace ME.BECS.Editor {
         private readonly Dictionary<MethodInfo, Type[]> filters = new Dictionary<MethodInfo, Type[]>();
         private readonly Dictionary<MethodInfo, Type[]> schedules = new Dictionary<MethodInfo, Type[]>();
         private readonly Dictionary<Type, Type[]> aspects = new Dictionary<Type, Type[]>();
-        // Static queries are absent when ENABLE_BECS_FLAT_QUERIES is enabled.
-        private readonly Type staticBuilder = typeof(QueryBuilder).Assembly.GetType("ME.BECS.QueryBuilderStatic", false);
-        private readonly Type staticQuery = typeof(QueryBuilder).Assembly.GetType("ME.BECS.Query", false);
 
         internal bool TryFilter(MethodInfo method, out Type[] components) {
             if (this.filters.TryGetValue(method, out components)) return components != null;
@@ -34,16 +31,11 @@ namespace ME.BECS.Editor {
         private bool IsFilter(MethodInfo method) {
             if (!method.IsGenericMethod) return false;
             var owner = method.DeclaringType;
-            var compose = owner == typeof(ArchetypeQueries.QueryCompose);
+            var compose = owner == typeof(FlatQueries.QueryCompose);
             var dynamic = owner == typeof(QueryBuilder);
-            var @static = owner != null && owner == this.staticBuilder;
-            var begin = owner != null && owner == this.staticQuery && method.IsStatic && this.staticBuilder != null && method.ReturnType == this.staticBuilder;
-            if (!compose && !dynamic && !@static && !begin) return false;
+            if (!compose && !dynamic) return false;
             var parameters = method.GetParameters();
-            if (begin) {
-                if (!(parameters.Length == 1 && parameters[0].ParameterType == typeof(SystemContext).MakeByRefType()) &&
-                    !(parameters.Length == 2 && parameters[0].ParameterType == typeof(World).MakeByRefType() && parameters[1].ParameterType == typeof(Unity.Jobs.JobHandle))) return false;
-            } else if (method.IsStatic || parameters.Length != 0 || method.ReturnType != (compose ? typeof(void) : owner)) return false;
+            if (method.IsStatic || parameters.Length != 0 || method.ReturnType != (compose ? typeof(void) : owner)) return false;
             var count = method.GetGenericArguments().Length;
             switch (method.Name) {
                 case "With": case "Without": case "WithAspect": return count == 1;

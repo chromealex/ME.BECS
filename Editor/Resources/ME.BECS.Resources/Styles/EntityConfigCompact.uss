@@ -1,384 +1,127 @@
-/* Standalone inspector styles. No Entity, Tooltip, theme or DefaultStyles dependency. */
-.compact-config-inspector { padding: 4px 0px; }
+/* EntityConfig and inline entity layout; appearance is shared in DefaultStyles.uss. */
+.compact-config-inspector { padding: 0px; }
 .compact-config-inspector .baseconfig-field { margin: 0px 0px 8px; }
 .compact-config-inspector .config-search { align-self: stretch; width: auto; margin: 0px 0px 6px; }
 .compact-config-inspector .config-search > .unity-text-field { flex-grow: 1; }
 .compact-config-inspector .maskable-field { margin: 2px 0px 8px; }
 .compact-config-inspector .entity-components { margin: 0px 0px 8px; }
-.compact-config-inspector .entity-components-label {
-    align-self: stretch;
-    padding: 6px 8px;
-    margin: 0px;
-    font-size: 12px;
-    -unity-font-style: bold;
-    background-color: rgba(128, 128, 128, 0.14);
-}
+.compact-config-inspector .entity-components-label { align-self: stretch; padding: 6px 8px; margin: 0px; font-size: 12px; -unity-font-style: bold; }
 .compact-config-inspector .fields-container-root { margin: 0px; }
 .compact-config-inspector .fields-container { padding: 0px; }
-.compact-config-inspector .config-component-row {
-    margin: 0px;
-    padding: 0px;
-    border-bottom-width: 1px;
-    border-bottom-color: rgba(128, 128, 128, 0.18);
-}
-.compact-config-inspector .config-component-foldout > .unity-foldout__toggle {
-    min-height: 24px;
-    padding: 2px 28px 2px 4px;
-    margin: 0px;
-    border-radius: 0px;
-    -unity-font-style: normal;
-    background-color: rgba(128, 128, 128, 0.04);
-}
-.compact-config-inspector .config-component-foldout > .unity-foldout__toggle:hover {
-    background-color: rgba(128, 128, 128, 0.12);
-}
-.compact-config-inspector .config-component-foldout.field-selected > .unity-foldout__toggle,
-.compact-config-inspector .config-tag-row.field-selected {
-    background-color: rgba(48, 128, 192, 0.22);
-}
-.compact-config-inspector .config-component-foldout > .unity-foldout__content {
-    margin: 0px;
-    padding: 3px 8px 7px 24px;
-}
-.compact-config-inspector .config-tag-row {
-    min-height: 24px;
-    padding: 2px 28px 2px 20px;
-    -unity-text-align: middle-left;
-}
+.compact-config-inspector .config-component-row { margin: 0px; padding: 0px; border-bottom-width: 1px; }
+.compact-config-inspector .config-component-foldout > .unity-foldout__toggle { min-height: 24px; padding: 2px 28px 2px 4px; margin: 0px; border-radius: 0px; -unity-font-style: normal; }
+.compact-config-inspector .config-component-foldout > .unity-foldout__content { margin: 0px; padding: 3px 8px 7px 24px; }
+.compact-config-inspector .config-tag-row { min-height: 29px; margin: 0px; padding: 4px 28px 4px 24px; -unity-text-align: middle-left; }
 .compact-config-inspector .config-field-row { flex-direction: row; align-items: flex-start; }
-.compact-config-inspector .config-field-row > PropertyField {
-    flex-grow: 1;
-    flex-shrink: 1;
-    min-width: 0px;
-    margin: 1px 0px;
-}
-.compact-config-inspector .config-field-mask {
-    flex-shrink: 0;
-    width: 18px;
-    height: 22px;
-    margin: 3px 4px 0px 0px;
-    padding: 0px;
-    align-items: center;
-    justify-content: center;
-}
+.compact-config-inspector .config-field-row > PropertyField { flex-grow: 1; flex-shrink: 1; min-width: 0px; margin: 0px; }
+.compact-config-inspector .config-field-mask { flex-shrink: 0; width: 18px; height: 22px; margin: 3px 4px 0px 0px; padding: 0px; align-items: center; justify-content: center; }
 .compact-config-inspector .config-field-mask > .unity-toggle__input { margin: 0px; align-self: center; }
 .compact-config-inspector .config-field-excluded > PropertyField { opacity: 0.5; }
 .compact-config-inspector .config-inherited-row > .unity-foldout__toggle > .unity-toggle__input,
 .compact-config-inspector .config-inherited-row.config-tag-row { opacity: 0.65; }
 .compact-config-inspector .buttons-container { flex-direction: row; justify-content: flex-end; padding: 2px 8px; }
 .compact-config-inspector .buttons-container Button { min-width: 28px; height: 20px; margin: 0px 0px 0px 3px; padding: 0px 6px; }
-.compact-config-inspector .drag-root {
-    position: absolute;
-    right: 7px;
-    top: 4px;
-    width: 16px;
-    height: 16px;
-    opacity: 0.3;
-    background-image: resource("d_Grid.MoveTool.png");
-    cursor: move-arrow;
-}
+.compact-config-inspector .drag-root { position: absolute; right: 7px; top: 4px; width: 16px; height: 16px; opacity: 0.3; cursor: move-arrow; }
 .compact-config-inspector .config-component-row:hover > .drag-root { opacity: 0.8; }
-.compact-config-inspector .drag-handler {
-    position: absolute;
-    left: 0px;
-    right: 0px;
-    height: 2px;
-    background-color: rgb(48, 128, 192);
-}
-.compact-config-inspector .config-aspect-row {
-    flex-direction: row;
-    flex-wrap: wrap;
-    padding: 3px 0px;
-    border-bottom-width: 1px;
-    border-bottom-color: rgba(128, 128, 128, 0.12);
-}
+.compact-config-inspector .drag-handler { position: absolute; left: 0px; right: 0px; height: 2px; }
+.compact-config-inspector .config-aspect-row { flex-direction: row; flex-wrap: wrap; padding: 3px 0px; border-bottom-width: 1px; }
 .compact-config-inspector .config-aspect-name { flex-grow: 1; min-width: 100px; }
 .compact-config-inspector .config-aspect-row > Label { margin-right: 8px; }
-
-/* Compact layout uses the editor theme, with subtle neutral surfaces. */
-.compact-config-inspector { background-color: rgba(0, 0, 0, 0); }
-.compact-config-inspector .config-content { padding: 10px; }
-.compact-config-inspector .config-toolbar {
-    padding: 10px;
-    margin-bottom: 12px;
-    border-width: 1px;
-    border-color: rgba(128, 128, 128, 0.3);
-    border-radius: 5px;
-    background-color: rgba(128, 128, 128, 0.04);
-}
-.compact-config-inspector .config-search { margin: 4px 0px 8px; }
-.compact-config-inspector .config-search > .unity-text-field__input {
-    min-height: 28px;
-    padding: 4px 8px;
-    border-width: 1px;
-    border-color: rgba(128, 128, 128, 0.3);
-    border-radius: 4px;
-}
-.compact-config-inspector .entity-components {
-    margin-bottom: 12px;
-    border-width: 1px;
-    border-color: rgba(128, 128, 128, 0.3);
-    border-radius: 4px;
-    overflow: hidden;
-}
-.compact-config-inspector .entity-components-label {
-    padding: 7px 10px;
-    background-color: rgba(128, 128, 128, 0.1);
-    -unity-font-style: normal;
-    border-bottom-width: 1px;
-    border-bottom-color: rgba(128, 128, 128, 0.18);
-}
-.compact-config-inspector .config-component-row { border-bottom-color: rgba(128, 128, 128, 0.15); }
-.compact-config-inspector .config-component-foldout > .unity-foldout__toggle {
-    min-height: 28px;
-    padding: 4px 28px 4px 8px;
-    background-color: rgba(0, 0, 0, 0);
-}
-.compact-config-inspector .config-component-foldout > .unity-foldout__content {
-    padding: 8px 12px 12px 28px;
-    background-color: rgba(128, 128, 128, 0.035);
-}
-.compact-config-inspector .config-field-row > PropertyField { margin: 3px 0px; }
-.compact-config-inspector .config-field-row > PropertyField > .unity-base-field > .unity-base-field__label {
-    flex-grow: 1;
-    flex-shrink: 1;
-    min-width: 90px;
-    width: auto;
-    max-width: none;
-    margin-right: 12px;
-    -unity-text-align: middle-left;
-}
-.compact-config-inspector .config-field-row > PropertyField > .unity-base-field > .unity-base-field__input {
-    flex-grow: 0;
-    flex-shrink: 1;
-    flex-basis: 160px;
-    min-width: 80px;
-    max-width: 160px;
-    min-height: 22px;
-    border-width: 1px;
-    border-color: rgba(128, 128, 128, 0.3);
-    border-radius: 3px;
-}
-.compact-config-inspector .config-field-row > PropertyField > Toggle > .unity-toggle__input {
-    border-width: 0px;
-    background-color: rgba(0, 0, 0, 0);
-}
-.compact-config-inspector .buttons-container { padding: 6px 8px; background-color: rgba(128, 128, 128, 0.04); }
-.compact-config-inspector .buttons-container Button {
-    height: 24px;
-    padding: 2px 9px;
-    margin-left: 5px;
-    border-width: 1px;
-    border-color: rgba(128, 128, 128, 0.3);
-    border-radius: 3px;
-}
-/* Selection is restricted to the component header in either editor theme. */
-.compact-config-inspector .config-component-foldout.field-selected > .unity-foldout__toggle {
-    background-color: rgba(48, 128, 192, 0.22);
-}
-
-/* Existing TooltipAttribute decorators, styled locally without Tooltip.uss. */
+.compact-config-inspector .config-content { padding: 0px 0px 8px; }
+.compact-config-inspector .config-toolbar { padding: 8px 12px; margin-bottom: 8px; border-width: 0px; border-bottom-width: 1px; border-radius: 0px; }
+.compact-config-inspector .config-search { margin: 4px 8px 8px; }
+.compact-config-inspector .config-search > .unity-text-field__input { min-height: 28px; padding: 4px 8px; border-width: 1px; border-radius: 4px; }
+.compact-config-inspector .entity-components { margin: 0px 8px 8px; border-width: 1px; border-radius: 4px; overflow: hidden; }
+.compact-config-inspector .entity-components-label { padding: 7px 10px; -unity-font-style: normal; border-bottom-width: 1px; }
+.compact-config-inspector .config-component-foldout > .unity-foldout__toggle { min-height: 28px; padding: 4px 28px 4px 8px; }
+.compact-config-inspector .config-component-foldout > .unity-foldout__content { padding: 8px 12px 12px 28px; }
+.compact-config-inspector .config-field-row PropertyField { margin: 0px; padding: 0px; }
+.compact-config-inspector .buttons-container { padding: 6px 8px; }
+.compact-config-inspector .buttons-container Button { height: 28px; padding: 3px 10px; margin-left: 5px; border-width: 1px; border-radius: 3px; }
 .compact-config-inspector .config-tooltip-anchor { padding-right: 22px; }
-.compact-config-inspector .tooltip-decorator {
-    position: absolute;
-    right: 0px;
-    top: 3px;
-    width: 18px;
-    height: 18px;
-    margin: 0px;
-    padding: 0px;
-}
+.compact-config-inspector .tooltip-decorator { position: absolute; right: 0px; top: 3px; width: 18px; height: 18px; margin: 0px; padding: 0px; }
 .compact-config-inspector .tooltip-decorator .tooltip-text { display: none; }
-.compact-config-inspector .tooltip-decorator .tooltip {
-    width: 16px;
-    height: 16px;
-    margin: 0px;
-    padding: 0px;
-    font-size: 11px;
-    -unity-text-align: middle-center;
-    border-radius: 8px;
-    background-color: rgba(128, 128, 128, 0.18);
-}
-.compact-config-inspector .tooltip-decorator .tooltip:hover {
-    background-color: rgba(128, 128, 128, 0.35);
-}
-.config-tooltip-popup {
-    position: absolute;
-    white-space: normal;
-    padding: 8px 10px;
-    border-width: 1px;
-    border-color: rgb(95, 95, 95);
-    border-radius: 4px;
-    background-color: rgb(48, 48, 48);
-    color: rgb(230, 230, 230);
-    font-size: 12px;
-}
-.config-tooltip-popup.config-tooltip-light {
-    background-color: rgb(250, 250, 250);
-    border-color: rgb(180, 180, 180);
-    color: rgb(40, 40, 40);
-}
-
-/* Color accents follow ME.BECS / Themes; surfaces stay neutral. */
-.compact-config-inspector .config-toolbar {
-    border-left-width: 3px;
-    border-left-color: var(--main-color);
-}
-.compact-config-inspector .entity-components-label {
-    border-left-width: 3px;
-    border-left-color: var(--highlight-color);
-}
-.compact-config-inspector .config-component-foldout.field-selected > .unity-foldout__toggle,
-.compact-config-inspector .config-tag-row.field-selected {
-    background-color: var(--main-color);
-    color: var(--highlight-text-color);
-}
-.compact-config-inspector .config-component-foldout.field-selected > .unity-foldout__toggle Label {
-    color: var(--highlight-text-color);
-}
-/* Addition uses the same quiet surface as the other inspector actions. */
-.compact-config-inspector .add-button {
-    align-self: flex-end;
-    height: 22px;
-    margin: 3px 8px;
-    padding: 1px 8px;
-    border-width: 1px;
-    border-color: rgba(128, 128, 128, 0.3);
-    border-radius: 3px;
-    background-color: rgba(128, 128, 128, 0.08);
-    font-size: 11px;
-}
-.compact-config-inspector .add-button:hover {
-    background-color: rgba(128, 128, 128, 0.18);
-    border-color: var(--highlight-color);
-}
-.compact-config-inspector .config-field-mask:checked #unity-checkmark {
-    background-color: var(--highlight-color);
-    border-color: var(--main-color);
-}
-.compact-config-inspector .config-search > .unity-text-field__input:focus,
-.compact-config-inspector .config-field-row .unity-base-field__input:focus {
-    border-color: var(--highlight-color);
-}
-.compact-config-inspector .drag-handler { background-color: var(--highlight-color); }
-.compact-config-inspector .tooltip-decorator .tooltip {
-    color: var(--highlight-text-color);
-    background-color: var(--main-color);
-}
-.config-tooltip-popup { border-color: var(--highlight-color); }
-
+.compact-config-inspector .tooltip-decorator .tooltip { width: 16px; height: 16px; margin: 0px; padding: 0px; font-size: 11px; -unity-text-align: middle-center; border-radius: 8px; }
+.config-tooltip-popup { position: absolute; white-space: normal; padding: 8px 10px; border-width: 1px; border-radius: 4px; font-size: 12px; }
+.compact-config-inspector .add-button { align-self: flex-end; height: 28px; margin: 4px 8px; padding: 3px 10px; border-width: 1px; border-radius: 4px; font-size: 12px; }
 .compact-config-inspector #common-heading,
-.compact-config-inspector #different-heading {
-    padding: 5px 10px;
-    opacity: 0.7;
-    font-size: 11px;
-}
+.compact-config-inspector #different-heading { padding: 5px 10px; opacity: 0.7; font-size: 11px; }
 .compact-config-inspector .config-difference-group { margin: 2px 6px 8px; }
 .compact-config-inspector .config-difference-group > .unity-foldout__content { margin-left: 12px; }
-.compact-config-inspector .config-common-row > .unity-foldout__toggle { border-left-width: 2px; border-left-color: var(--highlight-color); }
-
-/* Custom property drawers also use has-tooltip without a decorator wrapper. */
+.compact-config-inspector .config-common-row > .unity-foldout__toggle { border-left-width: 2px; }
 .compact-config-inspector .has-tooltip > .tooltip-text { display: none; }
-.compact-config-inspector .has-tooltip > .tooltip {
-    position: absolute;
-    right: 1px;
-    top: 2px;
-    width: 16px;
-    height: 16px;
-    margin: 0px;
-    padding: 0px;
-    font-size: 11px;
-    -unity-font-style: bold;
-    -unity-text-align: middle-center;
-    border-radius: 8px;
-    color: var(--highlight-color);
-    background-color: rgba(128, 128, 128, 0.15);
-}
-.compact-config-inspector .has-tooltip > .tooltip:hover {
-    background-color: rgba(128, 128, 128, 0.3);
-}
-
-/* Multi-selection: compact hierarchy, with actions sized to their text. */
-.compact-config-inspector .config-difference-group {
-    margin: 3px 8px 6px;
-    border-width: 1px;
-    border-color: rgba(128, 128, 128, 0.18);
-    border-radius: 3px;
-    background-color: rgba(128, 128, 128, 0.04);
-}
-.compact-config-inspector .config-difference-group > .unity-foldout__toggle {
-    height: 25px;
-    margin: 0px;
-    padding: 2px 6px;
-}
-.compact-config-inspector .config-difference-group > .unity-foldout__content {
-    margin: 0px;
-    padding: 0px 5px 4px 12px;
-}
-.compact-config-inspector .config-owner-row > .unity-foldout__toggle {
-    background-color: rgba(0, 0, 0, 0);
-    border-bottom-width: 0px;
-}
-.compact-config-inspector .config-owner-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex-shrink: 1;
-}
-.compact-config-inspector .config-difference-actions {
-    flex-direction: row;
-    justify-content: flex-end;
-    padding: 2px 0px;
-}
-.compact-config-inspector .config-difference-actions > .add-button {
-    flex-grow: 0;
-    flex-shrink: 0;
-    margin: 2px 3px;
-    min-width: 0px;
-}
-
-.runtime-entity-inspector > Foldout > .unity-foldout__toggle {
-    min-height: 25px;
-    margin: 0px;
-    padding: 3px 6px;
-    background-color: rgba(128, 128, 128, 0.08);
-}
+.compact-config-inspector .has-tooltip > .tooltip { position: absolute; right: 1px; top: 2px; width: 16px; height: 16px; margin: 0px; padding: 0px; font-size: 11px; -unity-font-style: bold; -unity-text-align: middle-center; border-radius: 8px; }
+.compact-config-inspector .config-difference-group { margin: 3px 8px 6px; border-width: 1px; border-radius: 3px; }
+.compact-config-inspector .config-difference-group > .unity-foldout__toggle { height: 25px; margin: 0px; padding: 2px 6px; }
+.compact-config-inspector .config-difference-group > .unity-foldout__content { margin: 0px; padding: 0px 5px 4px 12px; }
+.compact-config-inspector .config-owner-row > .unity-foldout__toggle { border-bottom-width: 0px; }
+.compact-config-inspector .config-owner-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 1; }
+.compact-config-inspector .config-difference-actions { flex-direction: row; justify-content: flex-end; padding: 2px 0px; }
+.compact-config-inspector .config-difference-actions > .add-button { flex-grow: 0; flex-shrink: 0; margin: 2px 3px; min-width: 0px; }
+.runtime-entity-inspector > Foldout > .unity-foldout__toggle { min-height: 28px; margin: 0px 0px 8px; padding: 4px 8px; border-bottom-width: 1px; }
 .runtime-entity-inspector > Foldout > .unity-foldout__content { margin-left: 0px; }
-.runtime-entity-inspector .runtime-entity-metadata {
-    margin: 3px 8px 8px;
-    font-size: 11px;
-    opacity: 0.7;
-    white-space: normal;
-}
+.runtime-entity-inspector .runtime-entity-metadata { margin: 3px 8px 8px; font-size: 11px; opacity: 0.7; white-space: normal; }
 .runtime-entity-inspector .runtime-component-disabled > .unity-foldout__toggle { opacity: 0.45; }
 .runtime-entity-inspector .tooltip-decorator { position: relative; height: 0px; top: 0px; width: auto; }
-
 .runtime-entity-inspector .config-tag-row.runtime-component-disabled { opacity: 0.45; }
+.runtime-entity-inspector .runtime-entity-navigation { flex-direction: row; align-items: center; padding: 6px 8px; min-height: 36px; flex-wrap: wrap; border-bottom-width: 1px; }
+.runtime-entity-inspector .runtime-entity-reference { flex-grow: 1; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.runtime-entity-inspector .runtime-entity-navigation > Button { flex-grow: 0; flex-shrink: 0; height: 28px; margin: 2px 0px 2px 4px; padding: 3px 10px; font-size: 12px; border-width: 1px; border-radius: 4px; }
 
-.runtime-entity-inspector .runtime-entity-navigation {
-    flex-direction: row;
-    align-items: center;
-    padding: 2px 4px;
-    min-height: 24px;
-}
-.runtime-entity-inspector .runtime-entity-reference {
-    flex-grow: 1;
-    flex-shrink: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.runtime-entity-inspector .runtime-entity-navigation > Button {
-    flex-grow: 0;
-    flex-shrink: 0;
-    height: 21px;
-    margin: 0px 0px 0px 4px;
-    padding: 1px 6px;
-    font-size: 10px;
-    border-width: 1px;
-    border-color: rgba(128, 128, 128, 0.3);
-    border-radius: 3px;
-    background-color: rgba(128, 128, 128, 0.08);
-}
+.runtime-entity-inspector .runtime-entity-identity { flex-grow: 1; flex-shrink: 1; min-width: 0px; padding: 2px 5px; }
+.runtime-entity-inspector .runtime-entity-identity > .runtime-entity-reference { -unity-font-style: normal; font-size: 12px; }
+.runtime-entity-inspector .runtime-entity-identity > .runtime-entity-metadata { margin: 2px 0px 0px; font-size: 11px; white-space: normal; }
 
-.runtime-entity-inspector .config-tag-row { padding-left: 24px; }
+/* Tooltip affordances live in the row, outside custom-drawer clipping and value inputs. */
+.compact-config-inspector .config-field-tooltip { position: absolute; left: -22px; top: 5px; width: 16px; height: 16px; margin: 0px; font-size: 11px; -unity-text-align: middle-center; border-radius: 8px; }
+.compact-config-inspector .config-has-field-tooltip > .tooltip-decorator { display: none; }
+
+/* Keep the group accent visible in collapsed, expanded and selected headers. */
+.compact-config-inspector .becs-component-group-accent { position: absolute; left: 0px; right: 0px; top: 0px; bottom: 0px; border-left-width: 3px; }
+.runtime-entity-inspector .config-search { margin: 4px 8px 8px; }
+.runtime-entity-inspector .config-search > .unity-text-field { min-height: 28px; margin: 0px; }
+.runtime-entity-inspector .config-search .unity-text-field__input { min-height: 24px; }
+
+.runtime-entity-inspector .runtime-field-tooltip { position: absolute; left: -22px; top: 5px; width: 16px; height: 16px; margin: 0px; }
+
+/* Reserve the same disclosure-arrow space in data headers and tag labels. */
+.compact-config-inspector .config-component-foldout > .unity-foldout__toggle > .unity-toggle__input { margin: 0px; }
+.compact-config-inspector .config-component-foldout > .unity-foldout__toggle > .unity-toggle__input > .unity-foldout__checkmark { width: 12px; min-width: 12px; margin: 0px 4px 0px 0px; }
+.compact-config-inspector .config-component-foldout > .unity-foldout__toggle .unity-foldout__text { margin: 0px; padding: 0px; }
+.runtime-entity-inspector .runtime-field-tooltip > .tooltip { left: 0px; right: auto; top: 0px; }
+
+.compact-config-inspector .unity-list-view { margin: 3px 0px; border-width: 1px; border-radius: 3px; }
+.compact-config-inspector .unity-list-view__item { padding: 2px 4px; }
+.compact-config-inspector .unity-list-view__footer { min-height: 28px; padding: 2px 4px; border-top-width: 1px; }
+.compact-config-inspector .unity-list-view__footer Button { min-width: 24px; height: 24px; margin: 0px 0px 0px 4px; }
+
+
+/* One input grid at every nesting depth; only compound axes have narrow labels. */
+.compact-config-inspector .config-field-row .becs-inspector-field { min-height: 22px; margin: 2px 0px; padding: 0px; align-items: center; flex-shrink: 1; }
+.compact-config-inspector .config-field-row .becs-inspector-field > .unity-base-field__label { height: 22px; padding: 0px; margin-top: 0px; margin-bottom: 0px; -unity-text-align: middle-left; }
+.compact-config-inspector .config-field-row .becs-inspector-field > .unity-base-field__input { flex-grow: 1; flex-shrink: 1; flex-basis: 0px; width: auto; min-width: 0px; max-width: none; min-height: 22px; margin: 0px; padding-top: 0px; padding-bottom: 0px; }
+.compact-config-inspector .config-field-row .becs-inspector-field > .unity-base-text-field__input,
+.compact-config-inspector .config-field-row .becs-inspector-field > .unity-object-field__input,
+.compact-config-inspector .config-field-row .becs-inspector-field > .unity-base-popup-field__input,
+.compact-config-inspector .config-field-row EnumField.becs-inspector-field > .unity-base-field__input,
+.compact-config-inspector .config-field-row EnumFlagsField.becs-inspector-field > .unity-base-field__input { height: 22px; max-height: 22px; border-width: 1px; border-radius: 3px; }
+.compact-config-inspector .config-field-row .becs-inspector-axis { flex-grow: 1; flex-shrink: 1; flex-basis: 0px; width: auto; min-width: 0px; margin: 0px 4px 0px 0px; }
+.compact-config-inspector .config-field-row .unity-composite-field__input { align-items: center; }
+.compact-config-inspector .config-field-row .vector-field,
+.compact-config-inspector .config-field-row .quaternion-field { flex-direction: row; align-items: center; margin: 2px 0px; padding: 0px; min-height: 22px; }
+.compact-config-inspector .config-field-row .vector-field > Label,
+.compact-config-inspector .config-field-row .quaternion-field > Label { flex-grow: 0; flex-shrink: 0; width: 140px; min-width: 140px; max-width: 140px; margin: 0px 8px 0px 0px; padding: 0px; -unity-text-align: middle-left; }
+.compact-config-inspector .config-field-row .fp-field { padding: 0px; margin: 0px; }
+.compact-config-inspector .config-field-row .becs-sector-field { margin: 4px 0px; padding: 0px; border-width: 0px; }
+.compact-config-inspector .config-field-row .sector-root { align-items: center; }
+.compact-config-inspector .config-field-row .sector-root .sector-field { flex-grow: 0; flex-shrink: 0; width: 48px; min-width: 48px; margin-left: 4px; }
+.compact-config-inspector .config-field-row .unity-list-view__item PropertyField > Foldout > .unity-foldout__content { margin-left: 16px; padding: 2px 0px; }
+
+/* Array headers stay within their panel; native negative foldout offsets are reset. */
+.compact-config-inspector .unity-list-view__foldout-header { margin: 0px; padding: 0px; }
+.compact-config-inspector .unity-list-view__foldout-header > .unity-foldout__toggle { margin: 0px; padding: 3px 60px 3px 6px; min-height: 28px; border-radius: 0px; }
+.compact-config-inspector .unity-list-view__foldout-header > .unity-foldout__content { margin: 0px; padding: 0px; }
+.compact-config-inspector .unity-list-view__size-field { position: absolute; right: 6px; top: 3px; width: 48px; min-width: 48px; margin: 0px; }
+.compact-config-inspector .unity-list-view__footer { flex-direction: row; justify-content: flex-end; align-items: center; min-height: 34px; margin: 0px; padding: 5px 6px; border-left-width: 0px; border-right-width: 0px; border-bottom-width: 0px; border-radius: 0px; }
+.compact-config-inspector .unity-list-view__footer .becs-list-action { width: 24px; min-width: 24px; max-width: 24px; height: 24px; min-height: 24px; max-height: 24px; flex-grow: 0; flex-shrink: 0; margin: 0px 0px 0px 6px; padding: 0px; border-width: 1px; border-radius: 4px; }
+.becs-remove-button .becs-add-button-line-vertical { display: none; }

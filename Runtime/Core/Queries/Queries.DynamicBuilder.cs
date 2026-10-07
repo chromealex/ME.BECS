@@ -24,14 +24,10 @@ namespace ME.BECS {
     
     public struct QueryData {
 
-        internal TempBitArray archetypesBits;
-        internal safe_ptr<uint> archetypes;
-        internal uint archetypesCount;
         internal uint steps;
         internal uint minElementsPerStep;
 
         public void Dispose() {
-            if (this.archetypesBits.IsCreated == true) this.archetypesBits.Dispose();
             this = default;
         }
 
@@ -192,7 +188,7 @@ namespace ME.BECS {
         
         internal safe_ptr<CommandBuffer> commandBuffer;
         internal safe_ptr<QueryData> queryData;
-        internal ArchetypeQueries.QueryCompose compose;
+        internal FlatQueries.QueryCompose compose;
         internal uint parallelForBatch;
         internal JobHandle builderDependsOn;
         internal Allocator allocator;
@@ -211,7 +207,7 @@ namespace ME.BECS {
 
             public safe_ptr<QueryData> queryData;
             public safe_ptr<CommandBuffer> commandBuffer;
-            public ArchetypeQueries.QueryCompose compose;
+            public FlatQueries.QueryCompose compose;
             public Allocator allocator;
 
             public void Execute() {
@@ -363,7 +359,6 @@ namespace ME.BECS {
                                               where T1 : unmanaged, IComponentBase {
             E.IS_CREATED(this);
             this.compose.WithAny<T0, T1>();
-            //this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, TNull, TNull>(ref this);
             return this;
         }
 
@@ -374,7 +369,6 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             this.compose.WithAny<T0, T1>();
             this.compose.WithAny<T2, TNull>();
-            //this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, T2, TNull>(ref this);
             return this;
         }
 
@@ -386,7 +380,6 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             this.compose.WithAny<T0, T1>();
             this.compose.WithAny<T2, T3>();
-            //this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, T2, T3>(ref this);
             return this;
         }
 
@@ -394,7 +387,6 @@ namespace ME.BECS {
         public QueryBuilder With<T>() where T : unmanaged, IComponentBase {
             E.IS_CREATED(this);
             this.compose.With<T>();
-            //this.builderDependsOn = ArchetypeQueries.With<T>(ref this);
             return this;
         }
 
@@ -402,7 +394,6 @@ namespace ME.BECS {
         public QueryBuilder Without<T>() where T : unmanaged, IComponentBase {
             E.IS_CREATED(this);
             this.compose.Without<T>();
-            //this.builderDependsOn = ArchetypeQueries.Without<T>(ref this);
             return this;
         }
 
@@ -410,7 +401,6 @@ namespace ME.BECS {
         public QueryBuilder WithAspect<T>() where T : unmanaged, IAspect {
             E.IS_CREATED(this);
             this.compose.WithAspect<T>();
-            //this.builderDependsOn = ArchetypeQueries.With(ref this, AspectTypeInfo.with.Get(AspectTypeInfo<T>.typeId));
             return this;
         }
         
@@ -838,73 +828,10 @@ namespace ME.BECS {
             return handle;
         }
         
-        #if !ENABLE_BECS_FLAT_QUERIES
-        [BURST]
-        private partial struct FromQueryDataJob : IJob {
-
-            public safe_ptr<State> state;
-            public safe_ptr<Queries.QueryDataStatic> queryDataStatic;
-            public safe_ptr<QueryData> queryData;
-            
-            public void Execute() {
-                
-                this.queryData.ptr->archetypes = this.queryDataStatic.ptr->archetypes.GetUnsafePtr(in this.state.ptr->allocator);
-                this.queryData.ptr->archetypesCount = this.queryDataStatic.ptr->archetypes.Count;
-                
-            }
-
-        }
-        
-        [INLINE(256)]
-        internal QueryBuilderDisposable FromQueryData(safe_ptr<State> state, ushort worldId, safe_ptr<Queries.QueryDataStatic> queryDataStatic) {
-
-            //this.queryData = queryDataStatic->GetQueryData(state);
-            //this.commandBuffer = queryDataStatic->GetCommandBuffer(state, worldId);
-            
-            this.builderDependsOn = new FromQueryDataJob() {
-                queryDataStatic = queryDataStatic,
-                state = state,
-                queryData = this.queryData,
-            }.Schedule(this.builderDependsOn);
-            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn, fromStaticQuery: true);
-            //this.builderDependsOn.Complete();
-            return new QueryBuilderDisposable(this);
-
-        }
-        #endif
-
-        [BURST]
-        public partial struct FillTrueBitsJob : IJobParallelForDefer {
-
-            public safe_ptr<QueryData> queryData;
-            public NativeParallelList<uint> list;
-
-            public void Execute(int index) {
-                var hasBit = this.queryData.ptr->archetypesBits.IsSet(index);
-                if (hasBit == true) this.list.Add((uint)index);
-            }
-
-        }
-
-        [BURST]
-        public partial struct FillArchetypesJob : IJob {
-
-            public safe_ptr<QueryData> queryData;
-            public ME.BECS.NativeCollections.NativeParallelList<uint> list;
-
-            public void Execute() {
-                var list = this.list.ToList(Constants.ALLOCATOR_TEMP);
-                var ptr = list.Ptr;
-                this.queryData.ptr->archetypes = new safe_ptr<uint>(ptr, (byte*)ptr, (byte*)(ptr + list.Length));
-                this.queryData.ptr->archetypesCount = (uint)list.Length;
-            }
-
-        }
 
         [BURST]
         public partial struct SetEntitiesJob : IJob {
 
-            #if ENABLE_BECS_FLAT_QUERIES
             private struct BitWords {
 
                 public safe_ptr<ulong> ptr;
@@ -957,13 +884,12 @@ namespace ME.BECS {
                 }
                 return value;
             }
-            #endif
 
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             public SafetyComponentContainerRO<TNull> safety;
             #endif
 
-            public ArchetypeQueries.ComposeJob composeJob;
+            public FlatQueries.QueryCompose compose;
             public safe_ptr<State> state;
             public safe_ptr<CommandBuffer> buffer;
             public safe_ptr<QueryData> queryData;
@@ -972,7 +898,6 @@ namespace ME.BECS {
 
             public void Execute() {
 
-                #if ENABLE_BECS_FLAT_QUERIES
                 var allCount = (this.state.ptr->entities.Capacity + DataDenseSet.ENTITIES_PER_PAGE_MASK) / DataDenseSet.ENTITIES_PER_PAGE * DataDenseSet.ENTITIES_PER_PAGE;
                 var wordCount = Bitwise.GetLength(allCount);
                 var aliveBits = this.state.ptr->entities.aliveBits;
@@ -981,26 +906,26 @@ namespace ME.BECS {
                     length = Bitwise.GetLength(aliveBits.Length),
                 };
 
-                var withCount = (uint)this.composeJob.query.with.Length;
+                var withCount = (uint)this.compose.with.Length;
                 var with = withCount > 0u ? _makeArray<BitWords>(withCount, Constants.ALLOCATOR_TEMP, false) : default;
                 for (uint i = 0u; i < withCount; ++i) {
-                    with[i] = this.GetComponentBitWords(this.composeJob.query.with[(int)i]);
+                    with[i] = this.GetComponentBitWords(this.compose.with[(int)i]);
                 }
 
-                var hasWithAny = this.composeJob.query.withAny.Length > 0;
-                var withAnyCapacity = (uint)this.composeJob.query.withAny.Length * 2u;
+                var hasWithAny = this.compose.withAny.Length > 0;
+                var withAnyCapacity = (uint)this.compose.withAny.Length * 2u;
                 var withAny = withAnyCapacity > 0u ? _makeArray<BitWords>(withAnyCapacity, Constants.ALLOCATOR_TEMP, false) : default;
                 var withAnyCount = 0u;
-                for (int i = 0; i < this.composeJob.query.withAny.Length; ++i) {
-                    var typeIdPair = this.composeJob.query.withAny[i];
+                for (int i = 0; i < this.compose.withAny.Length; ++i) {
+                    var typeIdPair = this.compose.withAny[i];
                     if (typeIdPair.Key > 0u) withAny[withAnyCount++] = this.GetComponentBitWords(typeIdPair.Key);
                     if (typeIdPair.Value > 0u) withAny[withAnyCount++] = this.GetComponentBitWords(typeIdPair.Value);
                 }
 
-                var withoutCount = (uint)this.composeJob.query.without.Length;
+                var withoutCount = (uint)this.compose.without.Length;
                 var without = withoutCount > 0u ? _makeArray<BitWords>(withoutCount, Constants.ALLOCATOR_TEMP, false) : default;
                 for (uint i = 0u; i < withoutCount; ++i) {
-                    without[i] = this.GetComponentBitWords(this.composeJob.query.without[(int)i]);
+                    without[i] = this.GetComponentBitWords(this.compose.without[(int)i]);
                 }
 
                 var composedWords = _makeArray<ulong>(wordCount, Constants.ALLOCATOR_TEMP, false);
@@ -1063,137 +988,17 @@ namespace ME.BECS {
                 }
                 this.buffer.ptr->entities = arrPtr.ptr;
                 this.buffer.ptr->count = elementsCount;
-                #else
-                {
-                    var marker = new Unity.Profiling.ProfilerMarker("Compose");
-                    marker.Begin();
-                    this.composeJob.allocator = this.allocator;
-                    this.composeJob.Execute();
-                    marker.End();
-                }
-
-                {
-                    var archCount = this.queryData.ptr->archetypesCount;
-                    // queryData.ptr->archetypes are set with static queries only
-                    // so we need to check if it is null - we have a dynamic query
-                    // build archetypes
-                    if (this.queryData.ptr->archetypes.ptr == null) {
-                        var marker = new Unity.Profiling.ProfilerMarker("GetTrueBitsTemp");
-                        marker.Begin();
-                        var tempListBits = this.queryData.ptr->archetypesBits.GetTrueBitsTemp();
-                        #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
-                        this.queryData.ptr->archetypes = new safe_ptr<uint>(tempListBits.Ptr, (byte*)tempListBits.Ptr, (byte*)(tempListBits.Ptr + tempListBits.Length));
-                        #else
-                        this.queryData.ptr->archetypes = new safe_ptr<uint>(tempListBits.Ptr);
-                        #endif
-                        archCount = (uint)tempListBits.Length;
-                        marker.End();
-                    }
-
-                    if (archCount == 0u) {
-                        this.buffer.ptr->entities = null;
-                        this.buffer.ptr->count = 0u;
-                        return;
-                    }
-
-                    var archs = this.queryData.ptr->archetypes;
-                    safe_ptr<uint> arrPtr = default;
-                    var elementsCount = 0u;
-                    if (this.queryData.ptr->steps > 0u) {
-
-                        var currentStep = this.state.ptr->tick;
-                        var temp = new UnsafeList<uint>((int)archCount, Constants.ALLOCATOR_TEMP);
-
-                        for (uint i = 0u; i < archCount; ++i) {
-                            var archIdx = archs[i];
-                            ref var arch = ref this.state.ptr->archetypes.list[in this.state.ptr->allocator, archIdx];
-                            temp.AddRange(arch.entitiesList.GetUnsafePtr(in this.state.ptr->allocator).ptr, (int)arch.entitiesList.Count);
-                        }
-
-                        var steps = this.queryData.ptr->steps;
-                        var count = (uint)temp.Length;
-                        if (count > 0u) {
-                            var elementsPerStep = count / steps;
-                            if (elementsPerStep < this.queryData.ptr->minElementsPerStep) elementsPerStep = this.queryData.ptr->minElementsPerStep;
-                            steps = (uint)math.ceil((count / (tfloat)elementsPerStep));
-                            var fromIdx = (uint)(currentStep % steps) * elementsPerStep;
-                            var toIdx = fromIdx + elementsPerStep;
-                            if (toIdx > count) toIdx = count;
-                            // Add range fromIdx..toIdx
-                            var size = toIdx - fromIdx;
-                            arrPtr = _makeArray<uint>(size, this.allocator);
-                            if (size > 0u) _memcpy((safe_ptr)(temp.Ptr + fromIdx), (safe_ptr)arrPtr, TSize<uint>.size * size);
-                            elementsCount += size;
-                        }
-
-                        temp.Dispose();
-
-                    } else {
-
-                        {
-                            var marker = new Unity.Profiling.ProfilerMarker("Count");
-                            marker.Begin();
-                            for (uint i = 0u; i < archCount; ++i) {
-                                var archIdx = archs[i];
-                                ref var arch = ref this.state.ptr->archetypes.list[in this.state.ptr->allocator, archIdx];
-                                elementsCount += arch.entitiesList.Count;
-                            }
-                            marker.End();
-                        }
-
-                        if (elementsCount > 0u) {
-                            var marker = new Unity.Profiling.ProfilerMarker("Copy");
-                            marker.Begin();
-                            arrPtr = _makeArray<uint>(elementsCount, this.allocator);
-                            var k = 0u;
-                            for (uint i = 0u; i < archCount; ++i) {
-                                var archIdx = archs[i];
-                                ref var arch = ref this.state.ptr->archetypes.list[in this.state.ptr->allocator, archIdx];
-                                if (arch.entitiesList.Count > 0u) _memcpy(arch.entitiesList.GetUnsafePtr(in this.state.ptr->allocator), arrPtr + k, TSize<uint>.size * arch.entitiesList.Count);
-                                k += arch.entitiesList.Count;
-                            }
-                            marker.End();
-                        }
-
-                    }
-
-                    if (this.useSort == true && elementsCount > 0u) {
-                        var marker = new Unity.Profiling.ProfilerMarker("Sort");
-                        marker.Begin();
-                        Unity.Collections.NativeSortExtension.Sort(arrPtr.ptr, (int)elementsCount);
-                        marker.End();
-                    }
-                    this.buffer.ptr->entities = arrPtr.ptr;
-                    this.buffer.ptr->count = elementsCount;
-                }
-                #endif
                 
             }
 
         }
         
         [INLINE(256)]
-        internal JobHandle SetEntities(safe_ptr<CommandBuffer> buffer, bool useSort, JobHandle dependsOn, bool fromStaticQuery = false) {
+        internal JobHandle SetEntities(safe_ptr<CommandBuffer> buffer, bool useSort, JobHandle dependsOn) {
 
             var allocator = WorldsTempAllocator.allocatorTemp.Get(this.WorldId).Allocator.ToAllocator;
-            /*if (fromStaticQuery == false) {
-                var counter = _makeDefault(new ME.BECS.NativeCollections.DeferJobCounter(), allocator);
-                dependsOn = this.compose.Build(ref this, counter, dependsOn);
-                var list = new ME.BECS.NativeCollections.NativeParallelList<uint>(10, allocator);
-                dependsOn = new FillTrueBitsJob() {
-                    queryData = this.queryData,
-                    list = list,
-                }.Schedule(&counter.ptr->count, 64, dependsOn);
-                dependsOn = new FillArchetypesJob() {
-                    queryData = this.queryData,
-                    list = list,
-                }.Schedule(dependsOn);
-                Worlds.GetWorld(buffer.ptr->worldId).AddEndTickHandle(list.Dispose(dependsOn));
-            }*/
-            var counter = _makeDefault(new ME.BECS.NativeCollections.DeferJobCounter(), allocator);
-            var composeJob = this.compose.Build(ref this, counter);
             var job = new SetEntitiesJob() {
-                composeJob = composeJob,
+                compose = this.compose,
                 buffer = buffer,
                 queryData = this.queryData,
                 state = buffer.ptr->state,

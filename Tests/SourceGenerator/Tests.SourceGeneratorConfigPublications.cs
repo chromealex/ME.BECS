@@ -19,7 +19,7 @@ namespace ME.BECS.Tests {
         private static string Row(int id, string phase, string component, string owner) => "config-registration-owner\t" + id + "\t" + Encode(phase + "|" + Encode(component)) + "\t" + Encode(owner);
         private static object[] Documents(IEnumerable<string> rows, bool editor) => ((Array)Call(Format, "Documents", rows, editor)).Cast<object>().ToArray();
         private static string Serialize(object document) => (string)Call(Format, "Serialize", document);
-        private static string[] Rows(Assembly assembly, string profile) => assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+        private static string[] Rows(Assembly assembly, string profile) => assembly.BecsInputMetadata()
             .Where(item => item.Key == "ME.BECS.TypeInput.v1" && item.Value.StartsWith(profile.ToLowerInvariant() + "\t", StringComparison.Ordinal))
             .Select(item => item.Value.Substring(profile.Length + 1)).ToArray();
         private static MethodInfo[] Calls(MethodInfo method) => ME.BECS.Mono.Reflection.Disassembler.GetInstructions(method)
@@ -27,7 +27,7 @@ namespace ME.BECS.Tests {
         private static void Incomplete(TestDelegate action) => Assert.IsInstanceOf<InvalidOperationException>(Assert.Throws<TargetInvocationException>(action).InnerException);
 
         internal static Type Catalog(Assembly selection, string phase, Type component, out string key, string[][] records = null) {
-            var inputProfile = selection.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+            var inputProfile = selection.BecsInputMetadata()
                 .Single(attribute => attribute.Key == "ME.BECS.TypeInputProfile.v1").Value;
             var profile = inputProfile == "editor" ? "Editor" : "Runtime";
             var rows = records == null ? Rows(selection, profile).Select(value => value.Split('\t')) :

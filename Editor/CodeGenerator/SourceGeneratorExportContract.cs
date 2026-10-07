@@ -6,8 +6,6 @@ namespace ME.BECS.Editor {
     // Pure preflight: never invoke a legacy hook or instantiate its owner to find
     // out whether it still generates code. New exporters transport data only.
     internal static class SourceGeneratorExportContract {
-        internal const string RetirementComment = "// Legacy Editor-generated code retired; implementation is owned by the source generator.\n";
-
         internal static void ValidateType(Type type) {
             if (type == null || !typeof(CustomCodeGenerator).IsAssignableFrom(type))
                 throw new InvalidOperationException("Expected a source input feeder type.");

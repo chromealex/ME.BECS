@@ -16,16 +16,76 @@ namespace ME.BECS.Views.Tests {
         private static object Call(string method, params object[] args) => Format.GetMethod(method, Static).Invoke(null, args);
         private static T Field<T>(object value, string field) => (T)value.GetType().GetField(field, Instance).GetValue(value);
         private static string Decode(string value) => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(value));
-        private static AssemblyMetadataAttribute[] Metadata(string profile) => Assembly.Load("ME.BECS.Gen." + profile)
+        internal static Assembly SelectionAssembly(string profile) => (Assembly)Assembly.Load("ME.BECS.Editor")
+            .GetType("ME.BECS.Editor.SourceGeneratorViewSelectionCatalog", true).GetMethod("GetAssembly").Invoke(null, new object[] { profile == "Editor" });
+        private static AssemblyMetadataAttribute[] Metadata(string profile) => SelectionAssembly(profile)
             .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>().ToArray();
-        private static string[] Rows(string profile) => Metadata(profile).Where(item => item.Key == "ME.BECS.TypeInput.v1" &&
-            item.Value.StartsWith(profile.ToLowerInvariant() + "\t", StringComparison.Ordinal)).Select(item => item.Value.Substring(profile.Length + 1)).ToArray();
+        internal static string[] Rows(string profile) => (string[])Format.Assembly.GetType("ME.BECS.Editor.SourceGeneratorInputCatalog", true)
+            .GetMethod("GetRows", BindingFlags.Public | BindingFlags.Static).Invoke(null, new object[] { profile == "Editor" });
+        internal static void AssertPhases(string profile) {
+            var rows = Rows(profile).Select(row => row.Split('\t')).ToArray();
+            var owner = Assembly.Load(Decode(rows.Single(row => row[0] == "bootstrap-registration-owner")[3]));
+            Assert.IsFalse(owner.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal));
+            var phases = owner.GetType("ME.BECS.SourceGenerated.BootstrapPhaseInputs", true);
+            var feeders = rows.Where(row => row[0] == "bootstrap-feeder").OrderBy(row => int.Parse(row[1], System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+            foreach (var item in new[] { (Field: "Initializers", Column: 3, Kind: "views", Method: "InitializeTrackers"),
+                (Field: "Registrations", Column: 4, Kind: "view-types", Method: "RegisterInstalledTypes") }) {
+                var callbacks = (Action<bool>[])phases.GetField(item.Field, Static).GetValue(null);
+                Assert.AreEqual(feeders.Length, callbacks.Length);
+                var indices = Enumerable.Range(0, feeders.Length).Where(index => feeders[index][item.Column] == item.Kind).ToArray();
+                Assert.AreEqual(1, indices.Length);
+                Assert.AreEqual(typeof(BootstrapViews).GetMethod(item.Method), callbacks[indices[0]].Method);
+            }
+        }
         private static MethodInfo[] Calls(MethodInfo method) => ME.BECS.Mono.Reflection.Disassembler.GetInstructions(method)
             .Where(instruction => instruction.OpCode == System.Reflection.Emit.OpCodes.Call || instruction.OpCode == System.Reflection.Emit.OpCodes.Callvirt)
             .Select(instruction => (MethodInfo)instruction.Operand).ToArray();
         private static (string Kind, string[] Payload)[] Selection(string profile) => Metadata(profile)
             .Where(item => item.Key == "ME.BECS.ViewTrackerSelection.v1").Select(item => item.Value.Split('\t'))
             .Select(row => (row[0], Decode(row[2]).Split('\n'))).ToArray();
+
+        [TestCase("Editor")]
+        [TestCase("Runtime")]
+        public void DependencySelectionHasItsOwnCompilerOwnerAndExactRoleUnion(string profile) {
+            var owner = SelectionAssembly(profile);
+            Assert.IsFalse(owner.GetName().Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal));
+            Assert.IsFalse(owner.GetReferencedAssemblies().Any(reference => reference.Name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal)));
+            var format = Format.Assembly.GetType("ME.BECS.CodeGeneration.SourceGeneratorViewSelectionFragmentFormat", true);
+            object Invoke(string method, params object[] args) => format.GetMethod(method, Static).Invoke(null, args);
+            var document = ((Array)Invoke("Documents", Rows(profile), profile == "Editor")).GetValue(0);
+            Assert.AreEqual(owner.GetName().Name, Field<string>(document, "Owner"));
+            var content = (string)Invoke("Serialize", document);
+            var parsed = new object[] { content, null };
+            Assert.IsTrue((bool)Invoke("TryParse", parsed));
+            Assert.AreEqual(content, Invoke("Serialize", parsed[1]));
+            var envelope = Format.Assembly.GetType("ME.BECS.CodeGeneration.SourceGeneratorSystemFragmentFormat", true);
+            var receipt = (string)envelope.GetMethod("Metadata", Static).Invoke(null, new[] { document, content });
+            Assert.AreEqual(1, Metadata(profile).Count(attribute => attribute.Key == "ME.BECS.ViewSelectionFragment.v1" && attribute.Value == receipt));
+            var root = owner.GetType("ME.BECS.SourceGenerated.ViewSelectionProfile_" + profile, true);
+            var publish = root.GetMethod("Publish", Static);
+            Assert.IsTrue(publish.IsDefined(typeof(UnityEngine.Scripting.PreserveAttribute), false));
+            if (profile == "Editor") Assert.IsTrue(publish.IsDefined(typeof(UnityEditor.InitializeOnLoadMethodAttribute), false));
+            else {
+                Assert.AreEqual(UnityEngine.RuntimeInitializeLoadType.AfterAssembliesLoaded, publish.GetCustomAttribute<UnityEngine.RuntimeInitializeOnLoadMethodAttribute>().loadType);
+                Assert.AreEqual(1, owner.GetCustomAttributes(false).Count(attribute => attribute.GetType().FullName == "UnityEngine.Scripting.AlwaysLinkAssemblyAttribute"));
+            }
+            var selection = owner.GetType("ME.BECS.SourceGenerated.BootstrapViewsSelection", true);
+            CollectionAssert.AreEqual(new[] { selection.GetMethod("Publish") }, Calls(publish));
+            CollectionAssert.AreEqual(new[] { typeof(BootstrapViews).GetMethod("ExpectPlan") }, Calls(selection.GetMethod("Publish")));
+            var selected = Selection(profile);
+            var components = selected.Single(row => row.Kind == "view-tracker").Payload.Skip(2).Where(value => value.Length != 0).ToArray();
+            var expected = selected.Where(row => row.Kind != "view-tracker").GroupBy(row => row.Payload[0], StringComparer.Ordinal)
+                .Select(group => group.SelectMany(row => row.Payload.Skip(1)).Where(value => value.Length != 0).Distinct(StringComparer.Ordinal)
+                    .Select(component => Array.IndexOf(components, component)).ToArray()).ToArray();
+            var actual = (int[][])selection.GetField("Dependencies", Static).GetValue(null);
+            Assert.AreEqual(expected.Length, actual.Length);
+            for (var i = 0; i < expected.Length; ++i) CollectionAssert.AreEqual(expected[i], actual[i]);
+            // Unrelated project input changes must not alter this feature's publication.
+            var shuffled = Rows(profile).Reverse().Concat(new[] { "unrelated\t0\tdjE=" }).ToArray();
+            Assert.AreEqual(content, Invoke("Serialize", ((Array)Invoke("Documents", shuffled, profile == "Editor")).GetValue(0)));
+            document.GetType().GetField("Entries", Instance).SetValue(document, Array.Empty<KeyValuePair<int, string>>());
+            Assert.IsTrue((bool)Invoke("TryParse", Invoke("Serialize", document), null));
+        }
 
         [TestCase(false)]
         [TestCase(true)]
@@ -117,12 +177,7 @@ namespace ME.BECS.Views.Tests {
                 }
             }
             CollectionAssert.AreEquivalent(Enumerable.Range(0, expected.Length), seen);
-            var aggregate = Assembly.Load("ME.BECS.Gen." + profile);
-            foreach (var pair in new[] { ("ViewTrackerInputs", "InitializeTrackers"), ("ViewTypeInputs", "RegisterInstalledTypes") }) {
-                var facade = aggregate.GetType("ME.BECS.SourceGenerated." + pair.Item1, true);
-                CollectionAssert.AreEqual(new[] { "Initialize" }, facade.GetMethods(Static | BindingFlags.Public | BindingFlags.DeclaredOnly).Select(method => method.Name));
-                CollectionAssert.AreEqual(new[] { typeof(BootstrapViews).GetMethod(pair.Item2) }, Calls(facade.GetMethod("Initialize")));
-            }
+            AssertPhases(profile);
         }
 
         private static uint ComponentIndex<T>() where T : unmanaged, IComponentBase => StaticTypes<T>.trackerIndex;

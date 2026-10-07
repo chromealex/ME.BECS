@@ -14,13 +14,11 @@ internal static class SystemQueryFilterContracts {
 
     internal static void Append(StringBuilder rows, IMethodSymbol method, Compilation compilation) {
         if (method.IsStatic || method.Parameters.Length != 0 || method.Arity == 0) return;
-        var compose = compilation.GetTypeByMetadataName("ME.BECS.ArchetypeQueries+QueryCompose");
+        var compose = compilation.GetTypeByMetadataName("ME.BECS.FlatQueries+QueryCompose");
         var dynamicBuilder = compilation.GetTypeByMetadataName("ME.BECS.QueryBuilder");
-        var staticBuilder = compilation.GetTypeByMetadataName("ME.BECS.QueryBuilderStatic");
         var isCompose = SymbolEqualityComparer.Default.Equals(method.ContainingType, compose);
         var isDynamic = SymbolEqualityComparer.Default.Equals(method.ContainingType, dynamicBuilder);
-        var isStatic = SymbolEqualityComparer.Default.Equals(method.ContainingType, staticBuilder);
-        if (!isCompose && !isDynamic && !isStatic) return;
+        if (!isCompose && !isDynamic) return;
         if (isCompose ? !method.ReturnsVoid : !SymbolEqualityComparer.Default.Equals(method.ReturnType, method.ContainingType)) return;
         string? kind = method.Name switch {
             "With" when method.Arity == 1 => "with",

@@ -2,7 +2,6 @@ namespace ME.BECS.Editor {
     using System;
     using System.IO;
     using System.Linq;
-    using System.Text;
     using ME.BECS.CodeGeneration;
 
     internal static class SourceGeneratorInputTransport {
@@ -28,36 +27,63 @@ namespace ME.BECS.Editor {
         }
 
         internal static string Publish(bool editor, string content) {
-            var path = InputPath(editor);
-            var directory = Path.GetDirectoryName(path).Replace('\\', '/');
-            SourceGeneratorInputMigration.MoveFrameworkInputs(directory);
-            SourceGeneratorPublicationBridges.PublishUsed(content);
-            SourceGeneratorSystemFragments.Publish(content, editor, directory);
-            SourceGeneratorSystemFragments.PublishSelection(content, editor, directory, types: true);
-            SourceGeneratorSystemFragments.PublishEntities(content, editor, directory);
-            SourceGeneratorSystemFragments.PublishAspects(content, editor, directory);
-            SourceGeneratorSystemFragments.PublishDestroy(content, editor, directory);
-            SourceGeneratorSystemFragments.PublishConfigs(content, editor, directory);
-            SourceGeneratorSystemFragments.PublishNetwork(content, editor, directory);
-            SourceGeneratorSystemFragments.PublishViews(content, editor, directory);
-            SourceGeneratorSystemFragments.PublishViewSelection(content, editor, directory);
-            SourceGeneratorSystemFragments.PublishSystemDependencies(content, editor, directory);
-            SourceGeneratorSystemFragments.PublishThemeMenus(content, editor, directory);
-            SourceGeneratorSystemFragments.PublishJobInit(content, editor, directory);
-            SourceGeneratorSystemFragments.PublishJobSetup(content, editor, directory);
-            SourceGeneratorSystemFragments.PublishJobDebug(content, editor, directory);
-            SourceGeneratorSystemFragments.PublishGraphs(content, editor, directory);
-            SourceGeneratorSystemFragments.PublishBootstrap(content, editor, directory);
-            PublishCatalog(content, editor, directory);
-            Directory.CreateDirectory(directory);
-            if (!File.Exists(path) || File.ReadAllText(path) != content) {
-                File.WriteAllText(path, content, new UTF8Encoding(false));
-                UnityEditor.AssetDatabase.ImportAsset(path);
-            }
+            var publication = Prepare(editor, content, out var path);
+            UnityEditor.AssetDatabase.StartAssetEditing();
+            try { SourceGeneratorSystemFragments.ApplyPublication(publication); }
+            finally { UnityEditor.AssetDatabase.StopAssetEditing(); }
             return path;
         }
 
-        private static void PublishCatalog(string content, bool editor, string directory) {
+        // Resumable variant for the sliced background publication: the Editor
+        // thread is released (yield) while the workers prepare fragments/catalog.
+        internal static System.Collections.IEnumerator PrepareSteps(SourceGeneratorInputManifest.StepResult<System.Collections.Generic.KeyValuePair<string, string>[]> output,
+            bool editor, string content) {
+            var path = InputPath(editor);
+            var directory = Path.GetDirectoryName(path).Replace('\\', '/');
+            using (CodeGeneratorTimings.Measure("Prepare: migration")) SourceGeneratorInputMigration.MoveFrameworkInputs(directory);
+            var fragmentsTask = System.Threading.Tasks.Task.Run(() => SourceGeneratorSystemFragments.PrepareProfile(content, editor, directory));
+            var catalogTask = System.Threading.Tasks.Task.Run(() => PrepareCatalog(content, editor, directory));
+            System.Collections.Generic.KeyValuePair<string, string>[] bridges;
+            using (CodeGeneratorTimings.Measure("Prepare: publication bridges")) bridges = SourceGeneratorPublicationBridges.PrepareUsed(content);
+            while (!fragmentsTask.IsCompleted || !catalogTask.IsCompleted) yield return null;
+            var files = new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, string>>();
+            files.AddRange(bridges);
+            files.AddRange(fragmentsTask.GetAwaiter().GetResult());
+            files.AddRange(catalogTask.GetAwaiter().GetResult());
+            if (!File.Exists(path) || File.ReadAllText(path) != content)
+                files.Add(new System.Collections.Generic.KeyValuePair<string, string>(path, content));
+            output.value = files.ToArray();
+        }
+
+        internal static System.Collections.Generic.KeyValuePair<string, string>[] Prepare(bool editor, string content, out string path) {
+            path = InputPath(editor);
+            var directory = Path.GetDirectoryName(path).Replace('\\', '/');
+            using (CodeGeneratorTimings.Measure("Prepare: migration")) SourceGeneratorInputMigration.MoveFrameworkInputs(directory);
+            // Owner fragments and the input catalog are pure text/filesystem work over
+            // the ~20 MB manifest (no Unity API): prepare them on workers while the
+            // Editor thread plans publication bridges, which need CompilationPipeline.
+            var fragmentsTask = System.Threading.Tasks.Task.Run(() => SourceGeneratorSystemFragments.PrepareProfile(content, editor, directory));
+            var catalogTask = System.Threading.Tasks.Task.Run(() => PrepareCatalog(content, editor, directory));
+            System.Collections.Generic.KeyValuePair<string, string>[] bridges;
+            using (CodeGeneratorTimings.Measure("Prepare: publication bridges")) bridges = SourceGeneratorPublicationBridges.PrepareUsed(content);
+            System.Collections.Generic.KeyValuePair<string, string>[] fragments, catalog;
+            using (CodeGeneratorTimings.Measure("Prepare: wait for fragments and catalog")) {
+                // GetResult rethrows the original exception, not an AggregateException.
+                fragments = fragmentsTask.GetAwaiter().GetResult();
+                catalog = catalogTask.GetAwaiter().GetResult();
+            }
+            var files = new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, string>>();
+            files.AddRange(bridges);
+            files.AddRange(fragments);
+            files.AddRange(catalog);
+            if (!File.Exists(path) || File.ReadAllText(path) != content)
+                files.Add(new System.Collections.Generic.KeyValuePair<string, string>(path, content));
+            // Finish all preparation before the first write. A publication worker
+            // can consume this data without resolving Unity assets or assemblies.
+            return files.ToArray();
+        }
+
+        private static System.Collections.Generic.KeyValuePair<string, string>[] PrepareCatalog(string content, bool editor, string directory) {
             var document = SourceGeneratorInputCatalogFormat.Document(content, editor);
             directory += "/InputCatalogs";
             var path = directory + "/" + SourceGeneratorInputCatalogFormat.FileName(document.Owner, editor);
@@ -72,12 +98,7 @@ namespace ME.BECS.Editor {
                 previous.Entries = Array.Empty<System.Collections.Generic.KeyValuePair<int, string>>();
                 pending.Add(normalized, SourceGeneratorInputCatalogFormat.Serialize(previous));
             }
-            foreach (var pair in pending) {
-                if (File.Exists(pair.Key) && File.ReadAllText(pair.Key) == pair.Value) continue;
-                Directory.CreateDirectory(directory);
-                File.WriteAllText(pair.Key, pair.Value, new UTF8Encoding(false));
-                UnityEditor.AssetDatabase.ImportAsset(pair.Key);
-            }
+            return pending.Where(pair => !File.Exists(pair.Key) || File.ReadAllText(pair.Key) != pair.Value).ToArray();
         }
     }
 }

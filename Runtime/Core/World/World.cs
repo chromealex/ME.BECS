@@ -65,9 +65,6 @@ namespace ME.BECS {
 
             if (switchContext == true) Context.Switch(world);
             Worlds.AddWorld(ref world, worldId, name: properties.name);
-            #if !ENABLE_BECS_FLAT_QUERIES
-            Batches.SetCapacity(world.id, properties.stateProperties.entitiesCapacity);
-            #endif
             if (switchContext == true) Context.Switch(world);
             State.BurstMode(world.state, true, default);
             return world;
@@ -85,9 +82,6 @@ namespace ME.BECS {
 
             if (switchContext == true) Context.Switch(world);
             Worlds.AddWorld(ref world, name: properties.name, raiseCallback: false);
-            #if !ENABLE_BECS_FLAT_QUERIES
-            Batches.SetCapacity(world.id, properties.stateProperties.entitiesCapacity);
-            #endif
             if (switchContext == true) Context.Switch(world);
             State.BurstMode(world.state, true, default);
             return world;

@@ -104,6 +104,20 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void RequirementMemoKeepsOpenAndClosedPoliciesSeparate() {
+            var session = Planner.Assembly.GetType("ME.BECS.Editor.ILAnalysisSession", true);
+            var method = Planner.GetMethod("RequiredAssembliesCore", Hidden);
+            var open = typeof(Tests_SourceGeneratorComponentOwnership.GenericOwner<>.Nested<>);
+            using ((IDisposable)Activator.CreateInstance(session, true)) {
+                var first = (string[])method.Invoke(null, new object[] { open, true });
+                Assert.AreSame(first, method.Invoke(null, new object[] { open, true }));
+                Assert.IsInstanceOf<ArgumentException>(Assert.Throws<TargetInvocationException>(() =>
+                    method.Invoke(null, new object[] { open, false })).InnerException,
+                    "An allow-open memo hit must not bypass closed registration validation.");
+            }
+        }
+
+        [Test]
         public void RequirementsIncludeConstraintAssembliesNotJustDefinitionAndArgument() {
             var names = (string[])Planner.GetMethod("RequiredAssemblies", Hidden).Invoke(null,
                 new object[] { typeof(Constrained<ConstraintArgument>) });

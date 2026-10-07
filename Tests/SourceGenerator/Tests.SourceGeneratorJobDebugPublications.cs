@@ -99,9 +99,12 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
-        public void RuntimePublicationAssembliesHaveOneLinkerRoot() {
+        public void RuntimeExecutablePublicationAssembliesHaveOneLinkerRoot() {
             var owners = Rows(false).Select(row => row.Split('\t'))
-                .Where(row => row.Length == 4 && row[0].EndsWith("-registration-owner", StringComparison.Ordinal))
+                // Input catalogs contain Editor validation metadata only, not a
+                // runtime callback. They intentionally do not root an assembly.
+                .Where(row => row.Length == 4 && row[0] != "inputcatalog-registration-owner" &&
+                    row[0].EndsWith("-registration-owner", StringComparison.Ordinal))
                 .Select(row => Decode(row[3])).Distinct(StringComparer.Ordinal).ToArray();
             Assert.IsNotEmpty(owners);
             foreach (var owner in owners) Assert.AreEqual(1, Assembly.Load(owner).GetCustomAttributesData()

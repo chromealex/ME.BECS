@@ -21,7 +21,13 @@ namespace ME.BECS.Editor {
 
         // No graph/config/theme values or generated consumer MVIDs here. Consumer
         // dependants use their own content instead of their cascading compile MVID.
-        internal static string GetCodeFingerprint() {
+        // Loaded script assemblies cannot change inside an IL analysis session (a
+        // domain reload ends it), so reuse the identity there: export and preflight
+        // asked for it 5-7 times, ~0.5 s each. Asset fingerprints stay uncached.
+        internal static string GetCodeFingerprint() =>
+            ILAnalysisSession.Get((typeof(SourceGeneratorGraphSnapshot), "code-fingerprint"), ComputeCodeFingerprint);
+
+        private static string ComputeCodeFingerprint() {
             var scriptAssemblies = UnityEditor.Compilation.CompilationPipeline.GetAssemblies(UnityEditor.Compilation.AssembliesType.Editor);
             var byName = scriptAssemblies.ToDictionary(script => script.name, StringComparer.Ordinal);
             var dependants = SourceGeneratorCodeIdentity.ConsumerDependants(scriptAssemblies);

@@ -131,7 +131,8 @@ namespace ME.BECS.Attack {
 
         public Unity.Jobs.JobHandle UpdateSpatial(ref SystemContext context, Unity.Jobs.JobHandle jobHandle) {
 
-            var target = context.Query(jobHandle)
+            // Spatial and quadtree firing are mutually exclusive by configuration.
+            var target = context.Query(jobHandle).AsUnsafe()
                                 .With<ReloadedComponent>()
                                 .With<CanFireComponent>()
                                 .Without<FireUsedComponent>()
@@ -139,7 +140,7 @@ namespace ME.BECS.Attack {
                                 .Schedule<SpatialFireTargetJob, AttackAspect, TransformAspect, SpatialQueryAspect>(new SpatialFireTargetJob() {
                                     dt = context.deltaTime,
                                 });
-            var targets = context.Query(target)
+            var targets = context.Query(target).AsUnsafe()
                                 .With<ReloadedComponent>()
                                 .With<CanFireComponent>()
                                 .Without<FireUsedComponent>()

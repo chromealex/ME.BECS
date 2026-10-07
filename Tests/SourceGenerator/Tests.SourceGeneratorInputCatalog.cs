@@ -4,6 +4,32 @@ using System.Reflection;
 using NUnit.Framework;
 
 namespace ME.BECS.Tests {
+    // Compiled input catalogs carry only the hash of their snapshot; the
+    // catalog rows ("ME.BECS.TypeInput.v1") are read from the verified
+    // Editor-side snapshot. Tests see them as synthetic metadata entries.
+    internal static class Tests_SourceGeneratorInputMetadata {
+        private static readonly MethodInfo Records = Assembly.Load("ME.BECS.Editor")
+            .GetType("ME.BECS.Editor.SourceGeneratorInputCatalog", true)
+            .GetMethod("Records", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+
+        // The catalog behind an owner is fixed for the domain (SourceGeneratorInputCatalog
+        // caches it too). Rebuilding ~20k synthetic rows (21 MB) on every helper call made
+        // whole fixtures take minutes, so materialize them once per assembly.
+        private static readonly System.Collections.Generic.Dictionary<Assembly, AssemblyMetadataAttribute[]> cache =
+            new System.Collections.Generic.Dictionary<Assembly, AssemblyMetadataAttribute[]>();
+
+        internal static System.Collections.Generic.IEnumerable<AssemblyMetadataAttribute> BecsInputMetadata(this Assembly assembly) {
+            if (cache.TryGetValue(assembly, out var cached)) return cached;
+            var metadata = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>();
+            var records = (string[][])Records.Invoke(null, new object[] { assembly });
+            var result = metadata.Concat(records.Select(record => new AssemblyMetadataAttribute("ME.BECS.TypeInput.v1", string.Join("\t", record)))).ToArray();
+            // An empty answer may only mean the catalog is not compiled yet: do not pin it.
+            if (records.Length > 0 || assembly.IsDynamic || assembly.GetType("ME.BECS.SourceGenerated.InputCatalog_Editor", false) == null &&
+                assembly.GetType("ME.BECS.SourceGenerated.InputCatalog_Runtime", false) == null) cache[assembly] = result;
+            return result;
+        }
+    }
+
     public class Tests_SourceGeneratorInputCatalog {
         private const BindingFlags Static = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
         private const BindingFlags Hidden = BindingFlags.Instance | BindingFlags.NonPublic;

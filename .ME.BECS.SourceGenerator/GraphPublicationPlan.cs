@@ -91,10 +91,9 @@ internal sealed class GraphPublicationPlan {
         result.patches.Add(id, graphPatches);
         result.actions.Add(id, apply.ToArray());
         if (!result.topologies[id].BindSlots(slotTypes, resolver, out error)) return null;
-        var flat = compilation.SyntaxTrees.Any(tree => tree.Options.PreprocessorSymbolNames.Contains("ENABLE_BECS_FLAT_QUERIES"));
         var phases = new[] { "Awake", "Start", "Update", "Destroy", "DrawGizmos" };
         for (var index = 0; index < phases.Length; ++index) {
-            if (!GraphLifecyclePlan.TryCreate(result.topologies[id], resolver, phases[index], index + 1, flat, out var plan, out error)) return null;
+            if (!GraphLifecyclePlan.TryCreate(result.topologies[id], resolver, phases[index], index + 1, out var plan, out error)) return null;
             result.lifecycles.Add((id, phases[index]), plan!);
         }
         error = "";

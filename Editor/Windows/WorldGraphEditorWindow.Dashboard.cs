@@ -11,8 +11,8 @@ namespace ME.BECS.Editor {
 
         [SerializeField] private System.Collections.Generic.List<int> dashboardWorldTabs = new System.Collections.Generic.List<int>();
         [SerializeField] private int dashboardSelectedWorld = -1;
-        [SerializeField] private bool dashboardLegacy;
         [SerializeField] private bool dashboardAllocator;
+        [SerializeField] private bool dashboardJournal;
         private VisualElement dashboardTabs;
         private VisualElement dashboardBody;
         private Button dashboardOverviewButton;
@@ -30,32 +30,17 @@ namespace ME.BECS.Editor {
         private struct DashboardSnapshot {
             public World world;
             public ulong reserved, used, free, persistent, temp, tempUsed;
-            public ulong entities, archetypes, componentsBytes, entitiesBytes, registryBytes, archetypesBytes, batchesBytes;
+            public ulong entities, componentsBytes, entitiesBytes, registryBytes, batchesBytes;
             public uint zones, persistentBlocks, tempBlocks;
             public bool persistentKnown;
         }
 
         public void CreateGUI() {
             this.UpdateWorlds();
-            if (this.dashboardLegacy) {
-                this.CreateLegacyGUI();
-                return;
-            }
             this.CreateDashboardGUI();
         }
 
         private void Update() {
-            if (this.dashboardLegacy) {
-                // Resolve the registered world again; a cached World can outlive its state.
-                this.world = Worlds.GetWorld(this.world.id);
-                if (this.world.state.ptr == null) {
-                    this.dashboardLegacy = false;
-                    this.CreateGUI();
-                } else {
-                    this.UpdateLegacy();
-                }
-                return;
-            }
             if (this.dashboardBody == null || EditorApplication.timeSinceStartup < this.dashboardNextSample) return;
             this.dashboardNextSample = EditorApplication.timeSinceStartup + 0.25d;
             this.UpdateWorlds();
@@ -85,6 +70,7 @@ namespace ME.BECS.Editor {
         }
 
         private void CreateDashboardGUI() {
+            EditorUIUtils.ApplyWindowIcon(this, "Worlds Viewer", "ME.BECS.Resources/Icons/icon-worldviewer.png");
             this.allocatorWindow = null;
             this.journalWindow = null;
             this.rootVisualElement.Clear();
@@ -93,42 +79,33 @@ namespace ME.BECS.Editor {
             if (sheet != null) this.rootVisualElement.styleSheets.Add(sheet);
             var shell = new VisualElement();
             shell.AddToClassList("world-dashboard");
+            shell.AddToClassList("becs-editor-window");
             shell.AddToClassList(EditorGUIUtility.isProSkin ? "dark" : "light");
             this.rootVisualElement.Add(shell);
             EditorUIUtils.AddLogoLine(shell);
             var toolbar = new VisualElement();
             toolbar.AddToClassList("dashboard-toolbar");
-            shell.Add(toolbar);
-            this.dashboardOverviewButton = new Button(() => { this.dashboardAllocator = false; this.BuildDashboardBody(); this.SampleDashboard(); }) { text = "Dashboard" };
+            this.dashboardOverviewButton = new Button(() => { this.dashboardAllocator = false; this.dashboardJournal = false; this.BuildDashboardBody(); this.SampleDashboard(); }) { text = "Dashboard" };
             this.dashboardOverviewButton.AddToClassList("dashboard-page");
             toolbar.Add(this.dashboardOverviewButton);
-            this.dashboardMemoryButton = new Button(() => { this.dashboardAllocator = true; this.BuildDashboardBody(); this.SampleDashboard(); }) { text = "Allocator" };
+            this.dashboardMemoryButton = new Button(() => { this.dashboardAllocator = true; this.dashboardJournal = false; this.BuildDashboardBody(); this.SampleDashboard(); }) { text = "Allocator" };
             this.dashboardMemoryButton.AddToClassList("dashboard-page");
             toolbar.Add(this.dashboardMemoryButton);
-            #if !ENABLE_BECS_FLAT_QUERIES
             this.dashboardGraphButton = new Button(() => {
-                if (!this.DashboardTryGetWorld(this.dashboardSelectedWorld, out var selected)) return;
-                this.world = selected;
-                this.dashboardLegacy = true;
-                this.CreateGUI();
-            }) { text = "Archetypes / Queries / Journal" };
-            toolbar.Add(this.dashboardGraphButton);
-            #else
-            // Journal remains useful when archetype graphs are disabled.
-            this.dashboardGraphButton = new Button(() => {
-                if (!this.DashboardTryGetWorld(this.dashboardSelectedWorld, out var selected)) return;
-                this.world = selected;
-                this.dashboardLegacy = true;
-                this.CreateGUI();
+                this.dashboardAllocator = false;
+                this.dashboardJournal = true;
+                this.BuildDashboardBody();
+                this.SampleDashboard();
             }) { text = "Journal" };
+            this.dashboardGraphButton.AddToClassList("dashboard-page");
             toolbar.Add(this.dashboardGraphButton);
-            #endif
             this.dashboardStatus = new Label();
             this.dashboardStatus.AddToClassList("dashboard-status");
             toolbar.Add(this.dashboardStatus);
             this.dashboardTabs = new VisualElement();
             this.dashboardTabs.AddToClassList("dashboard-tabs");
             shell.Add(this.dashboardTabs);
+            shell.Add(toolbar);
             this.dashboardBody = new VisualElement();
             this.dashboardBody.AddToClassList("dashboard-body");
             shell.Add(this.dashboardBody);
@@ -145,7 +122,7 @@ namespace ME.BECS.Editor {
             foreach (var id in this.dashboardWorldTabs) {
                 if (this.DashboardTryGetWorld(id, out var item)) this.AddDashboardTab(item.Name + " · #" + id, id);
             }
-            this.dashboardTabs.Add(new Button(() => {
+            this.dashboardTabs.Add(EditorUIUtils.CreateAddWorldButton(() => {
                 this.UpdateWorlds();
                 var menu = new GenericMenu();
                 var count = 0;
@@ -162,7 +139,7 @@ namespace ME.BECS.Editor {
                 }
                 if (count == 0) menu.AddDisabledItem(new GUIContent(this.aliveWorlds.Count == 0 ? "No running worlds" : "All running worlds are already open"));
                 menu.ShowAsContext();
-            }) { text = "+", tooltip = "Open an existing world in a tab" });
+            }, "Open an existing world in a tab"));
             this.dashboardMemoryButton.SetEnabled(this.dashboardSelectedWorld >= 0);
             this.dashboardGraphButton.SetEnabled(this.dashboardSelectedWorld >= 0);
         }
@@ -183,15 +160,27 @@ namespace ME.BECS.Editor {
         }
 
         private void BuildDashboardBody() {
-            this.dashboardOverviewButton.EnableInClassList("selected", !this.dashboardAllocator);
+            this.dashboardOverviewButton.parent.style.display = this.dashboardSelectedWorld < 0 ? DisplayStyle.None : DisplayStyle.Flex;
+            this.dashboardOverviewButton.EnableInClassList("selected", !this.dashboardAllocator && !this.dashboardJournal);
             this.dashboardMemoryButton.EnableInClassList("selected", this.dashboardAllocator);
+            this.dashboardGraphButton.EnableInClassList("selected", this.dashboardJournal);
             this.dashboardBody.Clear();
             this.dashboardValues.Clear();
             this.dashboardBars.Clear();
             this.dashboardContexts.Clear();
             this.allocatorWindow = null;
+            this.journalWindow = null;
             if (this.aliveWorlds.Count == 0) {
-                this.dashboardBody.Add(new HelpBox("No running worlds yet. Start Play mode to inspect memory and entities.", HelpBoxMessageType.Info));
+                var empty = new Label("No running worlds yet. Start Play mode to inspect memory and entities.");
+                empty.AddToClassList("becs-empty-state");
+                empty.AddToClassList("dashboard-empty-state");
+                this.dashboardBody.Add(empty);
+                return;
+            }
+            if (this.dashboardJournal && this.DashboardTryGetWorld(this.dashboardSelectedWorld, out var journalWorld)) {
+                this.world = journalWorld;
+                this.journalWindow = new JournalEditorWindow { world = journalWorld };
+                this.journalWindow.CreateGUI(this.dashboardBody);
                 return;
             }
             if (this.dashboardAllocator && this.DashboardTryGetWorld(this.dashboardSelectedWorld, out var selected)) {
@@ -227,10 +216,6 @@ namespace ME.BECS.Editor {
             this.DashboardRow(right, "entity-memory", "Entities", false, true);
             this.DashboardRow(right, "registry", "Collections registry", false, true);
             #endif
-            #if !ENABLE_BECS_FLAT_QUERIES
-            this.DashboardRow(right, "archetype-memory", "Archetypes", false, true);
-            this.DashboardRow(right, "batches", "Batches (separate estimate)");
-            #endif
             DashboardNote(right, "GetReservedSizeInBytes estimates are not added to allocator totals. They may include storage outside State.");
             var bottom = DashboardElement(scroll, "dashboard-columns");
             bottom.AddToClassList("dashboard-bottom");
@@ -241,11 +226,8 @@ namespace ME.BECS.Editor {
             DashboardNote(zones, "Open Allocator for zone maps, allocated/free blocks and allocation tags.");
             DashboardHeading(runtime, "World statistics");
             this.DashboardRow(runtime, "worlds", "Running worlds");
-            #if !ENABLE_BECS_FLAT_QUERIES
-            this.DashboardRow(runtime, "archetypes", "Archetypes");
-            #endif
             this.DashboardRow(runtime, "tick", "Current tick");
-            DashboardNote(runtime, "Select a world to open Allocator, entity archetypes, queries or Journal.");
+            DashboardNote(runtime, "Select a world to open Allocator, entities, queries or Journal.");
         }
 
         private static VisualElement DashboardElement(VisualElement parent, string className) {
@@ -310,11 +292,6 @@ namespace ME.BECS.Editor {
             snapshot.free = free;
             snapshot.zones = selected.state.ptr->allocator.zonesCount;
             snapshot.entities = selected.state.ptr->entities.EntitiesCount;
-            #if !ENABLE_BECS_FLAT_QUERIES
-            snapshot.archetypes = selected.state.ptr->archetypes.Count;
-            snapshot.archetypesBytes = selected.state.ptr->archetypes.GetReservedSizeInBytes(selected.state);
-            snapshot.batchesBytes = Batches.GetReservedSizeInBytes(selected.id);
-            #endif
             #if !LEAK_DETECTION_ALLOCATOR
             snapshot.componentsBytes = Components.GetReservedSizeInBytes(selected.state);
             snapshot.entitiesBytes = selected.state.ptr->entities.GetReservedSizeInBytes(selected.state);
@@ -352,6 +329,11 @@ namespace ME.BECS.Editor {
                 this.dashboardStatus.text = "Live · 4 Hz";
                 return;
             }
+            if (this.dashboardJournal && this.journalWindow != null) {
+                this.journalWindow.Update();
+                this.dashboardStatus.text = this.journalWindow.Status;
+                return;
+            }
             if (this.dashboardValues.Count == 0) return;
             this.dashboardSnapshots.Clear();
             foreach (var selected in this.aliveWorlds) {
@@ -362,10 +344,10 @@ namespace ME.BECS.Editor {
             foreach (var item in this.dashboardSnapshots) {
                 sum.reserved += item.reserved; sum.used += item.used; sum.free += item.free;
                 sum.persistent += item.persistent; sum.temp += item.temp; sum.tempUsed += item.tempUsed;
-                sum.entities += item.entities; sum.archetypes += item.archetypes;
+                sum.entities += item.entities;
                 sum.zones += item.zones; sum.persistentBlocks += item.persistentBlocks; sum.tempBlocks += item.tempBlocks;
                 sum.componentsBytes += item.componentsBytes; sum.entitiesBytes += item.entitiesBytes; sum.registryBytes += item.registryBytes;
-                sum.archetypesBytes += item.archetypesBytes; sum.batchesBytes += item.batchesBytes;
+                sum.batchesBytes += item.batchesBytes;
                 sum.persistentKnown &= item.persistentKnown;
             }
             var total = sum.reserved + sum.persistent + sum.temp;
@@ -387,11 +369,9 @@ namespace ME.BECS.Editor {
             this.DashboardSet("components", DashboardBytes(sum.componentsBytes)); this.DashboardBar("components", sum.componentsBytes, sum.reserved);
             this.DashboardSet("entity-memory", DashboardBytes(sum.entitiesBytes)); this.DashboardBar("entity-memory", sum.entitiesBytes, sum.reserved);
             this.DashboardSet("registry", DashboardBytes(sum.registryBytes)); this.DashboardBar("registry", sum.registryBytes, sum.reserved);
-            this.DashboardSet("archetype-memory", DashboardBytes(sum.archetypesBytes)); this.DashboardBar("archetype-memory", sum.archetypesBytes, sum.reserved);
             this.DashboardSet("batches", DashboardBytes(sum.batchesBytes));
             this.DashboardSet("zones", sum.zones.ToString("N0"));
             this.DashboardSet("worlds", this.aliveWorlds.Count.ToString());
-            this.DashboardSet("archetypes", sum.archetypes.ToString("N0"));
             this.DashboardSet("tick", this.dashboardSnapshots.Count == 1 ? this.dashboardSnapshots[0].world.CurrentTick.ToString("N0") : "— (select a world)");
             this.dashboardStatus.text = "Live · 4 Hz";
         }

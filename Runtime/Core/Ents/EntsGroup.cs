@@ -318,9 +318,7 @@ namespace ME.BECS {
             size += this.groupByEntityType.GetReservedSizeInBytes();
             size += this.destroyed.GetReservedSizeInBytes();
             size += this.aliveBits.GetReservedSizeInBytes();
-            #if ENABLE_BECS_FLAT_QUERIES
             size += this.GetEntityComponentsReservedSizeInBytes();
-            #endif
             
             return size;
         }
@@ -356,9 +354,7 @@ namespace ME.BECS {
             this.locksPerEntity.BurstMode(in allocator, mode);
             this.destroyed.BurstMode(in allocator, mode);
             this.aliveBits.BurstMode(in allocator, mode);
-            #if ENABLE_BECS_FLAT_QUERIES
             this.BurstModeEntityComponents(in allocator, mode);
-            #endif
         }
 
         [NotThreadSafe]
@@ -515,9 +511,7 @@ namespace ME.BECS {
                 entities.versionsGroup.Resize(ref state.ptr->allocator, len * (StaticTypesTrackedBurst.maxId + 1u), 2);
                 entities.locksPerEntity.Resize(ref state.ptr->allocator, len, 2);
                 entities.seeds.Resize(ref state.ptr->allocator, len, 2);
-                #if ENABLE_BECS_FLAT_QUERIES
                 entities.ResizeEntityComponents(state, len);
-                #endif
             }
         }
 
@@ -562,9 +556,7 @@ namespace ME.BECS {
                     state.ptr->entities.entityToGroupLocal[state, entId] = localGroupIndex;
                     state.ptr->entities.generations[in state.ptr->allocator, entId] = gen;
                     state.ptr->entities.versions[in state.ptr->allocator, entId] = version;
-                    #if ENABLE_BECS_FLAT_QUERIES
                     state.ptr->entities.ClearEntityComponents(state, entId);
-                    #endif
                 }
                 state.ptr->entities.resizeLock.WriteEnd();
             } else {
@@ -579,9 +571,7 @@ namespace ME.BECS {
                     _memclear((safe_ptr<byte>)state.ptr->entities.versionsGroup.GetUnsafePtr(in state.ptr->allocator) + groupsIndex * TSize<ushort>.size, (StaticTypesTrackedBurst.maxId + 1u) * TSize<ushort>.size);
                     state.ptr->entities.entityToGroup[state, entId] = groupId;
                     state.ptr->entities.entityToGroupLocal[state, entId] = localGroupIndex;
-                    #if ENABLE_BECS_FLAT_QUERIES
                     state.ptr->entities.ClearEntityComponents(state, entId);
-                    #endif
                 }
                 state.ptr->entities.resizeLock.ReadEnd(state);
             }

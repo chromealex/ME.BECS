@@ -146,18 +146,6 @@ namespace ME.BECS.Editor.CreateProject {
                 }
             },
             new OptionInfo() {
-                state = false,
-                caption = "Flat Queries instead of Archetypes",
-                description = "Use flat queries instead of archetypes.",
-                action = (state) => {
-                    if (state == true) {
-                        NewProject.AddDefines(new[] {
-                            "ENABLE_BECS_FLAT_QUERIES",
-                        });
-                    }
-                },
-            },
-            new OptionInfo() {
                 state = true,
                 caption = "Default exceptions",
                 description = "[Recommended] Add all default exceptions.",

@@ -87,17 +87,13 @@ namespace ME.BECS {
             private int active;
             private MemArray<Page> dataPagesA;
             private MemArray<Page> dataPagesB;
-            #if ENABLE_BECS_FLAT_QUERIES
             private BitArray bitsA;
             private BitArray bitsB;
-            #endif
 
             public DoubleBuffer(safe_ptr<State> state, uint pages) {
                 this.dataPagesA = new MemArray<Page>(ref state.ptr->allocator, pages);
-                #if ENABLE_BECS_FLAT_QUERIES
                 this.bitsA = new BitArray(ref state.ptr->allocator, pages * ENTITIES_PER_PAGE, ClearOptions.ClearMemory, true);
                 this.bitsB = default;
-                #endif
                 this.dataPagesB = default;
                 this.active = 0;
             }
@@ -112,7 +108,6 @@ namespace ME.BECS {
                 return ref (buffer.active == 0 ? ref buffer.dataPagesA : ref buffer.dataPagesB);
             }
 
-            #if ENABLE_BECS_FLAT_QUERIES
             [INLINE(256)]
             public static ref BitArray GetTargetBits(ref DoubleBuffer buffer) {
                 return ref (buffer.active == 0 ? ref buffer.bitsB : ref buffer.bitsA);
@@ -122,18 +117,15 @@ namespace ME.BECS {
             public static ref BitArray GetActiveBits(ref DoubleBuffer buffer) {
                 return ref (buffer.active == 0 ? ref buffer.bitsA : ref buffer.bitsB);
             }
-            #endif
 
             [INLINE(256)]
             public static void Swap(ref DoubleBuffer buffer, safe_ptr<State> state, uint newSize) {
                 ref var targetPages = ref GetTargetPages(ref buffer);
                 targetPages.Resize(ref state.ptr->allocator, newSize, 2);
                 targetPages.CopyFrom(ref state.ptr->allocator, in GetActivePages(ref buffer));
-                #if ENABLE_BECS_FLAT_QUERIES
                 ref var targetBits = ref GetTargetBits(ref buffer);
                 targetBits.Resize(ref state.ptr->allocator, newSize * ENTITIES_PER_PAGE, growFactor: 2);
                 targetBits.CopyFrom(ref state.ptr->allocator, in GetActiveBits(ref buffer));
-                #endif
                 System.Threading.Interlocked.Exchange(ref buffer.active, buffer.active == 0 ? 1 : 0);
             }
 
@@ -141,10 +133,8 @@ namespace ME.BECS {
             public void BurstMode(in MemoryAllocator allocator, bool state) {
                 this.dataPagesA.BurstMode(in allocator, state);
                 this.dataPagesB.BurstMode(in allocator, state);
-                #if ENABLE_BECS_FLAT_QUERIES
                 this.bitsA.BurstMode(in allocator, state);
                 this.bitsB.BurstMode(in allocator, state);
-                #endif
             }
 
             public uint GetReservedSizeInBytes(safe_ptr<State> state, uint dataSize) {
@@ -156,19 +146,15 @@ namespace ME.BECS {
                     size += this.dataPagesB[state, i].GetReservedSizeInBytes(dataSize, ENTITIES_PER_PAGE);
                 }
 
-                #if ENABLE_BECS_FLAT_QUERIES
                 size += this.bitsA.GetReservedSizeInBytes();
                 size += this.bitsB.GetReservedSizeInBytes();
-                #endif
                 return size;
             }
 
-            #if ENABLE_BECS_FLAT_QUERIES
             [INLINE(256)]
             public void CleanUpEntity(safe_ptr<State> state, uint entityId, uint typeId) {
                 GetActiveBits(ref this).SetThreaded(state.ptr->allocator, entityId, false);
             }
-            #endif
 
         }
 
@@ -271,7 +257,6 @@ namespace ME.BECS {
             return this.Resize(state, worldId, entityId + 1u);
         }
 
-        #if ENABLE_BECS_FLAT_QUERIES
         [INLINE(256)]
         public void CleanUpEntity(safe_ptr<State> state, uint entityId, uint typeId) {
             this.buffer.CleanUpEntity(state, entityId, typeId);
@@ -281,7 +266,6 @@ namespace ME.BECS {
         public BitArray GetBits() {
             return DoubleBuffer.GetActiveBits(ref this.buffer);
         }
-        #endif
 
         [INLINE(256)]
         public bool SetState(safe_ptr<State> state, uint entityId, ushort entityGen, bool value) {
@@ -291,9 +275,7 @@ namespace ME.BECS {
             var val = _offsetState(_getBlock(state, page, entityId, this.dataSize));
             if ((value == true && *val.ptr == 1) || (value == false && *val.ptr == 0)) {
                 var res = (value == true && *val.ptr == 1);
-                #if ENABLE_BECS_FLAT_QUERIES
                 DoubleBuffer.GetActiveBits(ref this.buffer).SetThreaded(state.ptr->allocator, entityId, res);
-                #endif
                 changed = true;
                 *val.ptr = res == true ? (byte)0 : (byte)1;
             }
@@ -465,12 +447,10 @@ namespace ME.BECS {
             return gen == entityGen && disableState == 0;
         }
 
-        #if ENABLE_BECS_FLAT_QUERIES
         [INLINE(256)]
         public void SetBit(safe_ptr<State> state, uint entityId, bool value, uint typeId) {
             DoubleBuffer.GetActiveBits(ref this.buffer).SetThreaded(state.ptr->allocator, entityId, value);
         }
-        #endif
 
     }
 

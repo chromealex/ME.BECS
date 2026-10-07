@@ -71,6 +71,13 @@ namespace ME.BECS.Editor {
             return snapshot;
         }
 
+        internal void MergeWorker(Snapshot snapshot) {
+            if (current != this || this.disposed || this.values == null)
+                throw new InvalidOperationException("Worker memo requires an active receiving IL session.");
+            foreach (var pair in snapshot.Take())
+                if (!this.values.ContainsKey(pair.Key)) this.values.Add(pair.Key, pair.Value);
+        }
+
         internal static void Checkpoint(MethodBase method = null) {
             current?.cancellation.ThrowIfCancellationRequested();
             current?.progress?.Invoke(method);
@@ -97,6 +104,16 @@ namespace ME.BECS.Editor {
 
         internal static string CodeFingerprint => current?.codeFingerprint;
         internal static bool Rebuild => current?.rebuild == true;
+
+        internal static string MemorySummary() {
+            var values = current?.values;
+            long dependencies = 0;
+            if (values != null) foreach (Entry entry in values.Values) dependencies += entry.dependencies.Length;
+            // This is process-wide managed heap usage, not an attribution to BECS
+            // or a forced collection. Dependency slots include repeated references.
+            return "managed heap=" + (GC.GetTotalMemory(false) / (1024L * 1024L)) +
+                " MiB; IL memo entries=" + (values?.Count ?? 0) + "; dependency reference slots=" + dependencies;
+        }
 
         internal static string[] IndexDeclarations(Assembly[] assemblies) {
             Checkpoint();
@@ -150,6 +167,25 @@ namespace ME.BECS.Editor {
             if (current != this) throw new InvalidOperationException("IL sessions must be disposed on their owning thread in reverse order.");
             this.disposed = true;
             current = this.previous;
+            // The export's publication session received the complete background memo.
+            // Keep it as the Editor's retained memo for this compiled code, so the
+            // next synchronous analysis in this domain (tests, build preflight, a
+            // manual export) reuses it instead of re-validating every summary.
+            if (this.isolated && this.codeFingerprint != null && this.values != null && this.values.Count > 0 &&
+                UnityEditorInternal.InternalEditorUtility.CurrentThreadIsMainThread()) {
+                if (retainedFingerprint == this.codeFingerprint && retainedValues != null) {
+                    // Entries the Editor already retained win (callers may hold their
+                    // results by reference); only add what the export computed.
+                    foreach (var pair in this.values)
+                        if (!retainedValues.ContainsKey(pair.Key)) retainedValues.Add(pair.Key, pair.Value);
+                    this.values.Clear();
+                } else {
+                    retainedFingerprint = this.codeFingerprint;
+                    retainedValues = this.values;
+                }
+                this.values = null;
+                return;
+            }
             if (this.isolated) this.values?.Clear();
         }
     }

@@ -65,27 +65,22 @@ namespace ME.BECS.Editor.Aspects {
             var differences = 0;
             var unavailable = 0;
             foreach (var editor in new[] { false, true }) {
-                var name = "ME.BECS.Gen." + (editor ? "Editor" : "Runtime");
-                var owners = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => !assembly.IsDynamic && assembly.GetName().Name == name).ToArray();
-                if (owners.Length != 1) {
-                    ++unavailable;
-                    details.AppendLine(name + ": expected one loaded assembly, found " + owners.Length);
-                    continue;
-                }
+                var name = editor ? "Editor" : "Runtime";
                 try {
+                    var owner = SourceGeneratorViewSelectionCatalog.GetAssembly(editor);
                     var feeder = new EntityViewCodeGenerator { editorAssembly = editor, asms = EditorUtils.GetAssembliesInfo() };
                     var expectedText = new StringBuilder();
                     feeder.AppendSourceGeneratorInputs(expectedText);
                     var expected = expectedText.ToString().Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)
                         .Where(row => row.StartsWith("view-tracker", StringComparison.Ordinal)).ToArray();
-                    var actual = owners[0].GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                    var actual = owner.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
                         .Where(attribute => attribute.Key == "ME.BECS.ViewTrackerInputs.v1").Select(attribute => attribute.Value).ToArray();
                     var same = expected.SequenceEqual(actual, StringComparer.Ordinal);
                     if (same) ++equal; else ++differences;
                     var plan = feeder.Collect();
                     details.AppendLine(name + ": views/modules=" + plan.entries.Count + ", tracked components=" + plan.tracked.Length +
                         ", expected records=" + expected.Length + ", compiled records=" + actual.Length + ", equal=" + same +
-                        ", MVID=" + owners[0].ManifestModule.ModuleVersionId);
+                        ", owner=" + owner.GetName().Name + ", MVID=" + owner.ManifestModule.ModuleVersionId);
                 } catch (System.Exception exception) {
                     ++unavailable;
                     details.AppendLine(name + ": " + exception);

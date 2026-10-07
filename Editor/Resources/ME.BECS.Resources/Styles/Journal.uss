@@ -250,3 +250,21 @@
     padding: 20px;
     white-space: normal;
 }
+/* Journal feed geometry; all control and palette rules come from DefaultStyles.uss. */
+.journal-feed { flex-grow: 1; flex-basis: 0; min-height: 0; min-width: 0; overflow: hidden; }
+.journal-feed .journal-line { flex-direction: row; align-items: center; flex-wrap: wrap; margin-bottom: 8px; flex-shrink: 0; }
+.journal-feed .journal-line > Label { margin-right: 10px; }
+.journal-feed .journal-workspace { flex-grow: 1; flex-basis: 0; min-height: 0; flex-shrink: 1; flex-wrap: nowrap; align-items: stretch; overflow: hidden; }
+.journal-feed .journal-table { flex-grow: 2; flex-basis: 0; min-height: 0; min-width: 0; }
+.journal-feed .journal-list { flex-grow: 1; flex-basis: 0; min-height: 0; }
+.journal-feed .journal-inspector { flex-grow: 1; flex-basis: 0; min-width: 0; min-height: 0; margin-left: 16px; }
+.journal-feed .journal-inspector TextField { white-space: normal; }
+.journal-feed .journal-inspector .unity-text-field__input { white-space: normal; }
+.journal-feed .journal-event-row { flex-direction: row; align-items: center; height: 42px; padding: 4px; }
+.journal-feed .journal-event-row #tick { width: 75px; }
+.journal-feed .journal-event-row #thread { width: 45px; }
+.journal-feed .journal-event-row #entity { width: 110px; overflow: hidden; text-overflow: ellipsis; }
+.journal-feed .journal-event-row #event { flex-grow: 1; flex-basis: 0; min-width: 0; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+.journal-feed .journal-note { white-space: normal; flex-shrink: 0; margin-top: 8px; }
+.journal-feed .journal-activity { flex-direction: row; align-items: flex-end; height: 40px; flex-shrink: 0; margin-top: 8px; margin-bottom: 8px; }
+.journal-feed .journal-bin { flex-grow: 1; flex-basis: 0; margin-right: 2px; }

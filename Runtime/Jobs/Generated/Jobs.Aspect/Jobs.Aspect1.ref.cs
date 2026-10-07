@@ -14,13 +14,6 @@ namespace ME.BECS.Jobs {
         
         public static partial JobHandle Schedule<T, T0>(this QueryBuilder builder, in T job = default) where T : struct, IJobForAspects<T0> where T0 : unmanaged, IAspect;
         
-        #if !ENABLE_BECS_FLAT_QUERIES
-        public static partial JobHandle Schedule<T, T0>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobForAspects<T0> where T0 : unmanaged, IAspect;
-        
-        public static partial JobHandle Schedule<T, T0>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobForAspects<T0> where T0 : unmanaged, IAspect;
-
-        public static partial JobHandle Schedule<T, T0>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobForAspects<T0> where T0 : unmanaged, IAspect;
-        #endif
         
     }
 

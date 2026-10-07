@@ -160,7 +160,17 @@ namespace ME.BECS.Editor {
         }
 
         internal static void PublishUsed(string manifest) {
-            var owners = manifest.Split('\n').Select(row => row.Split('\t'))
+            var files = PrepareUsed(manifest);
+            if (files.Length == 0) return;
+            UnityEditor.AssetDatabase.StartAssetEditing();
+            try { SourceGeneratorSystemFragments.ApplyPublication(files); }
+            finally { UnityEditor.AssetDatabase.StopAssetEditing(); }
+        }
+
+        // Capture on the Editor thread: GetPlan/ValidateOwned consult Unity's
+        // assembly inventory. The returned file contents contain no Unity objects.
+        internal static System.Collections.Generic.KeyValuePair<string, string>[] PrepareUsed(string manifest) {
+            var owners = manifest.Split('\n').Where(row => row.IndexOf("-registration-owner\t", StringComparison.Ordinal) > 0).Select(row => row.Split('\t'))
                 .Where(fields => fields.Length == 4 && fields[0].EndsWith("-registration-owner", StringComparison.Ordinal))
                 .Select(fields => CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(fields[3])).Where(IsBridge).Distinct(StringComparer.Ordinal);
             var plans = new System.Collections.Generic.List<Plan>();
@@ -180,18 +190,19 @@ namespace ME.BECS.Editor {
                 ValidateOwned(plan);
                 plans.Add(plan);
             }
-            if (plans.Count == 0) return;
-            UnityEditor.AssetDatabase.StartAssetEditing();
-            try {
-                foreach (var plan in plans) {
-                    Directory.CreateDirectory(plan.Folder);
-                    WriteChanged(plan.Folder + "/AssemblyMarker.cs", Anchor);
-                    WriteChanged(plan.Folder + "/" + plan.Name + ".asmdef", plan.Content);
-                    WriteChanged(plan.Folder + "/Bridge.becs-owner", UnityEngine.JsonUtility.ToJson(new Receipt {
-                        schema = Schema, name = plan.Name, contentHash = Names.Hash(plan.Content), editor = plan.Editor, required = plan.Required,
-                    }, true) + "\n");
-                }
-            } finally { UnityEditor.AssetDatabase.StopAssetEditing(); }
+            var files = new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, string>>();
+            void Add(string path, string text) {
+                if (!File.Exists(path) || File.ReadAllText(path) != text)
+                    files.Add(new System.Collections.Generic.KeyValuePair<string, string>(path, text));
+            }
+            foreach (var plan in plans) {
+                Add(plan.Folder + "/AssemblyMarker.cs", Anchor);
+                Add(plan.Folder + "/" + plan.Name + ".asmdef", plan.Content);
+                Add(plan.Folder + "/Bridge.becs-owner", UnityEngine.JsonUtility.ToJson(new Receipt {
+                    schema = Schema, name = plan.Name, contentHash = Names.Hash(plan.Content), editor = plan.Editor, required = plan.Required,
+                }, true) + "\n");
+            }
+            return files.ToArray();
         }
 
         private static void ValidateOwned(Plan plan) {
@@ -212,10 +223,5 @@ namespace ME.BECS.Editor {
                 throw new InvalidOperationException("Publication bridge asmdef was modified outside its exporter; preserving it: " + files[1]);
         }
 
-        private static void WriteChanged(string path, string text) {
-            if (File.Exists(path) && File.ReadAllText(path) == text) return;
-            File.WriteAllText(path, text, new UTF8Encoding(false));
-            UnityEditor.AssetDatabase.ImportAsset(path);
-        }
     }
 }

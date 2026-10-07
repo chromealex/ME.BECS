@@ -12,6 +12,45 @@ namespace ME.BECS.Editor {
         public StyleSheet styleSheet;
         public World world;
 
+        // Graph Studio uses themed buttons opening GenericMenu, rather than native DropdownField chrome.
+        // Must NOT re-implement INotifyValueChanged<string>: TextElement.text is
+        // implemented through that interface, so a re-implementation makes the
+        // caption assignment below call our value setter, which assigns the
+        // caption again -> unbounded recursion (main-thread stack overflow).
+        private sealed class MenuPicker : Button {
+            private readonly string caption;
+            private string current;
+            public scg.List<string> choices;
+            public System.Action<string> changed;
+            public int index => this.choices.IndexOf(this.current);
+            public string value {
+                get => this.current;
+                set {
+                    if (this.current == value) return;
+                    this.SetValueWithoutNotify(value);
+                    this.changed?.Invoke(value);
+                }
+            }
+            public MenuPicker(string caption, scg.List<string> choices, int index) {
+                this.caption = caption;
+                this.choices = choices;
+                this.AddToClassList("studio-phase-filter");
+                this.SetValueWithoutNotify(choices[index]);
+                this.clicked += () => {
+                    var menu = new GenericMenu();
+                    foreach (var choice in this.choices) {
+                        var option = choice;
+                        menu.AddItem(new GUIContent(option), option == this.value, () => this.value = option);
+                    }
+                    menu.DropDown(this.worldBound);
+                };
+            }
+            public void SetValueWithoutNotify(string value) {
+                this.current = value;
+                this.text = this.caption + ": " + value + " ▾";
+            }
+        }
+
         private sealed class Block {
             public int zone;
             public uint offset, size;
@@ -35,10 +74,11 @@ namespace ME.BECS.Editor {
         private readonly scg.List<string> matches = new scg.List<string>();
         private readonly scg.Dictionary<string, int> componentCounts = new scg.Dictionary<string, int>();
         private TextField search, traceField;
-        private VisualElement suggestions, maps, legend;
+        private VisualElement suggestions, maps, legend, allocatorPage;
+        private Button clearSearchButton;
         private Label counters, status, resultCount, details;
         private ListView list;
-        private DropdownField zoneField, scaleField, stateField;
+        private MenuPicker zoneField, scaleField, stateField;
         private string componentFilter = string.Empty, selectedKey, tagFilter;
         private int suggestionIndex;
         private double nextSample;
@@ -51,7 +91,14 @@ namespace ME.BECS.Editor {
             if (this.styleSheet == null) this.styleSheet = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/MemoryAllocator.uss");
             root.styleSheets.Add(this.styleSheet);
             var page = new VisualElement();
+            this.allocatorPage = page;
             page.AddToClassList("allocator-dashboard");
+            page.AddToClassList("becs-graph-studio");
+            var studioSheet = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/FeaturesGraphStudio.uss");
+            if (studioSheet != null) page.styleSheets.Add(studioSheet);
+            var skin = EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector);
+            if (skin != null) page.style.unityFont = skin.font;
+            page.style.fontSize = 12;
             page.AddToClassList(EditorGUIUtility.isProSkin ? "dark" : "light");
             root.Add(page);
             var top = Row(page);
@@ -69,25 +116,27 @@ namespace ME.BECS.Editor {
             #endif
             this.legend = Row(page);
             var filters = Row(page);
-            this.zoneField = new DropdownField("Zone", new scg.List<string> { "All zones" }, 0);
-            this.zoneField.RegisterValueChangedCallback(_ => this.ApplyFilter());
+            this.zoneField = new MenuPicker("Zone", new scg.List<string> { "All zones" }, 0);
+            this.zoneField.changed = _ => this.ApplyFilter();
             filters.Add(this.zoneField);
-            this.scaleField = new DropdownField("Per row", new scg.List<string> { "Auto · up to 32 blocks", "4 MiB", "2 MiB", "1 MiB" }, 0);
-            this.scaleField.RegisterValueChangedCallback(e => { this.bandSize = (e.newValue == "4 MiB" ? 4u : e.newValue == "2 MiB" ? 2u : 1u) * 1024u * 1024u; this.DrawMaps(); });
+            this.scaleField = new MenuPicker("Per row", new scg.List<string> { "Auto · up to 32 blocks", "4 MiB", "2 MiB", "1 MiB" }, 0);
+            this.scaleField.changed = value => { this.bandSize = (value == "4 MiB" ? 4u : value == "2 MiB" ? 2u : 1u) * 1024u * 1024u; this.DrawMaps(); };
             filters.Add(this.scaleField);
-            this.stateField = new DropdownField("Blocks", new scg.List<string> { "Allocated", "Free", "All" }, 0);
-            this.stateField.RegisterValueChangedCallback(_ => this.ApplyFilter());
+            this.stateField = new MenuPicker("Blocks", new scg.List<string> { "Allocated", "Free", "All" }, 0);
+            this.stateField.changed = _ => this.ApplyFilter();
             filters.Add(this.stateField);
             var searchBox = new VisualElement();
             searchBox.AddToClassList("allocator-search");
             page.Add(searchBox);
             var searchRow = Row(searchBox);
-            this.search = new TextField("Component");
+            searchRow.Add(new Label("Component"));
+            this.search = new TextField();
+            this.search.AddToClassList("studio-system-search");
             this.search.style.flexGrow = 1;
-            this.search.RegisterValueChangedCallback(_ => this.ShowSuggestions());
+            this.search.RegisterValueChangedCallback(_ => { this.UpdateClearSearchButton(); this.ShowSuggestions(); });
             this.search.RegisterCallback<FocusInEvent>(_ => this.ShowSuggestions());
             this.search.RegisterCallback<KeyDownEvent>(e => {
-                if (e.keyCode == KeyCode.Escape) { this.search.SetValueWithoutNotify(this.componentFilter); this.HideSuggestions(); e.StopPropagation(); }
+                if (e.keyCode == KeyCode.Escape) { this.search.SetValueWithoutNotify(this.componentFilter); this.UpdateClearSearchButton(); this.HideSuggestions(); e.StopPropagation(); }
                 else if (e.keyCode == KeyCode.DownArrow || e.keyCode == KeyCode.UpArrow) {
                     this.suggestionIndex = Mathf.Clamp(this.suggestionIndex + (e.keyCode == KeyCode.DownArrow ? 1 : -1), 0, this.matches.Count - 1);
                     this.RenderSuggestions(); e.StopImmediatePropagation();
@@ -97,12 +146,18 @@ namespace ME.BECS.Editor {
                 }
             }, TrickleDown.TrickleDown);
             searchRow.Add(this.search);
-            searchRow.Add(new Button(() => this.CommitComponent(string.Empty)) { text = "Clear" });
+            this.clearSearchButton = new Button(() => this.CommitComponent(string.Empty)) { text = "×", tooltip = "Clear component filter" };
+            this.clearSearchButton.AddToClassList("studio-search-clear");
+            this.search.Add(this.clearSearchButton);
+            this.UpdateClearSearchButton();
             this.suggestions = new VisualElement();
             this.suggestions.AddToClassList("allocator-suggestions");
-            searchBox.Add(this.suggestions);
+            page.Add(this.suggestions);
+            this.suggestions.style.position = Position.Absolute;
+            this.search.RegisterCallback<GeometryChangedEvent>(_ => this.PositionSuggestions());
+            page.RegisterCallback<GeometryChangedEvent>(_ => this.PositionSuggestions());
             this.HideSuggestions();
-            page.RegisterCallback<PointerDownEvent>(e => { if (e.target is VisualElement target && !searchBox.Contains(target)) this.HideSuggestions(); });
+            page.RegisterCallback<PointerDownEvent>(e => { if (e.target is VisualElement target && !searchBox.Contains(target) && !this.suggestions.Contains(target)) this.HideSuggestions(); });
             var mapScroll = new ScrollView();
             mapScroll.AddToClassList("allocator-map-scroll");
             page.Add(mapScroll);
@@ -132,10 +187,11 @@ namespace ME.BECS.Editor {
                     element.tooltip = $"{b.component}\n{b.tag}\nPayload: {b.size:N0} bytes\nAddress: 0x{b.address.ToInt64():X}";
                 },
             };
+            this.list.AddToClassList("allocator-list");
             this.list.style.flexGrow = 1;
             this.list.selectionChanged += selection => { foreach (var item in selection) { this.Select((Block)item); break; } };
             table.Add(this.list);
-            var inspector = new VisualElement();
+            var inspector = new ScrollView(ScrollViewMode.Vertical);
             inspector.AddToClassList("allocator-inspector");
             lower.Add(inspector);
             var inspectorTop = Row(inspector);
@@ -268,6 +324,8 @@ namespace ME.BECS.Editor {
         private void RenderSuggestions() {
             this.suggestions.Clear();
             this.suggestions.style.display = DisplayStyle.Flex;
+            this.suggestions.BringToFront();
+            this.PositionSuggestions();
             if (this.matches.Count == 0) { this.suggestions.Add(new Label("No matching components in this snapshot")); return; }
             var scroll = new ScrollView(); scroll.style.maxHeight = 160; this.suggestions.Add(scroll);
             for (int i = 0; i < this.matches.Count; ++i) {
@@ -283,8 +341,21 @@ namespace ME.BECS.Editor {
         private void CommitComponent(string name) {
             this.componentFilter = name;
             this.search.SetValueWithoutNotify(name);
+            this.UpdateClearSearchButton();
             this.HideSuggestions();
             this.ApplyFilter();
+        }
+
+        private void UpdateClearSearchButton() {
+            if (this.clearSearchButton != null) this.clearSearchButton.style.display = string.IsNullOrEmpty(this.search.value) ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+
+        private void PositionSuggestions() {
+            if (this.suggestions == null || this.allocatorPage == null || this.search == null) return;
+            var anchor = this.allocatorPage.WorldToLocal(this.search.worldBound.position);
+            this.suggestions.style.left = anchor.x;
+            this.suggestions.style.top = anchor.y + this.search.worldBound.height + 4;
+            this.suggestions.style.width = this.search.worldBound.width;
         }
 
         private void HideSuggestions() { this.suggestions.style.display = DisplayStyle.None; }

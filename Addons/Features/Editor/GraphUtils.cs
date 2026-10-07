@@ -53,12 +53,10 @@ namespace ME.BECS.Editor.FeaturesGraph {
                 return System.Array.Empty<BECS.FeaturesGraph.Nodes.SystemNode>();
             }
             
-            var type = System.Type.GetType("ME.BECS.Editor.StaticMethods, ME.BECS.Gen.Editor");
-            
             var arr = graph.nodes.SelectMany(x => {
                 return FilterNodes(x);
             }).Select(x => {
-                var list = (List<ComponentDependencyGraphInfo>)type.GetMethod("GetSystemComponentsDependencies").Invoke(null, new object[] { x.system.GetType() });
+                var list = SystemDependencyCatalog.GetSystemComponentsDependencies(x.system.GetType());
                 var accesses = list.Select(c => new TypeAccess() {
                     Access = ((RefOp)c.op == RefOp.ReadOnly) ? AccessType.Read : AccessType.Write,
                     TypeName = c.type,
@@ -67,17 +65,6 @@ namespace ME.BECS.Editor.FeaturesGraph {
                     Access = AccessType.Write,
                     TypeName = x.system.GetType(),
                 });
-                /*try {
-                    var listSystems = (HashSet<System.Type>)type.GetMethod("GetSystemDependencies").Invoke(null, new object[] { x.system.GetType() });
-                    if (listSystems != null) {
-                        foreach (var item in listSystems) {
-                            accesses.Add(new TypeAccess() {
-                                Access = AccessType.Read,
-                                TypeName = item,
-                            });
-                        }
-                    }
-                } catch (System.Exception ex) {}*/
 
                 return new BuilderNode() {
                     SourceNode = x,

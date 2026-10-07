@@ -191,7 +191,7 @@ internal sealed class JobEntityInputEmitter {
                 source.Append(target).Append(".entitiesMaxCount = ").Append(plan.Maximum.ToString(CultureInfo.InvariantCulture)).Append("u;\n")
                     .Append(target).Append(".loopCount = ").Append(plan.Loops.ToString(CultureInfo.InvariantCulture)).Append("u;\n")
                     .Append(target).Append(".inlineCount = ").Append(plan.Allocate ?
-                        "global::ME.BECS.Cuts._makeArray<uint>(" + groupCount.ToString(CultureInfo.InvariantCulture) + "u, global::Unity.Collections.Allocator.Domain)" : "default").Append(";\n");
+                        target + ".AllocateInlineCount(" + groupCount.ToString(CultureInfo.InvariantCulture) + "u)" : "default").Append(";\n");
                 for (var index = 0; index < plan.Groups.Length; ++index)
                     source.Append(target).Append(".inlineCount[").Append(groups[plan.Groups[index]].ToString(CultureInfo.InvariantCulture))
                         .Append("u] = ").Append(plan.Counts[index].ToString(CultureInfo.InvariantCulture)).Append("u;\n");

@@ -1,60 +1,19 @@
+@import url("Default.uss");
+
 :root {
     --main-color: #16545c;
     --dark-color: #033735;
     --highlight-color: #21a0b1;
     --highlight-text-color: #bbefff;
-    --toolbar-color: #16545c;
-    --content-background-color: rgba(0, 0, 0, 0.3);
-    --content-border-color: rgba(0, 0, 0, 0.3);
-    --content-border-width: 1px;
-    --content-border-radius: 6px;
-    --content-margin: 4px;
-    --toolbar-buttons-radius: 4px;
-    --toolbar-buttons-margin: 2px 0px 0px 4px;
-    --toolbar-buttons-border-width: 1px;
-    --toolbar-buttons-border-color: rgba(0, 0, 0, 0.7);
-    --toolbar-buttons-background-color: rgba(0, 0, 0, 0.4);
-    --toolbar-buttons-background-color-hover: rgba(0, 0, 0, 0.7);
-    --grid-lines-color: rgba(255, 255, 255, 0.1);
-    --grid-lines-thick-color: rgba(255, 255, 255, 0.2);
-}
-
-.unity-base-slider__dragger {
-    background-color: var(--main-color);
-    border-color: var(--dark-color);
-}
-
-.h-root .h-element > Foldout > Toggle .unity-base-field__input .unity-toggle__text,
-.h-root .h-element > Foldout > Toggle Label {
-    font-size: 12px;
-    padding-top: 4px;
-    padding-bottom: 4px;
-}
-
-.tag-label {
-    width: 8px;
-    height: 8px;
-    max-height: 8px;
-}
-
-.unity-scroller #unity-low-button,
-.unity-scroller #unity-high-button {
-    display: none;
-}
-
-#unity-slider {
-    margin-top: 0px;
-    margin-bottom: 0px;
-}
-
-.unity-scroller #unity-low-button {
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
-    -unity-background-image-tint-color: var(--main-color);
-}
-
-.unity-scroller #unity-high-button {
-    border-bottom-left-radius: 5px;
-    border-bottom-right-radius: 5px;
-    -unity-background-image-tint-color: var(--main-color);
+    --becs-accent: #21a0b1;
+    --becs-selection: #16545c;
+    --becs-background-dark: #1c2528;
+    --becs-surface-dark: #253236;
+    --becs-border-dark: #3b5158;
+    --toolbar-color: #253236;
+    --toolbar-buttons-background-color: #101c20;
+    --toolbar-buttons-background-color-hover: #18282d;
+    --toolbar-buttons-border-color: #3b5158;
+    --becs-button-dark: #101c20;
+    --becs-button-hover-dark: #18282d;
 }

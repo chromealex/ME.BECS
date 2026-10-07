@@ -8,7 +8,6 @@ namespace ME.BECS {
 
     public unsafe partial struct Components {
 
-        #if ENABLE_BECS_FLAT_QUERIES
         [INLINE(256)]
         public static void CleanUpEntity(safe_ptr<State> state, in Ent ent) {
 
@@ -25,7 +24,6 @@ namespace ME.BECS {
             spinner.Unlock();
 
         }
-        #endif
 
     }
 

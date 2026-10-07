@@ -1088,13 +1088,39 @@ namespace ME.BECS.Editor {
             return loadedAssemblies;
         }
 
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<System.Collections.Generic.List<AssemblyInfo>, AssemblyIndex> assemblyIndices =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<System.Collections.Generic.List<AssemblyInfo>, AssemblyIndex>();
+        private sealed class AssemblyIndex {
+            internal int count;
+            internal readonly System.Collections.Generic.Dictionary<string, AssemblyInfo> map =
+                new System.Collections.Generic.Dictionary<string, AssemblyInfo>(System.StringComparer.Ordinal);
+        }
+
+        private static AssemblyIndex BuildAssemblyIndex(System.Collections.Generic.List<AssemblyInfo> list) {
+            var index = new AssemblyIndex { count = list.Count };
+            // FirstOrDefault semantics: the first entry with a name wins.
+            foreach (var item in list) if (item.name != null && !index.map.ContainsKey(item.name)) index.map.Add(item.name, item);
+            return index;
+        }
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<System.Reflection.Assembly, string> assemblyNames =
+            new System.Collections.Concurrent.ConcurrentDictionary<System.Reflection.Assembly, string>();
+
         public static bool IsValidTypeForAssembly(bool editorAssembly, System.Type type, System.Collections.Generic.List<AssemblyInfo> asms = null, bool runtimeInEditor = true) {
             
             if (type == null) return false;
             if (asms == null) asms = EditorUtils.GetAssembliesInfo();
             
-            var asm = type.Assembly.GetName().Name;
-            var info = asms.FirstOrDefault(x => x.name == asm);
+            // Called for every selected type of every export step: index the list once
+            // (it is not mutated after GetAssembliesInfo) instead of a linear scan.
+            var index = assemblyIndices.GetValue(asms, BuildAssemblyIndex);
+            if (index.count != asms.Count) {
+                // The list grew/shrank after indexing: rebuild (never recurse).
+                assemblyIndices.Remove(asms);
+                index = assemblyIndices.GetValue(asms, BuildAssemblyIndex);
+            }
+            var asm = assemblyNames.GetOrAdd(type.Assembly, item => item.GetName().Name);
+            index.map.TryGetValue(asm, out var info);
             if (editorAssembly == false && info.isEditor == true) return false;
             if (editorAssembly == true && info.isEditor == false && runtimeInEditor == false) return false;
             return true;

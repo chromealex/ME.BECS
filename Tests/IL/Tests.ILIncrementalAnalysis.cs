@@ -16,6 +16,19 @@ namespace ME.BECS.Tests {
         private static int CallOne() { return One(); }
         private static int CallOther() { return AlsoOne(); }
 
+        [Test]
+        public void SharedMethodReferencePublishesOneKeyAcrossWorkers() {
+            var type = EditorType("ILContentFingerprint").GetNestedType("MethodReference", BindingFlags.NonPublic);
+            var reference = type.GetMethod("From", HiddenStatic).Invoke(null, new object[] { Method(nameof(One)) });
+            var key = type.GetProperty("Key", BindingFlags.Instance | BindingFlags.NonPublic);
+            var results = new string[128];
+            System.Threading.Tasks.Parallel.For(0, results.Length, new System.Threading.Tasks.ParallelOptions {
+                MaxDegreeOfParallelism = 4,
+            }, index => results[index] = (string)key.GetValue(reference));
+            Assert.IsNotEmpty(results[0]);
+            foreach (var result in results) Assert.AreSame(results[0], result, "Every reader must receive the published instance.");
+        }
+
         [TestCase("Microsoft.CodeAnalysis.EmbeddedAttribute")]
         [TestCase("System.Runtime.CompilerServices.IsUnmanagedAttribute")]
         [TestCase("System.Runtime.CompilerServices.NullableAttribute")]
@@ -66,6 +79,35 @@ namespace ME.BECS.Tests {
             Assert.AreEqual(expected, EditorType("ILContentFingerprint").GetMethod("TryCompilerMetadata", HiddenStatic).Invoke(null, args));
             if (expected) Assert.IsNotEmpty((string)args[1]);
             else Assert.IsNull(args[1]);
+        }
+
+        [TestCase("empty", true)]
+        [TestCase("helper", false)]
+        [TestCase("field", false)]
+        [TestCase("static-constructor", false)]
+        [TestCase("method", false)]
+        public void EmptyUserAttributeStampAuditsConstructorInstructions(string mode, bool expected) {
+            var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("BECS.EmptyMarker." + Guid.NewGuid().ToString("N")), AssemblyBuilderAccess.Run);
+            var type = assembly.DefineDynamicModule("main").DefineType("ReadOnlyAttribute", TypeAttributes.Public, typeof(Attribute));
+            var constructor = type.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, Type.EmptyTypes);
+            var il = constructor.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Call, typeof(Attribute).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null));
+            if (mode == "helper") {
+                il.Emit(OpCodes.Call, Method(nameof(One)));
+                il.Emit(OpCodes.Pop);
+            }
+            il.Emit(OpCodes.Ret);
+            if (mode == "field") type.DefineField("State", typeof(int), FieldAttributes.Public);
+            if (mode == "static-constructor") type.DefineTypeInitializer().GetILGenerator().Emit(OpCodes.Ret);
+            if (mode == "method") type.DefineMethod("Run", MethodAttributes.Public, typeof(void), Type.EmptyTypes)
+                .GetILGenerator().Emit(OpCodes.Ret);
+            var created = type.CreateType();
+            var stamp = EditorType("ILContentFingerprint").GetMethod("ExecutableMetadataStamp", HiddenStatic);
+            var before = (string)stamp.Invoke(null, new object[] { created, Guid.Empty });
+            var after = (string)stamp.Invoke(null, new object[] { created, Guid.NewGuid() });
+            StringAssert.StartsWith(expected ? "empty-attribute:" : "assembly:", before);
+            Assert.AreEqual(expected, before == after);
         }
         private sealed class Constructed {
             public Constructed() { default(Ent).Get<Test1Component>(); }
@@ -198,6 +240,53 @@ namespace ME.BECS.Tests {
             Assert.AreEqual(2, reads);
         }
 
+        [Test]
+        public void PersistentSnapshotRequiresCompletedProducerAndIsConsumedOnce() {
+            var type = EditorType("ILPersistentAnalysis");
+            const BindingFlags instance = BindingFlags.Instance | BindingFlags.NonPublic;
+            var scope = (IDisposable)type.GetConstructor(instance, null, new[] { typeof(bool) }, null)
+                .Invoke(new object[] { false });
+            object snapshot;
+            MethodInfo take;
+            try {
+                snapshot = type.GetMethod("CaptureSnapshot", instance).Invoke(scope, null);
+                take = snapshot.GetType().GetMethod("Take", instance);
+                var premature = Assert.Throws<TargetInvocationException>(() => take.Invoke(snapshot, null));
+                Assert.IsInstanceOf<InvalidOperationException>(premature.InnerException);
+            } finally {
+                // No summaries were requested: this scope does not read or write the disk cache.
+                scope.Dispose();
+            }
+            Assert.AreSame(scope, take.Invoke(snapshot, null), "A premature attempt must not consume the snapshot.");
+            var repeated = Assert.Throws<TargetInvocationException>(() => take.Invoke(snapshot, null));
+            Assert.IsInstanceOf<InvalidOperationException>(repeated.InnerException);
+        }
+
+        [Test]
+        public void WorkerMemoMergePreservesCoordinatorEntriesAndConsumesSnapshotOnce() {
+            var type = EditorType("ILAnalysisSession");
+            const BindingFlags instance = BindingFlags.Instance | BindingFlags.NonPublic;
+            var constructor = type.GetConstructor(instance, null, Type.EmptyTypes, null);
+            var get = type.GetMethod("Get", HiddenStatic).MakeGenericMethod(typeof(string));
+            string Read(string key, string value) => (string)get.Invoke(null, new object[] { key, (Func<string>)(() => value) });
+            using var coordinator = (IDisposable)constructor.Invoke(null);
+            Assert.AreEqual("parent", Read("shared", "parent"));
+            var snapshot = System.Threading.Tasks.Task.Run(() => {
+                using var worker = (IDisposable)constructor.Invoke(null);
+                Assert.AreEqual("child", Read("shared", "child"), "A worker must not borrow the coordinator memo.");
+                Assert.AreEqual("worker-only", Read("unique", "worker-only"));
+                return type.GetMethod("Detach", instance).Invoke(worker, null);
+            }).GetAwaiter().GetResult();
+            Assert.AreEqual("parent", Read("shared", "unexpected"));
+            var merge = type.GetMethod("MergeWorker", instance);
+            merge.Invoke(coordinator, new[] { snapshot });
+            Assert.AreEqual("parent", Read("shared", "unexpected"), "Coordinator entries win collisions deterministically.");
+            Assert.AreEqual("worker-only", Read("unique", "unexpected"), "Disposing the producer must preserve its detached memo.");
+            var repeated = Assert.Throws<TargetInvocationException>(() => merge.Invoke(coordinator, new[] { snapshot }));
+            Assert.IsInstanceOf<InvalidOperationException>(repeated.InnerException);
+            Assert.AreEqual("worker-only", Read("unique", "unexpected"));
+        }
+
         private sealed class CacheFormat {
             private readonly Type cache = EditorType("ILPersistentAnalysis");
             private Type Nested(string name) => this.cache.GetNestedType(name, BindingFlags.NonPublic);
@@ -232,8 +321,29 @@ namespace ME.BECS.Tests {
                 return this.cache.GetMethod("Pack", HiddenStatic).Invoke(null, new object[] { records, this.Items("AssemblyRecord"), "current" });
             }
             internal Array Unpack(object data) => (Array)this.cache.GetMethod("Unpack", HiddenStatic).Invoke(null, new[] { data });
+            internal void AssertPackingDoesNotMutateDependencies() {
+                var method = Method(nameof(One));
+                var verified = this.Dependency(method, "verified");
+                var oldBody = this.Dependency(method, "old-body");
+                foreach (var item in new[] { verified, oldBody }) item.GetType().GetField("mvid").SetValue(item, "previous-mvid");
+                var validatedType = typeof(System.Collections.Generic.Dictionary<,>).MakeGenericType(this.Nested("Dependency"), typeof(MethodBase));
+                var validated = (System.Collections.IDictionary)Activator.CreateInstance(validatedType);
+                validated.Add(verified, method);
+                var records = this.Items("Record", this.Record("a", "current", verified, oldBody));
+                var packed = this.cache.GetMethod("PackWithVersions", HiddenStatic).Invoke(null,
+                    new object[] { records, this.Items("AssemblyRecord"), "current", validated });
+                var methods = (Array)Field(packed, "methods");
+                Assert.AreEqual(method.Module.ModuleVersionId.ToString("D"), Field(methods.GetValue(0), "mvid"));
+                Assert.AreEqual("previous-mvid", Field(methods.GetValue(1), "mvid"), "Another body was not validated.");
+                Assert.AreEqual("previous-mvid", Field(verified, "mvid"), "Shared input records must remain immutable.");
+                Assert.AreEqual("previous-mvid", Field(oldBody, "mvid"));
+                Assert.AreNotSame(verified, methods.GetValue(0));
+            }
             internal object RoundTrip(object data) => UnityEngine.JsonUtility.FromJson(UnityEngine.JsonUtility.ToJson(data), data.GetType());
         }
+
+        [Test]
+        public void CompactCacheRefreshesOnlySerializedValidatedVersion() => new CacheFormat().AssertPackingDoesNotMutateDependencies();
 
         [Test]
         public void CompactCacheSharesMethodsButKeepsOldBodiesAndGenericVariantsSeparate() {

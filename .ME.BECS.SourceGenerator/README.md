@@ -12,13 +12,13 @@ the transition, not a second long-term production analyzer.
 Current project-specific C# emission belongs to the compiler, including bootstrap entry points/AOT,
 graph lifecycle and injection, config callbacks, addon registrations and all 72
 template job backends. The Editor exports ordered discovery/IL/asset data and
-consumer assembly settings; its remaining `.cs` writes are fixed migration
-retirement comments, not executable bodies or compilation stamps. IL analysis is retained intentionally. The disabled
+consumer assembly settings; it no longer writes aggregate `.cs` retirement
+comments, executable bodies or compilation stamps. IL analysis is retained intentionally. The disabled
 CopyFrom implementation is deferred separately, as requested.
 
-Removing `Assets/ME.BECS.Gen` entirely is also part of the final target. The current
-consumer assemblies still require that folder; compiler-owned C# emission alone does
-not retire it. Project-owned native additional files now carry the input data,
+Removing `Assets/ME.BECS.Gen` entirely is also part of the final target. Current
+publication owners and input catalogs are independent of the retired aggregate;
+publication tests reject references back to its assemblies. Project-owned native additional files carry the input data,
 without per-consumer response arguments or dummy C# stamps. The first
 decoupling step moves the project-independent initialization lifecycle into
 `ME.BECS.BootstrapRuntime`. Generated entry points now supply ordered type/method
@@ -28,8 +28,10 @@ System/component AOT roots now belong to their selected publication owners (see
 "Owner-local AOT preservation" below). Core composition now has a project-owned,
 type-free publisher; Views dependency selection has its own feature-scoped project
 owner. Compiled input evidence and readiness checks now use independent profile
-catalogs plus each typed owner's receipt. Remaining diagnostic readers and compatibility
-adapters still retain both aggregate consumers, but startup no longer comes from them.
+catalogs plus each typed owner's receipt. Readers discover those catalogs by their
+profile markers rather than a fixed aggregate assembly name. Startup no longer
+comes from the aggregate. Compatibility exclusions and migration diagnostics still
+recognize its old names; these are not executable generation paths.
 
 Unity verification of this lifecycle extraction (2026-10-05, 14:49–14:51 MSK):
 `Tests_SourceGeneratorBootstrapOwnership` passed 31/31, including IL checks of both
@@ -45,12 +47,46 @@ the cold exports after the analyzer/core change took 95.46 s and 60.01 s respect
 
 Selected registrations, graph bodies, AOT references and core composition now have explicit owners,
 including downstream bridges for closed generic specializations. Remaining structural
-work is retiring aggregate selection/bootstrap adapters and their diagnostic consumers,
-then removing legacy export/upgrade paths. The clean-import and build-machine path
+work includes auditing remaining legacy export/upgrade paths. The clean-import and build-machine path
 must recreate this state, not depend on a pre-existing Library cache. Moving or
 renaming the generated folder does not satisfy this requirement.
 
+Unity EditMode migration smoke verification (2026-10-06, 21:20:29–21:27:08 MSK):
+430 selected, 428 passed, zero failures, two ignored optional source-analysis
+comparisons (`BECS_SOURCE_ANALYSIS_DIAGNOSTICS` disabled). This includes publication
+ownership, lifecycle plans, bootstrap/config/injection contracts, executable linker
+roots, deterministic entity limits, isolated IL worker-cache merges and build-machine
+analysis reconstruction without input writes. The latest run also covers the four
+Player-build guard call sites and removal of the obsolete retirement-stub constant.
+Guard call-site tests are structural, not a real concurrent export/build test.
+The report is project-local at
+`Temp/ME.BECS.SourceGenerator/MigrationSmoke.Tests.xml`. It does not establish a
+clean-Library import or actual Player/Burst AOT execution and stripping correctness.
+
+Local Player build verification (2026-10-06, 20:53:04–21:11:46 MSK):
+Unity reported `Succeeded` for the Dev macOS IL2CPP build in 1122 seconds.
+Both the Player executable and `GameAssembly.dylib` contain x86_64 and arm64
+slices. The project-local artifact is `Builds/Dronefall-Dev-macOS-20261006.app`
+(approximately 1.6 GiB). This establishes Player/native compilation, not execution
+of generated registrations, Burst callbacks or stripping-sensitive paths. The
+application was not launched as part of this verification. An earlier attempt
+failed because source input export was still running; the successful retry does
+not establish that export/build overlap is handled correctly.
+
 ### Non-modal input export progress
+
+Clean-project relocation verification (2026-10-06): copied the framework to
+`Assets/RenamedFramework` in an isolated project without existing Library or source
+inputs. Unity 6000.2.14f1 compiled it successfully after configuring its package
+dependencies, Animation/Particle System modules and project-level `Assets/csc.rsp`
+(required by existing framework response files). Ordinary Editor startup published
+337 input files; a subsequent export changed zero files. A project-local probe
+validated readiness, executed the Editor bootstrap, entered Play Mode and required
+the Runtime bootstrap plan successfully; the Editor exited with code 0.
+Evidence is in `/private/tmp/becs-clean-import.JDTrJD/clean-import-result.txt` and
+`probe-play.log`. This verifies relocation and initialization, not gameplay,
+IL2CPP execution or a package-manager-only installation. Shutdown reported two
+Persistent allocations; leak investigation remains deferred by request.
 
 Input export uses scoped `UnityEditor.Progress` tasks in Unity's background-task UI,
 not `EditorUtility.DisplayProgressBar`/`DisplayCancelableProgressBar`. Stage names,
@@ -58,19 +94,26 @@ current subject and elapsed time are still reported at most every 150 ms. Manage
 tasks finish with the export outcome and never clear unrelated Unity/Burst progress.
 Cancellation is cooperative during analysis and disabled before publishing any input
 files or assembly settings. Batch mode creates no UI task. The migration smoke suite
-includes task isolation/cleanup and cancellation-before-publication tests (not yet run).
+includes task isolation/cleanup and cancellation-before-publication tests (passed
+in the 2026-10-06 smoke run recorded above).
 
 Automatic refresh, Rebuild and both graph Compile buttons now use `RequestExport`:
-capture Unity data -> one IL worker -> validate the snapshot -> publish on the Editor
-thread. Its return value means accepted, not completed; graph UI clears compile-dirty
+capture Unity data -> background IL analysis -> validate/compose on the Editor
+thread -> write files on a worker -> import/validate on the Editor thread.
+Its return value means accepted, not completed; graph UI clears compile-dirty
 state only in the successful publication callback. Synchronous `TryExport`/`TryRebuild`
 remain for compatibility, not for these UI paths. No Player build is started.
 
 `CaptureRuntimeDiscovery` reads graph, config and module roots into a type-only snapshot;
 `AnalyzeRuntimeDiscovery` consumes it without retaining asset instances.
 `ILAnalysisEnvironment.Capture` copies compilation inventory, target and cache path.
-The worker prepares discovery, exact selected job safety/entity-count/weight summaries,
-and Editor system dependencies, using the same production analyzers. An isolated
+The coordinator worker prepares discovery and exact selected job
+safety/entity-count/weight summaries. Editor system dependencies run concurrently
+on a second worker using the same production analyzers. The coordinator joins that
+worker before transferring results; the Editor never waits synchronously for it.
+Both workers own isolated memo/persistent-cache dictionaries. Child cache changes
+merge once, preserving coordinator results for duplicate keys; only the coordinator
+writes the merged analysis cache. An isolated
 `ILAnalysisSession` transfers its memo once, only after its Task completes; it never
 borrows the Editor's retained dictionary. Code-identity dictionaries use short locks;
 file hashing runs outside those locks. User `IRefOp` constructors/getters are serviced
@@ -84,12 +127,15 @@ worker owns reflection objects and unlocked on cleanup, including cancellation/e
 No cancelled/stale task publishes files or a successful receipt. Cancelling an unfinished
 declaration index preserves the previous persistent cache.
 
-Asset capture, final input composition/addon work and file publication still run on the
-Editor thread, as does Unity's own reload. This does not claim an entirely stall-free
+Asset capture, final input composition/addon work, asset imports and receipt validation
+still run on the Editor thread, as does Unity's own reload. Planned input-file writes
+run on a worker, with asset editing/reload protection retained until completion.
+This does not claim an entirely stall-free
 Editor: compare the remaining main-thread timings in Unity after these changes.
 `Tests_ILAnalysisSnapshot`, `Tests_ILExportSession` and graph-refresh tests cover ordered
 worker/main-thread discovery parity (including generic systems), memo transfer/isolation,
-cancellation and stale-result gates. The new Unity tests have not been run.
+cancellation and stale-result gates. These fixtures passed in the 2026-10-06 smoke
+run recorded above.
 
 ### Independent compiled input catalogs and readiness
 
@@ -1965,7 +2011,7 @@ pre/post batch decisions and symbol-bound lifecycle/Burst flags. Each handle ref
 operation; -1 means caller input, while an empty list means default handle. Repeated graph assets use
 independent occurrence keys. A full stalled queue reports a cycle/unreachable dependency instead of
 emitting a partial plan. Unknown node kinds are explicit unavailable plans. Phase plans
-use the compilation's ENABLE_BECS_FLAT_QUERIES setting and invariant numeric serialization.
+use flat queries and invariant numeric serialization.
 InputManifestGenerator publishes diagnostic ME.BECS.GraphLifecyclePlan.v1 metadata for all five phases.
 `Export Compiled Lifecycle Plans` saves it to Temp/ME.BECS.SourceGenerator/GraphLifecyclePlans.txt,
 without reading generated C# or invoking systems. This is not yet the production emitter: fresh sync
@@ -3293,7 +3339,7 @@ dependencies (`Q`, filter kind and closed component type), root
 binding (`R`, a generated MethodInfo getter), and explicit gaps. Closed generic
 lifecycle roots retain their specialization identity. The Scheduled Jobs report
 checks these bindings against interface maps without executing lifecycle methods.
-`query-filter-schema=1` identifies exact instance APIs on QueryBuilder, QueryBuilderStatic
+`query-filter-schema=1` identifies exact instance APIs on QueryBuilder
 and QueryCompose. With/WithAll, Without and every WithAny argument are retained separately
 from component data accesses; TNull in an odd-sized WithAny group is a sentinel, not a dependency.
 Source-only helpers are traversed and generic component arguments are substituted per call.
@@ -3832,7 +3878,9 @@ The analyzer DLL builds successfully; this does not prove Unity compilation or r
 Required evidence still includes fresh Editor compilation without the aggregate directory, source
 generator contract and integration tests, independent-world deterministic entity creation and
 generic scheduling, graph-edit re-export, config/View/Network callbacks, and clean import with the
-framework relocated. Player/Burst/IL2CPP stripping validation belongs to the build machine.
+framework relocated. Local macOS IL2CPP compilation succeeded on 2026-10-06 (see
+the evidence above); Player/Burst execution and stripping-sensitive behavior remain
+unverified. A clean build-machine import is separate from that cached local build.
 Do not treat older test results, published receipts alone, or an analyzer-only build as proof of
 these checks. CopyFrom remains a separately deferred investigation, not a silently enabled feature.
 

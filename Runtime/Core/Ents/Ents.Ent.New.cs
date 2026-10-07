@@ -96,13 +96,6 @@ namespace ME.BECS {
             {
                 newEnt = Ents.New(state, worldId, groupId, out reused, in jobInfo);
             }
-            #if !ENABLE_BECS_FLAT_QUERIES
-            {
-                Ents.Lock(state, in newEnt);
-                Archetypes.AddEntity(state, newEnt);
-                Ents.Unlock(state, in newEnt);
-            }
-            #endif
 
             #if UNITY_EDITOR
             EntEditorName.SetEditorName(in newEnt, editorName);

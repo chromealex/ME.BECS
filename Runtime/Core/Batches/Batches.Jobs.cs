@@ -10,26 +10,6 @@ namespace ME.BECS {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Jobs;
     
-    #if !ENABLE_BECS_FLAT_QUERIES
-    [BURST]
-    public partial struct ApplyJob : IJobSingle {
-
-        #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
-        public SafetyComponentContainerRW<TNull> safety;
-        #endif
-        
-        public ushort worldId;
-        public safe_ptr<State> state;
-            
-        [INLINE(256)]
-        public void Execute() {
-
-            Batches.ApplyFromJob(this.worldId, this.state);
-
-        }
-
-    }
-    #endif
 
     [BURST]
     public partial struct ApplyDestroyedJob : IJobSingle {

@@ -20,6 +20,7 @@ namespace ME.BECS.Editor {
             var analyzers = UnityEditor.AssetDatabase.FindAssets("l:RoslynAnalyzer").Select(UnityEditor.AssetDatabase.GUIDToAssetPath)
                 .Where(path => Path.GetFileName(path) == "ME.BECS.SourceGenerator.dll").ToArray();
             if (analyzers.Length != 1) throw new InvalidOperationException("Expected one BECS analyzer for input migration.");
+            MoveNativeSnapshots(destination);
             var origin = Path.GetDirectoryName(analyzers[0]).Replace('\\', '/');
             if (!origin.StartsWith("Assets/", StringComparison.Ordinal) || origin == destination) return;
             var moves = new System.Collections.Generic.List<KeyValuePair<string, string>>();
@@ -70,6 +71,28 @@ namespace ME.BECS.Editor {
                 }
             } finally { UnityEditor.AssetDatabase.StopAssetEditing(); }
             UnityEngine.Debug.Log("[ME.BECS] Moved " + moves.Count + " project compiler inputs out of the framework; preserved asset GUIDs and removed managed options from " + responses.Count + " response files.");
+        }
+
+        // Full snapshots used to be compiler additional files although no generator
+        // reads them. Move them to the Editor-only name, keeping their asset GUIDs.
+        private static void MoveNativeSnapshots(string destination) {
+            var moves = new System.Collections.Generic.List<KeyValuePair<string, string>>();
+            foreach (var editor in new[] { false, true }) {
+                var old = destination + "/" + (editor ? SourceGeneratorInputFiles.NativeEditor : SourceGeneratorInputFiles.NativeRuntime);
+                if (!File.Exists(old)) continue;
+                var target = destination + "/" + SourceGeneratorInputTransport.FileName(editor);
+                if (File.Exists(target)) throw new InvalidOperationException("Both legacy and current source input snapshots exist; preserving both: " + old);
+                moves.Add(new KeyValuePair<string, string>(old, target));
+            }
+            if (moves.Count == 0) return;
+            UnityEditor.AssetDatabase.StartAssetEditing();
+            try {
+                foreach (var move in moves) {
+                    var error = UnityEditor.AssetDatabase.MoveAsset(move.Key, move.Value);
+                    if (error.Length != 0) throw new InvalidOperationException("Cannot migrate " + move.Key + ": " + error);
+                }
+            } finally { UnityEditor.AssetDatabase.StopAssetEditing(); }
+            UnityEngine.Debug.Log("[ME.BECS] Moved " + moves.Count + " full source input snapshots out of compiler additional files.");
         }
 
         private static void EnsureFolder(string path) {

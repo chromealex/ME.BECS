@@ -22,7 +22,9 @@ namespace ME.BECS.Tests {
             .Distinct(StringComparer.Ordinal).Select(Assembly.Load).SelectMany(Metadata)
             .Where(attribute => attribute.Key.StartsWith("ME.BECS.PublishedGraph", StringComparison.Ordinal)).ToArray();
         private static MethodInfo[] Calls(MethodInfo method) => ME.BECS.Mono.Reflection.Disassembler.GetInstructions(method)
-            .Where(instruction => instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt).Select(instruction => (MethodInfo)instruction.Operand).ToArray();
+            .Where(instruction => instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt)
+            // Value-type constructors can also use call; they are not lifecycle methods.
+            .Select(instruction => instruction.Operand).OfType<MethodInfo>().ToArray();
 
         internal static Assembly Owner(string graphId) {
             foreach (var doc in Documents()) foreach (var entry in Field<KeyValuePair<int, string>[]>(doc, "Entries"))
@@ -113,6 +115,8 @@ namespace ME.BECS.Tests {
                             if (step[7] == "ordinary") {
                                 calls.Add("Create");
                                 calls.Add("InvokeSystem_" + step[5]);
+                                // The resulting handle is read from a property, not a field.
+                                calls.Add("get_" + nameof(SystemContext.dependsOn));
                             } else {
                                 calls.Add((step[7] == "parallel" ? "InvokeParallel_" : "InvokeSequential_") + step[5] + "_" + step[6]);
                             }
@@ -121,11 +125,18 @@ namespace ME.BECS.Tests {
                     }
                     var methods = Enumerable.Range(0, groups.Count).Select(index => lifecycle.GetMethod("PlannedLifecycleGroup_" + index, Static)).ToArray();
                     CollectionAssert.AreEqual(methods, Calls(lifecycle.GetMethod("Execute", Static)).Where(method => method.DeclaringType == lifecycle).ToArray());
-                    Assert.AreEqual(groups.Count, lifecycle.GetMethods(Static).Count(method => method.Name.StartsWith("PlannedLifecycleGroup_", StringComparison.Ordinal)));
+                    const string groupPrefix = "PlannedLifecycleGroup_";
+                    // Burst adds $BurstManaged copies and replaces the entry body's IL
+                    // with dispatch code. Count only the compiler-owned numeric slots.
+                    CollectionAssert.AreEquivalent(methods, lifecycle.GetMethods(Static).Where(method =>
+                        method.Name.StartsWith(groupPrefix, StringComparison.Ordinal) &&
+                        int.TryParse(method.Name.Substring(groupPrefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out _)).ToArray(),
+                        graph[3] + " / " + phase);
                     for (var index = 0; index < groups.Count; ++index) {
                         Assert.IsNotNull(methods[index]);
                         Assert.AreEqual(groups[index].burst, methods[index].IsDefined(typeof(Unity.Burst.BurstCompileAttribute), false));
-                        CollectionAssert.AreEqual(groups[index].calls, Calls(methods[index]).Select(method => method.Name).ToArray(), graph[3] + " / " + phase);
+                        var managedBody = lifecycle.GetMethod(methods[index].Name + "$BurstManaged", Static) ?? methods[index];
+                        CollectionAssert.AreEqual(groups[index].calls, Calls(managedBody).Select(method => method.Name).ToArray(), graph[3] + " / " + phase);
                     }
                 }
             }

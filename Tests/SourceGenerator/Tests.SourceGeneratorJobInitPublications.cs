@@ -18,7 +18,7 @@ namespace ME.BECS.Tests {
         private static string Serialize(object doc) => (string)Call("Serialize", doc);
         private static string Row(int ordinal, string payload, string owner) => "jobinit-registration-owner\t" + ordinal + "\t" +
             Encode((string)Call("EntryValue", payload)) + "\t" + Encode(owner);
-        private static string[] Rows(Assembly assembly, string profile) => assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+        private static string[] Rows(Assembly assembly, string profile) => assembly.BecsInputMetadata()
             .Where(item => item.Key == "ME.BECS.TypeInput.v1" && item.Value.StartsWith(profile.ToLowerInvariant() + "\t", StringComparison.Ordinal))
             .Select(item => item.Value.Substring(profile.Length + 1)).ToArray();
         private static MethodInfo[] Calls(MethodInfo method) => ME.BECS.Mono.Reflection.Disassembler.GetInstructions(method)
@@ -71,7 +71,7 @@ namespace ME.BECS.Tests {
                 else Assert.AreEqual(UnityEngine.RuntimeInitializeLoadType.AfterAssembliesLoaded, publish.GetCustomAttribute<UnityEngine.RuntimeInitializeOnLoadMethodAttribute>().loadType);
                 var envelope = Format.Assembly.GetType("ME.BECS.CodeGeneration.SourceGeneratorSystemFragmentFormat", true);
                 var metadata = (string)envelope.GetMethod("Metadata", Static).Invoke(null, new[] { doc, Serialize(doc) });
-                Assert.AreEqual(1, owner.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>()
+                Assert.AreEqual(1, owner.BecsInputMetadata()
                     .Count(item => item.Key == "ME.BECS.JobInitFragment.v1" && item.Value == metadata));
                 var entries = Field<KeyValuePair<int, string>[]>(doc, "Entries");
                 var callbacks = (Action[])publisher.GetField("Callbacks", Static).GetValue(null);

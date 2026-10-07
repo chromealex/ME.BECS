@@ -170,7 +170,7 @@ internal static class JobEntitySummary {
             body.Append("global::ME.BECS.JobStaticInfo<TJob>.entitiesMaxCount = ").Append(maximum.ToString(CultureInfo.InvariantCulture)).Append("u;\n");
             body.Append("global::ME.BECS.JobStaticInfo<TJob>.loopCount = ").Append(loops.ToString(CultureInfo.InvariantCulture)).Append("u;\n");
             if (inline.Length > 0) {
-                body.Append("global::ME.BECS.JobStaticInfo<TJob>.inlineCount = global::ME.BECS.Cuts._makeArray<uint>(groupCount, global::Unity.Collections.Allocator.Domain);\n");
+                body.Append("global::ME.BECS.JobStaticInfo<TJob>.inlineCount = global::ME.BECS.JobStaticInfo<TJob>.AllocateInlineCount(groupCount);\n");
                 for (var index = 0; index < inline.Length; ++index)
                     body.Append("global::ME.BECS.JobStaticInfo<TJob>.inlineCount[group").Append(index.ToString(CultureInfo.InvariantCulture))
                         .Append("] = ").Append((maximum > 0u && inline[index].Value.Loop > 0 ? maximum : (uint)inline[index].Value.Inline).ToString(CultureInfo.InvariantCulture)).Append("u;\n");

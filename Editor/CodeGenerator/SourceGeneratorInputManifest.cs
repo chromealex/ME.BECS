@@ -82,6 +82,17 @@ namespace ME.BECS.Editor {
 
         // Registers graph references and prepares input text; publishing input files
         // and updating assembly references remain the caller's responsibility.
+        internal static System.Collections.IEnumerator PrepareActiveInputsSteps(StepResult<string> output, string targetAssembly, bool editor,
+            IEnumerable<CustomCodeGenerator> addonFeeders, Systems.SystemDependenciesCodeGenerator.UsedObjects prepared) {
+            CodeGeneratorTimings.Stage("Discover used types", 0.02f);
+            var feeders = (addonFeeders ?? CreateFeeders()).ToArray();
+            CodeGeneratorTimings.Stage("Prepare graph inputs", 0.15f);
+            yield return null;
+            var steps = SerializeSteps(output, targetAssembly, editor, prepared, registerGraphReferences: true, addonFeeders: feeders);
+            try { while (steps.MoveNext()) yield return null; }
+            finally { (steps as IDisposable)?.Dispose(); }
+        }
+
         internal static string PrepareActiveInputs(string targetAssembly, bool editor,
             IEnumerable<CustomCodeGenerator> addonFeeders,
             out Systems.SystemDependenciesCodeGenerator.UsedObjects used, List<Type> references = null,
@@ -105,24 +116,49 @@ namespace ME.BECS.Editor {
         [UnityEditor.MenuItem("ME.BECS/Source Generator/Export Runtime Type Inputs")]
         private static void ExportRuntime() => Export(false);
 
+        [UnityEditor.MenuItem("ME.BECS/Source Generator/Verify Published Inputs (Build Preflight)")]
+        private static void VerifyPublishedInputs() {
+            var ok = TryAnalyzePublishedInputs(out var reason);
+            UnityEngine.Debug.Log("[ME.BECS] Build preflight " + (ok ? "passed." : "failed: " + reason));
+        }
+
         // A build machine with a fresh Library has no local analysis receipt.
         // Reconstruct it by analyzing current IL and comparing the complete data,
         // without publishing assets, registering graph references or compiling.
         internal static bool TryAnalyzePublishedInputs(out string reason) {
             reason = "";
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            var timings = new StringBuilder();
+            void Mark(string stage) {
+                timings.Append("\n  ").Append(stage).Append(": ").Append(watch.ElapsedMilliseconds).Append(" ms");
+                watch.Restart();
+            }
             try {
                 var code = SourceGeneratorGraphSnapshot.GetCodeFingerprint();
-                var fingerprint = SourceGeneratorGraphSnapshot.GetCurrent();
-                var compilerSnapshot = SourceGeneratorGraphSnapshot.GetCompilerSnapshot();
+                Mark("code fingerprint");
                 using var analysis = new ILAnalysisSession(code, false);
                 using var incremental = new ILPersistentAnalysis(false);
+                var fingerprint = SourceGeneratorGraphSnapshot.GetCurrent();
+                Mark("graph fingerprint");
+                var compilerSnapshot = SourceGeneratorGraphSnapshot.GetCompilerSnapshot();
+                Mark("compiler snapshot");
                 var content = new string[2];
                 foreach (var editor in new[] { false, true }) {
                     using var lookup = SourceGeneratorBridge.BeginLookupScope();
-                    Systems.SystemDependenciesCodeGenerator.GetUsedObjects(editor, out var used);
+                    Systems.SystemDependenciesCodeGenerator.UsedObjects used;
+                    if (editor) Systems.SystemDependenciesCodeGenerator.GetUsedObjects(true, out used);
+                    else {
+                        var roots = Systems.SystemDependenciesCodeGenerator.CaptureRuntimeDiscovery();
+                        Mark("Runtime discovery roots (assets)");
+                        used = Systems.SystemDependenciesCodeGenerator.AnalyzeRuntimeDiscovery(roots, false);
+                    }
+                    Mark((editor ? "Editor" : "Runtime") + " used objects (IL)");
                     var index = editor ? 1 : 0;
                     content[index] = Serialize("ME.BECS.Gen." + (editor ? "Editor" : "Runtime"), editor, used);
-                    if (content[index] != File.ReadAllText(SourceGeneratorInputTransport.InputPath(editor))) {
+                    Mark((editor ? "Editor" : "Runtime") + " serialize");
+                    var published = File.ReadAllText(SourceGeneratorInputTransport.InputPath(editor));
+                    Mark((editor ? "Editor" : "Runtime") + " read published");
+                    if (content[index] != published) {
                         reason = "Current IL/assets require different " + (editor ? "Editor" : "Runtime") +
                             " source inputs. Regenerate inputs and compile them before building; build preflight does not modify assets.";
                         return false;
@@ -132,9 +168,12 @@ namespace ME.BECS.Editor {
                     reason = "Code/assets changed during source input analysis. Retry after imports settle.";
                     return false;
                 }
+                Mark("final graph fingerprint");
                 SourceGeneratorAnalysisReceipt.Commit(fingerprint, compilerSnapshot, content[0], content[1]);
+                Mark("commit receipt");
                 return true;
             } catch (Exception exception) { reason = "Cannot analyze published source inputs: " + exception.Message; return false; }
+            finally { UnityEngine.Debug.Log("[ME.BECS] Build preflight timings:" + timings); }
         }
 
         private static void Export(bool editor) {
@@ -156,14 +195,33 @@ namespace ME.BECS.Editor {
             } catch (Exception exception) { UnityEngine.Debug.LogException(exception); }
         }
 
+        internal sealed class StepResult<T> { internal T value; }
+
         internal static string Serialize(string targetAssembly, bool editor, Systems.SystemDependenciesCodeGenerator.UsedObjects used, bool registerGraphReferences = false,
+            IEnumerable<CustomCodeGenerator> addonFeeders = null) {
+            var result = new StepResult<string>();
+            var steps = SerializeSteps(result, targetAssembly, editor, used, registerGraphReferences, addonFeeders);
+            try { while (steps.MoveNext()) { } }
+            finally { (steps as IDisposable)?.Dispose(); }
+            return result.value;
+        }
+
+        // The same preparation as one resumable sequence: the background export runs
+        // a few steps per Editor frame instead of freezing the Editor for the whole
+        // Runtime+Editor publication. Every yield is between independent stages.
+        internal static System.Collections.IEnumerator SerializeSteps(StepResult<string> output, string targetAssembly, bool editor,
+            Systems.SystemDependenciesCodeGenerator.UsedObjects used, bool registerGraphReferences = false,
             IEnumerable<CustomCodeGenerator> addonFeeders = null) {
             if (string.IsNullOrWhiteSpace(targetAssembly)) throw new ArgumentException("Target assembly is required.", nameof(targetAssembly));
             using var publicationBridges = SourceGeneratorPublicationBridges.BeginPlanning();
             var feeders = (addonFeeders ?? CreateFeeders()).ToArray();
             SourceGeneratorExportContract.Validate(feeders);
+            CodeGeneratorTimings.Stage("Input fingerprints", 0.05f);
+            yield return null;
             var graphSnapshot = SourceGeneratorGraphSnapshot.GetCurrent();
             var compilerSnapshot = SourceGeneratorGraphSnapshot.GetCompilerSnapshot();
+            CodeGeneratorTimings.Stage("Select systems", 0.08f);
+            yield return null;
             var result = new StringBuilder("ME.BECS.TypeInputs.v3\t").Append(Encode(targetAssembly))
                 .Append('\t').Append(editor ? "editor" : "runtime").Append('\n');
             result.Append("bootstrap-schema\t0\t").Append(Encode("v2")).Append('\n');
@@ -176,6 +234,8 @@ namespace ME.BECS.Editor {
                 !EditorUtils.IsValidTypeForAssembly(editor, type, assemblies, true));
             Append(result, "system-registration", selectedSystems);
             SourceGeneratorRegistrationOwners.Append(result, selectedSystems, editor);
+            CodeGeneratorTimings.Stage("Select components, destroy and configs", 0.12f);
+            yield return null;
             Append(result, "component", used.components);
             var componentOrdinal = 0;
             foreach (var component in used.components) {
@@ -214,6 +274,8 @@ namespace ME.BECS.Editor {
             SourceGeneratorRegistrationOwners.AppendTypes(result,
                 used.components.Where(type => type.IsValueType && EditorUtils.IsValidTypeForAssembly(editor, type, assemblies, true)).ToArray(),
                 used.componentsGroup.Where(type => EditorUtils.IsValidTypeForAssembly(editor, type, assemblies, true)).ToArray(), editor);
+            CodeGeneratorTimings.Stage("Select entities and aspects", 0.18f);
+            yield return null;
             Append(result, "job", used.jobTypes);
             Append(result, "entity", used.entityTypes);
             var entitySelector = new EntityTypeCodeGenerator {
@@ -231,6 +293,8 @@ namespace ME.BECS.Editor {
             SourceGeneratorRegistrationOwners.AppendAspects(result, selectedAspects, editor);
             Append(result, "aspect-registration", selectedAspects);
             Append(result, "aspect-construction-auto", selectedAspects);
+            CodeGeneratorTimings.Stage("Graph injection inputs", 0.22f);
+            yield return null;
             if (!editor) {
                 // Transport graph/job ownership only; the compiler selects all injected
                 // fields, callback kinds, target slots and the final apply sequence.
@@ -293,6 +357,7 @@ namespace ME.BECS.Editor {
             var feederOrdinal = 0;
             foreach (var feeder in feeders) {
                 CodeGeneratorTimings.Stage(feeder.GetType().Name, 0.35f + 0.55f * feederOrdinal / System.Math.Max(1, feeders.Length));
+                yield return null;
                 result.Append("bootstrap-feeder\t").Append((feederOrdinal++).ToString(CultureInfo.InvariantCulture))
                     .Append('\t').Append(Encode(feeder.GetType().AssemblyQualifiedName))
                     .Append('\t').Append(feeder.SourceInitializationKind)
@@ -303,23 +368,38 @@ namespace ME.BECS.Editor {
                 feeder.jobTypes = new List<Type>(used.jobTypes);
                 feeder.entityTypes = new List<Type>(used.entityTypes);
                 feeder.aspects = new List<Type>(used.aspects);
-                SourceGeneratorFeederCache.Append(feeder, result);
+                var feederSteps = SourceGeneratorFeederCache.AppendSteps(feeder, result);
+                while (feederSteps.MoveNext()) yield return null;
             }
+            CodeGeneratorTimings.Stage("Select network publication owners", 0.90f);
+            yield return null;
             SourceGeneratorRegistrationOwners.AppendNetwork(result, editor);
+            CodeGeneratorTimings.Stage("Select job setup publication owners", 0.91f);
+            yield return null;
             SourceGeneratorRegistrationOwners.AppendJobSetup(result, editor);
+            CodeGeneratorTimings.Stage("Select debug job publication owners", 0.92f);
+            yield return null;
             SourceGeneratorRegistrationOwners.AppendJobDebug(result, editor);
+            CodeGeneratorTimings.Stage("Select graph publication owners", 0.93f);
+            yield return null;
             SourceGeneratorRegistrationOwners.AppendGraphs(result, editor);
+            CodeGeneratorTimings.Stage("Select view and dependency publication owners", 0.94f);
+            yield return null;
             SourceGeneratorRegistrationOwners.AppendViewSelection(result, editor);
             SourceGeneratorRegistrationOwners.AppendSystemDependencies(result, editor);
             SourceGeneratorRegistrationOwners.AppendThemeMenus(result, editor);
+            CodeGeneratorTimings.Stage("Prepare bootstrap and input catalog", 0.95f);
+            yield return null;
             SourceGeneratorRegistrationOwners.AppendBootstrap(result, editor);
             SourceGeneratorRegistrationOwners.AppendInputCatalog(result, editor);
+            CodeGeneratorTimings.Stage("Validate and seal input snapshot", 0.96f);
+            yield return null;
             if (graphSnapshot != SourceGeneratorGraphSnapshot.GetCurrent())
                 throw new InvalidOperationException("Graphs or loaded script assemblies changed during input preparation. Retry after imports/compilation settle.");
             var payload = result.ToString();
             var recordCount = 0;
             foreach (var character in payload) if (character == '\n') ++recordCount;
-            return payload + "end\t" + (recordCount - 1).ToString(CultureInfo.InvariantCulture) + "\t" +
+            output.value = payload + "end\t" + (recordCount - 1).ToString(CultureInfo.InvariantCulture) + "\t" +
                 ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(payload) + "\n";
         }
 

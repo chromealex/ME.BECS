@@ -36,3 +36,15 @@
 .allocator-dashboard .allocator-map-row > Label { flex-shrink: 0; }
 .allocator-dashboard .allocator-map { min-width: 0; height: 24px; }
 .allocator-dashboard .allocator-map-scroll { height: 280px; min-height: 140px; }
+/* Constrain the workspace, allowing the virtualized list to scroll inside its column. */
+.allocator-dashboard { flex-basis: 0; min-height: 0; min-width: 0; overflow: hidden; }
+.allocator-dashboard .allocator-lower { flex-basis: 0; min-height: 0; flex-wrap: nowrap; overflow: hidden; align-items: stretch; }
+.allocator-dashboard .allocator-table { flex-basis: 0; flex-grow: 55; min-height: 0; min-width: 0; overflow: hidden; }
+.allocator-dashboard .allocator-inspector { flex-basis: 0; flex-grow: 45; min-height: 0; min-width: 0; overflow: hidden; }
+.allocator-dashboard .allocator-list { flex-basis: 0; min-height: 0; overflow: hidden; }
+.allocator-dashboard .allocator-map-scroll { flex-basis: 200px; height: auto; min-height: 60px; max-height: 280px; flex-shrink: 1; }
+.allocator-dashboard .allocator-trace { flex-grow: 0; min-height: 100px; }
+.allocator-dashboard .allocator-search, .allocator-dashboard .allocator-counters { flex-shrink: 0; }
+.allocator-dashboard .allocator-allocation-row #size { width: 75px; }
+.allocator-dashboard .allocator-allocation-row #offset { width: 105px; }
+.allocator-dashboard .allocator-suggestions { position: absolute; max-height: 168px; }

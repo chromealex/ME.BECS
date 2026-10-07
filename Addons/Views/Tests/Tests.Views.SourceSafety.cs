@@ -5,6 +5,19 @@ using NUnit.Framework;
 
 namespace ME.BECS.Views.Tests {
     public partial class Tests_Views_SourceSafety {
+        [Test]
+        public void RemoveFromSceneDoesNotDeclareViewComponentWrite() {
+            var analyzer = Type.GetType("ME.BECS.Editor.Jobs.JobsEarlyInitCodeGenerator, ME.BECS.Editor", true);
+            var result = (System.Collections.IEnumerable)analyzer.GetMethod("GetJobTypesInfo")
+                .Invoke(null, new object[] { typeof(Jobs.JobRemoveFromScene), null });
+            foreach (var row in result) {
+                var type = (Type)row.GetType().GetField("type").GetValue(row);
+                if (type != typeof(ViewComponent)) continue;
+                Assert.AreEqual(RefOp.ReadOnly, row.GetType().GetField("op").GetValue(row),
+                    "Removing a view from the scene must not claim a ViewComponent write through its unused ref argument.");
+            }
+        }
+
         public struct ComponentA : IComponent { public int value; }
         public struct ComponentB : IComponent { public int value; }
 

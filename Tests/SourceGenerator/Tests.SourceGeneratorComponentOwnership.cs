@@ -43,7 +43,7 @@ namespace ME.BECS.Tests {
             .Select(instruction => (MethodInfo)instruction.Operand).ToArray();
 
         private static (Type Type, int Flags)[] Selected(Assembly assembly, string profile) {
-            var metadata = assembly.GetCustomAttributes(typeof(AssemblyMetadataAttribute), false).Cast<AssemblyMetadataAttribute>().ToArray();
+            var metadata = assembly.BecsInputMetadata().ToArray();
             var flags = Tests_SourceGeneratorAotPublications.Entries(assembly, false).Where(entry => entry.Phase == "Register")
                 .ToDictionary(entry => entry.Selected.AssemblyQualifiedName, entry => (int)entry.Publisher.GetField("Flags_" + entry.Ordinal).GetRawConstantValue());
             return metadata.Where(item => item.Key == "ME.BECS.TypeInput.v1").Select(item => item.Value.Split('\t'))

@@ -241,8 +241,6 @@ namespace ME.BECS.Editor {
         public string dir;
         public System.Collections.Generic.List<AssemblyInfo> asms;
         public bool editorAssembly;
-        public UnityEditor.TypeCache.TypeCollection burstedTypes;
-        public UnityEditor.TypeCache.MethodCollection burstDiscardedTypes;
         public System.Collections.Generic.List<System.Type> systems;
         public System.Collections.Generic.List<System.Type> jobTypes;
         public System.Collections.Generic.List<System.Type> entityTypes;
@@ -258,6 +256,13 @@ namespace ME.BECS.Editor {
 
         // Addon input transport only. Implementations export data records, never C# bodies.
         public virtual void AppendSourceGeneratorInputs(System.Text.StringBuilder manifest) { }
+
+        // Resumable form used by the sliced background export: a long feeder may
+        // yield between independent parts. Must produce exactly the same text.
+        public virtual System.Collections.IEnumerator AppendSourceGeneratorInputsSteps(System.Text.StringBuilder manifest) {
+            this.AppendSourceGeneratorInputs(manifest);
+            yield break;
+        }
 
         // Dependencies of source-emitted code, independent of legacy C# callbacks.
         public virtual void AddSourceGeneratorReferences(scg::List<System.Type> references) { }
@@ -357,7 +362,127 @@ namespace ME.BECS.Editor {
         internal static bool PublishPreparedInputs(SourceGeneratorInputAnalysis.Result prepared) =>
             TryRegenerateInputs(true, prepared.rebuild, prepared);
 
-        private static bool TryRegenerateInputs(bool forced, bool cleanCache, SourceGeneratorInputAnalysis.Result prepared) {
+        internal sealed class PendingPublication {
+            internal scg.KeyValuePair<string, string>[] files;
+            internal string codeFingerprint, graphSnapshot, compilerSnapshot, runtimeContent, editorContent;
+
+            internal void Complete(bool written) {
+                var success = false;
+                try {
+                    if (!written) return;
+                    if (this.codeFingerprint != SourceGeneratorGraphSnapshot.GetCodeFingerprint() ||
+                        this.graphSnapshot != SourceGeneratorGraphSnapshot.GetCurrent())
+                        throw new System.InvalidOperationException("Inputs changed during background publication. Retry input generation.");
+                    SourceGeneratorAnalysisReceipt.Commit(this.graphSnapshot, this.compilerSnapshot, this.runtimeContent, this.editorContent);
+                    LastExportedGraphSnapshot = this.graphSnapshot;
+                    success = true;
+                } finally { FinishExport(success); }
+            }
+        }
+
+        internal static PendingPublication PrepareBackgroundPublication(SourceGeneratorInputAnalysis.Result prepared) {
+            PendingPublication pending = null;
+            return TryRegenerateInputs(true, prepared.rebuild, prepared, value => pending = value) ? pending : null;
+        }
+
+        // Background export only: the Editor-thread publication as a resumable
+        // sequence (see SourceGeneratorInputRefresh.PollBackground). Same checks,
+        // same order and same single import batch as TryRegenerateInputs.
+        internal static System.Collections.IEnumerator PrepareBackgroundPublicationSteps(SourceGeneratorInputAnalysis.Result prepared,
+            System.Action<PendingPublication> accept) {
+            if (exportingInputs) yield break;
+            if (UnityEditor.EditorPrefs.HasKey("ME.BECS.Editor.AwaitPackageImportData") == true) yield break;
+            if (UnityEngine.Application.isBatchMode == true) yield break;
+            Logger.Editor.Log("[ ME.BECS ] Publishing source generator inputs (forced)");
+            var exported = false;
+            var deferred = false;
+            exportingInputs = true;
+            try {
+                using var publicationBridges = SourceGeneratorPublicationBridges.BeginPlanning();
+                var codeFingerprint = SourceGeneratorGraphSnapshot.GetCodeFingerprint();
+                var graphSnapshot = SourceGeneratorGraphSnapshot.GetCurrent();
+                if (prepared.codeFingerprint != codeFingerprint || prepared.fingerprint != graphSnapshot)
+                    throw new System.InvalidOperationException("Background IL analysis is stale; no inputs were published. Retry export.");
+                SourceGeneratorAnalysisReceipt.Invalidate();
+                using var analysis = new ILAnalysisSession(codeFingerprint, prepared.rebuild, prepared.memo);
+                using var incremental = new ILPersistentAnalysis(false, prepared.persistent);
+                var compilerSnapshot = SourceGeneratorGraphSnapshot.GetCompilerSnapshot();
+                var files = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.Ordinal);
+                var contents = new string[2];
+                foreach (var editor in new[] { false, true }) {
+                    var built = new SourceGeneratorInputManifest.StepResult<string>();
+                    var build = BuildSteps(built, editor, editor ? prepared.editor : prepared.runtime, files);
+                    try { while (build.MoveNext()) yield return null; }
+                    finally { (build as System.IDisposable)?.Dispose(); }
+                    if (built.value == null) yield break;
+                    contents[editor ? 1 : 0] = built.value;
+                }
+                if (codeFingerprint != SourceGeneratorGraphSnapshot.GetCodeFingerprint() ||
+                    graphSnapshot != SourceGeneratorGraphSnapshot.GetCurrent()) {
+                    throw new System.InvalidOperationException("Input assets or loaded script assemblies changed while preparing publication; no planned inputs were written. Retry input generation.");
+                }
+                accept(new PendingPublication { files = files.ToArray(), codeFingerprint = codeFingerprint,
+                    graphSnapshot = graphSnapshot, compilerSnapshot = compilerSnapshot,
+                    runtimeContent = contents[0], editorContent = contents[1] });
+                deferred = true;
+            } finally {
+                // An exception or an abandoned sequence never leaves the export flag set.
+                if (!deferred) FinishExport(exported);
+            }
+        }
+
+        // Build(...) as steps; a failure is logged and leaves output.value null.
+        private static System.Collections.IEnumerator BuildSteps(SourceGeneratorInputManifest.StepResult<string> output, bool editorAssembly,
+            Systems.SystemDependenciesCodeGenerator.UsedObjects prepared, System.Collections.Generic.Dictionary<string, string> files) {
+            using var sourceGeneratorLookup = SourceGeneratorBridge.BeginLookupScope();
+            using var timings = new CodeGeneratorTimings(editorAssembly);
+            var postfix = editorAssembly ? "Editor" : "Runtime";
+            var generators = SourceGeneratorInputManifest.CreateFeeders();
+            System.Collections.IEnumerator current = null;
+            var stage = 0;
+            var manifest = new SourceGeneratorInputManifest.StepResult<string>();
+            var prepared2 = new SourceGeneratorInputManifest.StepResult<scg::KeyValuePair<string, string>[]>();
+            var finished = false;
+            try {
+            while (!finished) {
+                var more = false;
+                try {
+                    if (current == null) {
+                        if (stage == 0) {
+                            CodeGeneratorTimings.Stage("Prepare input export", 0f);
+                            current = SourceGeneratorInputManifest.PrepareActiveInputsSteps(manifest, $"{ECS}.Gen.{postfix}", editorAssembly, generators, prepared);
+                        } else if (stage == 1) {
+                            CodeGeneratorTimings.Stage("Publish owner inputs", 0.97f, cancellable: false);
+                            current = SourceGeneratorInputTransport.PrepareSteps(prepared2, editorAssembly, manifest.value);
+                        } else {
+                            foreach (var file in prepared2.value) files[file.Key] = file.Value;
+                            output.value = manifest.value;
+                            timings.Complete();
+                            finished = true;
+                        }
+                    }
+                    if (!finished) {
+                        more = current.MoveNext();
+                        if (!more) { (current as System.IDisposable)?.Dispose(); current = null; ++stage; }
+                    }
+                } catch (System.OperationCanceledException) {
+                    timings.Cancelled();
+                    Logger.Editor.Log("[ ME.BECS ] Input export cancelled during analysis; no inputs were published for this target.");
+                    finished = true;
+                } catch (System.Exception ex) {
+                    UnityEngine.Debug.LogException(ex);
+                    finished = true;
+                }
+                if (more) yield return null;
+            }
+            } finally {
+                // Failed or abandoned: release the inner sequence's scopes (its finally blocks).
+                (current as System.IDisposable)?.Dispose();
+            }
+        }
+
+        private static bool TryRegenerateInputs(bool forced, bool cleanCache, SourceGeneratorInputAnalysis.Result prepared,
+            System.Action<PendingPublication> accept = null) {
             if (exportingInputs) return false;
             
             // Skip if project creation is in progress
@@ -373,6 +498,7 @@ namespace ME.BECS.Editor {
             Logger.Editor.Log($"[ ME.BECS ] Publishing source generator inputs {(forced == true ? "(forced)" : "")}");
 
             var exported = false;
+            var deferred = false;
             exportingInputs = true;
             try {
                 using var publicationBridges = SourceGeneratorPublicationBridges.BeginPlanning();
@@ -386,20 +512,49 @@ namespace ME.BECS.Editor {
                 using var incremental = prepared == null ? new ILPersistentAnalysis(cleanCache) :
                     new ILPersistentAnalysis(false, prepared.persistent);
                 var compilerSnapshot = SourceGeneratorGraphSnapshot.GetCompilerSnapshot();
-                var runtimeExported = Build(out var runtimeContent, prepared: prepared?.runtime);
-                if (!runtimeExported) return false;
-                var editorExported = Build(out var editorContent, editorAssembly: true, prepared: prepared?.editor);
-                if (runtimeExported && editorExported && (codeFingerprint != SourceGeneratorGraphSnapshot.GetCodeFingerprint() ||
-                    graphSnapshot != SourceGeneratorGraphSnapshot.GetCurrent())) {
-                    throw new System.InvalidOperationException("Input assets or loaded script assemblies changed between Runtime and Editor exports. Retry input generation.");
+                // Keep both profiles in the same import batch. Inner profile
+                // batches must not release Runtime inputs before Editor is ready.
+                string runtimeContent, editorContent;
+                var files = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.Ordinal);
+                void PreparePublication(bool editor, string content) {
+                    foreach (var file in SourceGeneratorInputTransport.Prepare(editor, content, out _)) files[file.Key] = file.Value;
                 }
-                if (runtimeExported && editorExported) {
-                    SourceGeneratorAnalysisReceipt.Commit(graphSnapshot, compilerSnapshot, runtimeContent, editorContent);
-                    LastExportedGraphSnapshot = graphSnapshot;
-                    exported = true;
+                if (!Build(out runtimeContent, prepared: prepared?.runtime, publication: PreparePublication)) return false;
+                if (!Build(out editorContent, editorAssembly: true, prepared: prepared?.editor, publication: PreparePublication)) return false;
+                if (codeFingerprint != SourceGeneratorGraphSnapshot.GetCodeFingerprint() ||
+                    graphSnapshot != SourceGeneratorGraphSnapshot.GetCurrent()) {
+                    throw new System.InvalidOperationException("Input assets or loaded script assemblies changed while preparing publication; no planned inputs were written. Retry input generation.");
                 }
-                return exported;
+                if (accept != null) {
+                    accept(new PendingPublication { files = files.ToArray(), codeFingerprint = codeFingerprint,
+                        graphSnapshot = graphSnapshot, compilerSnapshot = compilerSnapshot,
+                        runtimeContent = runtimeContent, editorContent = editorContent });
+                    deferred = true;
+                    return true;
+                }
+                UnityEditor.AssetDatabase.StartAssetEditing();
+                try {
+                    SourceGeneratorSystemFragments.ApplyPublication(files.ToArray());
+                } finally {
+                    UnityEditor.AssetDatabase.StopAssetEditing();
+                }
+                if (codeFingerprint != SourceGeneratorGraphSnapshot.GetCodeFingerprint() ||
+                    graphSnapshot != SourceGeneratorGraphSnapshot.GetCurrent()) {
+                    throw new System.InvalidOperationException("Input assets or loaded script assemblies changed during Runtime/Editor publication. Retry input generation.");
+                }
+                SourceGeneratorAnalysisReceipt.Commit(graphSnapshot, compilerSnapshot, runtimeContent, editorContent);
+                LastExportedGraphSnapshot = graphSnapshot;
+                exported = true;
+                return true;
+            } catch {
+                deferred = false;
+                throw;
             } finally {
+                if (!deferred) FinishExport(exported);
+            }
+        }
+
+        private static void FinishExport(bool exported) {
                 exportingInputs = false;
                 // Observers must not mask the original export error or prevent other
                 // observers from updating their stale-input state.
@@ -407,13 +562,12 @@ namespace ME.BECS.Editor {
                     try { handler(exported); }
                     catch (System.Exception exception) { UnityEngine.Debug.LogException(exception); }
                 }
-            }
         }
 
         public const string PROGRESS_BAR_CAPTION = "[ ME.BECS ] CodeGenerator";
 
         private static bool Build(out string publishedContent, bool editorAssembly = false,
-            Systems.SystemDependenciesCodeGenerator.UsedObjects? prepared = null) {
+            Systems.SystemDependenciesCodeGenerator.UsedObjects? prepared = null, System.Action<bool, string> publication = null) {
             publishedContent = null;
             using var sourceGeneratorLookup = SourceGeneratorBridge.BeginLookupScope();
             using var timings = new CodeGeneratorTimings(editorAssembly);
@@ -437,8 +591,9 @@ namespace ME.BECS.Editor {
                 publishedContent = inputManifest;
                 // Cancellation is safe during analysis, not between publishing
                 // fragments, their compilation hosts and the completed receipt.
-                CodeGeneratorTimings.Stage("Publish owner inputs", 0.95f, cancellable: false);
-                SourceGeneratorInputTransport.Publish(editorAssembly, inputManifest);
+                CodeGeneratorTimings.Stage("Publish owner inputs", 0.97f, cancellable: false);
+                if (publication == null) SourceGeneratorInputTransport.Publish(editorAssembly, inputManifest);
+                else publication(editorAssembly, inputManifest);
                 exportSucceeded = true;
             } catch (System.OperationCanceledException) {
                 timings.Cancelled();

@@ -7,9 +7,7 @@ namespace ME.BECS {
 
         public static StateProperties Default => new StateProperties() {
             entitiesCapacity = 100u,
-            archetypesCapacity = 100u,
             storageCapacity = 1u,
-            queriesCapacity = 100u,
             sharedComponentsCapacity = 10u,
             oneShotTasksCapacity = 1u,
             mode = WorldMode.Logic,
@@ -18,8 +16,6 @@ namespace ME.BECS {
         public static StateProperties Min => new StateProperties() {
             entitiesCapacity = 1u,
             storageCapacity = 1u,
-            archetypesCapacity = 1u,
-            queriesCapacity = 1u,
             oneShotTasksCapacity = 1u,
             sharedComponentsCapacity = 1u,
             mode = WorldMode.Logic,
@@ -32,12 +28,6 @@ namespace ME.BECS {
         [UnityEngine.MinAttribute(1)]
         [UnityEngine.Tooltip("Resize components storage per component type.")]
         public uint storageCapacity;
-        [UnityEngine.MinAttribute(1)]
-        [UnityEngine.Tooltip("Resize archetypes storage. Set up this value to max variations of unique components on entities.")]
-        public uint archetypesCapacity;
-        [UnityEngine.MinAttribute(0)]
-        [UnityEngine.Tooltip("Resize static queries storage. Set up this value to fit max variations of unique static queries.")]
-        public uint queriesCapacity;
         [UnityEngine.MinAttribute(0)]
         [UnityEngine.Tooltip("Resize shared components storage. Set up this value to fit max shared components count.")]
         public uint sharedComponentsCapacity;

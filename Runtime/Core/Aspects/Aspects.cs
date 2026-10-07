@@ -458,57 +458,6 @@ namespace ME.BECS {
         
     }
 
-    /*
-    public ref struct AspectQueryBuilder {
 
-        internal QueryBuilder builder;
-        internal QueryBuilderStatic builderStatic;
-
-        [INLINE(256)]
-        public AspectQueryBuilder(in QueryBuilder builder) {
-
-            this = default;
-            this.builder = builder;
-
-        }
-
-        [INLINE(256)]
-        public AspectQueryBuilder(in QueryBuilderStatic builder) {
-
-            this = default;
-            this.builderStatic = builder;
-
-        }
-
-        [INLINE(256)]
-        public AspectQueryBuilder WithAll<T0, T1>() where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent {
-            if (this.builderStatic.isCreated == true) this.builderStatic = this.builderStatic.WithAll<T0, T1>();
-            if (this.builder.isCreated == true) this.builder = this.builder.WithAll<T0, T1>();
-            return this;
-        }
-
-        [INLINE(256)]
-        public AspectQueryBuilder WithAny<T0, T1>() where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent {
-            if (this.builderStatic.isCreated == true) this.builderStatic = this.builderStatic.WithAny<T0, T1>();
-            if (this.builder.isCreated == true) this.builder = this.builder.WithAny<T0, T1>();
-            return this;
-        }
-
-        [INLINE(256)]
-        public AspectQueryBuilder With<T>() where T : unmanaged, IComponent {
-            if (this.builderStatic.isCreated == true) this.builderStatic = this.builderStatic.With<T>();
-            if (this.builder.isCreated == true) this.builder = this.builder.With<T>();
-            return this;
-        }
-
-        [INLINE(256)]
-        public AspectQueryBuilder Without<T>() where T : unmanaged, IComponent {
-            if (this.builderStatic.isCreated == true) this.builderStatic = this.builderStatic.Without<T>();
-            if (this.builder.isCreated == true) this.builder = this.builder.Without<T>();
-            return this;
-        }
-
-    }
-    */
 
 }

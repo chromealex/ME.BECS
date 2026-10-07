@@ -156,10 +156,22 @@ namespace ME.BECS.Editor.Jobs {
             return initialization;
         }
 
+        // Export asks for the same contract's jobs up to three times (EarlyInit
+        // phases, debug/weight loop, preparation); expanding generic jobs is costly.
+        private readonly System.Collections.Generic.Dictionary<System.Type, System.Collections.Generic.List<System.Type>> earlyInitJobs =
+            new System.Collections.Generic.Dictionary<System.Type, System.Collections.Generic.List<System.Type>>();
+        private System.Collections.Generic.List<System.Type> earlyInitJobsSource;
+
         private System.Collections.Generic.List<System.Type> SelectEarlyInitJobs(System.Type contract) {
+            if (!ReferenceEquals(this.earlyInitJobsSource, this.jobTypes)) { this.earlyInitJobs.Clear(); this.earlyInitJobsSource = this.jobTypes; }
+            if (this.earlyInitJobs.TryGetValue(contract, out var cached)) return new System.Collections.Generic.List<System.Type>(cached);
             var jobs = this.GetTypesDerivedFrom(contract).OrderBy(type => type.FullName).ToList();
-            CodeGenerator.PatchSystemsList(jobs);
-            return jobs;
+            jobs = ILAnalysisSession.ReadMetadata(() => {
+                CodeGenerator.PatchSystemsList(jobs);
+                return jobs;
+            });
+            this.earlyInitJobs[contract] = jobs;
+            return new System.Collections.Generic.List<System.Type>(jobs);
         }
 
         // Populate only the IL memo for exactly the production debug/weight jobs.
@@ -168,15 +180,23 @@ namespace ME.BECS.Editor.Jobs {
 
         // Safety/count/weight summaries are keyed by the concrete job, not the
         // publication profile. Share this set only within one analysis session.
+        internal System.Action<int, int> analysisProgress;
         internal void PrepareAnalysis(System.Collections.Generic.HashSet<System.Type> visited) {
+            var selected = new System.Collections.Generic.List<System.Type>();
             foreach (var contract in EarlyInitContracts.Distinct()) {
                 foreach (var job in this.SelectEarlyInitJobs(contract)) {
                     if (!job.IsValueType || !job.IsVisible || !this.IsValidTypeForAssembly(job) || !visited.Add(job)) continue;
-                    ILAnalysisSession.Checkpoint();
-                    GetJobTypesInfo(job);
-                    ILJobEntityCounts.TryGetExportPayload(job, out _, out _);
-                    ILJobWeights.Analyze(job);
+                    selected.Add(job);
                 }
+            }
+            var completed = 0;
+            this.analysisProgress?.Invoke(0, selected.Count);
+            foreach (var job in selected) {
+                ILAnalysisSession.Checkpoint();
+                GetJobTypesInfo(job);
+                ILJobEntityCounts.TryGetExportPayload(job, out _, out _);
+                ILJobWeights.Analyze(job);
+                this.analysisProgress?.Invoke(++completed, selected.Count);
             }
         }
 
@@ -342,8 +362,16 @@ namespace ME.BECS.Editor.Jobs {
         }
 
         public override void AppendSourceGeneratorInputs(System.Text.StringBuilder manifest) {
+            var steps = this.AppendSourceGeneratorInputsSteps(manifest);
+            while (steps.MoveNext()) { }
+        }
+
+        // Yields between independent parts and every 64 jobs; the text is identical.
+        public override System.Collections.IEnumerator AppendSourceGeneratorInputsSteps(System.Text.StringBuilder manifest) {
             this.debugInputReferences.Clear();
-            var initialization = this.SelectSourceEarlyInit();
+            System.Collections.Generic.List<(System.Type job, MethodInfo method)> initialization;
+            using (CodeGeneratorTimings.Measure("JobsEarlyInit: select early init")) initialization = this.SelectSourceEarlyInit();
+            yield return null;
             manifest.Append("job-early-init-schema\t0\tdjE=\n");
             for (var index = 0; index < initialization.Count; ++index) {
                 var entry = initialization[index];
@@ -361,7 +389,8 @@ namespace ME.BECS.Editor.Jobs {
                 manifest.Append("job-early-init\t").Append(index.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\t')
                     .Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(payload.ToString()))).Append('\n');
             }
-            SourceGeneratorRegistrationOwners.AppendJobInit(manifest, this.editorAssembly);
+            using (CodeGeneratorTimings.Measure("JobsEarlyInit: job init owners")) SourceGeneratorRegistrationOwners.AppendJobInit(manifest, this.editorAssembly);
+            yield return null;
             manifest.Append("job-debug-schema\t0\tdjE=\n");
             var contracts = new[] { typeof(IJobParallelForComponentsBase), typeof(IJobForComponentsBase),
                 typeof(IJobParallelForAspectsBase), typeof(IJobForAspectsBase),
@@ -370,13 +399,16 @@ namespace ME.BECS.Editor.Jobs {
             var weightJobs = new System.Collections.Generic.HashSet<System.Type>();
             var entityFallbackOrdinal = 0;
             var entityILOrdinal = 0;
+            var yieldCounter = 0;
             foreach (var contract in contracts) {
                 var componentsOnly = contract == typeof(IJobParallelForComponentsBase) || contract == typeof(IJobForComponentsBase);
                 var aspectsOnly = contract == typeof(IJobParallelForAspectsBase) || contract == typeof(IJobForAspectsBase);
                 foreach (var job in this.SelectEarlyInitJobs(contract).Distinct()) {
                     if (!job.IsValueType || !job.IsVisible || !this.IsValidTypeForAssembly(job)) continue;
                     CodeGeneratorTimings.Subject("Safety: " + job.FullName);
-                    var plan = this.CreateDebugWrapperPlan(job, contract, aspectsOnly ? null : typeof(IComponentBase),
+                    if (++yieldCounter % 64 == 0) yield return null;
+                    DebugWrapperPlan plan;
+                    using (CodeGeneratorTimings.Measure("JobsEarlyInit: safety plan")) plan = this.CreateDebugWrapperPlan(job, contract, aspectsOnly ? null : typeof(IComponentBase),
                         componentsOnly ? null : typeof(IAspect));
                     this.debugInputReferences.Add(plan.job);
                     this.debugInputReferences.Add(plan.contract);
@@ -398,7 +430,8 @@ namespace ME.BECS.Editor.Jobs {
                         .Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(payload.ToString()))).Append('\n');
                     if (weightJobs.Add(job)) {
                         CodeGeneratorTimings.Subject("Entity counts: " + job.FullName);
-                        var entityPayload = this.GetEntityInputPayload(job, out var covered);
+                        string entityPayload; bool covered;
+                        using (CodeGeneratorTimings.Measure("JobsEarlyInit: entity counts")) entityPayload = this.GetEntityInputPayload(job, out covered);
                         var entityOrdinal = covered ? entityILOrdinal++ : entityFallbackOrdinal++;
                         manifest.Append(covered ? "job-entity-il\t" : "job-entity-fallback\t")
                             .Append(entityOrdinal.ToString(System.Globalization.CultureInfo.InvariantCulture))
@@ -406,10 +439,14 @@ namespace ME.BECS.Editor.Jobs {
                         CodeGeneratorTimings.Subject("Job weight: " + job.FullName);
                         manifest.Append("job-weight\t").Append((weightJobs.Count - 1).ToString(System.Globalization.CultureInfo.InvariantCulture))
                             .Append('\t').Append(System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(job.AssemblyQualifiedName)))
-                            .Append("\til\t").Append(this.SelectWeight(job).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\n');
+                            .Append("\til\t").Append(MeasuredWeight(job).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append('\n');
                     }
                 }
             }
+        }
+
+        private uint MeasuredWeight(System.Type job) {
+            using (CodeGeneratorTimings.Measure("JobsEarlyInit: weights")) return this.SelectWeight(job);
         }
 
         private string GetEntityInputPayload(System.Type job, out bool covered) {
@@ -495,6 +532,152 @@ namespace ME.BECS.Editor.Jobs {
             System.Func<Instruction, System.Collections.Generic.Queue<MethodInfo>, bool> onInstruction) =>
             GetBodyTypesInfoCore(root, true, false, false, onInstruction, nextBodies: nextBodies);
 
+        private static RefOp? ParameterAccess(MethodBase method, ParameterInfo parameter) {
+            return ILAnalysisSession.Get((typeof(ParameterInfo), method, parameter.Position, "component-access"),
+                () => {
+                    var work = 0;
+                    return ParameterAccessCore(method, parameter, new System.Collections.Generic.HashSet<MethodBase>(), ref work);
+                });
+        }
+
+        private static RefOp? ParameterAccessCore(MethodBase method, ParameterInfo parameter,
+            System.Collections.Generic.HashSet<MethodBase> visiting, ref int work) {
+            ILAnalysisSession.Checkpoint(method);
+            if (method.GetMethodBody() == null || visiting.Count >= 64 || !visiting.Add(method)) return RefOp.ReadWrite;
+            try {
+                var expected = parameter.Position + (method.IsStatic ? 0 : 1);
+                var instructions = ILAnalysisSession.Instructions(method);
+                var aliases = new System.Collections.Generic.HashSet<int>();
+                int Local(Instruction instruction, string operation) {
+                    var opcode = instruction.OpCode.Name;
+                    if (opcode == operation || opcode == operation + ".s")
+                        return instruction.Operand is LocalVariableInfo local ? local.LocalIndex : System.Convert.ToInt32(instruction.Operand);
+                    return opcode.StartsWith(operation + ".", System.StringComparison.Ordinal) &&
+                        int.TryParse(opcode.Substring(operation.Length + 1), out var index) ? index : -1;
+                }
+                bool Loads(Instruction instruction) {
+                    if (aliases.Contains(Local(instruction, "ldloc")) || aliases.Contains(Local(instruction, "ldloca"))) return true;
+                    var opcode = instruction.OpCode.Name;
+                    if (opcode == "ldarg." + expected) return true;
+                    if (opcode != "ldarg" && opcode != "ldarg.s" && opcode != "ldarga" && opcode != "ldarga.s") return false;
+                    var index = instruction.Operand is ParameterInfo argument
+                        ? argument.Position + (method.IsStatic ? 0 : 1) : System.Convert.ToInt32(instruction.Operand);
+                    return index == expected;
+                }
+                Instruction Consumer(Instruction instruction) {
+                    var nextInstruction = instruction.Next;
+                    while (nextInstruction != null && (nextInstruction.OpCode.Name == "nop" || nextInstruction.OpCode.Name == "ldflda"))
+                        nextInstruction = nextInstruction.Next;
+                    return nextInstruction;
+                }
+                // MAY aliases across all paths: reassignment never erases a possible
+                // component reference. Iterate to handle backedges and local-to-local copies.
+                bool changed;
+                do {
+                    ILAnalysisSession.Checkpoint(method);
+                    changed = false;
+                    foreach (var instruction in instructions) {
+                        if (++work > 65536) return RefOp.ReadWrite;
+                        if (!Loads(instruction)) continue;
+                        var consumer = Consumer(instruction);
+                        if (consumer == null) continue;
+                        var local = Local(consumer, "stloc");
+                        if (local >= 0) changed |= aliases.Add(local);
+                    }
+                } while (changed);
+                RefOp? access = null;
+                void Merge(RefOp value) => access = !access.HasValue || access.Value == value ? value : RefOp.ReadWrite;
+                foreach (var instruction in instructions) {
+                    if (++work > 65536) return RefOp.ReadWrite;
+                    var name = instruction.OpCode.Name;
+                    if (!Loads(instruction)) continue;
+                    if (name.StartsWith("ldloca", System.StringComparison.Ordinal) || name.StartsWith("ldarga", System.StringComparison.Ordinal)) return RefOp.ReadWrite;
+                    // These instructions consume the reference and push a value copy;
+                    // subsequent mutations of that copy do not write the component.
+                    var consumer = Consumer(instruction);
+                    // Taking a nested field address is not a write. Follow only a
+                    // contiguous address chain; aliases/branches retain conservative handling.
+                    var next = consumer?.OpCode.Name;
+                    if (consumer != null && Local(consumer, "stloc") >= 0) continue;
+                    if (!name.StartsWith("ldarga", System.StringComparison.Ordinal) &&
+                        (next == "ldfld" || next == "ldobj" || next?.StartsWith("ldind.", System.StringComparison.Ordinal) == true)) {
+                        Merge(RefOp.ReadOnly);
+                        continue;
+                    }
+                    if (!name.StartsWith("ldarga", System.StringComparison.Ordinal) && next == "initobj") {
+                        Merge(RefOp.WriteOnly);
+                        continue;
+                    }
+                    if (TryParameterCall(consumer, ref work, out var helper, out var argument, out var directWrite)) {
+                        if (directWrite) { Merge(RefOp.WriteOnly); continue; }
+                        if (consumer != instruction.Next) return RefOp.ReadWrite;
+                        if (argument.ParameterType == parameter.ParameterType) {
+                            var nested = ParameterAccessCore(helper, argument, visiting, ref work);
+                            if (nested == RefOp.ReadWrite) return RefOp.ReadWrite;
+                            if (nested.HasValue) Merge(nested.Value);
+                            continue;
+                        }
+                    }
+                    return parameter.IsIn && !parameter.IsOut ? RefOp.ReadOnly : RefOp.ReadWrite;
+                }
+                return access;
+            } finally { visiting.Remove(method); }
+        }
+
+        private static bool TryParameterCall(Instruction instruction, ref int work, out MethodInfo helper, out ParameterInfo parameter, out bool directWrite) {
+            helper = null;
+            parameter = null;
+            directWrite = false;
+            var above = 0;
+            for (var current = instruction; current != null; current = current.Next) {
+                if (++work > 65536) return false;
+                // The value lies above the tracked destination address. The store
+                // consumes both without reading the previous component value.
+                var opcode = current.OpCode.Name;
+                if (above == 1 && (opcode == "stfld" || opcode == "stobj" || opcode.StartsWith("stind.", System.StringComparison.Ordinal))) {
+                    directWrite = true;
+                    return true;
+                }
+                if (current.OpCode.Name == "call" && current.Operand is MethodInfo method) {
+                    var arguments = method.GetParameters();
+                    var popped = arguments.Length + (method.IsStatic ? 0 : 1);
+                    if (popped > above) {
+                        var index = arguments.Length - 1 - above;
+                        if (index < 0 || method.ReturnType.IsByRef || method.ReturnType.IsPointer) return false;
+                        helper = method;
+                        parameter = arguments[index];
+                        return true;
+                    }
+                    above += (method.ReturnType == typeof(void) ? 0 : 1) - popped;
+                    continue;
+                }
+                if (current.OpCode.FlowControl != System.Reflection.Emit.FlowControl.Next &&
+                    current.OpCode.FlowControl != System.Reflection.Emit.FlowControl.Meta) return false;
+                var count = FixedStackCount(current.OpCode.StackBehaviourPop);
+                var pushed = FixedStackCount(current.OpCode.StackBehaviourPush);
+                if (count < 0 || pushed < 0 || count > above) return false;
+                above += pushed - count;
+            }
+            return false;
+        }
+
+        private static int FixedStackCount(StackBehaviour behavior) {
+            switch (behavior) {
+                case StackBehaviour.Pop0: case StackBehaviour.Push0: return 0;
+                case StackBehaviour.Pop1: case StackBehaviour.Popi: case StackBehaviour.Popref:
+                case StackBehaviour.Push1: case StackBehaviour.Pushi: case StackBehaviour.Pushi8:
+                case StackBehaviour.Pushr4: case StackBehaviour.Pushr8: case StackBehaviour.Pushref: return 1;
+                case StackBehaviour.Pop1_pop1: case StackBehaviour.Popi_pop1: case StackBehaviour.Popi_popi:
+                case StackBehaviour.Popi_popi8: case StackBehaviour.Popi_popr4: case StackBehaviour.Popi_popr8:
+                case StackBehaviour.Popref_pop1: case StackBehaviour.Popref_popi: case StackBehaviour.Push1_push1: return 2;
+                case StackBehaviour.Popi_popi_popi: case StackBehaviour.Popref_popi_pop1:
+                case StackBehaviour.Popref_popi_popi: case StackBehaviour.Popref_popi_popi8:
+                case StackBehaviour.Popref_popi_popr4: case StackBehaviour.Popref_popi_popr8:
+                case StackBehaviour.Popref_popi_popref: return 3;
+                default: return -1; // Variable/unknown stack effects require a conservative result.
+            }
+        }
+
         private static System.Collections.Generic.HashSet<TypeInfo> GetBodyTypesInfoCore(MethodBase root, bool traverseHierarchy, bool useAnalyzer, bool methodParameters,
             System.Func<Instruction, System.Collections.Generic.Queue<System.Reflection.MethodInfo>, bool> onInstruction,
             System.Collections.Generic.HashSet<MethodBase> scannedBodies = null,
@@ -529,12 +712,11 @@ namespace ME.BECS.Editor.Jobs {
                             op = RefOp.ReadOnly,
                             isArg = true,
                         });
-                    } else if (p.ParameterType.IsByRef && typeof(IComponentBase).IsAssignableFrom(parameterType)) {
-                        // A ref component is part of the job's access contract even when
-                        // its body contains no SafetyCheck call (or does not use the value).
+                    } else if (p.ParameterType.IsByRef && typeof(IComponentBase).IsAssignableFrom(parameterType) &&
+                               ParameterAccess(root, p) is RefOp parameterAccess) {
                         parameterAccesses.Add(new TypeInfo() {
                             type = parameterType,
-                            op = p.IsIn && !p.IsOut ? RefOp.ReadOnly : RefOp.ReadWrite,
+                            op = parameterAccess,
                             isArg = true,
                         });
                     }
@@ -687,7 +869,7 @@ namespace ME.BECS.Editor.Jobs {
                                     var constraints = type.GetGenericParameterConstraints();
                                     foreach (var constraint in constraints) {
                                         if (constraint == typeof(System.ValueType)) continue;
-                                        var constTypes = UnityEditor.TypeCache.GetTypesDerivedFrom(constraint);
+                                        var constTypes = ILAnalysisSession.ReadMetadata(() => UnityEditor.TypeCache.GetTypesDerivedFrom(constraint).ToArray());
                                         foreach (var constType in constTypes) {
                                             uniqueTypes.Add(new TypeInfo() {
                                                 type = constType,

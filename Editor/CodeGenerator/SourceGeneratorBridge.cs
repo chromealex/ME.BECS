@@ -54,8 +54,8 @@ namespace ME.BECS.Editor {
 
         private static string[][] GetInputRecords(Assembly assembly) {
             if (lookup != null && lookup.inputRecords.TryGetValue(assembly, out var cached)) return cached;
-            var records = assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
-                .Where(a => a.Key == "ME.BECS.TypeInput.v1" && a.Value != null).Select(a => a.Value.Split('\t')).ToArray();
+            // Catalog assemblies no longer embed their rows; read the verified snapshot rows.
+            var records = SourceGeneratorInputCatalog.Records(assembly);
             if (lookup != null) lookup.inputRecords.Add(assembly, records);
             return records;
         }

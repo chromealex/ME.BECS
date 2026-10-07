@@ -21,15 +21,6 @@ namespace ME.BECS.Tests {
             }
         }
 
-        #if !ENABLE_BECS_FLAT_QUERIES
-        public partial struct StaticQueryFilterSummarySystem : IUpdate {
-            public void OnUpdate(ref SystemContext context) {
-                var query = default(QueryBuilderStatic);
-                query.With<TestComponent>().Without<Test1Component>()
-                    .WithAny<Test2Component, Test3Component>().WithAspect<QueryFilterAspect>();
-            }
-        }
-        #endif
 
         public partial struct QueryAnyOnlySummarySystem : IUpdate {
             public void OnUpdate(ref SystemContext context) {
@@ -71,9 +62,6 @@ namespace ME.BECS.Tests {
         private static string QueryFilter(string kind, Type component) => "Q\t" + kind + "\t" + component.AssemblyQualifiedName;
 
         [TestCase(typeof(QueryFilterSummarySystem))]
-        #if !ENABLE_BECS_FLAT_QUERIES
-        [TestCase(typeof(StaticQueryFilterSummarySystem))]
-        #endif
         public void QueryPresenceIsSeparateFromComponentDataAccess(Type system) {
             var rows = QueryFilterSummary(system);
             Assert.AreEqual("0", rows[2], string.Join("\n", rows));
