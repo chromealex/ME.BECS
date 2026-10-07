@@ -21,10 +21,10 @@ namespace ME.BECS.Attack {
 
     [BURST]
     [UnityEngine.Tooltip("Stop unit while attacking")]
-    public struct StopWhileAttackSystem : IUpdate {
+    public partial struct StopWhileAttackSystem : IUpdate {
 
         [BURST]
-        public struct JobSet : IJobFor1Aspects1Components<AttackAspect, ParentComponent> {
+        public partial struct JobSet : IJobFor1Aspects1Components<AttackAspect, ParentComponent> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect sensor, ref ParentComponent parent) {
 
@@ -41,7 +41,7 @@ namespace ME.BECS.Attack {
         }
         
         [BURST]
-        public struct JobRemove : IJobFor1Aspects1Components<AttackAspect, ParentComponent> {
+        public partial struct JobRemove : IJobFor1Aspects1Components<AttackAspect, ParentComponent> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect sensor, ref ParentComponent parentComponent) {
 

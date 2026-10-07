@@ -4,9 +4,9 @@ namespace ME.BECS.FeaturesGraph.Nodes {
     using g = System.Collections.Generic;
     
     [System.Serializable]
-    public class ExitNode : FeaturesGraphNode {
+    public partial class ExitNode : FeaturesGraphNode {
 
-        private struct ExitSystem : ISystem {}
+        private partial struct ExitSystem : ISystem {}
 
         [Input(name = "In", allowMultiple = true)]
         public g::List<SystemHandle> inputNodes;

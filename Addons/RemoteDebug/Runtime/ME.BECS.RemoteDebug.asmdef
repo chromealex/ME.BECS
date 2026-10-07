@@ -1,0 +1,6 @@
+{
+  "name": "ME.BECS.RemoteDebug",
+  "references": ["ME.BECS", "ME.BECS.Features", "ME.BECS.Network", "ME.BECS.Transforms", "Unity.Collections"],
+  "allowUnsafeCode": true,
+  "defineConstraints": ["BECS_REMOTE_DEBUG", "!UNITY_WEBGL"]
+}

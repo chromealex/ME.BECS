@@ -1088,13 +1088,39 @@ namespace ME.BECS.Editor {
             return loadedAssemblies;
         }
 
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<System.Collections.Generic.List<AssemblyInfo>, AssemblyIndex> assemblyIndices =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<System.Collections.Generic.List<AssemblyInfo>, AssemblyIndex>();
+        private sealed class AssemblyIndex {
+            internal int count;
+            internal readonly System.Collections.Generic.Dictionary<string, AssemblyInfo> map =
+                new System.Collections.Generic.Dictionary<string, AssemblyInfo>(System.StringComparer.Ordinal);
+        }
+
+        private static AssemblyIndex BuildAssemblyIndex(System.Collections.Generic.List<AssemblyInfo> list) {
+            var index = new AssemblyIndex { count = list.Count };
+            // FirstOrDefault semantics: the first entry with a name wins.
+            foreach (var item in list) if (item.name != null && !index.map.ContainsKey(item.name)) index.map.Add(item.name, item);
+            return index;
+        }
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<System.Reflection.Assembly, string> assemblyNames =
+            new System.Collections.Concurrent.ConcurrentDictionary<System.Reflection.Assembly, string>();
+
         public static bool IsValidTypeForAssembly(bool editorAssembly, System.Type type, System.Collections.Generic.List<AssemblyInfo> asms = null, bool runtimeInEditor = true) {
             
             if (type == null) return false;
             if (asms == null) asms = EditorUtils.GetAssembliesInfo();
             
-            var asm = type.Assembly.GetName().Name;
-            var info = asms.FirstOrDefault(x => x.name == asm);
+            // Called for every selected type of every export step: index the list once
+            // (it is not mutated after GetAssembliesInfo) instead of a linear scan.
+            var index = assemblyIndices.GetValue(asms, BuildAssemblyIndex);
+            if (index.count != asms.Count) {
+                // The list grew/shrank after indexing: rebuild (never recurse).
+                assemblyIndices.Remove(asms);
+                index = assemblyIndices.GetValue(asms, BuildAssemblyIndex);
+            }
+            var asm = assemblyNames.GetOrAdd(type.Assembly, item => item.GetName().Name);
+            index.map.TryGetValue(asm, out var info);
             if (editorAssembly == false && info.isEditor == true) return false;
             if (editorAssembly == true && info.isEditor == false && runtimeInEditor == false) return false;
             return true;
@@ -1225,11 +1251,38 @@ namespace ME.BECS.Editor {
         }
 
         public static System.Type[] GetTypesDerivedFrom(System.Type genType, System.Type baseTypeWithout) {
-            return GetTypesDerivedFrom(genType, baseTypeWithout.GetInterfaces().Where(x => typeof(IGenericWithout).IsAssignableFrom(x)).ToArray());
+            if (typeof(ISystem).IsAssignableFrom(baseTypeWithout) == false) {
+                return GetTypesDerivedFrom(genType, baseTypeWithout.GetInterfaces().Where(x => typeof(IGenericWithout).IsAssignableFrom(x)).ToArray());
+            }
+            var definition = baseTypeWithout.IsGenericTypeDefinition ? baseTypeWithout : baseTypeWithout.GetGenericTypeDefinition();
+            if (definition.GetGenericArguments().Length != 1) {
+                throw new System.NotSupportedException($"Generic system {definition.FullName}: automatic specialization currently requires exactly one generic parameter.");
+            }
+            if (SourceGeneratorBridge.TryGetGenericComponents(definition, genType, out var snapshot)) return snapshot;
+            var candidates = GetTypesDerivedFrom(genType, definition.GetInterfaces().Where(x => typeof(IGenericWithout).IsAssignableFrom(x)).ToArray());
+            var result = candidates.Where(component => {
+                if (!component.IsVisible || component.ContainsGenericParameters || !typeof(IComponentBase).IsAssignableFrom(component) ||
+                    !IsUnmanagedGenericComponent(component, new System.Collections.Generic.HashSet<System.Type>())) return false;
+                // MakeGenericType validates ALL constraints, not just the first interface used for discovery.
+                try { definition.MakeGenericType(component); return true; }
+                catch (System.ArgumentException) { return false; }
+            }).OrderBy(component => component.Namespace?.StartsWith("ME.BECS", System.StringComparison.Ordinal) == false)
+                .ThenBy(component => component.FullName, System.StringComparer.Ordinal)
+                .ThenBy(component => component.Assembly.FullName, System.StringComparer.Ordinal).ToArray();
+            SourceGeneratorBridge.StoreGenericComponents(definition, genType, result);
+            return result;
+        }
+
+        private static bool IsUnmanagedGenericComponent(System.Type type, System.Collections.Generic.HashSet<System.Type> visited) {
+            if (type.IsPointer || type.IsPrimitive || type.IsEnum) return true;
+            if (!type.IsValueType || type.IsByRefLike) return false;
+            if (!visited.Add(type)) return true;
+            return type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
+                .All(field => IsUnmanagedGenericComponent(field.FieldType, visited));
         }
 
         public static System.Type[] GetTypesDerivedFrom(System.Type genType, System.Type[] withoutTypes = null) {
-            var types = UnityEditor.TypeCache.GetTypesDerivedFrom(genType).Where(x => x.IsValueType).OrderBy(x => x.Namespace?.StartsWith("ME.BECS") == false).ThenBy(x => x.FullName);
+            var types = SourceGeneratorBridge.GetDerivedTypesSnapshot(genType).Where(x => x.IsValueType).OrderBy(x => x.Namespace?.StartsWith("ME.BECS") == false).ThenBy(x => x.FullName);
             if (withoutTypes != null) {
                 var list = types.ToArray();
                 foreach (var item in withoutTypes) {

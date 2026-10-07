@@ -70,18 +70,9 @@ namespace ME.BECS {
             {
                 Components.ClearShared(state, ent.id);
             }
-            #if !ENABLE_BECS_FLAT_QUERIES
-            {
-                Batches.Clear(ent.worldId, in ent);
-            }
-            {
-                Archetypes.RemoveEntity(state, in ent);
-            }
-            #else
             {
                 Components.CleanUpEntity(state, in ent);
             }
-            #endif
             {
                 CollectionsRegistry.Destroy(state, in ent);
             }

@@ -76,9 +76,19 @@ namespace ME.BECS {
 
     }
 
+    public struct JobStaticInfoEntitiesMaxCount<TJob> {
+        public static readonly Unity.Burst.SharedStatic<uint> data = Unity.Burst.SharedStatic<uint>.GetOrCreate<JobStaticInfoEntitiesMaxCount<TJob>>();
+    }
+
     public struct JobStaticInfoInlineCount<TJob> {
         
         public static readonly Unity.Burst.SharedStatic<safe_ptr<uint>> data = Unity.Burst.SharedStatic<safe_ptr<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<JobStaticInfoInlineCount<TJob>>(TAlign<uint>.align, 9090);
+
+    }
+
+    public struct JobStaticInfoInlineCapacity<TJob> {
+        
+        public static readonly Unity.Burst.SharedStatic<uint> data = Unity.Burst.SharedStatic<uint>.GetOrCreate<JobStaticInfoInlineCapacity<TJob>>();
 
     }
 
@@ -110,13 +120,32 @@ namespace ME.BECS {
 
         public static ref uint lastCount => ref JobStaticInfoLastCount<TJob>.data.Data;
         public static ref uint loopCount => ref JobStaticInfoLoopCount<TJob>.data.Data;
+        public static ref uint entitiesMaxCount => ref JobStaticInfoEntitiesMaxCount<TJob>.data.Data;
         public static ref safe_ptr<uint> inlineCount => ref JobStaticInfoInlineCount<TJob>.data.Data;
+
+        // Called by generated job initializers on every bootstrap load. Domain memory is
+        // only released on domain unload and Unity tracks each block in a fixed-size table
+        // (DomainUnloadAutoFree, 262144 entries): allocating per load overflows it and
+        // crashes the Editor after enough reloads (e.g. a test run calling LoadInstalled
+        // in every SetUp). Reuse the block for this job instead.
+        [INLINE(256)]
+        public static safe_ptr<uint> AllocateInlineCount(uint groupCount) {
+            ref var capacity = ref JobStaticInfoInlineCapacity<TJob>.data.Data;
+            var current = inlineCount;
+            if (current.ptr != null && capacity >= groupCount) {
+                if (groupCount > 0u) Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemClear(current.ptr, TSize<uint>.size * capacity);
+                return current;
+            }
+            capacity = groupCount;
+            return _makeArray<uint>(groupCount, Unity.Collections.Allocator.Domain);
+        }
         public static ref uint opsWeight => ref JobStaticInfoWeights<TJob>.data.Data;
         public static ref uint maxStructSize => ref JobStaticInfoMaxStructSize<TJob>.data.Data;
-        public static bool IsParallelSupport => loopCount == 0u;
+        public static bool IsParallelSupport => loopCount == 0u || entitiesMaxCount > 0u;
         
         [INLINE(256)]
         public static JobHandle SchedulePatch(ref JobInfo jobInfo, CommandBuffer* buffer, ScheduleMode scheduleMode, JobHandle dependsOn) {
+            jobInfo.entitiesMaxCount = entitiesMaxCount;
 
             if (scheduleMode == ScheduleMode.Parallel) {
                 if (IsParallelSupport == false) {
@@ -194,6 +223,7 @@ namespace ME.BECS {
         public safe_ptr<uint> itemsPerCall;
         public safe_ptr<safe_ptr<Ent>> results;
         public safe_ptr<uint> localOffsets;
+        public uint entitiesMaxCount;
         public ushort worldId;
 
         public bool IsCreated => this.worldId > 0;
@@ -203,6 +233,10 @@ namespace ME.BECS {
             if (this.itemsPerCall.ptr == null) return 0u;
             var itemsPerCall = this.itemsPerCall[groupId];
             var localOffset = this.localOffsets[groupId];
+            if (localOffset >= itemsPerCall) {
+                if (this.entitiesMaxCount > 0u) E.JOB_ENTITIES_MAX_COUNT();
+                throw new System.InvalidOperationException("Entity creation exceeds the analyzed reservation for this group.");
+            }
             E.RANGE(localOffset, 0u, itemsPerCall);
             return this.index * itemsPerCall + localOffset;
         }
@@ -215,6 +249,10 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Prewarm(CommandBuffer* buffer, safe_ptr<uint> inlineCount) {
+            // Check before allocating entities or entering the prewarm state.
+            for (uint group = 0; group < EntityTypes.groupsCount; ++group)
+                if ((ulong)inlineCount[group] * buffer->count > (uint)(int.MaxValue / sizeof(Ent)))
+                    throw new System.InvalidOperationException("Entity reservation is too large. Reduce EntitiesJobMaxCount or the query size.");
             var maxId = 0u;
             Ents.PrewarmBegin(buffer->state);
             var allocator = WorldsTempAllocator.allocatorTemp.Get(this.worldId).Allocator.ToAllocator;
@@ -235,6 +273,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public readonly Ent GetEntity(ushort groupId) {
+            this.CheckEntityLimit();
             ref var ent = ref this.results[groupId][this.GetOffset(groupId)];
             var newEnt = ent;
             ent = default;
@@ -259,14 +298,25 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void CreateLocalCounter() {
-            if (this.itemsPerCall.ptr == null) return;
-            this.localOffsets = _makeArray<uint>(EntityTypes.groupsCount, Constants.ALLOCATOR_TEMP);
+            var length = (this.itemsPerCall.ptr != null ? EntityTypes.groupsCount : 0u) + (this.entitiesMaxCount > 0u ? 1u : 0u);
+            if (length == 0u) return;
+            this.localOffsets = _makeArray<uint>(length, Constants.ALLOCATOR_TEMP);
         }
         
         [INLINE(256)]
         public void ResetLocalCounter() {
-            if (this.itemsPerCall.ptr == null) return;
-            _memclear(this.localOffsets, EntityTypes.groupsCount * sizeof(uint));
+            var length = (this.itemsPerCall.ptr != null ? EntityTypes.groupsCount : 0u) + (this.entitiesMaxCount > 0u ? 1u : 0u);
+            if (length == 0u) return;
+            _memclear(this.localOffsets, length * sizeof(uint));
+        }
+
+        [INLINE(256)]
+        public readonly void CheckEntityLimit() {
+            if (this.entitiesMaxCount == 0u) return;
+            if (this.localOffsets.ptr == null) { E.JOB_ENTITIES_MAX_COUNT(); return; }
+            ref var created = ref this.localOffsets[this.itemsPerCall.ptr != null ? EntityTypes.groupsCount : 0u];
+            if (created >= this.entitiesMaxCount) { E.JOB_ENTITIES_MAX_COUNT(); return; }
+            ++created;
         }
 
         [INLINE(256)]
@@ -295,14 +345,14 @@ namespace ME.BECS {
     }
     
     [BURST]
-    public unsafe struct DisposeJob : IJob {
+    public unsafe partial struct DisposeJob : IJob {
         public MemPtr ptr;
         public ushort worldId;
         public void Execute() => Worlds.GetWorld(this.worldId).state.ptr->allocator.Free(this.ptr);
     }
 
     [BURST]
-    public unsafe struct DisposeAutoJob : IJob {
+    public unsafe partial struct DisposeAutoJob : IJob {
         public MemPtr ptr;
         public Ent ent;
         public ushort worldId;
@@ -316,14 +366,14 @@ namespace ME.BECS {
     }
 
     [BURST]
-    public unsafe struct DisposePtrJob : IJob {
+    public unsafe partial struct DisposePtrJob : IJob {
         [NativeDisableUnsafePtrRestriction]
         public safe_ptr ptr;
         public void Execute() => _free(ref this.ptr);
     }
 
     [BURST]
-    public unsafe struct DisposeWithAllocatorPtrJob : IJob {
+    public unsafe partial struct DisposeWithAllocatorPtrJob : IJob {
 
         public AllocatorManager.AllocatorHandle allocator;
         [NativeDisableUnsafePtrRestriction]
@@ -332,7 +382,7 @@ namespace ME.BECS {
 
     }
 
-    public struct DisposeHandleJob : IJob {
+    public partial struct DisposeHandleJob : IJob {
         public GCHandle gcHandle;
         public void Execute() {
             if (this.gcHandle.IsAllocated == true) this.gcHandle.Free();

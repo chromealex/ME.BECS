@@ -15,10 +15,10 @@ namespace ME.BECS.Pathfinding {
 
     [BURST]
     [UnityEngine.Tooltip("Look at target system")]
-    public struct LookAtSystem : IUpdate {
+    public partial struct LookAtSystem : IUpdate {
 
         [BURST]
-        public struct Job : IJobForAspects<TransformAspect, UnitAspect> {
+        public partial struct Job : IJobForAspects<TransformAspect, UnitAspect> {
 
             public tfloat dt;
             public BuildGraphSystem buildGraphSystem;

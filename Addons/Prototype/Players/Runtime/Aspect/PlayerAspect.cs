@@ -6,7 +6,7 @@ namespace ME.BECS.Players {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     #endif
     
-    public struct PlayerAspect : IAspect {
+    public partial struct PlayerAspect : IAspect {
         
         public Ent ent { get; set; }
 

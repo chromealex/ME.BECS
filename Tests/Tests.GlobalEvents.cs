@@ -3,7 +3,7 @@ using Unity.Jobs;
 
 namespace ME.BECS.Tests {
 
-    public class Tests_GlobalEvents {
+    public partial class Tests_GlobalEvents {
 
         [UnityEngine.TestTools.UnitySetUpAttribute]
         public System.Collections.IEnumerator SetUp() {
@@ -17,7 +17,7 @@ namespace ME.BECS.Tests {
             yield return null;
         }
 
-        public struct TestSystem : IUpdate {
+        public partial struct TestSystem : IUpdate {
 
             public World visualWorld;
 

@@ -1,3 +1,5 @@
+@import url("Themes/Default.uss");
+
 .horizontal-group {
     align-items: stretch;
     flex-direction: row;
@@ -130,3 +132,623 @@ GradientAnimated {
 .unity-toolbar-breadcrumbs .unity-toolbar-breadcrumbs__item {
     color: var(--highlight-text-color);
 }
+
+.becs-editor-window { background-color: var(--becs-background-dark); color: var(--becs-text-dark); }
+.becs-editor-window.light { background-color: var(--becs-background-light); color: var(--becs-text-light); }
+.becs-editor-window Button { min-height: 24px; padding: 4px 8px; border-width: var(--toolbar-buttons-border-width); border-radius: var(--toolbar-buttons-radius); border-color: var(--toolbar-buttons-border-color); background-color: var(--toolbar-buttons-background-color); }
+.becs-editor-window Button:hover { background-color: var(--toolbar-buttons-background-color-hover); }
+.becs-editor-window Button:disabled { opacity: 0.45; }
+.becs-editor-window .dashboard-tab.selected, .becs-editor-window .dashboard-page.selected,
+.becs-editor-window .studio-project-active { background-color: var(--becs-selection); color: white; border-bottom-color: var(--becs-accent); }
+.becs-editor-window .h-element:hover { background-color: var(--becs-row-hover); }
+.becs-editor-window .unity-collection-view__item--selected { background-color: var(--becs-selection); }
+
+
+
+/* Shared BECS editor appearance: dashboard, hierarchy, graph studio and replays. */
+.world-dashboard.dark { background-color: var(--becs-background-dark); color: var(--becs-text-dark); }
+
+.world-dashboard.light { background-color: var(--becs-background-light); color: var(--becs-text-light); }
+
+.dashboard-page.selected { border-bottom-color: var(--becs-accent); }
+
+.dark .dashboard-tabs { background-color: var(--becs-surface-dark); border-bottom-color: var(--becs-border-dark); }
+
+.light .dashboard-tabs { background-color: var(--becs-surface-light); border-bottom-color: var(--becs-border-light); }
+
+.dashboard-tab { background-color: rgba(0,0,0,0); }
+
+.dashboard-tab.selected { border-bottom-color: var(--becs-accent); }
+
+.dark .dashboard-tab.selected { background-color: var(--becs-background-dark); }
+
+.light .dashboard-tab.selected { background-color: var(--becs-background-light); }
+
+.dark .dashboard-stat { background-color: var(--becs-surface-dark); border-color: var(--becs-border-dark); }
+
+.light .dashboard-stat { background-color: var(--becs-surface-light); border-color: var(--becs-border-light); }
+
+.dark .dashboard-note, .dark .dashboard-status, .dark .dashboard-caption { color: var(--becs-muted-dark); }
+
+.light .dashboard-note, .light .dashboard-status, .light .dashboard-caption { color: var(--becs-muted-light); }
+
+.dark .dashboard-track { background-color: var(--becs-track-dark); }
+
+.light .dashboard-track { background-color: var(--becs-track-light); }
+
+.dashboard-fill { background-color: var(--becs-accent); }
+
+.dashboard-stack > .state { background-color: var(--becs-accent); }
+
+.dashboard-stack > .persistent { background-color: var(--becs-persistent); }
+
+.dashboard-stack > .temp { background-color: var(--becs-temporary); }
+
+.dark .dashboard-bottom { border-top-color: var(--becs-border-dark); }
+
+.light .dashboard-bottom { border-top-color: var(--becs-border-light); }
+
+.world-dashboard .dashboard-toolbar > Button,
+.world-dashboard .dashboard-tabs > Button { border-color: var(--toolbar-buttons-border-color); background-color: var(--toolbar-buttons-background-color); }
+
+.world-dashboard .dashboard-toolbar > Button:hover,
+.world-dashboard .dashboard-tabs > Button:hover { background-color: var(--toolbar-buttons-background-color-hover); }
+
+.world-dashboard.dark .dashboard-toolbar > Button,
+.world-dashboard.dark .dashboard-tabs > Button { color: var(--becs-text-dark); }
+
+.world-dashboard.light .dashboard-toolbar > Button,
+.world-dashboard.light .dashboard-tabs > Button { color: var(--becs-text-light); }
+
+.world-dashboard .dashboard-toolbar > .dashboard-page.selected,
+.world-dashboard .dashboard-tabs > .dashboard-tab.selected { background-color: var(--becs-selection); color: var(--becs-surface-light); border-bottom-color: var(--becs-accent); }
+
+.compact-ecs-hierarchy { background-color: var(--becs-hierarchy-background); }
+
+.compact-ecs-hierarchy .h-root { background-color: rgba(0, 0, 0, 0); }
+
+.compact-ecs-hierarchy .h-element { border-bottom-color: var(--becs-row-border); }
+
+.compact-ecs-hierarchy .unity-collection-view__item--selected { background-color: var(--becs-selection); }
+
+.compact-ecs-hierarchy .unity-collection-view__item--selected Label { color: var(--highlight-text-color); }
+
+.compact-ecs-hierarchy .footer-container { border-top-color: var(--becs-separator); }
+
+.compact-ecs-hierarchy .h-element:hover { background-color: var(--becs-row-hover); }
+
+.compact-ecs-hierarchy .toolbar { background-color: rgba(0, 0, 0, 0); }
+
+.compact-ecs-hierarchy .hierarchy-search .unity-text-field__input { border-color: var(--becs-control-border); }
+
+.compact-ecs-hierarchy .hierarchy-search .unity-text-field__input:focus { border-color: var(--highlight-color); }
+
+.compact-ecs-hierarchy .search-container { border-color: var(--becs-control-border); background-color: var(--becs-row-hover); }
+
+.compact-ecs-hierarchy .hierarchy-search .unity-text-field__input { background-color: rgba(0, 0, 0, 0); }
+
+.compact-ecs-hierarchy .hierarchy-search-clear { background-color: rgba(0, 0, 0, 0); }
+
+.becs-graph-studio .studio-inspector { border-left-color: var(--becs-inspector-border); }
+
+.becs-graph-studio .studio-method-active { background-color: var(--becs-method-active); }
+
+.becs-graph-studio .studio-burst { color: var(--becs-burst); }
+
+.becs-graph-studio .studio-field-summary { border-top-color: var(--becs-card-separator); }
+
+.becs-graph-studio .studio-card-title { border-bottom-color: var(--becs-card-separator); }
+
+.becs-graph-studio .studio-node-actions { border-top-color: var(--becs-card-separator); }
+
+.becs-graph-studio Button { border-color: var(--toolbar-buttons-border-color); background-color: var(--toolbar-buttons-background-color); }
+
+.becs-graph-studio Button:hover { background-color: var(--toolbar-buttons-background-color-hover); }
+
+.becs-graph-studio.dark Button { color: var(--becs-text-dark); }
+
+.becs-graph-studio.light Button { color: var(--becs-text-light); }
+
+.becs-graph-studio .studio-project-button.studio-project-active { background-color: var(--becs-selection); color: var(--becs-surface-light); border-bottom-color: var(--becs-accent); }
+
+.becs-graph-studio.studio-dark .studio-canvas { background-color: var(--becs-background-dark); }
+
+.becs-graph-studio.studio-light .studio-canvas { background-color: var(--becs-background-light); }
+
+.becs-graph-studio.studio-dark .studio-card { background-color: var(--becs-surface-dark); border-color: var(--becs-border-dark); }
+
+.becs-graph-studio.studio-light .studio-card { background-color: var(--becs-surface-light); border-color: var(--becs-border-light); }
+
+.becs-graph-studio.dark .studio-projects, .becs-graph-studio.dark .studio-toolbar,
+.becs-graph-studio.dark .studio-inspector { background-color: var(--becs-surface-dark); border-color: var(--becs-border-dark); }
+
+.becs-graph-studio.light .studio-projects, .becs-graph-studio.light .studio-toolbar,
+.becs-graph-studio.light .studio-inspector { background-color: var(--becs-surface-light); border-color: var(--becs-border-light); }
+
+.becs-graph-studio.dark .studio-status { color: var(--becs-muted-dark); border-top-color: var(--becs-border-dark); }
+
+.becs-graph-studio.light .studio-status { color: var(--becs-muted-light); border-top-color: var(--becs-border-light); }
+
+.becs-graph-studio.dark .studio-kind, .becs-graph-studio.dark .studio-muted { color: var(--becs-muted-dark); }
+
+.becs-graph-studio.light .studio-kind, .becs-graph-studio.light .studio-muted { color: var(--becs-muted-light); }
+
+.becs-graph-studio.light .studio-burst { color: var(--becs-success-light); }
+
+.becs-graph-studio .studio-ports Button { background-color: transparent; }
+
+.becs-graph-studio .studio-ports Button:hover { background-color: var(--becs-port-hover); }
+
+.becs-graph-studio .studio-breadcrumbs { background-color: transparent; }
+
+.becs-graph-studio.dark .studio-navigation-caption { color: var(--becs-muted-dark); }
+
+.becs-graph-studio.light .studio-navigation-caption { color: var(--becs-muted-light); }
+
+.becs-graph-studio.dark .studio-toolbar { border-bottom-color: var(--becs-border-dark); }
+
+.becs-graph-studio.light .studio-toolbar { border-bottom-color: var(--becs-border-light); }
+
+.becs-graph-studio.dark .studio-after-action { background-color: var(--becs-button-dark); border-color: var(--becs-action-border-dark); color: var(--becs-action-text-dark); }
+
+.becs-graph-studio.light .studio-after-action { background-color: var(--becs-button-light); border-color: var(--becs-action-border-light); color: var(--becs-muted-light); }
+
+.becs-graph-studio .studio-after-action:hover { background-color: var(--becs-selection); border-color: var(--becs-accent); color: var(--becs-surface-light); }
+
+.becs-graph-studio .studio-after-action:focus { border-color: var(--becs-accent); }
+
+.becs-graph-studio .studio-project-button.studio-search-match { border-color: var(--becs-warning); }
+
+.becs-graph-studio.dark .studio-inspector-section { background-color: var(--becs-background-dark); border-color: var(--becs-border-dark); }
+
+.becs-graph-studio.light .studio-inspector-section { background-color: var(--becs-background-light); border-color: var(--becs-border-light); }
+
+.becs-graph-studio.dark .studio-note, .becs-graph-studio.dark .studio-result-path { color: var(--becs-muted-dark); }
+
+.becs-graph-studio.light .studio-note, .becs-graph-studio.light .studio-result-path { color: var(--becs-muted-light); }
+
+.becs-graph-studio .studio-inspector-method.studio-method-active { background-color: var(--becs-selection); }
+
+.becs-graph-studio .studio-system-selection .subclass-selector { background-color: transparent; }
+
+.becs-graph-studio .studio-search-clear { background-color: transparent; }
+
+.becs-graph-studio .studio-card-header { border-bottom-color: var(--becs-control-border); }
+
+.becs-graph-studio .studio-card-fields { border-top-color: var(--becs-control-border); }
+
+.becs-graph-studio .studio-card.studio-execution-active { border-color: var(--becs-execution-border); }
+
+.becs-graph-studio .studio-card.studio-card-selected { border-color: var(--becs-accent); }
+
+.becs-graph-studio .studio-card.studio-system-match { border-color: var(--becs-warning); }
+
+.becs-graph-studio .studio-card.studio-system-match.studio-card-selected { border-color: var(--becs-accent); }
+
+.becs-graph-studio .studio-card.studio-start-card { background-color: var(--becs-start-background); border-top-color: var(--becs-start-border); border-bottom-color: var(--becs-start-border); border-left-color: var(--becs-start-border); border-right-color: var(--becs-start-border); }
+
+.becs-graph-studio .studio-card.studio-end-card { background-color: var(--becs-end-background); border-top-color: var(--becs-end-border); border-bottom-color: var(--becs-end-border); border-left-color: var(--becs-end-border); border-right-color: var(--becs-end-border); }
+
+.becs-graph-studio .studio-card.studio-subgraph-card { background-color: var(--becs-subgraph-background); }
+
+.studio-input-port > Label, .studio-output-port > Label { color: var(--becs-port-text); }
+
+.becs-graph-studio .studio-card .studio-node-delete { background-color: var(--becs-delete-background); }
+
+.becs-graph-studio .studio-card .studio-node-delete:hover { background-color: var(--becs-delete-hover); }
+
+.becs-graph-studio .studio-card .studio-node-delete:active { background-color: var(--becs-delete-active); }
+
+.becs-graph-studio .studio-breadcrumbs .studio-breadcrumb-item { background-color: transparent; }
+
+.becs-graph-studio .studio-breadcrumbs .studio-breadcrumb-item:hover { background-color: var(--becs-breadcrumb-hover); }
+
+.becs-graph-studio .studio-breadcrumbs .studio-breadcrumb-current { color: var(--becs-breadcrumb-text); }
+
+.becs-graph-studio .studio-readonly-vector-value { background-color: var(--becs-field-background); }
+
+
+.replays-window.dark { background-color: var(--becs-background-dark); color: var(--becs-text-dark); }
+
+.replays-window.light { background-color: var(--becs-background-light); color: var(--becs-text-light); }
+
+.replays-window.dark .replay-toolbar { background-color: var(--becs-surface-dark); }
+
+.replays-window.light .replay-toolbar { background-color: var(--becs-surface-light); }
+
+.replays-window .replay-mode { color: var(--becs-warning); }
+
+.replays-window.light .replay-mode { color: var(--becs-warning-light); }
+
+.replays-window .delta { color: var(--becs-info); }
+
+.replays-window.light .delta { color: var(--becs-info-light); }
+
+.replays-window.dark .track { border-bottom-color: var(--becs-border-dark); background-color: var(--becs-surface-dark); }
+
+.replays-window.light .track { border-bottom-color: var(--becs-border-light); background-color: var(--becs-background-light); }
+
+.replays-window .states .mark { background-color: var(--becs-success); }
+
+.replays-window .local .mark { background-color: var(--becs-warning); }
+
+.replays-window .remote .mark { background-color: var(--becs-purple); }
+
+.replays-window.light .states .mark { background-color: var(--becs-success-light); }
+
+.replays-window.light .local .mark { background-color: var(--becs-warning-light); }
+
+.replays-window.light .remote .mark { background-color: var(--becs-purple-light); }
+
+.replays-window .current-cursor,
+.replays-window .target-cursor { background-color: var(--becs-info); }
+
+.replays-window.light .current-cursor { background-color: var(--becs-info-light); }
+
+.replays-window .target-cursor { background-color: var(--becs-muted-dark); }
+
+.replays-window.light .target-cursor { background-color: var(--becs-muted-light); }
+
+.replays-window .rewind-buffer { background-color: var(--becs-rewind-dark); }
+
+.replays-window.light .rewind-buffer { background-color: var(--becs-rewind-light); }
+
+.replays-window.dark .selection-summary { border-top-color: var(--becs-border-dark); }
+
+.replays-window.light .selection-summary { border-top-color: var(--becs-border-light); }
+
+.replays-window.dark .event-row { border-bottom-color: var(--becs-border-dark); }
+
+.replays-window.light .event-row { border-bottom-color: var(--becs-border-light); }
+
+.replays-window .local-source { color: var(--becs-warning); }
+
+.replays-window .remote-source { color: var(--becs-purple); }
+
+.replays-window.light .local-source { color: var(--becs-warning-light); }
+
+.replays-window.light .remote-source { color: var(--becs-purple-light); }
+
+.replays-window.dark .replay-footer { color: var(--becs-muted-dark); border-top-color: var(--becs-border-dark); }
+
+.replays-window.light .replay-footer { color: var(--becs-muted-light); border-top-color: var(--becs-border-light); }
+
+/* Shared control geometry and window-specific control exceptions. */
+.dashboard-tabs { flex-direction: row; flex-wrap: wrap; padding: 0 12px; border-bottom-width: 1px; }
+
+.dashboard-tab { padding: 10px 14px; margin: 0 3px 0 0; border-width: 0; border-radius: 0; }
+
+.dashboard-tab.selected { border-bottom-width: 2px; }
+
+.world-dashboard .dashboard-toolbar > Button,
+.world-dashboard .dashboard-tabs > Button { min-height: 28px; padding: 5px 12px; margin: 2px 4px 2px 0; border-width: var(--toolbar-buttons-border-width); border-radius: var(--toolbar-buttons-radius); }
+
+.world-dashboard .dashboard-tabs > .dashboard-tab { padding: 9px 14px; border-radius: 4px 4px 0px 0px; margin-bottom: 0px; }
+
+.world-dashboard .dashboard-toolbar > .dashboard-page.selected,
+.world-dashboard .dashboard-tabs > .dashboard-tab.selected { border-bottom-width: 2px; }
+
+.world-dashboard .dashboard-toolbar > Button:disabled { opacity: 0.45; }
+
+.world-dashboard .dashboard-tabs, .world-dashboard .dashboard-toolbar { flex-shrink: 0; }
+
+/* Shared control geometry and window-specific control exceptions. */
+.becs-graph-studio .studio-project-button { font-size: 11px; margin-top: 2px; margin-bottom: 2px; padding-left: 8px; padding-right: 8px; }
+
+.becs-graph-studio .studio-ports Button { margin: 1px; }
+
+.becs-graph-studio .studio-node-actions Button { flex-grow: 1; font-size: 11px; }
+
+.becs-graph-studio .studio-project-button.studio-project-active { border-bottom-width: 2px; }
+
+.becs-graph-studio Button { min-height: 24px; padding: 4px 8px; border-width: var(--toolbar-buttons-border-width); border-radius: var(--toolbar-buttons-radius); }
+
+.becs-graph-studio Button:disabled { opacity: 0.45; }
+
+.becs-graph-studio .studio-ports Button { border-width: 0; }
+
+.becs-graph-studio .studio-card > Button { margin: 6px 8px; }
+
+.becs-graph-studio .studio-ports Button { min-height: 20px; width: 20px; padding: 0; font-size: 13px; }
+
+.becs-graph-studio .studio-project-button { min-height: 26px; margin: 0 5px 0 0; padding: 4px 10px; border-radius: 4px; }
+
+.becs-graph-studio .studio-toolbar > Button { margin: 2px 4px; min-height: 28px; padding: 5px 10px; }
+
+.becs-graph-studio .studio-breadcrumbs Button { padding: 5px 10px; margin: 2px 0; background-image: none; border-radius: 4px; }
+
+.becs-graph-studio .studio-project-button.studio-search-match { border-bottom-width: 2px; }
+
+.becs-editor-window.dark { --toolbar-buttons-background-color: var(--becs-button-dark); --toolbar-buttons-background-color-hover: var(--becs-button-hover-dark); --toolbar-buttons-border-color: var(--becs-border-dark); }
+
+.becs-editor-window.light { --toolbar-buttons-background-color: var(--becs-button-light); --toolbar-buttons-background-color-hover: var(--becs-button-hover-light); --toolbar-buttons-border-color: var(--becs-border-light); }
+
+/* EntityConfig and inline entity inspectors use the same editor palette. */
+/* EntityConfig uses the same opaque surfaces and controls as editor windows. */
+.compact-config-inspector {
+    --config-background: var(--becs-background-dark);
+    --config-surface: var(--becs-surface-dark);
+    --config-border: var(--becs-border-dark);
+    --config-text: var(--becs-text-dark);
+    --config-muted: var(--becs-muted-dark);
+    --toolbar-buttons-background-color: var(--becs-button-dark);
+    --toolbar-buttons-background-color-hover: var(--becs-button-hover-dark);
+    --toolbar-buttons-border-color: var(--becs-border-dark);
+    background-color: var(--config-background);
+    color: var(--config-text);
+    font-size: 12px;
+}
+.compact-config-inspector.config-light {
+    --config-background: var(--becs-background-light);
+    --config-surface: var(--becs-surface-light);
+    --config-border: var(--becs-border-light);
+    --config-text: var(--becs-text-light);
+    --config-muted: var(--becs-muted-light);
+    --toolbar-buttons-background-color: var(--becs-button-light);
+    --toolbar-buttons-background-color-hover: var(--becs-button-hover-light);
+    --toolbar-buttons-border-color: var(--becs-border-light);
+}
+.compact-config-inspector Button {
+    background-image: none;
+    border-color: var(--config-border);
+    background-color: var(--toolbar-buttons-background-color);
+    color: var(--config-text);
+    border-width: 1px;
+    border-radius: 4px;
+}
+.compact-config-inspector Button:hover { background-color: var(--toolbar-buttons-background-color-hover); }
+.compact-config-inspector Button:active { background-color: var(--becs-selection); }
+.compact-config-inspector Button:focus { border-color: var(--becs-accent); }
+.compact-config-inspector Button:disabled { opacity: 0.45; }
+.compact-config-inspector .config-toolbar,
+.compact-config-inspector .entity-components-label,
+.compact-config-inspector .buttons-container { background-color: var(--config-surface); border-color: var(--config-border); }
+.compact-config-inspector .entity-components,
+.compact-config-inspector .config-component-row,
+.compact-config-inspector .config-aspect-row,
+.compact-config-inspector .config-difference-group { border-color: var(--config-border); }
+.compact-config-inspector .config-component-foldout > .unity-foldout__toggle,
+.compact-config-inspector .config-component-foldout > .unity-foldout__content,
+.compact-config-inspector .config-difference-group { background-color: var(--config-background); }
+.compact-config-inspector .config-component-foldout > .unity-foldout__toggle:hover { background-color: var(--config-surface); }
+.compact-config-inspector .config-component-foldout.field-selected > .unity-foldout__toggle,
+.compact-config-inspector .config-tag-row.field-selected { background-color: var(--becs-selection); color: var(--highlight-text-color); }
+.compact-config-inspector .config-component-foldout.field-selected > .unity-foldout__toggle Label { color: var(--highlight-text-color); }
+.compact-config-inspector .unity-base-field__label,
+.compact-config-inspector .unity-foldout__text { color: var(--config-text); }
+.compact-config-inspector .unity-base-text-field__input,
+.compact-config-inspector .unity-object-field__input,
+.compact-config-inspector .unity-base-popup-field__input {
+    background-image: none;
+    background-color: var(--toolbar-buttons-background-color);
+    border-color: var(--config-border);
+    border-width: 1px;
+    border-radius: 3px;
+    color: var(--config-text);
+}
+.compact-config-inspector .unity-base-text-field__input:focus,
+.compact-config-inspector .unity-object-field__input:focus,
+.compact-config-inspector .unity-base-popup-field__input:focus { border-color: var(--becs-accent); }
+.compact-config-inspector .config-field-row > PropertyField > Toggle > .unity-toggle__input { background-color: rgba(0, 0, 0, 0); }
+.compact-config-inspector #common-heading,
+.compact-config-inspector #different-heading { color: var(--config-muted); }
+.compact-config-inspector .drag-root { background-image: resource("d_Grid.MoveTool.png"); }
+.compact-config-inspector .drag-handler { background-color: var(--becs-accent); }
+.compact-config-inspector .config-common-row > .unity-foldout__toggle { border-left-color: var(--becs-accent); }
+.compact-config-inspector .config-field-mask:checked #unity-checkmark { background-color: var(--becs-accent); border-color: var(--config-border); }
+.compact-config-inspector .tooltip-decorator .tooltip,
+.compact-config-inspector .has-tooltip > .tooltip { color: var(--config-text); background-color: var(--becs-selection); }
+.compact-config-inspector .has-tooltip > .tooltip:hover { background-color: var(--becs-accent); }
+.config-tooltip-popup { border-color: var(--becs-accent); background-color: var(--becs-surface-dark); color: var(--becs-text-dark); }
+.config-tooltip-popup.config-tooltip-light { background-color: var(--becs-surface-light); color: var(--becs-text-light); }
+.runtime-entity-inspector > Foldout > .unity-foldout__toggle,
+.runtime-entity-inspector > .runtime-entity-navigation { background-color: var(--config-surface); border-bottom-color: var(--config-border); }
+.runtime-entity-inspector .runtime-entity-metadata { color: var(--config-muted); }
+.runtime-entity-inspector .runtime-entity-navigation > Button { border-color: var(--becs-control-border); background-color: var(--becs-row-hover); }
+
+/* Shared scrollbars: 2px in both orientations; all track layers are transparent. */
+.becs-editor-window .unity-scroller,
+.compact-config-inspector .unity-scroller,
+.becs-graph-studio .unity-scroller { background-color: transparent; border-width: 0; padding: 0; margin: 0; }
+
+.becs-editor-window .unity-scroller #unity-low-button,
+.compact-config-inspector .unity-scroller #unity-low-button,
+.becs-graph-studio .unity-scroller #unity-low-button,
+.becs-editor-window .unity-scroller #unity-high-button,
+.compact-config-inspector .unity-scroller #unity-high-button,
+.becs-graph-studio .unity-scroller #unity-high-button { display: none; }
+
+.becs-editor-window #unity-vertical-scroller,
+.compact-config-inspector #unity-vertical-scroller,
+.becs-graph-studio #unity-vertical-scroller { width: 2px; min-width: 2px; max-width: 2px; }
+
+.becs-editor-window #unity-horizontal-scroller,
+.compact-config-inspector #unity-horizontal-scroller,
+.becs-graph-studio #unity-horizontal-scroller { height: 2px; min-height: 2px; max-height: 2px; }
+
+.becs-editor-window .unity-scroller #unity-slider,
+.compact-config-inspector .unity-scroller #unity-slider,
+.becs-graph-studio .unity-scroller #unity-slider { flex-grow: 1; margin: 0; padding: 0; }
+
+.becs-editor-window .unity-scroller .unity-base-slider__tracker,
+.compact-config-inspector .unity-scroller .unity-base-slider__tracker,
+.becs-graph-studio .unity-scroller .unity-base-slider__tracker { background-color: transparent; border-width: 0; border-radius: 0; }
+
+.becs-editor-window .unity-scroller .unity-base-slider__dragger,
+.compact-config-inspector .unity-scroller .unity-base-slider__dragger,
+.becs-graph-studio .unity-scroller .unity-base-slider__dragger { background-color: var(--becs-scrollbar); border-width: 0; border-radius: 0; }
+
+.becs-editor-window .unity-scroller .unity-base-slider__dragger-border,
+.compact-config-inspector .unity-scroller .unity-base-slider__dragger-border,
+.becs-graph-studio .unity-scroller .unity-base-slider__dragger-border { border-width: 0; background-color: transparent; }
+
+.becs-editor-window #unity-vertical-scroller .unity-base-slider__dragger,
+.compact-config-inspector #unity-vertical-scroller .unity-base-slider__dragger,
+.becs-graph-studio #unity-vertical-scroller .unity-base-slider__dragger { width: 2px; min-width: 2px; max-width: 2px; left: 0; }
+
+.becs-editor-window #unity-horizontal-scroller .unity-base-slider__dragger,
+.compact-config-inspector #unity-horizontal-scroller .unity-base-slider__dragger,
+.becs-graph-studio #unity-horizontal-scroller .unity-base-slider__dragger { height: 2px; min-height: 2px; max-height: 2px; top: 0; }
+
+.becs-editor-window .unity-scroller:hover .unity-base-slider__dragger,
+.compact-config-inspector .unity-scroller:hover .unity-base-slider__dragger,
+.becs-graph-studio .unity-scroller:hover .unity-base-slider__dragger { background-color: var(--becs-scrollbar-hover); }
+
+.becs-editor-window .unity-scroller .unity-base-slider__dragger:active,
+.compact-config-inspector .unity-scroller .unity-base-slider__dragger:active,
+.becs-graph-studio .unity-scroller .unity-base-slider__dragger:active { background-color: var(--becs-scrollbar-active); }
+
+.becs-editor-window .unity-scroller,
+.compact-config-inspector .unity-scroller,
+.becs-graph-studio .unity-scroller,
+.becs-editor-window .unity-scroller #unity-slider,
+.compact-config-inspector .unity-scroller #unity-slider,
+.becs-graph-studio .unity-scroller #unity-slider,
+.becs-editor-window .unity-scroller .unity-base-slider__input,
+.compact-config-inspector .unity-scroller .unity-base-slider__input,
+.becs-graph-studio .unity-scroller .unity-base-slider__input,
+.becs-editor-window .unity-scroller .unity-base-slider__drag-container,
+.compact-config-inspector .unity-scroller .unity-base-slider__drag-container,
+.becs-graph-studio .unity-scroller .unity-base-slider__drag-container,
+.becs-editor-window .unity-scroller .unity-base-slider__tracker,
+.compact-config-inspector .unity-scroller .unity-base-slider__tracker,
+.becs-graph-studio .unity-scroller .unity-base-slider__tracker,
+.becs-editor-window .unity-scroller .unity-base-slider__dragger-border,
+.compact-config-inspector .unity-scroller .unity-base-slider__dragger-border,
+.becs-graph-studio .unity-scroller .unity-base-slider__dragger-border { background-color: transparent; background-image: none; border-width: 0; border-radius: 0; margin: 0; padding: 0; }
+
+.becs-editor-window .unity-scroller .unity-base-slider__dragger,
+.compact-config-inspector .unity-scroller .unity-base-slider__dragger,
+.becs-graph-studio .unity-scroller .unity-base-slider__dragger { background-image: none; }
+
+.becs-editor-window #unity-vertical-scroller #unity-slider,
+.compact-config-inspector #unity-vertical-scroller #unity-slider,
+.becs-graph-studio #unity-vertical-scroller #unity-slider,
+.becs-editor-window #unity-vertical-scroller .unity-base-slider__input,
+.compact-config-inspector #unity-vertical-scroller .unity-base-slider__input,
+.becs-graph-studio #unity-vertical-scroller .unity-base-slider__input { width: 2px; min-width: 2px; max-width: 2px; }
+
+.becs-editor-window #unity-horizontal-scroller #unity-slider,
+.compact-config-inspector #unity-horizontal-scroller #unity-slider,
+.becs-graph-studio #unity-horizontal-scroller #unity-slider,
+.becs-editor-window #unity-horizontal-scroller .unity-base-slider__input,
+.compact-config-inspector #unity-horizontal-scroller .unity-base-slider__input,
+.becs-graph-studio #unity-horizontal-scroller .unity-base-slider__input { height: 2px; min-height: 2px; max-height: 2px; }
+
+.becs-graph-studio .becs-add-button-line { background-color: var(--becs-action-text-dark); }
+.becs-graph-studio.light .becs-add-button-line { background-color: var(--becs-muted-light); }
+.becs-graph-studio .studio-after-action:hover .becs-add-button-line,
+.becs-graph-studio .studio-parallel-action:hover .becs-add-button-line { background-color: var(--becs-text-dark); }
+
+/* All icon-only add buttons share a centered geometric plus. */
+.becs-add-button { min-width: 24px; min-height: 24px; }
+.becs-add-button-line { position: absolute; left: 50%; top: 50%; width: 10px; height: 2px; margin-left: -5px; margin-top: -1px; background-color: var(--becs-text-dark); }
+.becs-add-button-line-vertical { width: 2px; height: 10px; margin-left: -1px; margin-top: -5px; }
+.light .becs-add-button-line, .config-light .becs-add-button-line { background-color: var(--becs-text-light); }
+
+/* World-tab add actions have the same square footprint in every window. */
+.dashboard-tabs > .becs-add-button.add-world-tab { width: 28px; min-width: 28px; max-width: 28px; height: 28px; min-height: 28px; max-height: 28px; padding: 0; flex-grow: 0; flex-shrink: 0; align-self: center; }
+
+/* Empty-state copy follows the same typography and muted palette as editor notes. */
+.becs-empty-state,
+.becs-editor-window .becs-empty-state { font-size: 12px; -unity-font-style: normal; opacity: 1; color: var(--becs-muted-dark); }
+.light .becs-empty-state,
+.becs-editor-window.light .becs-empty-state { color: var(--becs-muted-light); }
+
+/* Fixed overlays on horizontal viewports; pointer input passes through to the list. */
+.becs-scroll-fade { position: absolute; top: 0; bottom: 0; width: 20px; color: var(--becs-surface-dark); }
+.light .becs-scroll-fade { color: var(--becs-surface-light); }
+.becs-scroll-fade-left { left: 0; }
+.becs-scroll-fade-right { right: 0; }
+
+/* Tabs meet the bottom separator; ordinary actions keep their button corners. */
+.becs-editor-window .dashboard-tabs { align-items: flex-end; padding-bottom: 0; }
+.becs-editor-window .dashboard-tabs > Button.dashboard-tab {
+    background-image: none;
+    align-self: flex-end;
+    height: auto;
+    margin-bottom: 0;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+/* The add-world action is a button: keep clearance from the tab separator. */
+.world-dashboard .dashboard-tabs > .becs-add-button.add-world-tab,
+.compact-ecs-hierarchy .dashboard-tabs > .becs-add-button.add-world-tab {
+    align-self: flex-end;
+    margin-bottom: 3px;
+}
+
+.becs-scroll-fade-top { top: 0; bottom: auto; left: 0; right: 0; width: auto; height: 20px; }
+.becs-scroll-fade-bottom { top: auto; bottom: 0; left: 0; right: 0; width: auto; height: 20px; }
+.becs-graph-studio.dark .studio-search-results .becs-scroll-fade { color: var(--becs-background-dark); }
+.becs-graph-studio.light .studio-search-results .becs-scroll-fade { color: var(--becs-background-light); }
+
+/* Allocator autocomplete uses the shared opaque popup palette. */
+.allocator-dashboard.dark .allocator-suggestions { background-color: var(--becs-surface-dark); border-color: var(--becs-border-dark); }
+.allocator-dashboard.light .allocator-suggestions { background-color: var(--becs-surface-light); border-color: var(--becs-border-light); }
+
+/* Keep selection visible on the entity row, including while the Inspector has focus. */
+.compact-ecs-hierarchy .h-element.h-selected,
+.compact-ecs-hierarchy .h-element.h-selected:hover { background-color: var(--becs-selection); }
+.compact-ecs-hierarchy .h-element.h-selected Label { color: var(--highlight-text-color); }
+
+.compact-config-inspector .config-field-tooltip { color: var(--highlight-text-color); background-color: var(--becs-selection); }
+.compact-config-inspector .config-field-tooltip:hover { background-color: var(--highlight-color); }
+
+.becs-add-button-icon { position: absolute; left: 0px; right: 0px; top: 0px; bottom: 0px; }
+.becs-add-button.becs-add-button-labeled { flex-direction: row; align-items: center; justify-content: center; }
+.becs-add-button-labeled > .becs-add-button-icon { position: relative; left: auto; right: auto; top: auto; bottom: auto; width: 12px; height: 12px; flex-shrink: 0; margin-right: 5px; }
+.becs-add-button-labeled > Label { margin: 0px; padding: 0px; -unity-text-align: middle-center; }
+
+/* Field hover includes its label, value, empty space and tooltip affordance. */
+.compact-config-inspector .config-field-row:hover { background-color: var(--becs-row-hover); border-radius: 3px; }
+.compact-config-inspector .config-field-row:hover > .config-field-tooltip,
+.compact-config-inspector .config-field-row:hover .has-tooltip > .tooltip { background-color: var(--becs-accent); color: var(--highlight-text-color); }
+
+/* Slider handles share the thin scrollbar appearance; retain the full input hit area. */
+.compact-config-inspector .config-field-row .unity-base-slider__tracker,
+.compact-config-inspector .config-field-row .unity-base-slider__dragger {
+    background-image: none;
+    border-width: 0px;
+    border-radius: 1px;
+}
+.compact-config-inspector .config-field-row .unity-base-slider__tracker { background-color: var(--becs-separator); }
+.compact-config-inspector .config-field-row .unity-base-slider__dragger { background-color: var(--becs-scrollbar); }
+.compact-config-inspector .config-field-row .unity-base-slider__dragger-border { display: none; }
+.compact-config-inspector .config-field-row .unity-base-slider--horizontal .unity-base-slider__tracker {
+    top: 50%; bottom: auto; height: 2px; min-height: 2px; max-height: 2px; margin-top: -1px;
+}
+.compact-config-inspector .config-field-row .unity-base-slider--horizontal .unity-base-slider__dragger {
+    position: absolute; align-self: flex-start; margin-bottom: 0px; top: 50%; bottom: auto; width: 16px; min-width: 16px; height: 8px; min-height: 8px; max-height: 8px; margin-top: -4px;
+}
+.compact-config-inspector .config-field-row .unity-base-slider--vertical .unity-base-slider__tracker {
+    left: 50%; right: auto; width: 2px; min-width: 2px; max-width: 2px; margin-left: -1px;
+}
+.compact-config-inspector .config-field-row .unity-base-slider--vertical .unity-base-slider__dragger {
+    position: absolute; align-self: flex-start; margin-right: 0px; left: 50%; right: auto; height: 16px; min-height: 16px; width: 8px; min-width: 8px; max-width: 8px; margin-left: -4px;
+}
+.compact-config-inspector .config-field-row .unity-base-slider:hover .unity-base-slider__dragger { background-color: var(--becs-scrollbar-hover); }
+.compact-config-inspector .config-field-row .unity-base-slider:active .unity-base-slider__dragger,
+.compact-config-inspector .config-field-row .unity-base-slider:focus .unity-base-slider__dragger { background-color: var(--becs-accent); }
+
+.compact-config-inspector .config-field-row .unity-base-slider__dragger { border-radius: 3px; }
+.compact-config-inspector .becs-slider-fill { position: absolute; background-color: var(--becs-accent); border-radius: 1px; }
+.compact-config-inspector .config-field-row .unity-base-slider__tracker { background-color: var(--config-border); overflow: visible; }
+
+/* Nested array/list surfaces follow the same palette as component sections. */
+.compact-config-inspector .unity-list-view,
+.compact-config-inspector .unity-list-view .unity-scroll-view,
+.compact-config-inspector .unity-list-view__item { background-color: var(--config-background); border-color: var(--config-border); }
+.compact-config-inspector .unity-list-view__item:hover { background-color: var(--becs-row-hover); }
+.compact-config-inspector .unity-list-view__item--selected { background-color: var(--becs-selection); }
+.compact-config-inspector .unity-list-view__foldout-header,
+.compact-config-inspector .unity-list-view__footer { background-color: var(--config-surface); border-color: var(--config-border); }
+.compact-config-inspector .unity-list-view__empty-label { background-color: var(--config-background); color: var(--config-muted); }
+
+.compact-config-inspector .config-field-row.becs-collection-field-row:hover { background-color: rgba(0,0,0,0); }
+.compact-config-inspector .unity-list-view__foldout-header > .unity-foldout__toggle { background-color: var(--config-surface); }
+.compact-config-inspector .unity-list-view__foldout-header > .unity-foldout__toggle:hover { background-color: var(--becs-row-hover); }
+.compact-config-inspector .unity-list-view__footer .becs-list-action { background-image: none; }

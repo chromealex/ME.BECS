@@ -4,7 +4,7 @@ using Unity.Jobs;
 namespace ME.BECS.Tests {
 
     [Unity.Burst.BurstCompileAttribute]
-    public unsafe class Tests_Components {
+    public unsafe partial class Tests_Components {
 
         [UnityEngine.TestTools.UnitySetUpAttribute]
         public System.Collections.IEnumerator SetUp() {
@@ -18,7 +18,7 @@ namespace ME.BECS.Tests {
             yield return null;
         }
 
-        public struct SetJob : Unity.Jobs.IJobParallelFor {
+        public partial struct SetJob : Unity.Jobs.IJobParallelFor {
 
             public Unity.Collections.NativeArray<Ent> entities;
 
@@ -32,7 +32,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct SetJobTag : Unity.Jobs.IJobParallelFor {
+        public partial struct SetJobTag : Unity.Jobs.IJobParallelFor {
 
             public Unity.Collections.NativeArray<Ent> entities;
 
@@ -584,7 +584,6 @@ namespace ME.BECS.Tests {
 
         }
 
-        #if ENABLE_BECS_FLAT_QUERIES
         [Test]
         public void FlatQueryEntityComponents() {
 
@@ -622,10 +621,9 @@ namespace ME.BECS.Tests {
             Assert.AreEqual(0u, world.state.ptr->entities.GetEntityComponentsCount(world.state, reusedEnt.id));
 
         }
-        #endif
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct TestJobSetParallel : IJobParallelFor {
+        public partial struct TestJobSetParallel : IJobParallelFor {
         
             [Unity.Collections.ReadOnlyAttribute]
             public Unity.Collections.NativeArray<Ent> arr;
@@ -639,7 +637,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct TestJobRemoveParallel : IJobParallelFor {
+        public partial struct TestJobRemoveParallel : IJobParallelFor {
 
             [Unity.Collections.ReadOnlyAttribute]
             public Unity.Collections.NativeArray<Ent> arr;

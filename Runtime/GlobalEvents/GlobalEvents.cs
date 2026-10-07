@@ -296,7 +296,7 @@ namespace ME.BECS {
     
     public partial struct World {
 
-        public unsafe struct GlobalEventsProcessJob : IJob {
+        public unsafe partial struct GlobalEventsProcessJob : IJob {
 
             public ushort worldId;
             

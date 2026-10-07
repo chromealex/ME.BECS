@@ -1,0 +1,292 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Text;
+
+namespace ME.BECS.SourceGenerator;
+
+// Instantiated reachability. Call multiplicity, virtual dispatch and CFG execution counts remain
+// separate concerns: a closed graph alone is not proof of safety or entity creation coverage.
+internal static class MethodSummaryGraph {
+    internal const string MetadataKey = "ME.BECS.JobGraph.v2";
+
+    internal sealed class Summary {
+        internal string Id = "";
+        // In-memory analysis specialization, never a CLR generic argument or an
+        // exported method identity. Static body weights use the original method.
+        internal string? AllocatorOrigin;
+        internal string[] Flags = Array.Empty<string>();
+        internal string[] Unresolved = Array.Empty<string>();
+        internal MethodSummaryType[] Environment = Array.Empty<MethodSummaryType>();
+        internal MethodSummaryType[]? RootArguments;
+        internal string? RootAssembly;
+        internal readonly List<string[]> Operations = new List<string[]>();
+    }
+
+    internal static (Dictionary<(string Assembly, string Id), Summary> Methods,
+        HashSet<(string Assembly, string Id)> Conflicts, List<Summary> Roots)
+        LoadCatalog(SourceProductionContext output, Compilation compilation, string[] localRows) {
+        var ownAssembly = compilation.Assembly.Identity.ToString();
+        var methods = new Dictionary<(string Assembly, string Id), Summary>();
+        var conflicts = new HashSet<(string Assembly, string Id)>();
+        var roots = new List<Summary>();
+
+        void Add(string assembly, string payload, bool local) {
+            var lines = payload.Split('\n');
+            if (lines.Length < 5 || !lines[0].StartsWith("M:", StringComparison.Ordinal)) return;
+            var summary = new Summary { Id = lines[0], Flags = SplitFlags(lines[1]), Unresolved = SplitFlags(lines[2]) };
+            var variables = new List<MethodSummaryType>();
+            foreach (var token in lines[3].Split(new[] { '\t' }, StringSplitOptions.RemoveEmptyEntries)) {
+                if (!MethodSummaryType.TryDecode(token, out var variable) || variable!.Kind != 'p') {
+                    summary.Unresolved = summary.Unresolved.Concat(new[] { "MalformedEnvironment" }).ToArray();
+                    break;
+                }
+                variables.Add(variable);
+            }
+            summary.Environment = variables.ToArray();
+            for (var i = 4; i < lines.Length; ++i) {
+                if (lines[i].Length != 0) summary.Operations.Add(lines[i].Split('\t'));
+            }
+            var key = (assembly, summary.Id);
+            if (methods.ContainsKey(key)) { conflicts.Add(key); return; }
+            methods.Add(key, summary);
+            if (local && (summary.Flags.Contains("job-root") || summary.Flags.Contains("system-root"))) roots.Add(summary);
+        }
+
+        foreach (var row in localRows) Add(ownAssembly, row, true);
+        var assemblies = new Queue<IAssemblySymbol>();
+        var seenAssemblies = new HashSet<string>(StringComparer.Ordinal) { ownAssembly };
+        foreach (var module in compilation.Assembly.Modules) {
+            foreach (var assembly in module.ReferencedAssemblySymbols) assemblies.Enqueue(assembly);
+        }
+        while (assemblies.Count != 0) {
+            output.CancellationToken.ThrowIfCancellationRequested();
+            var assembly = assemblies.Dequeue();
+            var identity = assembly.Identity.ToString();
+            if (!seenAssemblies.Add(identity)) continue;
+            foreach (var attribute in assembly.GetAttributes()) {
+                if (attribute.AttributeClass?.ToDisplayString() != "System.Reflection.AssemblyMetadataAttribute" ||
+                    attribute.ConstructorArguments.Length != 2 || attribute.ConstructorArguments[0].Value as string != MethodSummaryGenerator.MetadataKey ||
+                    attribute.ConstructorArguments[1].Value is not string payload) continue;
+                Add(identity, payload, false);
+            }
+            foreach (var module in assembly.Modules) {
+                foreach (var referenced in module.ReferencedAssemblySymbols) assemblies.Enqueue(referenced);
+            }
+        }
+
+        AllocatorMethodSummaries.Add(compilation, methods);
+        NativeHashMapMethodSummaries.Add(compilation, methods);
+        NativeHashMapGrowthSummaries.Add(compilation, methods);
+        ContainerAllocatorBindings.Expand(compilation, methods, conflicts, output.CancellationToken);
+        return (methods, conflicts, roots);
+    }
+
+    internal static void EmitCoverage(SourceProductionContext output, Compilation compilation, string[] localRows, string[] registryAccesses) {
+        var ownAssembly = compilation.Assembly.Identity.ToString();
+        var (methods, conflicts, roots) = LoadCatalog(output, compilation, localRows);
+        DestroyRegistrationEffects.Emit(output, compilation, registryAccesses, methods, conflicts);
+        ViewSafetySummary.Emit(output, compilation, methods, conflicts);
+        roots.AddRange(JobGenericRoots.Create(output, compilation, methods));
+
+        var source = new StringBuilder("// <auto-generated/>\n");
+        var scheduledCatalogs = new HashSet<string>(StringComparer.Ordinal);
+        var directRootCatalogs = new HashSet<string>(StringComparer.Ordinal);
+        var types = new Dictionary<string, MethodSummaryType?>(StringComparer.Ordinal);
+        MethodSummaryType? Decode(string token) {
+            if (types.TryGetValue(token, out var type)) return type;
+            if (!MethodSummaryType.TryDecode(token, out type)) type = null;
+            types.Add(token, type);
+            return type;
+        }
+        var dependencySummary = new SystemDependencySummary(compilation, output.CancellationToken, methods, conflicts, Decode);
+        var synchronizationSummary = new SystemSynchronizationSummary(compilation, output.CancellationToken, methods, conflicts, Decode);
+        var runtimeUsage = new RuntimeTypeUsage();
+        RuntimeUsageRoots.Emit(output, compilation, methods, conflicts, Decode, runtimeUsage);
+        if (roots.Count == 0) return;
+        foreach (var root in roots.OrderBy(static r => r.Id, StringComparer.Ordinal)) {
+            var systemRoot = root.Flags.Contains("system-root");
+            var scheduledJobs = new HashSet<string>(StringComparer.Ordinal);
+            var rootAssembly = root.RootAssembly ?? ownAssembly;
+            var rootArguments = root.RootArguments ?? root.Environment;
+            var pending = new Queue<(string Assembly, string Id, MethodSummaryType[] Arguments)>();
+            var visited = new HashSet<(string Assembly, string Id, string Arguments)>();
+            var missing = new HashSet<(string Assembly, string Id, string Arguments)>();
+            var gaps = new HashSet<string>(StringComparer.Ordinal);
+            long contextSize = 0;
+            pending.Enqueue((rootAssembly, root.Id, rootArguments));
+            if (rootArguments.Any(static a => a.IsOpen)) gaps.Add("OpenGenericRoot: " + root.Id);
+            while (pending.Count != 0) {
+                output.CancellationToken.ThrowIfCancellationRequested();
+                var node = pending.Dequeue();
+                var key = (node.Assembly, node.Id);
+                var instance = (node.Assembly, node.Id, string.Join(";", node.Arguments.Select(static a => a.Encode())));
+                if (!visited.Add(instance)) continue;
+                contextSize += instance.Item3.Length;
+                // Recursive F<T> -> F<List<T>> creates infinitely many distinct substitutions.
+                // Bound diagnostics explicitly rather than hanging compilation or truncating silently.
+                if (visited.Count > 10000 || contextSize > 16777216) { gaps.Add("InstantiationLimit: " + root.Id); break; }
+                if (conflicts.Contains(key)) { gaps.Add("ConflictingSummary: " + key.Id); continue; }
+                if (!methods.TryGetValue(key, out var method)) { missing.Add(instance); continue; }
+                if (method.Flags.Contains("ME.BECS.CodeGeneratorIgnoreAttribute")) continue;
+                if (!method.Flags.Contains(DestroyDispatchContracts.Schema)) gaps.Add("MissingDestroyContracts: " + key.Id);
+                if (!method.Flags.Contains(ImplicitFormattingContracts.Schema)) gaps.Add("MissingImplicitFormattingContracts: " + key.Id);
+                if (!method.Flags.Contains(GenericConstructionContracts.Schema)) gaps.Add("MissingGenericConstructionContracts: " + key.Id);
+                if (MethodSummaryContracts.IsConstructor(key.Id) && !method.Flags.Contains(MethodSummaryContracts.ConstructorSchema))
+                    gaps.Add("MissingConstructorContract: " + key.Id);
+                if (systemRoot && !method.Flags.Contains(MethodSummaryContracts.SchedulingSchema)) gaps.Add("MissingScheduleSchema: " + key.Id);
+                if (systemRoot && !method.Flags.Contains(SystemQueryFilterContracts.Schema)) gaps.Add("MissingQueryFilterSchema: " + key.Id);
+                if (node.Arguments.Any(static a => a.IsOpen)) gaps.Add("UnboundTypeParameter: " + key.Id);
+                if (method.Environment.Length != node.Arguments.Length) { gaps.Add("GenericArityMismatch: " + key.Id); continue; }
+                var environment = new Dictionary<string, MethodSummaryType>(StringComparer.Ordinal);
+                for (var i = 0; i < node.Arguments.Length; ++i) environment[method.Environment[i].Identity] = node.Arguments[i];
+                foreach (var unresolved in method.Unresolved) {
+                    // Scheduled-job discovery needs the union of reachable call
+                    // effects, not exceptional execution order or call counts.
+                    // Only certified producers include catch/filter/finally effects.
+                    if (systemRoot && unresolved == "ExceptionControlFlow" && method.Flags.Contains(MethodSummaryControlFlow.EffectUnionSchema)) continue;
+                    gaps.Add(unresolved + ": " + key.Id);
+                }
+                foreach (var rawOperation in method.Operations) {
+                    var operation = JobConstrainedCall.Resolve(rawOperation, compilation, environment, gaps, methods, conflicts);
+                    if (MethodSummaryContracts.Has(operation, "scalar-comparison") || MethodSummaryContracts.Has(operation, "ecs-leaf")) continue;
+                    if (operation.Length < 5) { gaps.Add("MalformedOperation: " + key.Id); continue; }
+                    DestroyDispatchContracts.Component(operation, compilation, environment, Decode, gaps);
+                    if (operation[0] == "field" || operation[0] == "parameter-override" || MethodSummaryContracts.Has(operation, "ignore")) continue;
+                    if (systemRoot && operation[0] == "method-ref") {
+                        // Taking a delegate does not execute its body. Resolved invocations have
+                        // their own call edge; escaping/unresolved delegates keep analysis incomplete.
+                        gaps.Add("DeferredInvocation: " + operation[3]);
+                        continue;
+                    }
+                    if (systemRoot && JobControlContracts.SystemCall(operation, method.Flags, gaps)) continue;
+                    if (systemRoot && QuerySchedulingContracts.Call(operation, method.Flags, gaps)) continue;
+                    if (systemRoot && MethodSummaryContracts.Value(operation, "query-filter") != null) continue;
+                    if (systemRoot && operation[0] != "method-ref" && MethodSummaryContracts.Value(operation, "scheduled-job") is string scheduled) {
+                        var job = Decode(scheduled)?.Substitute(environment);
+                        if (job == null || job.IsUnsupported || job.IsOpen) gaps.Add("UnresolvedScheduledJob: " + operation[3]);
+                        else scheduledJobs.Add(job.Encode());
+                    }
+                    if (systemRoot && (MethodSummaryContracts.Has(operation, "deferred-job-call") ||
+                        (MethodSummaryContracts.Value(operation, "safety") is string safetyMode &&
+                         (safetyMode == "0" || safetyMode == "1" || safetyMode == "2") &&
+                         MethodSummaryContracts.Value(operation, "component") != null))) continue;
+                    if (!operation[3].StartsWith("M:", StringComparison.Ordinal)) {
+                        gaps.Add("UnresolvedMember: " + operation[3]);
+                        continue;
+                    }
+                    var receiver = Decode(operation[4])?.Substitute(environment);
+                    if (receiver == null || receiver.Kind != 'n' || receiver.IsUnsupported) { gaps.Add("UnsupportedReceiver: " + operation[3]); continue; }
+                    var arguments = new List<MethodSummaryType>(receiver.Arguments);
+                    var invalid = false;
+                    for (var i = 5; i < MethodSummaryContracts.ArgumentEnd(operation); ++i) {
+                        var argument = Decode(operation[i])?.Substitute(environment);
+                        if (argument == null || argument.IsUnsupported) { invalid = true; break; }
+                        arguments.Add(argument);
+                    }
+                    if (invalid) { gaps.Add("UnsupportedTypeArgument: " + operation[3]); continue; }
+                    pending.Enqueue((operation[2], operation[3], arguments.ToArray()));
+                }
+            }
+            // Keep metadata bounded per root: exact counts + deterministic first examples.
+            // The full graph remains available from the method summaries, not these diagnostics.
+            var examples = missing.Select(static k => "MissingSummary: " + k.Assembly + " | " + k.Id)
+                .Concat(gaps).OrderBy(static s => s, StringComparer.Ordinal).Take(12);
+            var rootTypePrefix = systemRoot ? "system-type=" : "job-type=";
+            var rootKey = root.Id + (root.RootArguments == null ? "" : " | " + root.Flags.First(f => f.StartsWith(rootTypePrefix, StringComparison.Ordinal)));
+            var payload = rootKey + "\n" + visited.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\n" +
+                missing.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\n" + gaps.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\n" + string.Join("\n", examples);
+            if (systemRoot) {
+                var scheduleModes = SystemScheduleModeSummary.Analyze(output, compilation, rootAssembly, root, methods, conflicts, Decode, out var scheduledModes);
+                source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"").Append(SystemScheduleModeSummary.MetadataKey).Append("\", ")
+                    .Append(SymbolDisplay.FormatLiteral(scheduleModes, true)).Append(")]\n");
+                // Direct lifecycle call-graph accesses only. Scheduled Execute bodies
+                // remain separate job summaries; this is not a complete system dependency
+                // or dependsOn.Complete control-flow proof. Never emit job initializers here.
+                var directAccess = JobSafetySummary.Analyze(output, compilation, rootAssembly, root, methods, conflicts, Decode,
+                    emitInitializer: false, emitSizeInitializer: false, rootTypePrefix: "system-type=");
+                var directRoot = SystemDirectRootCatalog.Emit(output, compilation, rootAssembly, root, directRootCatalogs);
+                source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"").Append(RuntimeTypeUsage.MetadataKey).Append("\", ")
+                    .Append(SymbolDisplay.FormatLiteral(runtimeUsage.Analyze(output, compilation, rootAssembly, root, methods, conflicts, Decode, directRoot), true)).Append(")]\n");
+                var synchronization = synchronizationSummary.Analyze(rootAssembly, root, directRoot);
+                source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"").Append(SystemSynchronizationSummary.MetadataKey).Append("\", ")
+                    .Append(SymbolDisplay.FormatLiteral(synchronization, true)).Append(")]\n");
+                var dependencies = dependencySummary.Analyze(output, directAccess, scheduleModes, scheduledModes, directRoot);
+                source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"").Append(SystemDependencySummary.MetadataKey).Append("\", ")
+                    .Append(SymbolDisplay.FormatLiteral(dependencies, true)).Append(")]\n");
+                if (directRoot != null) directAccess += "\n" + directRoot;
+                source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.SystemDirectAccess.v1\", ")
+                    .Append(SymbolDisplay.FormatLiteral(directAccess, true)).Append(")]\n");
+                var scheduledPayload = root.Flags.First(static f => f.StartsWith("system-type=", StringComparison.Ordinal)).Substring("system-type=".Length) +
+                    "\n" + root.Id + "\n" + (missing.Count + gaps.Count).ToString(System.Globalization.CultureInfo.InvariantCulture) + "\n" +
+                    string.Join("\n", scheduledJobs.OrderBy(static j => j, StringComparer.Ordinal).Select(static j => "J\t" + j)) + "\n" +
+                    string.Join("\n", examples.Select(static e => "G\t" + e));
+                source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"ME.BECS.SystemScheduledJobs.v1\", ")
+                    .Append(SymbolDisplay.FormatLiteral(scheduledPayload, true)).Append(")]\n");
+                if (missing.Count == 0 && gaps.Count == 0) {
+                    var scheduledTypes = new List<ITypeSymbol>();
+                    var available = true;
+                    foreach (var encoded in scheduledJobs.OrderBy(static j => j, StringComparer.Ordinal)) {
+                        var symbol = MethodSummaryType.TryDecode(encoded, out var expression)
+                            ? MethodSummaryTypeResolver.Resolve(expression!, compilation) : null;
+                        if (symbol == null || !symbol.IsUnmanagedType || !compilation.IsSymbolAccessibleWithin(symbol, compilation.Assembly)) {
+                            available = false;
+                            break;
+                        }
+                        scheduledTypes.Add(symbol);
+                    }
+                    var identity = scheduledPayload.Split('\n')[0] + "\n" + root.Id;
+                    var key = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(identity);
+                    var rootMethods = DocumentationCommentId.GetSymbolsForDeclarationId(root.Id, compilation).OfType<IMethodSymbol>()
+                        .Where(method => method.ContainingAssembly.Identity.ToString() == rootAssembly).ToArray();
+                    IMethodSymbol? boundRoot = null;
+                    if (rootMethods.Length == 1 && rootMethods[0].Arity == 0 && !rootMethods[0].IsStatic) {
+                        var environment = new Dictionary<string, MethodSummaryType>(StringComparer.Ordinal);
+                        for (var index = 0; index < root.Environment.Length && index < rootArguments.Length; ++index)
+                            environment[root.Environment[index].Identity] = rootArguments[index];
+                        var ownerExpression = MethodSummaryType.From(rootMethods[0].ContainingType).Substitute(environment);
+                        var owner = MethodSummaryTypeResolver.Resolve(ownerExpression, compilation) as INamedTypeSymbol;
+                        boundRoot = owner?.GetMembers().OfType<IMethodSymbol>().SingleOrDefault(method =>
+                            SymbolEqualityComparer.Default.Equals(method.OriginalDefinition, rootMethods[0].OriginalDefinition));
+                        if (owner == null || !compilation.IsSymbolAccessibleWithin(owner, compilation.Assembly)) available = false;
+                    }
+                    if (boundRoot == null || boundRoot.Parameters.Any(parameter => !compilation.IsSymbolAccessibleWithin(parameter.Type, compilation.Assembly))) available = false;
+                    if (available && scheduledCatalogs.Add(key)) {
+                        var catalog = new StringBuilder("// <auto-generated/>\nnamespace ME.BECS.SourceGenerated { public static class ScheduledJobs_")
+                            .Append(key).Append(" { public static global::System.Type[] GetJobs() => new global::System.Type[] {");
+                        foreach (var type in scheduledTypes) catalog.Append("typeof(").Append(type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append("),");
+                        catalog.Append("};\npublic static global::System.Reflection.MethodInfo GetRoot() => typeof(")
+                            .Append(boundRoot!.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                            .Append(").GetMethod(").Append(SymbolDisplay.FormatLiteral(boundRoot.MetadataName, true))
+                            .Append(", global::System.Reflection.BindingFlags.Instance | global::System.Reflection.BindingFlags.Public | global::System.Reflection.BindingFlags.NonPublic | global::System.Reflection.BindingFlags.DeclaredOnly, null, new global::System.Type[] {");
+                        foreach (var parameter in boundRoot.Parameters) {
+                            catalog.Append("typeof(").Append(parameter.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append(')');
+                            if (parameter.RefKind != RefKind.None) catalog.Append(".MakeByRefType()");
+                            catalog.Append(',');
+                        }
+                        catalog.Append("}, null); } }\n");
+                        output.AddSource("ME.BECS.ScheduledJobs_" + key + ".g.cs", SourceText.From(catalog.ToString(), Encoding.UTF8));
+                    }
+                }
+                continue;
+            }
+            source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"").Append(MetadataKey).Append("\", ")
+                .Append(SymbolDisplay.FormatLiteral(payload, true)).Append(")]\n");
+            var entityCounts = JobEntitySummary.Analyze(output, compilation, rootAssembly, root, methods, conflicts, Decode);
+            source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"").Append(JobEntitySummary.MetadataKey).Append("\", ")
+                .Append(SymbolDisplay.FormatLiteral(entityCounts, true)).Append(")]\n");
+            var safety = JobSafetySummary.Analyze(output, compilation, rootAssembly, root, methods, conflicts, Decode);
+            source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"").Append(JobSafetySummary.MetadataKey).Append("\", ")
+                .Append(SymbolDisplay.FormatLiteral(safety, true)).Append(")]\n");
+            var weights = JobWeightSummary.Analyze(output, compilation, rootAssembly, root, methods, conflicts, Decode);
+            source.Append("[assembly: global::System.Reflection.AssemblyMetadataAttribute(\"").Append(JobWeightSummary.MetadataKey).Append("\", ")
+                .Append(SymbolDisplay.FormatLiteral(weights, true)).Append(")]\n");
+        }
+        output.AddSource("ME.BECS.JobGraphCoverage.g.cs", SourceText.From(source.ToString(), Encoding.UTF8));
+    }
+
+    private static string[] SplitFlags(string value) => value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+}

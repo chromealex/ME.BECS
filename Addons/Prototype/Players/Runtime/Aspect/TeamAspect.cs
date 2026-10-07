@@ -1,6 +1,6 @@
 namespace ME.BECS.Players {
 
-    public struct TeamAspect : IAspect {
+    public partial struct TeamAspect : IAspect {
         
         public Ent ent { get; set; }
 

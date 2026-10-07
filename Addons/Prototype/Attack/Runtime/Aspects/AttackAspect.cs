@@ -15,7 +15,7 @@ namespace ME.BECS.Attack {
     #endif
     using ME.BECS.Transforms;
 
-    public struct AttackAspect : IAspect {
+    public partial struct AttackAspect : IAspect {
         
         public Ent ent { get; set; }
 

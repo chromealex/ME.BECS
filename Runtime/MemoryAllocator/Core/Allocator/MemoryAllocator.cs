@@ -71,6 +71,7 @@ namespace ME.BECS {
             public uint size;
 
             public void Dispose(Unity.Collections.Allocator allocator) {
+                LeakDetector.FreeAllocatorZone(this.data.ptr, this.size);
                 _free(this.data, allocator);
             }
 

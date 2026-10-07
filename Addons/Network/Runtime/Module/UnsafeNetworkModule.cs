@@ -226,7 +226,7 @@ namespace ME.BECS.Network {
     }
     
     [BURST]
-    public unsafe struct CopyStatePrepareJob : IJobSingle {
+    public unsafe partial struct CopyStatePrepareJob : IJobSingle {
         
         public safe_ptr<UnsafeNetworkModule.Data> data;
         public Unity.Collections.NativeReference<System.IntPtr> tempData;
@@ -248,7 +248,7 @@ namespace ME.BECS.Network {
     }
 
     [BURST]
-    public unsafe struct CopyStateCompleteJob : IJobParallelFor {
+    public unsafe partial struct CopyStateCompleteJob : IJobParallelFor {
         
         public safe_ptr<UnsafeNetworkModule.Data> data;
         [Unity.Collections.ReadOnly]

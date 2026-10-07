@@ -10,10 +10,10 @@ namespace ME.BECS.Bullets {
     [BURST]
     [UnityEngine.Tooltip("Bullets hit target")]
     [RequiredDependencies(typeof(QuadTreeQuerySystem))]
-    public struct DestroySystem : IUpdate {
+    public partial struct DestroySystem : IUpdate {
 
         [BURST]
-        public struct DestroyJob : IJobForAspects<BulletAspect, QuadTreeQueryAspect, TransformAspect> {
+        public partial struct DestroyJob : IJobForAspects<BulletAspect, QuadTreeQueryAspect, TransformAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref BulletAspect bullet, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
 
@@ -56,7 +56,7 @@ namespace ME.BECS.Bullets {
         }
 
         [BURST]
-        public struct Destroy3DJob : IJobForAspects<BulletAspect, OctreeQueryAspect, TransformAspect> {
+        public partial struct Destroy3DJob : IJobForAspects<BulletAspect, OctreeQueryAspect, TransformAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref BulletAspect bullet, ref OctreeQueryAspect query, ref TransformAspect tr) {
 
@@ -99,7 +99,7 @@ namespace ME.BECS.Bullets {
         }
 
         [BURST]
-        public struct DestroySpatialJob : IJobForAspects<BulletAspect, SpatialQueryAspect, TransformAspect> {
+        public partial struct DestroySpatialJob : IJobForAspects<BulletAspect, SpatialQueryAspect, TransformAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref BulletAspect bullet, ref SpatialQueryAspect query, ref TransformAspect tr) {
 

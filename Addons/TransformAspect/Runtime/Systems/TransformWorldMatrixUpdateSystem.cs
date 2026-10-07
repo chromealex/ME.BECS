@@ -12,12 +12,12 @@ namespace ME.BECS.Transforms {
     
     [UnityEngine.Tooltip("Update all entities with TransformAspect (LocalPosition and LocalRotation components are required).")]
     [BURST]
-    public struct TransformWorldMatrixUpdateSystem : IAwake, IStart, IUpdate, IDestroy {
+    public partial struct TransformWorldMatrixUpdateSystem : IAwake, IStart, IUpdate, IDestroy {
 
         private NativeParallelList<Transform3DExt.HierarchyItem> hierarchyStack;
         
         [BURST]
-        public struct CalculateLocalMatrixJob : IJobForAspects<TransformAspect> {
+        public partial struct CalculateLocalMatrixJob : IJobForAspects<TransformAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect) {
 
@@ -28,7 +28,7 @@ namespace ME.BECS.Transforms {
         }
 
         [BURST]
-        public struct CalculateLocalMatrixStaticJob : IJobForAspects<TransformAspect> {
+        public partial struct CalculateLocalMatrixStaticJob : IJobForAspects<TransformAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect) {
 
@@ -40,7 +40,7 @@ namespace ME.BECS.Transforms {
         }
 
         [BURST]
-        public struct CalculateHierarchyJob : IJobForAspects<TransformAspect> {
+        public partial struct CalculateHierarchyJob : IJobForAspects<TransformAspect> {
 
             public NativeParallelList<Transform3DExt.HierarchyItem> hierarchyStack;
 

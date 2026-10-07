@@ -70,10 +70,6 @@ namespace ME.BECS {
 
         public static readonly Unity.Burst.SharedStatic<Counter<uint>> entitiesCount = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99000);
         public static readonly Unity.Burst.SharedStatic<Counter<uint>> componentsSize = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99001);
-        #if !ENABLE_BECS_FLAT_QUERIES
-        public static readonly Unity.Burst.SharedStatic<Counter<uint>> batchesSize = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99002);
-        public static readonly Unity.Burst.SharedStatic<Counter<uint>> archetypesSize = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99003);
-        #endif
         public static readonly Unity.Burst.SharedStatic<Counter<uint>> entitiesSize = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99004);
         
         public static readonly Unity.Burst.SharedStatic<Counter<int>> memoryAllocatorReserved = Unity.Burst.SharedStatic<Counter<int>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<int>>.align, 99006);
@@ -92,10 +88,6 @@ namespace ME.BECS {
             var categoryAllocator = new ProfilerCategory(categoryAllocatorCaption);
             entitiesCount.Data = new Counter<uint>("Entities Count", category, ProfilerMarkerDataUnit.Count);
             componentsSize.Data = new Counter<uint>("Components Size", category, ProfilerMarkerDataUnit.Bytes);
-            #if !ENABLE_BECS_FLAT_QUERIES
-            batchesSize.Data = new ("Batches Size", category, ProfilerMarkerDataUnit.Bytes);
-            archetypesSize.Data = new ("Archetypes Size", category, ProfilerMarkerDataUnit.Bytes);
-            #endif
             entitiesSize.Data = new Counter<uint>("Entities Size", category, ProfilerMarkerDataUnit.Bytes);
             
             memoryAllocatorReserved.Data = new Counter<int>("Allocator: Reserved", categoryAllocator, ProfilerMarkerDataUnit.Bytes);
@@ -127,10 +119,6 @@ namespace ME.BECS {
             if (ProfilerCountersDefinition.initialized.Data == false) return;
             ProfilerCountersDefinition.entitiesCount.Data.Sample(world.state.ptr->entities.EntitiesCount);
             ProfilerCountersDefinition.componentsSize.Data.Sample(Components.GetReservedSizeInBytes(world.state));
-            #if !ENABLE_BECS_FLAT_QUERIES
-            ProfilerCountersDefinition.archetypesSize.Data.Sample(world.state.ptr->archetypes.GetReservedSizeInBytes(world.state));
-            ProfilerCountersDefinition.batchesSize.Data.Sample(Batches.GetReservedSizeInBytes(world.id));
-            #endif
             ProfilerCountersDefinition.entitiesSize.Data.Sample(world.state.ptr->entities.GetReservedSizeInBytes(world.state));
             
             world.state.ptr->allocator.GetSize(out var reservedSize, out var usedSize, out var freeSize);

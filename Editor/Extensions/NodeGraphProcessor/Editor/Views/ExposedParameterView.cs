@@ -109,9 +109,8 @@ namespace ME.BECS.Extensions.GraphProcessor
             UpdateParameterList();
 
             // Add exposed parameter button
-            header.Add(new Button(OnAddClicked){
-                text = "+"
-            });
+            ME.BECS.Editor.EditorUIUtils.ApplyCommonStyles(header);
+            header.Add(ME.BECS.Editor.EditorUIUtils.CreateAddButton(OnAddClicked, "Add exposed parameter"));
         }
 
         void OnViewClosed(DetachFromPanelEvent evt)

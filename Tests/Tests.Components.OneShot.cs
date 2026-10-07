@@ -3,7 +3,7 @@ using Unity.Jobs;
 
 namespace ME.BECS.Tests {
 
-    public unsafe class Tests_Components_OneShot {
+    public unsafe partial class Tests_Components_OneShot {
 
         [UnityEngine.TestTools.UnitySetUpAttribute]
         public System.Collections.IEnumerator SetUp() {
@@ -17,7 +17,7 @@ namespace ME.BECS.Tests {
             yield return null;
         }
 
-        public struct TestCurrentTickSystem : IUpdate {
+        public partial struct TestCurrentTickSystem : IUpdate {
 
             public Ent ent;
             
@@ -39,7 +39,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestNextTickSystem : IUpdate {
+        public partial struct TestNextTickSystem : IUpdate {
 
             public Ent ent;
             

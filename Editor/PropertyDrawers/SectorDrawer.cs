@@ -36,6 +36,7 @@ namespace ME.BECS.Attack.Editor {
             var root = new VisualElement();
             root.styleSheets.Add(SectorDrawer.styleSheetBase);
             root.AddToClassList("root");
+            root.AddToClassList("becs-sector-field");
             var label = new Label(property.displayName);
             root.Add(label);
             SectorPreview sectorPreview = null;
@@ -144,7 +145,7 @@ namespace ME.BECS.Attack.Editor {
                 #if FIXED_POINT
                 var valProp = property.FindPropertyRelative(nameof(Sector.sector));
                 var prop = (sfloat)valProp.boxedValue;
-                var sector = new Slider("Sector", 0f, 360f, pageSize: 1f);
+                var sector = new Slider("Sector", 0f, 360f, pageSize: 0f);
                 var sectorValueField = new FloatField();
                 sectorValueField.AddToClassList("sector-field");
                 sector.AddToClassList("sector");
@@ -165,7 +166,7 @@ namespace ME.BECS.Attack.Editor {
                 #else
                 var valProp = property.FindPropertyRelative(nameof(Sector.sector));
                 var prop = valProp.floatValue;
-                var sector = new Slider("Sector", 0f, 360f, pageSize: 1f);
+                var sector = new Slider("Sector", 0f, 360f, pageSize: 0f);
                 var sectorValueField = new FloatField();
                 sectorValueField.AddToClassList("sector-field");
                 sector.AddToClassList("sector");

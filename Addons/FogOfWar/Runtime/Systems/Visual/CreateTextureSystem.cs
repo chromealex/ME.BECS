@@ -15,7 +15,7 @@ namespace ME.BECS.FogOfWar {
     using Unity.Collections;
     using static Cuts;
 
-    public struct CreateTextureSystem : IAwake, IDestroy {
+    public partial struct CreateTextureSystem : IAwake, IDestroy {
 
         public View renderView;
         

@@ -1,47 +1,87 @@
+/* Current BECS editor palette. Layout and controls are shared by every theme. */
 :root {
-    --main-color: #3c165c;
-    --dark-color: #1f0337;
-    --highlight-color: #7922c1;
-    --highlight-text-color: #E0BBFF;
-    --toolbar-color: #3c165c;
-    --content-background-color: rgb(55, 55, 55);
-    --content-border-color: rgba(0, 0, 0, 0.3);
+    --main-color: #202226;
+    --dark-color: #202226;
+    --highlight-color: #7196ff;
+    --highlight-text-color: #e8eaf0;
+    --toolbar-color: #292c31;
+    --content-background-color: #202226;
+    --content-border-color: #3c424c;
     --content-border-width: 1px;
-    --content-border-radius: 4px;
-    --content-margin: 2px;
-    --toolbar-buttons-radius: 4px 4px 4px 4px;
-    --toolbar-buttons-margin: 1px 0px 0px 4px;
+    --content-border-radius: 6px;
+    --content-margin: 4px;
+    --toolbar-buttons-radius: 4px;
+    --toolbar-buttons-margin: 2px 4px 2px 0px;
     --toolbar-buttons-border-width: 1px;
-    --toolbar-buttons-border-color: rgba(0, 0, 0, 0.7);
-    --toolbar-buttons-background-color: rgba(0, 0, 0, 0.4);
-    --toolbar-buttons-background-color-hover: rgba(0, 0, 0, 0.7);
-    --grid-lines-color: rgba(255, 255, 255, 0.1);
-    --grid-lines-thick-color: rgba(255, 255, 255, 0.2);
-}
-
-.unity-base-slider__dragger {
-    background-color: var(--main-color);
-    border-color: var(--dark-color);
-}
-
-.unity-scroller #unity-low-button,
-.unity-scroller #unity-high-button {
-    display: none;
-}
-
-#unity-slider {
-    margin-top: 0px;
-    margin-bottom: 0px;
-}
-
-.unity-scroller #unity-low-button {
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
-    -unity-background-image-tint-color: var(--main-color);
-}
-
-.unity-scroller #unity-high-button {
-    border-bottom-left-radius: 5px;
-    border-bottom-right-radius: 5px;
-    -unity-background-image-tint-color: var(--main-color);
+    --toolbar-buttons-border-color: #3c424c;
+    --toolbar-buttons-background-color: #14171b;
+    --toolbar-buttons-background-color-hover: #1b2027;
+    --grid-lines-color: rgba(255,255,255,0.1);
+    --grid-lines-thick-color: rgba(255,255,255,0.2);
+    --becs-background-dark: #202226;
+    --becs-text-dark: #e8eaf0;
+    --becs-background-light: #f4f5f7;
+    --becs-text-light: #242831;
+    --becs-surface-dark: #292c31;
+    --becs-surface-light: white;
+    --becs-border-dark: #3c424c;
+    --becs-border-light: #d9dee6;
+    --becs-muted-dark: #aab3c1;
+    --becs-muted-light: #596373;
+    --becs-track-dark: #3a404a;
+    --becs-track-light: #e4e8ee;
+    --becs-accent: #7196ff;
+    --becs-selection: #395f85;
+    --becs-warning: #e5bf57;
+    --becs-warning-light: #98720b;
+    --becs-info: #67b5ed;
+    --becs-info-light: #1565a7;
+    --becs-success: #7da48a;
+    --becs-success-light: #387850;
+    --becs-purple: #b696df;
+    --becs-purple-light: #7652ad;
+    --becs-persistent: #bd9add;
+    --becs-temporary: #50c5b8;
+    --becs-scrollbar: rgb(190,190,190);
+    --becs-scrollbar-hover: rgb(210,210,210);
+    --becs-scrollbar-active: rgb(225,225,225);
+    --becs-hierarchy-background: rgba(128, 128, 128, 0.025);
+    --becs-row-border: rgba(128, 128, 128, 0.1);
+    --becs-separator: rgba(128, 128, 128, 0.2);
+    --becs-row-hover: rgba(128, 128, 128, 0.08);
+    --becs-control-border: rgba(128, 128, 128, 0.3);
+    --becs-inspector-border: rgb(75, 75, 75);
+    --becs-method-active: rgba(82, 138, 197, 0.2);
+    --becs-burst: rgb(95, 170, 110);
+    --becs-card-separator: rgba(128, 128, 128, 0.4);
+    --becs-port-hover: rgba(113,150,255,0.18);
+    --becs-action-border-dark: #536071;
+    --becs-action-text-dark: #c4cddb;
+    --becs-action-border-light: #b5bfce;
+    --becs-execution-border: #536e91;
+    --becs-start-background: rgb(37, 73, 62);
+    --becs-start-border: rgb(85, 166, 130);
+    --becs-end-background: rgb(77, 48, 57);
+    --becs-end-border: rgb(174, 99, 122);
+    --becs-subgraph-background: rgb(48, 45, 70);
+    --becs-port-text: rgb(143, 180, 220);
+    --becs-delete-background: rgba(128, 128, 128, 0.16);
+    --becs-delete-hover: rgba(190, 95, 105, 0.35);
+    --becs-delete-active: rgba(190, 95, 105, 0.5);
+    --becs-breadcrumb-hover: rgba(100, 140, 180, 0.18);
+    --becs-breadcrumb-text: rgb(114, 169, 223);
+    --becs-field-background: rgba(128,128,128,0.12);
+    --becs-rewind-dark: rgba(125,164,138,0.5);
+    --becs-rewind-light: rgba(56,120,80,0.3);
+    --becs-config-heading: rgba(128, 128, 128, 0.14);
+    --becs-config-border: rgba(128, 128, 128, 0.18);
+    --becs-config-surface: rgba(128, 128, 128, 0.04);
+    --becs-config-selection: rgba(48, 128, 192, 0.22);
+    --becs-config-row-border: rgba(128, 128, 128, 0.15);
+    --becs-config-content: rgba(128, 128, 128, 0.035);
+    --becs-config-tooltip-hover: rgba(128, 128, 128, 0.35);
+    --becs-button-dark: #14171b;
+    --becs-button-hover-dark: #1b2027;
+    --becs-button-light: #d2d8e0;
+    --becs-button-hover-light: #e1e6ec;
 }

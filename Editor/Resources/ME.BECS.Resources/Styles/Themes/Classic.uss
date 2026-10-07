@@ -1,20 +1,21 @@
+@import url("Default.uss");
+
 :root {
-    --main-color: rgb(45, 45, 45);
-    --highlight-color: #676767;
-    --highlight-text-color: #dfdfdf;
-    --dark-color: #232323;
-    --toolbar-color: rgb(45, 45, 45);
-    --content-background-color: rgb(55, 55, 55);
-    --content-border-color: rgba(0, 0, 0, 0.3);
-    --content-border-width: 0px;
-    --content-border-radius: 0px;
-    --content-margin: 0px;
-    --toolbar-buttons-radius: 0px;
-    --toolbar-buttons-margin: 0px 0px 0px 0px;
-    --toolbar-buttons-border-width: 0px 1px 0px 0px;
-    --toolbar-buttons-border-color: rgba(30, 30, 30, 1);
-    --toolbar-buttons-background-color: rgb(47, 47, 47);
-    --toolbar-buttons-background-color-hover: rgb(40, 40, 40);
-    --grid-lines-color: rgba(255, 255, 255, 0.1);
-    --grid-lines-thick-color: rgba(255, 255, 255, 0.2);
+    --main-color: var(--unity-colors-window-background);
+    --dark-color: var(--unity-colors-window-background);
+    --highlight-color: #939393;
+    --toolbar-color: #2d2d2d;
+    --becs-accent: #939393;
+    --becs-selection: #505050;
+    /* Follow the active Unity editor skin rather than approximating its background. */
+    --content-background-color: var(--unity-colors-window-background);
+    --becs-background-dark: var(--unity-colors-window-background);
+    --becs-background-light: var(--unity-colors-window-background);
+    --becs-surface-dark: #2d2d2d;
+    --becs-border-dark: #454545;
+    --toolbar-buttons-background-color: #151515;
+    --toolbar-buttons-background-color-hover: #1e1e1e;
+    --toolbar-buttons-border-color: #454545;
+    --becs-button-dark: #151515;
+    --becs-button-hover-dark: #1e1e1e;
 }

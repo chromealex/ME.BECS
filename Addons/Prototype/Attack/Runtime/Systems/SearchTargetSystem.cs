@@ -19,7 +19,7 @@ namespace ME.BECS.Attack {
     public partial struct SearchTargetSystem : IUpdate {
 
         [BURST]
-        public struct SearchTargetJob : IJobForAspects<AttackAspect, QuadTreeQueryAspect, TransformAspect> {
+        public partial struct SearchTargetJob : IJobForAspects<AttackAspect, QuadTreeQueryAspect, TransformAspect> {
 
             public World world;
             
@@ -57,7 +57,7 @@ namespace ME.BECS.Attack {
         }
 
         [BURST]
-        public struct SearchTargetsJob : IJobFor3Aspects1Components<AttackAspect, QuadTreeQueryAspect, TransformAspect, AttackTargetsCountComponent> {
+        public partial struct SearchTargetsJob : IJobFor3Aspects1Components<AttackAspect, QuadTreeQueryAspect, TransformAspect, AttackTargetsCountComponent> {
 
             public World world;
             

@@ -51,6 +51,10 @@ namespace ME.BECS {
 
         public bool IsCreated => this.link.IsCreated;
 
+        /// <summary>Creates an injected link to an existing system; does not own its memory.</summary>
+        [INLINE(256)]
+        public static InjectSystem<T> FromPointer(void* ptr) => new InjectSystem<T>(new System.IntPtr(ptr));
+
         public ref T Value => ref this.link.GetValue<T>();
 
     }

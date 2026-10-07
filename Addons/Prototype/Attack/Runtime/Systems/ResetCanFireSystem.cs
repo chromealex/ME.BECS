@@ -7,10 +7,10 @@ namespace ME.BECS.Attack {
 
     [BURST]
     [UnityEngine.Tooltip("Reset Can Fire system")]
-    public struct ResetCanFireSystem : IUpdate {
+    public partial struct ResetCanFireSystem : IUpdate {
 
         [BURST]
-        public struct Job : IJobForAspects<AttackAspect, TransformAspect> {
+        public partial struct Job : IJobForAspects<AttackAspect, TransformAspect> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref TransformAspect tr) {
 

@@ -8,8 +8,6 @@ namespace ME.BECS.Editor.FeaturesGraph {
     
     public class FeaturesGraphView : BaseGraphView {
 
-        private static System.Type editorGenType = System.Type.GetType("ME.BECS.Editor.StaticMethods, ME.BECS.Gen.Editor");
-        
         public FeaturesGraphView(UnityEditor.EditorWindow window) : base(window) { }
 
         public bool isEditable;

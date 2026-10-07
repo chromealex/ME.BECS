@@ -18,7 +18,16 @@ namespace ME.BECS {
             }
             return null;
         }
-        
+
+        public static BaseWorldInitializer GetByWorldName(string worldName) {
+            foreach (var item in list) {
+                if (item != null && item.properties.name.ToString() == worldName) {
+                    return item;
+                }
+            }
+            return null;
+        }
+
         public static void Add(BaseWorldInitializer initializer) {
             list.Add(initializer);
         }

@@ -142,20 +142,17 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             this.CollectDependencies(ref iter, this.nodeTarget, types);
             
             if (this.nodeTarget is ME.BECS.FeaturesGraph.Nodes.SystemNode node && node.system != null) {
-                var type = System.Type.GetType("ME.BECS.Editor.StaticMethods, ME.BECS.Gen.Editor");
-                if (type != null) {
-                    var systemType = node.system.GetType();
-                    if (systemType.IsGenericType == true) {
-                        systemType = systemType.GetGenericTypeDefinition();
-                    }
+                var systemType = node.system.GetType();
+                if (systemType.IsGenericType == true) systemType = systemType.GetGenericTypeDefinition();
+                if (SystemDependencyCatalog.ContainsSystem(systemType)) {
                     {
-                        var errors = (System.Collections.Generic.List<ME.BECS.Editor.Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>)type
-                            .GetMethod("GetSystemDependenciesErrors").Invoke(null, new object[] { systemType });
+                        var errors = SystemDependencyCatalog.GetSystemDependenciesErrors(systemType);
                         if (errors.Count > 0) {
                             var container = new VisualElement();
                             container.AddToClassList("errors");
                             foreach (var err in errors) {
-                                var lbl = new Label($"<color=red>\u26a0</color> {err.message}");
+                                var lbl = new Label($"<color=#E8B04A>\u26a0</color> {err.GetDisplayMessage()}");
+                                lbl.tooltip = "Static analysis hint, not a required code change. Check synchronization in context before adding or removing Complete().";
                                 container.Add(lbl);
                             }
 
@@ -163,8 +160,7 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                         }
                     }
 
-                    var list = (System.Collections.Generic.List<ComponentDependencyGraphInfo>)type.GetMethod("GetSystemComponentsDependencies")
-                                                                                                  .Invoke(null, new object[] { systemType });
+                    var list = SystemDependencyCatalog.GetSystemComponentsDependencies(systemType);
                     var requiredContainer = new Foldout();
                     requiredContainer.value = UnityEditor.EditorPrefs.GetBool($"Foldouts.graphs.{systemType.FullName}");
                     requiredContainer.RegisterValueChangedCallback(evt => { UnityEditor.EditorPrefs.SetBool($"Foldouts.graphs.{systemType.FullName}", evt.newValue); });

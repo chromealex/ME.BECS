@@ -17,7 +17,7 @@ namespace ME.BECS.Tests {
 
     }
 
-    public unsafe class Tests_Components_Destroy {
+    public unsafe partial class Tests_Components_Destroy {
 
         [UnityEngine.TestTools.UnitySetUpAttribute]
         public System.Collections.IEnumerator SetUp() {
@@ -31,7 +31,7 @@ namespace ME.BECS.Tests {
             yield return null;
         }
 
-        public struct TestSystem : IUpdate {
+        public partial struct TestSystem : IUpdate {
 
             public Ent ent;
             
@@ -45,7 +45,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestSetSystem : IUpdate {
+        public partial struct TestSetSystem : IUpdate {
 
             public Ent ent;
             
@@ -59,7 +59,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestDestroyEntSystem : IUpdate {
+        public partial struct TestDestroyEntSystem : IUpdate {
 
             public Ent ent;
             

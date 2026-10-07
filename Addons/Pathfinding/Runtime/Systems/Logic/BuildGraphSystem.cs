@@ -18,7 +18,7 @@ namespace ME.BECS.Pathfinding {
 
     //[BURST]
     [UnityEngine.Tooltip("Schedule building a pathfinding graph.")]
-    public unsafe struct BuildGraphSystem : IAwake, IDestroy {
+    public unsafe partial struct BuildGraphSystem : IAwake, IDestroy {
 
         public BECS.ObjectReference<AgentTypesConfig> agentTypesConfig;
 

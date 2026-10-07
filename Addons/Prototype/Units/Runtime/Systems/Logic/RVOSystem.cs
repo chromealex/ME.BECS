@@ -23,7 +23,7 @@ namespace ME.BECS.Units {
 
     [BURST]
     [UnityEngine.Tooltip("RVO behaviour for units.")]
-    public struct RVOSystem : IUpdate, IDrawGizmos {
+    public partial struct RVOSystem : IUpdate, IDrawGizmos {
 
         public static RVOSystem Default => new RVOSystem() {
             minSpeedFactor = 0.3f,
@@ -38,7 +38,7 @@ namespace ME.BECS.Units {
         public bbool drawGizmos;
 
         [BURST]
-        public struct Job : IJobForAspects<TransformAspect, UnitAspect, QuadTreeQueryAspect> {
+        public partial struct Job : IJobForAspects<TransformAspect, UnitAspect, QuadTreeQueryAspect> {
 
             public InjectSystem<RVOSystem> system;
             [InjectDeltaTime]
@@ -53,7 +53,7 @@ namespace ME.BECS.Units {
         }
 
         [BURST]
-        public struct SpatialJob : IJobForAspects<TransformAspect, UnitAspect, SpatialQueryAspect> {
+        public partial struct SpatialJob : IJobForAspects<TransformAspect, UnitAspect, SpatialQueryAspect> {
 
             public InjectSystem<RVOSystem> system;
             [InjectDeltaTime]
@@ -68,7 +68,7 @@ namespace ME.BECS.Units {
         }
 
         [BURST]
-        public struct ApplyCollisionJob : IJobForAspects<TransformAspect, UnitAspect> {
+        public partial struct ApplyCollisionJob : IJobForAspects<TransformAspect, UnitAspect> {
 
             [InjectDeltaTime]
             public tfloat dt;

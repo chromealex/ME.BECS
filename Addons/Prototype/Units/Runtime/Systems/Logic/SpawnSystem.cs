@@ -8,10 +8,10 @@ namespace ME.BECS.Units {
 
     [BURST]
     [UnityEngine.Tooltip("Unit spawn effect system")]
-    public struct SpawnSystem : IUpdate {
+    public partial struct SpawnSystem : IUpdate {
 
         [BURST]
-        public struct Job : IJobForAspects<TransformAspect, UnitAspect> {
+        public partial struct Job : IJobForAspects<TransformAspect, UnitAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit) {
                 EffectUtils.CreateEffect(in jobInfo, tr.position, tr.rotation, unit.ent.ReadStatic<UnitEffectOnSpawnComponent>().effect, unit.readOwner.GetAspect<ME.BECS.Players.PlayerAspect>());

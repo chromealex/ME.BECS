@@ -8,10 +8,10 @@ namespace ME.BECS.FogOfWar {
 
     [BURST]
     [RequiredDependencies(typeof(CreateSystem))]
-    public struct UpdateSystem : IUpdate {
+    public partial struct UpdateSystem : IUpdate {
 
         [BURST]
-        public struct RevealRectJob : IJobForComponents<FogOfWarRevealerComponent, OwnerComponent> {
+        public partial struct RevealRectJob : IJobForComponents<FogOfWarRevealerComponent, OwnerComponent> {
 
             public FogOfWarStaticComponent props;
             
@@ -29,7 +29,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST]
-        public struct RevealRangeJob : IJobForComponents<FogOfWarRevealerComponent, OwnerComponent> {
+        public partial struct RevealRangeJob : IJobForComponents<FogOfWarRevealerComponent, OwnerComponent> {
 
             public FogOfWarStaticComponent props;
             
@@ -47,7 +47,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST]
-        public struct RevealRectPartialJob : IJobForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
+        public partial struct RevealRectPartialJob : IJobForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
 
             public FogOfWarStaticComponent props;
             
@@ -67,7 +67,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST]
-        public struct RevealRangePartialJob : IJobForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
+        public partial struct RevealRangePartialJob : IJobForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
 
             public FogOfWarStaticComponent props;
             
@@ -87,7 +87,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST]
-        public struct RevealRangeSectorJob : IJobForComponents<FogOfWarRevealerComponent, OwnerComponent, FogOfWarSectorRevealerComponent> {
+        public partial struct RevealRangeSectorJob : IJobForComponents<FogOfWarRevealerComponent, OwnerComponent, FogOfWarSectorRevealerComponent> {
 
             public FogOfWarStaticComponent props;
             
@@ -106,7 +106,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST]
-        public struct RevealRangeSectorPartialJob : IJobForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
+        public partial struct RevealRangeSectorPartialJob : IJobForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
 
             public FogOfWarStaticComponent props;
             

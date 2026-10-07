@@ -14,7 +14,7 @@ namespace ME.BECS.FogOfWar {
     using Unity.Collections;
 
     [RequiredDependencies(typeof(CreateTextureSystem))]
-    public unsafe struct UpdateTextureSystemGPU : IAwake, IUpdate, IDestroy {
+    public unsafe partial struct UpdateTextureSystemGPU : IAwake, IUpdate, IDestroy {
 
         private const int THREAD_GROUPS = 4;
 

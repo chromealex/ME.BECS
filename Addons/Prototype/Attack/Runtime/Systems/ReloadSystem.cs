@@ -15,10 +15,10 @@ namespace ME.BECS.Attack {
 
     [BURST]
     [UnityEngine.Tooltip("Reload system")]
-    public struct ReloadSystem : IUpdate {
+    public partial struct ReloadSystem : IUpdate {
 
         [BURST]
-        public struct ReloadJob : IJobForAspects<AttackAspect> {
+        public partial struct ReloadJob : IJobForAspects<AttackAspect> {
 
             public tfloat dt;
             

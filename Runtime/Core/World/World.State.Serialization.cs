@@ -12,10 +12,6 @@ namespace ME.BECS {
         public Ents entities;
         public OneShotTasks oneShotTasks;
         public Components components;
-        #if !ENABLE_BECS_FLAT_QUERIES
-        public Archetypes archetypes;
-        public Queries queries;
-        #endif
         public RandomData random;
         public CollectionsRegistry collectionsRegistry;
         public AutoDestroyRegistry autoDestroyRegistry;
@@ -34,10 +30,6 @@ namespace ME.BECS {
             writer.Write(this.entities);
             writer.Write(this.oneShotTasks);
             writer.Write(this.components);
-            #if !ENABLE_BECS_FLAT_QUERIES
-            writer.Write(this.archetypes);
-            writer.Write(this.queries);
-            #endif
             writer.Write(this.random);
             writer.Write(this.collectionsRegistry);
             writer.Write(this.autoDestroyRegistry);
@@ -53,10 +45,6 @@ namespace ME.BECS {
             reader.Read(ref this.entities);
             reader.Read(ref this.oneShotTasks);
             reader.Read(ref this.components);
-            #if !ENABLE_BECS_FLAT_QUERIES
-            reader.Read(ref this.archetypes);
-            reader.Read(ref this.queries);
-            #endif
             reader.Read(ref this.random);
             reader.Read(ref this.collectionsRegistry);
             reader.Read(ref this.autoDestroyRegistry);
@@ -101,17 +89,6 @@ namespace ME.BECS {
             value.SerializeHeaders(ref this);
         }
 
-        #if !ENABLE_BECS_FLAT_QUERIES
-        [INLINE(256)]
-        public void Write(Archetypes value) {
-            value.SerializeHeaders(ref this);
-        }
-
-        [INLINE(256)]
-        public void Write(Queries value) {
-            value.SerializeHeaders(ref this);
-        }
-        #endif
 
     }
 
@@ -147,17 +124,6 @@ namespace ME.BECS {
             value.DeserializeHeaders(ref this);
         }
 
-        #if !ENABLE_BECS_FLAT_QUERIES
-        [INLINE(256)]
-        public void Read(ref Archetypes value) {
-            value.DeserializeHeaders(ref this);
-        }
-
-        [INLINE(256)]
-        public void Read(ref Queries value) {
-            value.DeserializeHeaders(ref this);
-        }
-        #endif
 
     }
 

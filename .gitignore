@@ -33,6 +33,7 @@
 ExportedObj/
 .consulo/
 *.csproj
+!/.ME.BECS.SourceGenerator/ME.BECS.SourceGenerator.csproj
 *.unityproj
 *.sln
 *.suo
@@ -51,6 +52,10 @@ ExportedObj/
 *.pidb.meta
 *.pdb.meta
 *.mdb.meta
+
+# Project-specific source-generator input data; rebuilt by the Editor.
+/SourceGenerator/*Inputs.ME.BECS.SourceGenerator.additionalfile*
+/SourceGenerator/*Inputs.becs-inputs*
 
 # Unity3D generated file on crash reports
 sysinfo.txt

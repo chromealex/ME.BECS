@@ -12,7 +12,7 @@ namespace ME.BECS.Pathfinding {
     using Unity.Collections;
 
     [UnityEngine.Tooltip("Draw graph in gizmos.")]
-    public struct DrawGizmosGraphSystem : IUpdate, IDrawGizmos {
+    public partial struct DrawGizmosGraphSystem : IUpdate, IDrawGizmos {
 
         public bbool drawGraph;
         public bbool drawPath;

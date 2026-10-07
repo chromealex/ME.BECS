@@ -20,7 +20,7 @@ namespace ME.BECS.UnitsHealthBars {
     
     [BURST]
     [UnityEngine.Tooltip("Drawing health bars via GL API")]
-    public struct DrawHealthBarsSystem : IAwake, IUpdate, IDestroy {
+    public partial struct DrawHealthBarsSystem : IAwake, IUpdate, IDestroy {
 
         private const int MAX_SECTIONS = 20;
         private const int MIN_SECTIONS = 4;
@@ -65,7 +65,7 @@ namespace ME.BECS.UnitsHealthBars {
         private ClassPtr<UnityEngine.Camera> cameraObject;
 
         [BURST]
-        public struct Job : IJobForAspects<UnitAspect> {
+        public partial struct Job : IJobForAspects<UnitAspect> {
 
             public SystemLink<CreateSystem> fow;
             public PlayerAspect activePlayer;

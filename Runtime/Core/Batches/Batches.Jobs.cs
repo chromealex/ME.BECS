@@ -10,29 +10,9 @@ namespace ME.BECS {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Jobs;
     
-    #if !ENABLE_BECS_FLAT_QUERIES
-    [BURST]
-    public struct ApplyJob : IJobSingle {
-
-        #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
-        public SafetyComponentContainerRW<TNull> safety;
-        #endif
-        
-        public ushort worldId;
-        public safe_ptr<State> state;
-            
-        [INLINE(256)]
-        public void Execute() {
-
-            Batches.ApplyFromJob(this.worldId, this.state);
-
-        }
-
-    }
-    #endif
 
     [BURST]
-    public struct ApplyDestroyedJob : IJobSingle {
+    public partial struct ApplyDestroyedJob : IJobSingle {
 
         public ushort worldId;
         public safe_ptr<State> state;
@@ -47,7 +27,7 @@ namespace ME.BECS {
     }
 
     [BURST]
-    public unsafe struct StartParallelJob : IJobSingle {
+    public unsafe partial struct StartParallelJob : IJobSingle {
         
         #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
         public static readonly Unity.Burst.SharedStatic<AtomicSafetyHandle> safetyHandler = Unity.Burst.SharedStatic<AtomicSafetyHandle>.GetOrCreate<StartParallelJob>();
@@ -87,7 +67,7 @@ namespace ME.BECS {
     }
 
     [BURST]
-    public unsafe struct FinishParallelJob : IJobSingle {
+    public unsafe partial struct FinishParallelJob : IJobSingle {
         
         #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
         public static readonly Unity.Burst.SharedStatic<AtomicSafetyHandle> safetyHandler = Unity.Burst.SharedStatic<AtomicSafetyHandle>.GetOrCreate<StartParallelJob>();

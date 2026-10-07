@@ -14,7 +14,7 @@ namespace ME.BECS.Bullets {
 
     using ME.BECS.Players;
     
-    public struct BulletAspect : IAspect {
+    public partial struct BulletAspect : IAspect {
         
         public Ent ent { get; set; }
 

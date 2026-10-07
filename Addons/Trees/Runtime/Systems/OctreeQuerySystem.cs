@@ -76,7 +76,7 @@ namespace ME.BECS {
     }
 
     [EditorComment("Filter all entities which suitable for this query")]
-    public struct OctreeQueryAspect : IAspect {
+    public partial struct OctreeQueryAspect : IAspect {
 
         public Ent ent { get; set; }
 
@@ -94,10 +94,10 @@ namespace ME.BECS {
     
     [BURST]
     [RequiredDependencies(typeof(OctreeInsertSystem))]
-    public struct OctreeQuerySystem : IUpdate {
+    public partial struct OctreeQuerySystem : IUpdate {
 
         [BURST]
-        public struct Job : IJobForAspects<OctreeQueryAspect, TransformAspect> {
+        public partial struct Job : IJobForAspects<OctreeQueryAspect, TransformAspect> {
 
             public OctreeInsertSystem system;
 

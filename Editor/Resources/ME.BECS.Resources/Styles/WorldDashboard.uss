@@ -1,0 +1,43 @@
+/* Window-specific layout; shared appearance and controls are in DefaultStyles.uss. */
+.world-dashboard { flex-grow: 1; }
+.dashboard-toolbar { flex-direction: row; align-items: center; flex-wrap: wrap; padding: 8px 12px; }
+.dashboard-page.selected { border-bottom-width: 2px; }
+.dashboard-status { flex-grow: 1; -unity-text-align: middle-right; font-size: 11px; padding: 4px; }
+.dashboard-body, .dashboard-scroll { flex-grow: 1; min-height: 0; }
+.dashboard-scroll > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { padding: 18px; }
+.dashboard-stats { flex-direction: row; flex-wrap: wrap; margin-bottom: 22px; }
+.dashboard-stat { flex-grow: 1; flex-basis: 170px; padding: 14px; margin: 0 10px 10px 0; border-width: 1px; border-radius: 6px; }
+.dashboard-caption { font-size: 12px; }
+.dashboard-stat-value { font-size: 25px; margin-top: 6px; margin-bottom: 6px; }
+.dashboard-columns { flex-direction: row; flex-wrap: wrap; }
+.dashboard-column { flex-grow: 1; flex-basis: 300px; margin-right: 20px; margin-bottom: 18px; }
+.dashboard-heading { font-size: 13px; -unity-font-style: bold; margin-bottom: 14px; }
+.dashboard-note { font-size: 11px; white-space: normal; margin-top: 4px; margin-bottom: 8px; }
+.dashboard-row-group { padding-top: 6px; padding-bottom: 6px; }
+.dashboard-row { flex-direction: row; justify-content: space-between; }
+.dashboard-row > Label { white-space: normal; flex-shrink: 1; }
+.dashboard-row-value { -unity-text-align: middle-right; margin-left: 12px; }
+.dashboard-track { height: 7px; margin-top: 6px; border-radius: 2px; overflow: hidden; }
+.dashboard-fill { height: 7px; }
+.dashboard-stack { flex-direction: row; height: 18px; margin-bottom: 12px; overflow: hidden; }
+.dashboard-stack > VisualElement { height: 18px; flex-shrink: 0; }
+.dashboard-bottom { border-top-width: 1px; padding-top: 20px; }
+.world-dashboard { min-height: 0; overflow: hidden; }
+.world-dashboard .dashboard-body { padding: 16px; flex-basis: 0; min-height: 0; overflow: hidden; }
+.world-dashboard .dashboard-scroll > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { padding: 8px; }
+
+.world-dashboard .dashboard-empty-state { flex-grow: 1; white-space: normal; -unity-text-align: middle-center; padding: 24px; }
+/* Match the compact 28px world controls used by the other editor windows. */
+.world-dashboard .dashboard-tabs { align-items: flex-end; padding: 3px 12px 0px 12px; min-height: 32px; }
+.world-dashboard .dashboard-tabs > Button,
+.world-dashboard .dashboard-tabs > .dashboard-tab {
+    height: 28px;
+    min-height: 28px;
+    max-height: 28px;
+    margin: 0px 4px 0px 0px;
+    padding: 0px 12px;
+    border-radius: 4px;
+}
+.world-dashboard .dashboard-tabs > .becs-add-button.add-world-tab { padding: 0px; }
+
+.world-dashboard .dashboard-tabs > .dashboard-tab { background-image: none; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; }

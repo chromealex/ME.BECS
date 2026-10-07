@@ -5,11 +5,9 @@ namespace ME.BECS.Tests {
     public static class AllTests {
 
         public static void Start() {
+            BootstrapRuntime.RequireInstalledPlan(editor: true);
             ObjectReferenceRegistry.ClearRuntimeObjects();
-            {
-                var type = System.Type.GetType("ME.BECS.Editor.StaticMethods, ME.BECS.Gen.Editor");
-                type.GetMethod("Load").Invoke(null, null);
-            }
+            BootstrapRuntime.LoadInstalled(editor: true);
         }
 
         public static void Dispose() {
@@ -19,7 +17,7 @@ namespace ME.BECS.Tests {
 
     }
 
-    public struct TestAspect : IAspect {
+    public partial struct TestAspect : IAspect {
             
         public Ent ent { get; set; }
 

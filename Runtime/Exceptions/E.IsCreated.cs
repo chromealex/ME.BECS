@@ -70,21 +70,6 @@ namespace ME.BECS {
             NotCreatedException.Throw(world);
         }
 
-        #if !ENABLE_BECS_FLAT_QUERIES
-        [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK][IgnoreProfiler]
-        public static void IS_CREATED(in Query query) {
-            if (query.isCreated == true) return;
-            NotCreatedException.Throw(query);
-        }
-        
-        [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK][IgnoreProfiler]
-        public static void IS_CREATED(in QueryBuilderStatic queryBuilder) {
-            if (queryBuilder.isCreated == true) return;
-            NotCreatedException.Throw(queryBuilder);
-        }
-        #endif
 
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK][IgnoreProfiler]

@@ -5,7 +5,12 @@ namespace ME.BECS.Editor.Aspects {
 
     public class CopyFromCodeGenerator : CustomCodeGenerator {
 
-        public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
+        // CopyFrom remains disabled pending its separate investigation. Do not emit
+        // an empty legacy registration method for the built-in no-op feeder.
+        public override string SourceRegistrationKind => this.GetType() == typeof(CopyFromCodeGenerator) ? "none" : base.SourceRegistrationKind;
+
+        // Kept only for the deferred CopyFrom investigation, never called by export.
+        private System.Collections.Generic.List<CodeGenerator.MethodDefinition> CollectDisabledLegacyMethods(System.Collections.Generic.List<System.Type> references) {
 
             if (this.editorAssembly == true) return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
             // TODO: Disabled for now because of Burst Compiler failed in Unity Cloud

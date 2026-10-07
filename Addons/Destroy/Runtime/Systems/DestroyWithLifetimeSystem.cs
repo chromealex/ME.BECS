@@ -15,10 +15,10 @@ namespace ME.BECS {
     
     [UnityEngine.Tooltip("Update entities with lifetime component (ent.Destroy(float lifetime) API).")]
     [BURST]
-    public struct DestroyWithLifetimeSystem : IUpdate {
+    public partial struct DestroyWithLifetimeSystem : IUpdate {
 
         [BURST]
-        public struct LifetimeJob : IJobForComponents<DestroyWithLifetime> {
+        public partial struct LifetimeJob : IJobForComponents<DestroyWithLifetime> {
 
             public tfloat deltaTime;
 
@@ -32,7 +32,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        public struct LifetimeMsJob : IJobForComponents<DestroyWithLifetimeMs> {
+        public partial struct LifetimeMsJob : IJobForComponents<DestroyWithLifetimeMs> {
 
             public uint deltaTimeMs;
             

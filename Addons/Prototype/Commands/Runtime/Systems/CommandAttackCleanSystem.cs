@@ -7,10 +7,10 @@
     
     [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem))]
-    public struct CommandAttackCleanSystem : IUpdate {
+    public partial struct CommandAttackCleanSystem : IUpdate {
 
         [BURST]
-        public struct RemoveJob : IJobForComponents<UnitAttackCommandComponent> {
+        public partial struct RemoveJob : IJobForComponents<UnitAttackCommandComponent> {
 
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAttackCommandComponent attackCommand) {

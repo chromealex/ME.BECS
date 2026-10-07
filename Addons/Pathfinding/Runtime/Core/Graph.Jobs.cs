@@ -42,7 +42,7 @@ namespace ME.BECS.Pathfinding {
     }
 
     [BURST]
-    public struct BuildSlopeJob : IJob {
+    public partial struct BuildSlopeJob : IJob {
 
         public Ent graph;
         public World world;
@@ -79,7 +79,7 @@ namespace ME.BECS.Pathfinding {
     }
 
     [BURST]
-    public struct BuildChunksJob : IJob {
+    public partial struct BuildChunksJob : IJob {
 
         public Ent graph;
         public World world;
@@ -104,7 +104,7 @@ namespace ME.BECS.Pathfinding {
     }
 
     [BURST]
-    public struct UpdateChunksJob : IJob {
+    public partial struct UpdateChunksJob : IJob {
 
         public Ent graph;
         public World world;
@@ -131,7 +131,7 @@ namespace ME.BECS.Pathfinding {
     }
 
     [BURST]
-    public struct CalculateConnectionsJob : Unity.Jobs.IJobParallelFor {
+    public partial struct CalculateConnectionsJob : Unity.Jobs.IJobParallelFor {
 
         public World world;
         public Ent graph;
@@ -198,7 +198,7 @@ namespace ME.BECS.Pathfinding {
     }
 
     [BURST]
-    public unsafe struct FloodFillPortalAreasJob : IJob {
+    public unsafe partial struct FloodFillPortalAreasJob : IJob {
 
         public World world;
         public Ent graph;
@@ -260,7 +260,7 @@ namespace ME.BECS.Pathfinding {
     }
     
     [BURST]
-    public struct AddConnectionsJob : IJob {
+    public partial struct AddConnectionsJob : IJob {
 
         public World world;
         public Ent graph;
@@ -320,7 +320,7 @@ namespace ME.BECS.Pathfinding {
     }
 
     [BURST]
-    public struct PathDirectionsJob : IJob {
+    public partial struct PathDirectionsJob : IJob {
 
         [Unity.Collections.ReadOnlyAttribute]
         public Unity.Collections.NativeReference<byte> needToRepath;
@@ -401,7 +401,7 @@ namespace ME.BECS.Pathfinding {
     }
     
     [BURST]
-    public unsafe struct PathJob : IJob {
+    public unsafe partial struct PathJob : IJob {
 
         [Unity.Collections.ReadOnlyAttribute]
         public Unity.Collections.NativeReference<byte> needToRepath;

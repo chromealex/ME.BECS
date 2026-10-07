@@ -14,7 +14,7 @@ namespace ME.BECS.Units {
     /// like move, attack, etc
     /// For unit selection use UnitSelectionGroupAspect
     /// </summary>
-    public struct UnitCommandGroupAspect : IAspect {
+    public partial struct UnitCommandGroupAspect : IAspect {
         
         public Ent ent { get; set; }
 

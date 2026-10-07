@@ -13,10 +13,10 @@ namespace ME.BECS.Timers {
 
     [BURST]
     [SystemGenericParallelMode]
-    public struct TimersUpdateSystem<T> : IUpdate where T : unmanaged, ITimer {
+    public partial struct TimersUpdateSystem<T> : IUpdate where T : unmanaged, ITimer {
 
         [BURST]
-        public struct Job : IJobForComponents<T> {
+        public partial struct Job : IJobForComponents<T> {
             [InjectDeltaTime]
             public tfloat dt;
             public void Execute(in JobInfo jobInfo, in Ent ent, ref T component) {
@@ -37,10 +37,10 @@ namespace ME.BECS.Timers {
 
     [BURST]
     [SystemGenericParallelMode]
-    public struct TimersMsUpdateSystem<T> : IUpdate where T : unmanaged, ITimerMs {
+    public partial struct TimersMsUpdateSystem<T> : IUpdate where T : unmanaged, ITimerMs {
 
         [BURST]
-        public struct Job : IJobForComponents<T> {
+        public partial struct Job : IJobForComponents<T> {
             [InjectDeltaTime]
             public uint dt;
             public void Execute(in JobInfo jobInfo, in Ent ent, ref T component) {
@@ -62,10 +62,10 @@ namespace ME.BECS.Timers {
 
     [BURST]
     [SystemGenericParallelMode]
-    public struct TimersAutoDestroyUpdateSystem<T> : IUpdate where T : unmanaged, ITimerAutoDestroy {
+    public partial struct TimersAutoDestroyUpdateSystem<T> : IUpdate where T : unmanaged, ITimerAutoDestroy {
 
         [BURST]
-        public struct Job : IJobForComponents<T> {
+        public partial struct Job : IJobForComponents<T> {
             [InjectDeltaTime]
             public tfloat dt;
             public void Execute(in JobInfo jobInfo, in Ent ent, ref T component) {
@@ -86,10 +86,10 @@ namespace ME.BECS.Timers {
 
     [BURST]
     [SystemGenericParallelMode]
-    public struct TimersMsAutoDestroyUpdateSystem<T> : IUpdate where T : unmanaged, ITimerMsAutoDestroy {
+    public partial struct TimersMsAutoDestroyUpdateSystem<T> : IUpdate where T : unmanaged, ITimerMsAutoDestroy {
 
         [BURST]
-        public struct Job : IJobForComponents<T> {
+        public partial struct Job : IJobForComponents<T> {
             [InjectDeltaTime]
             public uint dt;
             public void Execute(in JobInfo jobInfo, in Ent ent, ref T component) {

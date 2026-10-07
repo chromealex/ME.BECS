@@ -8,10 +8,10 @@ namespace ME.BECS.Units {
 
     [BURST]
     [UnityEngine.Tooltip("Destroy units with health <= 0")]
-    public struct DestroySystem : IUpdate {
+    public partial struct DestroySystem : IUpdate {
 
         [BURST]
-        public struct DestroyJob : IJobForAspects<UnitAspect> {
+        public partial struct DestroyJob : IJobForAspects<UnitAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit) {
                 if (unit.readHealth <= 0u) {

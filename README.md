@@ -112,7 +112,7 @@ This is a main tool used by Code Generation to make all connections and dependen
 <img align="left" src="https://github.com/chromealex/chromealex.github.io/blob/main/WorldsViewer.png?raw=true" width="600" />
 
 ### Worlds Editor
-Worlds Viewer can give you an important information about memory usage, entities journal and archetypes.
+Worlds Viewer can give you an important information about memory usage, entities journal and queries.
 
 <br>
 <br>
@@ -145,12 +145,13 @@ Worlds Viewer can give you an important information about memory usage, entities
 -define:EXCEPTIONS
 ```
 
+Queries always use flat component bitsets; archetypes and static queries are no longer supported.
+
 Optional defines: ([Description](https://github.com/chromealex/ME.BECS/wiki/Defines))
 ```
 -define:ENABLE_BECS_COLLECTIONS_CHECKS
 -define:LEAK_DETECTION
 -define:MEMORY_ALLOCATOR_BOUNDS_CHECK
--define:ENABLE_BECS_FLAT_QUERIES
 ```
 - Use "Create/ME.BECS/Create Project" menu to create default project.
 

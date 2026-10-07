@@ -11,7 +11,7 @@ namespace ME.BECS.Players {
     
     [BURST]
     [UnityEngine.Tooltip("Initialize default players")]
-    public struct PlayersSystem : IAwake {
+    public partial struct PlayersSystem : IAwake {
 
         public static PlayersSystem Default => new PlayersSystem() {
             playersCount = 4u,

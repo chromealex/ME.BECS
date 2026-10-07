@@ -8,7 +8,6 @@ namespace ME.BECS {
     
     public unsafe partial struct Ents {
 
-        #if ENABLE_BECS_FLAT_QUERIES
         public struct EntityComponentsEnumerator {
 
             private safe_ptr<ulong> words;
@@ -125,31 +124,25 @@ namespace ME.BECS {
         public uint GetEntityComponentsReservedSizeInBytes() {
             return this.entityToComponents.GetReservedSizeInBytes() + this.entityToComponentsLocks.GetReservedSizeInBytes();
         }
-        #endif
 
         [INLINE(256)]
         public void SerializeHeadersFlatQueries(ref StreamBufferWriter writer) {
-            #if ENABLE_BECS_FLAT_QUERIES
             writer.Write(this.entityToComponentsWords);
             writer.Write(this.entityToComponents);
             writer.Write(this.entityToComponentsLocks);
-            #endif
         }
 
         [INLINE(256)]
         public void DeserializeHeadersFlatQueries(ref StreamBufferReader reader) {
-            #if ENABLE_BECS_FLAT_QUERIES
             reader.Read(ref this.entityToComponentsWords);
             reader.Read(ref this.entityToComponents);
             reader.Read(ref this.entityToComponentsLocks);
-            #endif
         }
 
     }
     
     public unsafe partial struct EntsOld {
 
-        #if ENABLE_BECS_FLAT_QUERIES
         public struct LockedEntityToComponent {
 
             public LockSpinner lockSpinner;
@@ -178,20 +171,15 @@ namespace ME.BECS {
             list.entities.Remove(ref state.ptr->allocator, typeId);
             list.lockSpinner.Unlock();
         }
-        #endif
 
         [INLINE(256)]
         public void SerializeHeadersFlatQueries(ref StreamBufferWriter writer) {
-            #if ENABLE_BECS_FLAT_QUERIES
             writer.Write(this.entityToComponents);
-            #endif
         }
 
         [INLINE(256)]
         public void DeserializeHeadersFlatQueries(ref StreamBufferReader reader) {
-            #if ENABLE_BECS_FLAT_QUERIES
             reader.Read(ref this.entityToComponents);
-            #endif
         }
 
     }

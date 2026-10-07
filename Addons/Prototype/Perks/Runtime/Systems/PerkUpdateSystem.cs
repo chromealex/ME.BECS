@@ -13,10 +13,10 @@ namespace ME.BECS.Perks {
     #endif
 
     [BURST]
-    public struct PerkInitializeSystem<T> : IUpdate where T : unmanaged, IPerkInitializeComponent {
+    public partial struct PerkInitializeSystem<T> : IUpdate where T : unmanaged, IPerkInitializeComponent {
 
         [BURST]
-        public struct Job : IJobFor1Aspects1Components<PerkAspect, T> {
+        public partial struct Job : IJobFor1Aspects1Components<PerkAspect, T> {
             [INLINE(256)]
             public void Execute(in JobInfo jobInfo, in Ent ent, ref PerkAspect perkAspect, ref T perk) {
                 ent.Remove<IsPerkInitializeRequired>();
@@ -33,10 +33,10 @@ namespace ME.BECS.Perks {
 
     [BURST]
     [SystemGenericParallelMode]
-    public struct PerkUpdateParallelSystem<T> : IUpdate where T : unmanaged, IPerkParallelComponent {
+    public partial struct PerkUpdateParallelSystem<T> : IUpdate where T : unmanaged, IPerkParallelComponent {
 
         [BURST]
-        public struct Job : IJobFor1Aspects1Components<PerkAspect, T> {
+        public partial struct Job : IJobFor1Aspects1Components<PerkAspect, T> {
             [InjectDeltaTime]
             public uint dt;
             [INLINE(256)]
@@ -54,10 +54,10 @@ namespace ME.BECS.Perks {
     }
 
     [BURST]
-    public struct PerkUpdateSystem<T> : IUpdate, IGenericWithout<IPerkParallelComponent> where T : unmanaged, IPerkComponent {
+    public partial struct PerkUpdateSystem<T> : IUpdate, IGenericWithout<IPerkParallelComponent> where T : unmanaged, IPerkComponent {
 
         [BURST]
-        public struct Job : IJobFor1Aspects1Components<PerkAspect, T> {
+        public partial struct Job : IJobFor1Aspects1Components<PerkAspect, T> {
             [InjectDeltaTime]
             public uint dt;
             [INLINE(256)]

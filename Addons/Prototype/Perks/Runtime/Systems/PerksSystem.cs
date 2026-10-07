@@ -24,10 +24,10 @@ namespace ME.BECS.Perks {
     }
     
     [BURST]
-    public struct PerksSystem : IUpdate {
+    public partial struct PerksSystem : IUpdate {
 
         [BURST]
-        public struct CooldownJob : IJobForComponents<PerkSlotRuntimeComponent> {
+        public partial struct CooldownJob : IJobForComponents<PerkSlotRuntimeComponent> {
             [InjectDeltaTime]
             public uint dt;
             public void Execute(in JobInfo jobInfo, in Ent ent, ref PerkSlotRuntimeComponent perk) {

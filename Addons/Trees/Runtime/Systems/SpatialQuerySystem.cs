@@ -77,7 +77,7 @@ namespace ME.BECS {
     }
 
     [EditorComment("Filter all entities which suitable for this query")]
-    public struct SpatialQueryAspect : IAspect {
+    public partial struct SpatialQueryAspect : IAspect {
 
         public Ent ent { get; set; }
 
@@ -95,10 +95,10 @@ namespace ME.BECS {
     
     [BURST]
     [RequiredDependencies(typeof(SpatialInsertSystem))]
-    public struct SpatialQuerySystem : IUpdate {
+    public partial struct SpatialQuerySystem : IUpdate {
 
         [BURST]
-        public struct Job : IJobForAspects<SpatialQueryAspect, TransformAspect> {
+        public partial struct Job : IJobForAspects<SpatialQueryAspect, TransformAspect> {
 
             public InjectSystem<SpatialInsertSystem> system;
 

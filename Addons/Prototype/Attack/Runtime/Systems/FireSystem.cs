@@ -18,7 +18,7 @@ namespace ME.BECS.Attack {
     public partial struct FireSystem : IUpdate {
 
         [BURST]
-        public struct FireTargetJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
+        public partial struct FireTargetJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
 
             public tfloat dt;
             
@@ -71,7 +71,7 @@ namespace ME.BECS.Attack {
         }
 
         [BURST]
-        public struct FireTargetsJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
+        public partial struct FireTargetsJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
 
             public tfloat dt;
             
@@ -134,7 +134,8 @@ namespace ME.BECS.Attack {
 
             var spatialHandle = this.UpdateSpatial(ref context, context.dependsOn);
 
-            var target = context.Query()
+            // Spatial and quadtree firing are mutually exclusive by configuration.
+            var target = context.Query().AsUnsafe()
                                 .With<ReloadedComponent>()
                                 .With<CanFireComponent>()
                                 .Without<FireUsedComponent>()
@@ -142,7 +143,7 @@ namespace ME.BECS.Attack {
                                 .Schedule<FireTargetJob, AttackAspect, TransformAspect, QuadTreeQueryAspect>(new FireTargetJob() {
                                     dt = context.deltaTime,
                                 });
-            var targets = context.Query(target)
+            var targets = context.Query(target).AsUnsafe()
                                 .With<ReloadedComponent>()
                                 .With<CanFireComponent>()
                                 .Without<FireUsedComponent>()

@@ -1,41 +1,45 @@
 
+using System;
+using System.Globalization;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 
 namespace ME.BECS.Network.Editor {
 
     using ME.BECS.Editor;
     
+    // Unity discovery only. Signatures and executable registration belong to Roslyn.
     public class NetworkCodeGenerator : CustomCodeGenerator {
-        
-        public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
-            
-            var content = new System.Collections.Generic.List<string>();
-            var methods = UnityEditor.TypeCache.GetMethodsWithAttribute<NetworkMethodAttribute>().OrderBy(x => x.Name).ToList();
+        private MethodInfo[] selected;
+
+        // The concrete built-in feeder is always discovered. Derived extensions
+        // reuse its global plan; legacy C# overrides are rejected before export.
+        public override string SourceRegistrationKind => this.GetType() == typeof(NetworkCodeGenerator) ? "network-methods" : base.SourceRegistrationKind;
+
+        private MethodInfo[] Collect() => this.selected ??= UnityEditor.TypeCache.GetMethodsWithAttribute<NetworkMethodAttribute>()
+            .Where(method => method.IsStatic && method.DeclaringType.IsVisible && !method.Name.Contains("$") &&
+                this.IsValidTypeForAssembly(method.DeclaringType))
+            // MethodsStorage assigns sequential network IDs. Culture and TypeCache tie
+            // order must never change the wire mapping. Roslyn validates this same order.
+            .OrderBy(method => method.Name, StringComparer.Ordinal)
+            .ThenBy(method => method.DeclaringType.AssemblyQualifiedName, StringComparer.Ordinal).ToArray();
+
+        public override void AddSourceGeneratorReferences(System.Collections.Generic.List<Type> references) {
             references.Add(typeof(UnsafeNetworkModule));
-            foreach (var method in methods) {
-
-                if (method.IsStatic == false) continue;
-                if (method.DeclaringType.IsVisible == false) continue;
-                if (method.Name.Contains("$") == true) continue;
-                
-                if (this.IsValidTypeForAssembly(method.DeclaringType) == false) continue;
-
-                var str = $"methods.Add({method.DeclaringType.FullName}.{method.Name});";
-                content.Add(str);
-
-            }
-            
-            var def = new CodeGenerator.MethodDefinition() {
-                methodName = "NetworkLoad",
-                type = "ME.BECS.Network.UnsafeNetworkModule.MethodsStorage",
-                registerMethodName = "RegisterCallback",
-                definition = "ref ME.BECS.Network.UnsafeNetworkModule.MethodsStorage methods",
-                content = string.Join("\n", content.ToArray()),
-            };
-            return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>() { def };
-            
+            references.AddRange(this.Collect().Select(method => method.DeclaringType).Distinct());
         }
 
+        public override void AppendSourceGeneratorInputs(StringBuilder manifest) {
+            if (this.SourceRegistrationKind != "network-methods") return;
+            var methods = this.Collect();
+            void Append(string kind, int ordinal, string payload) => manifest.Append(kind).Append('\t')
+                .Append(ordinal.ToString(CultureInfo.InvariantCulture)).Append('\t')
+                .Append(Convert.ToBase64String(Encoding.UTF8.GetBytes(payload))).Append('\n');
+            Append("network-method-schema", 0, "v1\n" + methods.Length.ToString(CultureInfo.InvariantCulture));
+            for (var index = 0; index < methods.Length; ++index)
+                Append("network-method", index, methods[index].DeclaringType.AssemblyQualifiedName + "\n" + methods[index].Name);
+        }
     }
 
 }

@@ -20,7 +20,7 @@ namespace ME.BECS.NativeCollections {
     using static Cuts;
     using Unity.Jobs.LowLevel.Unsafe;
 
-    public unsafe struct NativeParallelList<T> : IIsCreated where T : unmanaged {
+    public unsafe partial struct NativeParallelList<T> : IIsCreated where T : unmanaged {
 
         private static readonly uint CACHE_LINE_SIZE = _align(TSize<UnsafeList<T>>.size, JobUtils.CacheLineSize);
         
@@ -54,7 +54,7 @@ namespace ME.BECS.NativeCollections {
         }
 
         [BURST]
-        public struct DisposeJob : IJob {
+        public partial struct DisposeJob : IJob {
 
             public NativeParallelList<T> list;
 

@@ -95,10 +95,6 @@ namespace ME.BECS {
             this.entities = Ents.Create(statePtr, EntityTypes.groupsCount, stateProperties.EntitiesCapacity);
             this.oneShotTasks = OneShotTasks.Create(statePtr, stateProperties.oneShotTasksCapacity);
             this.components = Components.Create(statePtr, in stateProperties);
-            #if !ENABLE_BECS_FLAT_QUERIES
-            this.queries = Queries.Create(statePtr, stateProperties.queriesCapacity);
-            this.archetypes = Archetypes.Create(statePtr, stateProperties.archetypesCapacity, stateProperties.entitiesCapacity);
-            #endif
             this.random = RandomData.Create(statePtr);
             this.collectionsRegistry = CollectionsRegistry.Create(statePtr, stateProperties.EntitiesCapacity);
             this.autoDestroyRegistry = AutoDestroyRegistry.Create(statePtr, stateProperties.EntitiesCapacity);
@@ -108,7 +104,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        private struct SetWorldStateJob : IJobSingle {
+        private partial struct SetWorldStateJob : IJobSingle {
 
             public World world;
             public uint deltaTimeMs;
@@ -126,7 +122,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        private struct NextTickJob : IJobSingle {
+        private partial struct NextTickJob : IJobSingle {
 
             public safe_ptr<State> state;
             
@@ -137,7 +133,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        private struct BurstModeJob : IJobSingle {
+        private partial struct BurstModeJob : IJobSingle {
 
             public safe_ptr<State> state;
             public bool mode;
@@ -146,9 +142,6 @@ namespace ME.BECS {
 
                 this.state.ptr->entities.BurstMode(this.state.ptr->allocator, this.mode);
                 this.state.ptr->components.BurstMode(this.state.ptr->allocator, this.mode);
-                #if !ENABLE_BECS_FLAT_QUERIES
-                this.state.ptr->archetypes.BurstMode(this.state.ptr->allocator, this.mode);
-                #endif
 
             }
 

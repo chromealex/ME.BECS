@@ -23,10 +23,10 @@ namespace ME.BECS.Pathfinding {
     [BURST]
     [UnityEngine.Tooltip("Schedule update a pathfinding graph.")]
     [RequiredDependencies(typeof(BuildGraphSystem))]
-    public struct UpdateGraphSystem : IUpdate {
+    public partial struct UpdateGraphSystem : IUpdate {
 
         [BURST]
-        public unsafe struct ResetPathJob : IJobForComponents<TargetPathComponent> {
+        public unsafe partial struct ResetPathJob : IJobForComponents<TargetPathComponent> {
 
             public Ent graph;
             public Unity.Collections.NativeArray<ulong> dirtyChunks;
@@ -50,7 +50,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [BURST]
-        public unsafe struct UpdateGraphMaskJob : IJobForComponents<GraphMaskComponent, GraphMaskRuntimeComponent> {
+        public unsafe partial struct UpdateGraphMaskJob : IJobForComponents<GraphMaskComponent, GraphMaskRuntimeComponent> {
 
             public BuildGraphSystem graphSystem;
             

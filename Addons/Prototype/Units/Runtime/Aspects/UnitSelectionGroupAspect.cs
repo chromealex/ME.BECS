@@ -12,7 +12,7 @@ namespace ME.BECS.Units {
     /// Selection group used for the lists
     /// For unit commands use UnitCommandGroupAspect
     /// </summary>
-    public struct UnitSelectionGroupAspect : IAspect {
+    public partial struct UnitSelectionGroupAspect : IAspect {
         
         public Ent ent { get; set; }
 
@@ -65,7 +65,7 @@ namespace ME.BECS.Units {
     /// <summary>
     /// Selection temp group
     /// </summary>
-    public struct UnitSelectionTempGroupAspect : IAspect {
+    public partial struct UnitSelectionTempGroupAspect : IAspect {
         
         public Ent ent { get; set; }
 

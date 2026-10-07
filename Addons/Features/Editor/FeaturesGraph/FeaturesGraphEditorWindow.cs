@@ -49,6 +49,24 @@ namespace ME.BECS.Editor.FeaturesGraph {
         }
         
         public System.Collections.Generic.List<BreadcrumbItem> breadcrumbs = new System.Collections.Generic.List<BreadcrumbItem>();
+        private BaseGraph fingerprintGraph;
+        private string graphFingerprint;
+
+        private bool RefreshCompilationFingerprint() {
+            var previousGraph = this.fingerprintGraph;
+            var previous = this.graphFingerprint;
+            this.fingerprintGraph = this.graph;
+            this.graphFingerprint = null;
+            if (this.graph is not ME.BECS.FeaturesGraph.SystemsGraph systemsGraph) return true;
+            try {
+                this.graphFingerprint = SourceGeneratorGraphTopology.GetCompilationFingerprint(systemsGraph);
+            } catch (System.Exception) {
+                // An incomplete graph during editing must remain dirty. The exporter
+                // reports the actual error; never treat a failed snapshot as unchanged.
+                return true;
+            }
+            return previousGraph != this.graph || previous == null || previous != this.graphFingerprint;
+        }
 
         protected override VisualElement CreateRootElement() {
             
@@ -62,6 +80,8 @@ namespace ME.BECS.Editor.FeaturesGraph {
                 var saveButton = new UnityEditor.UIElements.ToolbarButton(() => {
                     this.gradientAnimated.ThinkOnce();
                     this.graphView.SaveGraphToDisk();
+                    UnityEditor.AssetDatabase.SaveAssetIfDirty(this.graph);
+                    SourceGeneratorInputRefresh.Request();
                     this.hasUnsavedChanges = false;
                     this.ShowNotification(new GUIContent("Graph Saved"), 1f);
                     this.UpdateToolbar();
@@ -79,8 +99,24 @@ namespace ME.BECS.Editor.FeaturesGraph {
             }
             {
                 this.compileButton = new UnityEditor.UIElements.ToolbarButton(() => {
-                    this.SetCompileDirty(false);
-                    CodeGenerator.RegenerateBurstAOT();
+                    this.SetCompileDirty(true);
+                    if (UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating) {
+                        this.ShowNotification(new GUIContent("Wait for compilation/import, then retry"), 3f);
+                        return;
+                    }
+                    this.graphView.SaveGraphToDisk();
+                    UnityEditor.AssetDatabase.SaveAssetIfDirty(this.graph);
+                    var requestedGraph = this.graph;
+                    if (SourceGeneratorInputRefresh.RequestExport(successful => {
+                        if (this == null || this.graph != requestedGraph) return;
+                        if (successful && !UnityEditor.EditorUtility.IsDirty(requestedGraph)) {
+                            this.SetCompileDirty(false);
+                            this.hasUnsavedChanges = false;
+                        }
+                        this.ShowNotification(new GUIContent(successful ? "Graph inputs exported; check Unity compilation" :
+                            "Graph export cancelled or incomplete; see Console"), 3f);
+                    })) this.ShowNotification(new GUIContent("Analyzing graph inputs in background"), 3f);
+                    else this.ShowNotification(new GUIContent("Export already running or unavailable; retry later"), 3f);
                 });
                 this.UpdateCompileButton();
                 toolbar.Add(this.compileButton);
@@ -99,6 +135,8 @@ namespace ME.BECS.Editor.FeaturesGraph {
         }
 
         private void UpdateCompileButton() {
+            // Undo/property notifications can arrive while the view is being rebuilt.
+            if (this.compileButton == null || this.gradientAnimated == null) return;
             if (this.isCompileDirty == true) {
                 this.compileButton.text = "Compile Graphs*";
                 this.gradientAnimated.ThinkStart();
@@ -155,6 +193,10 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
             UnityEditor.Selection.selectionChanged -= this.OnSelectionChanged;
             UnityEditor.Selection.selectionChanged += this.OnSelectionChanged;
+            this.rootVisualElement.UnregisterCallback<UnityEditor.UIElements.SerializedPropertyChangeEvent>(this.OnGraphPropertyChanged);
+            this.rootVisualElement.RegisterCallback<UnityEditor.UIElements.SerializedPropertyChangeEvent>(this.OnGraphPropertyChanged);
+            UnityEditor.Undo.undoRedoPerformed -= this.OnGraphUndoRedo;
+            UnityEditor.Undo.undoRedoPerformed += this.OnGraphUndoRedo;
             
             if (this.graphView is FeaturesGraphView view) view.UpdateEnableState();
             
@@ -164,6 +206,8 @@ namespace ME.BECS.Editor.FeaturesGraph {
             
             ME.BECS.Editor.Extensions.SubclassSelector.SubclassSelectorDrawer.onOpen -= this.OnOpen;
             UnityEditor.Selection.selectionChanged -= this.OnSelectionChanged;
+            this.rootVisualElement.UnregisterCallback<UnityEditor.UIElements.SerializedPropertyChangeEvent>(this.OnGraphPropertyChanged);
+            UnityEditor.Undo.undoRedoPerformed -= this.OnGraphUndoRedo;
             if (this.graph != null) { 
                 this.graph.onGraphChanges -= this.OnGraphChanged;
             }
@@ -203,6 +247,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
             this.graphView = null;
             this.rootView.Clear();
             this.InitializeGraph(this.graph);
+            this.RefreshCompilationFingerprint();
             
         }
 
@@ -212,9 +257,29 @@ namespace ME.BECS.Editor.FeaturesGraph {
             this.hasUnsavedChanges = true;
             this.UpdateToolbar();
 
-            if (obj.addedEdge != null || obj.removedEdge != null || obj.addedNode != null || obj.removedNode != null) {
+            if (obj.addedEdge != null || obj.removedEdge != null || obj.addedNode != null || obj.removedNode != null || obj.nodeChanged != null) {
+                this.RefreshCompilationFingerprint();
                 this.SetCompileDirty(true);
             }
+        }
+
+        private void OnGraphPropertyChanged(UnityEditor.UIElements.SerializedPropertyChangeEvent evt) {
+            // Property drawers do not all call BaseGraph.NotifyNodeChanged. Listen to
+            // the bound graph, not preferences/other inspectors or viewport movement.
+            if (this.graph == null || evt.changedProperty == null ||
+                evt.changedProperty.serializedObject.targetObject != this.graph) return;
+            this.hasUnsavedChanges = true;
+            this.RefreshCompilationFingerprint();
+            this.SetCompileDirty(true);
+        }
+
+        private void OnGraphUndoRedo() {
+            if (this.graph == null) return;
+            // Unity also sends this for unrelated assets and layout-only changes.
+            // Nested graph values participate in the snapshot; no export in this callback.
+            if (!this.RefreshCompilationFingerprint()) return;
+            this.hasUnsavedChanges = true;
+            this.SetCompileDirty(true);
         }
 
         private void UpdateToolbar() {
@@ -379,5 +444,6 @@ namespace ME.BECS.Editor.FeaturesGraph {
         }
 
     }
+
 
 }

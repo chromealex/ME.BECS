@@ -1,0 +1,204 @@
+namespace ME.BECS.Editor {
+
+    using System;
+    using System.Collections.Generic;
+    using System.Globalization;
+    using System.Linq;
+    using System.Reflection;
+    using System.Text;
+
+    internal static class SourceGeneratorSafetyValidation {
+
+        [UnityEditor.MenuItem("ME.BECS/Source Generator/Compare Job Safety")]
+        private static void Compare() {
+            if (!SourceAnalysisDiagnostics.BeginComparison()) return;
+            if (UnityEditor.EditorApplication.isCompiling) {
+                UnityEngine.Debug.LogWarning("[ME.BECS] Wait for compilation before comparing job safety.");
+                return;
+            }
+            if (!UnityEditor.EditorUtility.DisplayDialog("Compare job safety",
+                "The legacy IL analyzer invokes IRefOp.Op getters to determine access modes. Jobs and registration methods are not invoked. Continue?", "Compare", "Cancel")) return;
+            try {
+                using var lookup = SourceGeneratorBridge.BeginLookupScope();
+                Systems.SystemDependenciesCodeGenerator.GetUsedObjects(true, out var used, useSourceCatalogs: false);
+                var jobs = used.jobTypes.ToList();
+                CodeGenerator.PatchSystemsList(jobs);
+                var loadedAssemblies = new HashSet<Assembly>();
+                var safetyReader = new SourceGeneratorJobSafety();
+                var report = new StringBuilder("[ME.BECS] Job safety: source summaries vs fresh legacy IL analysis\n");
+                report.AppendLine("Snapshot UTC: " + DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture));
+                var blockers = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+                var compared = 0;
+                var matched = 0;
+                var incomplete = 0;
+                var unavailable = 0;
+                var sizeCompared = 0;
+                var sizeEqual = 0;
+                var sizeUnavailable = 0;
+                var typedCatalogs = 0;
+                var selectedSafety = 0;
+                var differentSafety = 0;
+                var invalidSafety = 0;
+                var fallbackSafety = 0;
+                var safetyCandidates = 0;
+                foreach (var job in jobs.Distinct().Where(t => t.IsValueType && t.IsVisible && !t.ContainsGenericParameters)
+                             .OrderBy(t => t.FullName, StringComparer.Ordinal).ThenBy(t => t.Assembly.FullName, StringComparer.Ordinal)) {
+                    ++safetyCandidates;
+                    if (loadedAssemblies.Add(job.Assembly)) {
+                        report.AppendLine("Loaded assembly: " + job.Assembly.FullName + " MVID=" + job.Module.ModuleVersionId);
+                    }
+                    var sourceStatus = safetyReader.ReadSource(job, out var summary, out _, out var sourceReason);
+                    if (sourceStatus == SourceGeneratorJobSafety.SourceStatus.Invalid) {
+                        ++invalidSafety;
+                        ++unavailable;
+                        AddBlocker(blockers, "InvalidSafetyCatalog: " + sourceReason, job.AssemblyQualifiedName);
+                        report.AppendLine("Invalid diagnostic source safety (IL export unaffected): " + job.AssemblyQualifiedName + " — " + sourceReason);
+                        continue;
+                    }
+                    if (sourceStatus == SourceGeneratorJobSafety.SourceStatus.Missing) {
+                        ++fallbackSafety;
+                        ++unavailable;
+                        AddBlocker(blockers, "MissingSafetySummary: " + sourceReason, job.AssemblyQualifiedName);
+                        continue;
+                    }
+                    if (sourceStatus == SourceGeneratorJobSafety.SourceStatus.Complete) { ++typedCatalogs; ++selectedSafety; }
+                    else { ++fallbackSafety; ++incomplete; }
+                    foreach (var gap in summary.Skip(3).Where(row => row.StartsWith("G\t", StringComparison.Ordinal)))
+                        AddBlocker(blockers, gap.Substring(2), job.AssemblyQualifiedName);
+                    if (!int.TryParse(summary[2], NumberStyles.None, CultureInfo.InvariantCulture, out var gaps)) { ++unavailable; continue; }
+                    var source = new HashSet<string>(StringComparer.Ordinal);
+                    var invalid = false;
+                    foreach (var row in summary.Skip(3)) {
+                        if (!row.StartsWith("D\t", StringComparison.Ordinal)) continue;
+                        var fields = row.Split('\t');
+                        if (fields.Length != 5 || !int.TryParse(fields[3], NumberStyles.None, CultureInfo.InvariantCulture, out var mode) ||
+                            mode > 2 || (fields[4] != "0" && fields[4] != "1") || !source.Add(row.Substring(2))) { invalid = true; break; }
+                    }
+                    if (invalid) { ++unavailable; report.AppendLine("Malformed safety summary: " + job.FullName); continue; }
+                    HashSet<string> baseline;
+                    try {
+                        var legacy = Jobs.JobsEarlyInitCodeGenerator.GetJobTypesInfo(job);
+                        var selection = SourceGeneratorJobSafety.Validate(job, summary, legacy, out _);
+                        if (selection == 0) ++differentSafety;
+                        if (selection < 0 && gaps == 0)
+                            report.AppendLine("Source safety unavailable for complete summary (catalog/identity/records): " + job.AssemblyQualifiedName);
+                        var sizeStatus = CompareSizes(job, summary, legacy.Select(entry => entry.type).Where(type => typeof(IComponent).IsAssignableFrom(type)).Distinct().ToArray(), report);
+                        if (sizeStatus < 0) ++sizeUnavailable;
+                        else { ++sizeCompared; if (sizeStatus == 1) ++sizeEqual; }
+                        Jobs.JobsEarlyInitCodeGenerator.UpdateDeps(legacy);
+                        baseline = new HashSet<string>(legacy.Select(d => d.type.Assembly.FullName + "\tT:" + d.type.FullName.Replace('+', '.') + "\t" +
+                            ((int)d.op).ToString(CultureInfo.InvariantCulture) + "\t" + (d.isArg ? "1" : "0")), StringComparer.Ordinal);
+                    } catch (Exception exception) {
+                        ++unavailable;
+                        report.AppendLine("Legacy analysis failed for " + job.FullName + ": " + exception.GetBaseException().Message);
+                        continue;
+                    }
+                    var equal = source.SetEquals(baseline);
+                    ++compared;
+                    if (equal) ++matched;
+                    if (equal && gaps == 0) continue;
+                    report.AppendLine($"{job.FullName}: {(equal ? "dependencies match" : "DEPENDENCIES DIFFER")}, analysis gaps={gaps}");
+                    foreach (var row in source.Except(baseline).OrderBy(s => s, StringComparer.Ordinal)) report.AppendLine("  Source only: " + row.Replace('\t', ' '));
+                    foreach (var row in baseline.Except(source).OrderBy(s => s, StringComparer.Ordinal)) report.AppendLine("  Legacy only: " + row.Replace('\t', ' '));
+                    foreach (var gap in summary.Skip(3).Where(s => s.StartsWith("G\t", StringComparison.Ordinal))) report.AppendLine("  " + gap.Substring(2));
+                }
+                report.AppendLine($"Compared={compared}, equal={matched}, different={compared - matched}, incomplete={incomplete}, unavailable={unavailable}");
+                report.Append(FormatBlockerImpact(blockers));
+                var sizeSummary = $"MaxStructSize: compared={sizeCompared}, equal={sizeEqual}, different={sizeCompared - sizeEqual}, unavailable/incomplete={sizeUnavailable} (diagnostic per-job catalogs vs IL-selected components and native layout on this host; initializer NOT invoked; production uses compiler-owned component size methods for the set selected by safety analysis, without a separate size fallback)";
+                report.AppendLine(sizeSummary);
+                report.AppendLine("Typed source safety catalogs=" + typedCatalogs + " (generated typeof getters read; jobs and initializers NOT invoked)");
+                var safetySelection = $"Diagnostic safety oracle: source={selectedSafety}, IL fallback={fallbackSafety}, invalid catalogs={invalidSafety}, candidates={safetyCandidates}; complete differences vs IL={differentSafety} (production uses fresh IL; no jobs or registrations invoked)";
+                report.AppendLine(safetySelection);
+                report.AppendLine("Normalized RO/WO/RW and isArg compared. No cache writes, jobs or registrations; legacy IRefOp.Op getters were allowed only by this comparison. Matching incomplete summaries do NOT establish coverage. Production exports fresh IL dependencies; missing, incomplete or corrupt source catalogs do not gate that path. IL analysis failures still stop export. Source/IL differences remain diagnostic and require semantic review. View callback coverage is reported separately by Compare View Safety.");
+                SourceGeneratorReport.Publish("Safety",
+                    $"Safety: compared={compared}, equal={matched}, different={compared - matched}, incomplete={incomplete}, unavailable={unavailable}\n" + sizeSummary + "\n" + safetySelection, report.ToString());
+            } catch (Exception exception) {
+                UnityEngine.Debug.LogException(exception);
+            }
+        }
+        private static int CompareSizes(Type job, string[] rows, Type[] legacy, StringBuilder report) {
+            return ValidateSizeInitializer(job, rows, legacy, report, out _);
+        }
+
+        internal static void AddBlocker(Dictionary<string, HashSet<string>> blockers, string reason, string job) {
+            if (!blockers.TryGetValue(reason, out var jobs)) blockers.Add(reason, jobs = new HashSet<string>(StringComparer.Ordinal));
+            jobs.Add(job);
+        }
+
+        internal static string FormatBlockerImpact(Dictionary<string, HashSet<string>> blockers) {
+            var result = new StringBuilder("Source migration blockers (distinct affected jobs; counts overlap, not additive):\n");
+            var categories = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+            foreach (var entry in blockers) {
+                var separator = entry.Key.IndexOf(':');
+                var category = separator < 0 ? entry.Key : entry.Key.Substring(0, separator);
+                foreach (var job in entry.Value) AddBlocker(categories, category, job);
+            }
+            foreach (var category in categories.OrderByDescending(entry => entry.Value.Count).ThenBy(entry => entry.Key, StringComparer.Ordinal))
+                result.AppendLine("  " + category.Key + ": jobs=" + category.Value.Count);
+            result.AppendLine("Top exact blockers (up to 30; one example job per blocker):");
+            foreach (var entry in blockers.OrderByDescending(item => item.Value.Count).ThenBy(item => item.Key, StringComparer.Ordinal).Take(30)) {
+                result.AppendLine("  jobs=" + entry.Value.Count + " " + entry.Key);
+                result.AppendLine("    example: " + entry.Value.OrderBy(job => job, StringComparer.Ordinal).First());
+            }
+            return result.ToString();
+        }
+
+        internal static int ValidateSizeInitializer(Type job, string[] rows, Type[] legacy, StringBuilder report, out string initializer) {
+            initializer = null;
+            try {
+                if (rows == null || rows.Length < 3 || rows[0] != (job.IsGenericType ? job.AssemblyQualifiedName : job.FullName) ||
+                    !rows[1].StartsWith("M:", StringComparison.Ordinal)) return -1;
+                if (rows[2] != "0" || rows.Skip(3).Any(row => row.StartsWith("G\t", StringComparison.Ordinal))) return -1;
+                var records = rows.Skip(3).Where(row => row.StartsWith("S\t", StringComparison.Ordinal)).ToArray();
+                if (records.Length != 1) throw new InvalidOperationException("missing/ambiguous size initializer metadata");
+                var fields = records[0].Split('\t');
+                if (fields.Length != 5 || fields[3] != "Apply" || fields[4] != "v1") throw new InvalidOperationException("invalid size schema");
+                var expected = "ME.BECS.SourceGenerated.JobMaxStructSize_" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(fields[1] + "\n" + rows[0] + "\n" + rows[1]);
+                if (fields[2] != expected) throw new InvalidOperationException("size initializer identity mismatch");
+                var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => !assembly.IsDynamic && assembly.FullName == fields[1]).ToArray();
+                if (assemblies.Length != 1) throw new InvalidOperationException("size initializer assembly unavailable/ambiguous");
+                var type = assemblies[0].GetType(expected, false);
+                if (type == null || !type.IsVisible) throw new InvalidOperationException("size initializer type unavailable");
+                var apply = type.GetMethod("Apply", BindingFlags.Public | BindingFlags.Static);
+                var getComponents = type.GetMethod("GetComponents", BindingFlags.Public | BindingFlags.Static);
+                var getSizes = type.GetMethod("GetSizes", BindingFlags.Public | BindingFlags.Static);
+                if (apply == null || !apply.IsGenericMethodDefinition || apply.GetGenericArguments().Length != 1 || apply.GetParameters().Length != 0 || apply.ReturnType != typeof(void) ||
+                    getComponents == null || getComponents.ContainsGenericParameters || getComponents.GetParameters().Length != 0 || getComponents.ReturnType != typeof(Type[]) ||
+                    getSizes == null || getSizes.ContainsGenericParameters || getSizes.GetParameters().Length != 0 || getSizes.ReturnType != typeof(uint[]))
+                    throw new InvalidOperationException("size initializer/getter signature mismatch");
+                apply.MakeGenericMethod(job); // Check constraints, never invoke.
+                var components = (Type[])getComponents.Invoke(null, null);
+                var sizes = (uint[])getSizes.Invoke(null, null);
+                if (components == null || sizes == null || components.Length != sizes.Length || components.Distinct().Count() != components.Length ||
+                    components.Any(component => component == null || !component.IsValueType || component.ContainsGenericParameters || !typeof(IComponent).IsAssignableFrom(component)) || sizes.Any(size => size == 0u))
+                    throw new InvalidOperationException("invalid size metadata values");
+                var sameTypes = new HashSet<Type>(components).SetEquals(legacy);
+                foreach (var component in components.Except(legacy).OrderBy(component => component.AssemblyQualifiedName, StringComparer.Ordinal))
+                    report.AppendLine("Size source-only component: " + job.FullName + " / " + component.AssemblyQualifiedName);
+                foreach (var component in legacy.Except(components).OrderBy(component => component.AssemblyQualifiedName, StringComparer.Ordinal))
+                    report.AppendLine("Size legacy-only component: " + job.FullName + " / " + component.AssemblyQualifiedName);
+                // The IL oracle supplies the component set, not a marshaling layout.
+                // Compare against the same native storage contract used by ECS on this host.
+                var sizeOf = typeof(Unity.Collections.LowLevel.Unsafe.UnsafeUtility).GetMethods(BindingFlags.Public | BindingFlags.Static)
+                    .Single(method => method.Name == "SizeOf" && method.IsGenericMethodDefinition &&
+                        method.GetGenericArguments().Length == 1 && method.GetParameters().Length == 0 && method.ReturnType == typeof(int));
+                var nativeSizes = legacy.Distinct().ToDictionary(component => component,
+                    component => checked((uint)(int)sizeOf.MakeGenericMethod(component).Invoke(null, null)));
+                var sourceMaximum = sizes.Length == 0 ? 0u : sizes.Max();
+                var nativeMaximum = nativeSizes.Count == 0 ? 0u : nativeSizes.Values.Max();
+                var equal = sameTypes && sourceMaximum == nativeMaximum;
+                for (var index = 0; index < components.Length; ++index) {
+                    if (!nativeSizes.TryGetValue(components[index], out var nativeSize) || sizes[index] == nativeSize) continue;
+                    equal = false;
+                    report.AppendLine("Size layout differs: " + job.FullName + " / " + components[index].FullName + ": source=" + sizes[index] + ", native=" + nativeSize);
+                }
+                if (!equal) report.AppendLine("MaxStructSize differs: " + job.FullName + ": same component set=" + sameTypes + ", source=" + sourceMaximum + ", native=" + nativeMaximum);
+                if (equal) initializer = "global::" + expected + ".Apply<" + EditorUtils.GetTypeName(job) + ">();";
+                return equal ? 1 : 0;
+            } catch (Exception exception) {
+                report.AppendLine("MaxStructSize unavailable: " + job.FullName + " — " + exception.GetBaseException().Message);
+                return -1;
+            }
+        }
+    }
+}

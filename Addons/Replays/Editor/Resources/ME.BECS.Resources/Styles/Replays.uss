@@ -1,249 +1,73 @@
-.bar {
-}
+/* Window-specific layout. Shared appearance lives in DefaultStyles.uss. */
+.replays-window { flex-grow: 1; }
 
-.bar .below-tick {
-    color: green;
-}
+.replays-window .rewind-pause-message { margin: 8px 12px; }
 
-.bar .current-tick {
-    color: yellow;
-}
+.replays-window .replay-toolbar,
+.replays-window .tick-controls { flex-direction: row; flex-wrap: wrap; align-items: center; padding: 8px 12px; }
 
-.bar .above-tick {
-    color: red;
-}
+.replays-window .replay-toolbar > *,
+.replays-window .tick-controls > * { margin-right: 6px; }
 
-.bar ScrollView {
-}
+.replays-window .space { flex-grow: 1; }
 
-.replay-mode {
-    display: none;
-    width: 120px;
-    padding-left: 4px;
-    padding-right: 4px;
-    margin-left: 4px;
-    -unity-text-align: middle-center;
-    background-color: rgba(0, 0, 0, 0.1);
-    color: darkgoldenrod;
-    border-radius: 8px;
-}
+.replays-window .empty-state { white-space: normal; -unity-text-align: middle-center; padding: 48px 24px; flex-grow: 1; }
 
-:root {
-    overflow: visible;
-}
+.replays-window .replay-scroll { flex-grow: 1; }
 
-.replay-mode .tooltip-text {
-    font-size: 10px;
-    padding: 2px;
-    color: #bfbfbf;
-    width: 700px;
-    left: 0px;
-}
+.replays-window .tick-controls TextField { width: 165px; }
 
-.timeline {
-    height: 51px;
-    max-height: 30px;
-    width: auto;
-    background-color: rgba(0, 0, 0, 0);
-    border-width: 1px;
-    border-color: rgb(150, 150, 150);
-    margin: 8px;
-}
+.replays-window .tick-controls TextField > Label { min-width: 28px; }
 
-.timeline .current,
-.timeline .realtick {
-    position: absolute;
-    top: 0px;
-    height: 100%;
-    width: 2px;
-    background-color: greenyellow;
-}
+.replays-window .timeline-row { flex-direction: row; margin: 8px 16px 16px 16px; }
 
-.timeline .realtick {
-    background-color: #ffac2f;
-}
+.replays-window .track-labels { width: 72px; flex-shrink: 0; }
 
-.timeline .buffer {
-    position: absolute;
-    right: 0px;
-    bottom: 0px;
-    height: 8px;
-    background-color: rgba(36, 89, 128, 0.8);
-    border-top-left-radius: 4px;
-}
+.replays-window .track-labels > Label { height: 44px; padding-top: 12px; margin: 0; }
 
-GridBackground {
-    --line-color: #5c5959;
-    --thick-line-color: #5c5959;
-    --grid-background-color: rgba(30, 30, 30, 0.5);
-}
+.replays-window .track-labels > Label:first-child { height: 26px; }
 
-.timeline .min, .timeline .max {
-    position: absolute;
-    bottom: 0px;
-    font-size: 10px;
-    text-shadow: 0px -2px 0px black;
-    -unity-font-style: bold;
-    margin-bottom: -14px;
-}
+.replays-window .timeline { flex-grow: 1; height: 204px; min-width: 0; }
 
-.timeline .max {
-    right: 0px;
-    -unity-text-align: middle-right;
-}
-.timeline .min {
-    left: 0px;
-    -unity-text-align: middle-left;
-}
+.replays-window .axis { height: 26px; flex-direction: row; justify-content: space-between; }
 
-.timeline .tick {
-    position: absolute;
-    font-size: 8px;
-    -unity-font-style: bold;
-    opacity: 0.5;
-    margin-top: -10px;
-}
+.replays-window .track { height: 44px; border-bottom-width: 1px; }
 
-.timeline .storage {
-    position: absolute;
-    right: 0px;
-    bottom: 0px;
-    top: 0px;
-    left: 0px;
-}
+.replays-window .mark { position: absolute; top: 14px; width: 7px; height: 15px; margin-left: -4px; border-radius: 2px; }
 
-.timeline .events {
-    position: absolute;
-    right: 0px;
-    bottom: 0px;
-    top: 0px;
-    left: 0px;
-}
+.replays-window .local .mark { height: 8px; top: 18px; border-radius: 4px; }
 
-.timeline .storage .entry {
-    position: absolute;
-    top: 0px;
-}
+.replays-window .remote .mark { height: 8px; top: 18px; }
 
-.timeline .storage .entry .dot {
-    position: absolute;
-    width: 4px;
-    height: 20px;
-    background-color: rgba(0, 255, 0, 0.3);
-    border-bottom-left-radius: 3px;
-    border-bottom-right-radius: 3px;
-    border-bottom-color: rgba(0, 0, 0, 0.5);
-    border-bottom-width: 2px;
-}
+.replays-window .mark:hover { opacity: 0.65; }
 
-.timeline .storage .entry:hover .dot {
-    background-color: white;
-}
+.replays-window .current-cursor,
+.replays-window .target-cursor { position: absolute; top: 26px; height: 132px; width: 2px; }
 
-.timeline .storage .entry Label {
-    -unity-text-align: middle-center;
-    font-size: 8px;
-}
+.replays-window .target-cursor { width: 1px; }
 
-.timeline .events .entry {
-    position: absolute;
-    bottom: 0px;
-}
+.replays-window .rewind-buffer { position: absolute; top: 167px; height: 6px; }
 
-.timeline .events .entry .dot {
-    position: absolute;
-    width: 2px;
-    top: -10px;
-    height: 10px;
-    background-color: rgba(255, 255, 0, 1);
-    border-top-left-radius: 3px;
-    border-top-right-radius: 3px;
-}
-.timeline .events .entry.remote .dot {
-    background-color: rgb(171, 117, 255);
-}
+.replays-window .scrubber { position: absolute; left: 0; right: 0; top: 178px; margin-left: 0; margin-right: 0; }
 
-.timeline .events .entry:hover .dot {
-    background-color: white;
-}
+.replays-window .selection-summary { flex-direction: row; flex-wrap: wrap; justify-content: space-between; margin: 8px 16px; padding: 12px 0; border-top-width: 1px; }
 
-.timeline .events .entry Label {
-    -unity-text-align: middle-center;
-    font-size: 8px;
-}
+.replays-window .selection-summary > Label { white-space: normal; }
 
-.timeline .entry .dot .tooltip-text {
-    min-width: 100px;
-    bottom: 0px;
-    border-radius: 4px;
-}
+.replays-window .events-header { opacity: 0.7; }
 
-.timeline .entry .dot .tooltip {
-    margin: 0px;
-    height: 100%;
-    padding-left: 8px;
-    border-top-left-radius: 0px;
-    border-bottom-left-radius: 0px;
-}
+.replays-window .event-action { width: 60px; }
 
+.replays-window .event-row > Button { width: 60px; }
 
+.replays-window .no-events { margin: 12px 16px; }
 
-.toolbar-container {
-    height: 20px;
-    min-height: 20px;
-}
+.replays-window .event-row { flex-direction: row; flex-wrap: wrap; align-items: center; padding: 8px 16px; border-bottom-width: 1px; }
 
-.toolbar-container .toolbar-buttons {
-    flex-direction: row;
-}
+.replays-window .event-row > Label { min-width: 55px; margin-right: 8px; }
 
-.toolbar-container .space {
-    flex-grow: 1;
-}
+.replays-window .event-method { flex-grow: 1; white-space: normal; }
 
-.toolbar-container DropdownField .unity-base-field__input {
-    min-width: 30px;
-}
-.toolbar-container DropdownField PopupTextElement {
-    padding-left: 2px;
-}
+.replays-window .replay-footer { padding: 10px 16px; white-space: normal; border-top-width: 1px; }
 
-.toolbar-container Button,
-.toolbar-container Toggle,
-.toolbar-container RepeatButton {
-    -unity-text-align: middle-center;
-    min-width: 20px;
-    margin: 0px;
-    border-radius: 0px;
-    border-width: 0px;
-    background-color: rgba(0, 0, 0, 0.3);
-    margin-left: 1px;
-    align-items: center;
-    justify-content: center;
-}
-.toolbar-container Button Image,
-.toolbar-container Toggle,
-.toolbar-container RepeatButton Image {
-    align-self: center;
-    width: 14px;
-    height: 14px;
-}
-
-.toolbar-container .toggle-on {
-    background-color: rgba(0, 0, 0, 0.6);
-}
-
-.toolbar-container Button:hover,
-.toolbar-container Toggle:hover,
-.toolbar-container RepeatButton:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-}
-
-.toolbar-container DropdownField .unity-base-field__input {
-    border-radius: 0px;
-    border-width: 0px;
-    margin: 0px;
-}
-.toolbar-container DropdownField:hover .unity-base-field__input {
-    background-color: rgba(0, 0, 0, 0.1);
-}
+.replays-window .replay-toolbar { flex-shrink: 0; }

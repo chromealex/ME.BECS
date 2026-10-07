@@ -1,0 +1,194 @@
+namespace ME.BECS.Editor {
+    using System;
+    using System.Collections.Generic;
+    using System.Globalization;
+    using System.Text;
+    using ME.BECS.Extensions.GraphProcessor;
+    using ME.BECS.FeaturesGraph;
+
+    public static class SourceGeneratorGraphTopology {
+        public static void PublishLifecycleComparison(string totals, string details) =>
+            SourceGeneratorReport.Publish("GraphLifecycleComparison", totals, details);
+
+        [UnityEditor.MenuItem("ME.BECS/Source Generator/Export Compiled Lifecycle Plans")]
+        private static void ExportLifecyclePlans() {
+            if (UnityEditor.EditorApplication.isCompiling) { UnityEngine.Debug.LogWarning("[ME.BECS] Wait for compilation."); return; }
+            var report = new StringBuilder();
+            var available = 0; var unavailable = 0; var errors = 0;
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            Array.Sort(assemblies, (left, right) => StringComparer.Ordinal.Compare(left.FullName, right.FullName));
+            foreach (var assembly in assemblies) {
+                if (assembly.IsDynamic) continue;
+                try {
+                    foreach (System.Reflection.AssemblyMetadataAttribute attribute in assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyMetadataAttribute), false)) {
+                        if (attribute.Key == "ME.BECS.PublishedGraphSyncComparison.v1") {
+                            report.AppendLine("fresh-vs-saved-sync\t" + assembly.FullName).AppendLine(attribute.Value);
+                            continue;
+                        }
+                        if (attribute.Key != "ME.BECS.PublishedGraphLifecyclePlan.v1") continue;
+                        var rows = attribute.Value?.Split('\n');
+                        if (rows == null || rows.Length < 4) { ++errors; report.AppendLine("Malformed plan in " + assembly.FullName); continue; }
+                        if (rows[2] == "ME.BECS.GraphLifecyclePlan.v1") ++available;
+                        else if (rows[2] == "unavailable") ++unavailable;
+                        else ++errors;
+                        report.AppendLine("assembly\t" + assembly.FullName).AppendLine(attribute.Value);
+                    }
+                } catch (Exception exception) { ++errors; report.AppendLine("ERROR " + assembly.FullName + ": " + exception.Message); }
+            }
+            SourceGeneratorReport.Publish("GraphLifecyclePlans", "Compiled phase plans: available=" + available + ", unavailable=" + unavailable +
+                ", errors=" + errors + ". Compiler lifecycle plans used for emitted bodies. Advisory metadata only; does not verify runtime behavior, Burst execution or stripping. Zero plans does not prove coverage.", report.ToString());
+        }
+
+        [UnityEditor.MenuItem("ME.BECS/Source Generator/Export Graph Topology")]
+        private static void Export() {
+            if (UnityEditor.EditorApplication.isCompiling) {
+                UnityEngine.Debug.LogWarning("[ME.BECS] Wait for compilation before exporting graph topology.");
+                return;
+            }
+            var report = new StringBuilder();
+            var count = 0;
+            var errors = 0;
+            foreach (var guid in UnityEditor.AssetDatabase.FindAssets("t:SystemsGraph")) {
+                var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                try {
+                    var graph = UnityEditor.AssetDatabase.LoadAssetAtPath<SystemsGraph>(path);
+                    if (graph == null) throw new InvalidOperationException("Missing graph asset");
+                    if (graph.isInnerGraph) continue;
+                    report.AppendLine("asset\t" + Encode(path));
+                    report.Append(Serialize(graph));
+                    ++count;
+                } catch (Exception exception) { ++errors; report.AppendLine("ERROR " + path + ": " + exception.Message); }
+            }
+            SourceGeneratorReport.Publish("GraphTopology", "Graph topology snapshots=" + count + ", errors=" + errors +
+                ". Read-only asset snapshot supplied to compiler lifecycle planning; no sync recalculation, registry or generated output changes.", report.ToString());
+        }
+
+        public static string Serialize(SystemsGraph root) {
+            var result = new StringBuilder("ME.BECS.GraphTopology.v3\n");
+            var active = new HashSet<SystemsGraph>();
+            var layouts = new Dictionary<SystemsGraph, List<SourceGeneratorInputManifest.GraphSystemInput>>();
+            List<SourceGeneratorInputManifest.GraphSystemInput> Layout(SystemsGraph graph) {
+                if (graph == null) throw new InvalidOperationException("Missing nested graph");
+                if (!layouts.TryGetValue(graph, out var value)) layouts.Add(graph, value = SourceGeneratorInputManifest.GetGraphSystems(graph));
+                return value;
+            }
+            var nextOccurrence = 0;
+            void Append(SystemsGraph graph, int parent, int parentNode, int firstSlot) {
+                if (graph == null) throw new InvalidOperationException("Missing nested graph");
+                if (!active.Add(graph)) throw new InvalidOperationException("Recursive graph: " + graph.name);
+                try {
+                    var occurrence = checked(nextOccurrence++);
+                    var layout = Layout(graph);
+                    var starts = new int[graph.nodes.Count];
+                    var counts = new int[graph.nodes.Count];
+                    foreach (var item in layout)
+                        if (item.graph == graph) counts[item.nodeIndex] = checked(counts[item.nodeIndex] + 1);
+                    var cursor = firstSlot;
+                    var indices = new Dictionary<BaseNode, int>();
+                    for (var index = 0; index < graph.nodes.Count; ++index) {
+                        var node = graph.nodes[index];
+                        if (node == null || indices.ContainsKey(node)) throw new InvalidOperationException("Null/duplicate graph node at " + index);
+                        indices.Add(node, index);
+                        starts[index] = cursor;
+                        if (node is FeaturesGraph.Nodes.GraphNode nested) counts[index] = Layout(nested.graphValue).Count;
+                        cursor = checked(cursor + counts[index]);
+                    }
+                    var entry = graph.GetStartNode(0);
+                    var exit = graph.GetEndNode();
+                    var entryIndex = entry != null && indices.TryGetValue(entry, out var startIndex) ? startIndex : -1;
+                    var exitIndex = exit != null && indices.TryGetValue(exit, out var endIndex) ? endIndex : -1;
+                    result.Append("graph\t").Append(Number(occurrence)).Append('\t').Append(Number(parent)).Append('\t').Append(Number(parentNode))
+                        .Append('\t').Append(Number(graph.GetId())).Append('\t').Append(Number(graph.nodes.Count))
+                        .Append('\t').Append(Number(entryIndex)).Append('\t').Append(Number(exitIndex)).Append('\n');
+                    for (var index = 0; index < graph.nodes.Count; ++index) {
+                        var node = graph.nodes[index];
+                        var system = (node as FeaturesGraph.Nodes.SystemNode)?.system;
+                        result.Append("node\t").Append(Number(occurrence)).Append('\t').Append(Number(index))
+                            .Append('\t').Append(Encode(node.GetType().AssemblyQualifiedName)).Append('\t').Append(node.enabled ? "1" : "0")
+                            .Append('\t').Append(node.IsGroupEnabled() ? "1" : "0").Append('\t').Append(Encode(system?.GetType().AssemblyQualifiedName ?? ""))
+                            .Append('\t').Append(Number(starts[index])).Append('\t').Append(Number(counts[index]))
+                            .Append('\t').Append(system != null && system.GetType().IsGenericType && Attribute.IsDefined(system.GetType(), typeof(SystemGenericParallelModeAttribute)) ? "1" : "0").Append('\n');
+                        // Do not call GetSyncPoint: it normalizes/mutates the node's array.
+                        var validSync = node.syncPoints != null && node.syncPoints.Length == (int)Method.DrawGizmos + 1;
+                        foreach (var phase in new[] { Method.Awake, Method.Start, Method.Update, Method.Destroy, Method.DrawGizmos }) {
+                            result.Append("sync\t").Append(Number(occurrence)).Append('\t').Append(Number(index)).Append('\t').Append(Number((int)phase));
+                            if (!validSync) result.Append("\tunknown\n");
+                            else {
+                                var sync = node.syncPoints[(int)phase];
+                                result.Append('\t').Append(sync.syncPoint ? "1" : "0").Append('\t').Append(Number(sync.syncCount))
+                                    .Append('\t').Append(sync.hasMethod ? "1" : "0").Append('\n');
+                            }
+                        }
+                        for (var port = 0; port < node.inputPorts.Count; ++port) {
+                            result.Append("input\t").Append(Number(occurrence)).Append('\t').Append(Number(index)).Append('\t').Append(Number(port));
+                            foreach (var edge in node.inputPorts[port].GetEdges()) {
+                                if (edge.outputNode == null || !indices.TryGetValue(edge.outputNode, out var source))
+                                    throw new InvalidOperationException("Missing/cross-graph input endpoint at node " + index);
+                                result.Append('\t').Append(Number(source));
+                            }
+                            result.Append('\n');
+                        }
+                        for (var port = 0; port < node.outputPorts.Count; ++port) {
+                            result.Append("output\t").Append(Number(occurrence)).Append('\t').Append(Number(index)).Append('\t').Append(Number(port));
+                            foreach (var edge in node.outputPorts[port].GetEdges()) {
+                                if (edge.inputNode == null || !indices.TryGetValue(edge.inputNode, out var target))
+                                    throw new InvalidOperationException("Missing/cross-graph output endpoint at node " + index);
+                                result.Append('\t').Append(Number(target));
+                            }
+                            result.Append('\n');
+                        }
+                    }
+                    for (var index = 0; index < graph.nodes.Count; ++index)
+                        if (graph.nodes[index] is FeaturesGraph.Nodes.GraphNode nested) Append(nested.graphValue, occurrence, index, starts[index]);
+                } finally { active.Remove(graph); }
+            }
+            Append(root, -1, -1, 0);
+            return result.ToString();
+        }
+
+        // Change detection only, not a replacement for the complete compiler inputs.
+        // Include nested graph values, but exclude viewport/node positions and cached
+        // sync analysis (the compiler recomputes synchronization from topology).
+        public static string GetProjectCompilationFingerprint() {
+            var guids = UnityEditor.AssetDatabase.FindAssets("t:SystemsGraph");
+            Array.Sort(guids, StringComparer.Ordinal);
+            var content = new StringBuilder();
+            foreach (var guid in guids) {
+                var graph = UnityEditor.AssetDatabase.LoadAssetAtPath<SystemsGraph>(
+                    UnityEditor.AssetDatabase.GUIDToAssetPath(guid));
+                if (graph == null) throw new InvalidOperationException("Missing systems graph: " + guid);
+                if (graph.isInnerGraph) continue;
+                content.Append(guid).Append('\t').Append(GetCompilationFingerprint(graph)).Append('\n');
+            }
+            return ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(content.ToString());
+        }
+
+        public static string GetCompilationFingerprint(SystemsGraph root) {
+            var content = new StringBuilder("ME.BECS.GraphCompilationFingerprint.v1\n");
+            using (var reader = new System.IO.StringReader(Serialize(root))) {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                    if (!line.StartsWith("sync\t", StringComparison.Ordinal)) content.Append(line).Append('\n');
+            }
+            // Slot counts alone cannot detect replacing a closed generic variant
+            // with another variant while retaining the same number of systems.
+            foreach (var system in SourceGeneratorInputManifest.GetGraphSystems(root))
+                content.Append("system\t").Append(Encode(system.type.AssemblyQualifiedName))
+                    .Append('\t').Append(system.useDefault ? "1" : "0").Append('\n');
+            void AppendValues(SystemsGraph graph) {
+                content.Append("name\t").Append(Encode(graph.name)).Append('\n');
+                foreach (var node in graph.nodes) {
+                    if (node is FeaturesGraph.Nodes.SystemNode systemNode)
+                        content.Append("value\t").Append(Encode(systemNode.system == null ? "" : UnityEngine.JsonUtility.ToJson(systemNode.system))).Append('\n');
+                    if (node is FeaturesGraph.Nodes.GraphNode nested) AppendValues(nested.graphValue);
+                }
+            }
+            // Serialize already rejects missing and recursive nested graphs.
+            AppendValues(root);
+            return ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(content.ToString());
+        }
+
+        private static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
+        private static string Encode(string value) => Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
+    }
+}

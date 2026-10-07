@@ -14,23 +14,6 @@ namespace ME.BECS.Jobs {
             return builder.builderDependsOn;
         }
         
-        #if !ENABLE_BECS_FLAT_QUERIES
-        public static JobHandle Schedule<T>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobForComponents {
-            return staticQuery.Schedule<T>(in job, in context.world, context.dependsOn);
-        }
-        
-        public static JobHandle Schedule<T>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobForComponents {
-            var state = world.state;
-            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state.ptr->queries.GetPtr(state, staticQuery.id));
-            return query.Schedule<T>(in job);
-        }
-
-        public static JobHandle Schedule<T>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobForComponents {
-            staticQuery.builderDependsOn = job.Schedule<T>(in staticQuery.commandBuffer.ptr, staticQuery.parallelForBatch, staticQuery.scheduleMode, staticQuery.builderDependsOn);
-            staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
-            return staticQuery.builderDependsOn;
-        }
-        #endif
         
     }
     

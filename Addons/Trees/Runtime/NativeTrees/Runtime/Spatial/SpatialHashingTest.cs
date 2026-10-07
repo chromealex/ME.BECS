@@ -4,7 +4,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
 
-public class SpatialHashingTest : MonoBehaviour {
+public partial class SpatialHashingTest : MonoBehaviour {
 
     public struct Item : System.IEquatable<Item> {
 
@@ -91,7 +91,7 @@ public class SpatialHashingTest : MonoBehaviour {
     }
 
     [Unity.Burst.BurstCompileAttribute]
-    public struct RebuildJob : IJob {
+    public partial struct RebuildJob : IJob {
         
         public NativeTrees.SpatialHashing data;
         
@@ -102,7 +102,7 @@ public class SpatialHashingTest : MonoBehaviour {
     }
 
     [Unity.Burst.BurstCompileAttribute]
-    public struct Job : IJobParallelFor {
+    public partial struct Job : IJobParallelFor {
 
         [ReadOnly]
         public NativeArray<Item> items;

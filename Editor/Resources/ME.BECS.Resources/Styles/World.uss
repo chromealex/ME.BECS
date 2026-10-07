@@ -150,90 +150,16 @@ GridBackground {
     font-size: 16px;
 }
 
-.archetype-container {
-    flex-direction: column;
-    position: absolute;
-    right: -2px;
-    top: 0px;
-    bottom: 0px;
-    width: 250px;
-    margin: 2px;
-    margin-left: 0px;
-    padding: 2px;
-    background-color: rgba(30, 30, 30, 0.9);
-    border-radius: 15px;
-    border-top-right-radius: 0px;
-    border-bottom-right-radius: 0px;
-}
 
-.archetype-container .sub-container {
-    margin: 10px;
-    padding: 10px;
-    background-color: rgba(10, 10, 10, 0.9);
-    border-radius: 15px;
-    border-top-color: green;
-}
 
-.archetype-container .sub-container.archetype-components {
-    margin-bottom: 0px;
-}
 
-.archetype-container .archetype-entities {
 
-}
 
-.archetype-container .archetype-entities-list {
-}
 
-.archetype-container .archetype-entities-label {
-    font-size: 10px;
-    -unity-font-style: bold;
-}
 
-.archetype-container .archetype-entities-ent {
-    -unity-text-align: middle-center;
-    background-color: #00bfff;
-    color: #012a39;
-    border-radius: 5px;
-    font-size: 10px;
-    padding: 2px;
-    margin: 2px;
-    transition-property: scale, background-color, border-width;
-    transition-duration: 0.3s;
-}
-.archetype-container .archetype-entities-ent:hover {
-    background-color: #1c9cc6;
-    border-width: 1px;
-    border-color: #5ac1ea;
-    transition-property: scale, background-color, border-width;
-    transition-duration: 0.3s;
-}
 
-.archetype-container .archetype-label {
-    -unity-font-style: bold;
-    -unity-text-align: middle-center;
-}
 
-.archetype-container .archetype-components-list {
-    align-items: flex-start;
-    flex-wrap: wrap;
-    flex-direction: row;
-}
 
-.archetype-container .archetype-components-label {
-    font-size: 10px;
-    -unity-font-style: bold;
-}
-
-.archetype-container .archetype-component-type {
-    flex-grow: 1;
-    -unity-text-align: middle-center;
-    background-color: green;
-    border-radius: 5px;
-    font-size: 10px;
-    padding: 2px;
-    margin: 2px;
-}
 
 .label-counter-count {
     align-content: flex-start;

@@ -15,7 +15,7 @@ namespace ME.BECS.Tests {
     using Unity.Jobs;
     
     [Unity.Burst.BurstCompileAttribute]
-    public unsafe class Tests_Entities {
+    public unsafe partial class Tests_Entities {
 
         [UnityEngine.TestTools.UnitySetUpAttribute]
         public System.Collections.IEnumerator SetUp() {
@@ -240,7 +240,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct CreateEntitiesJob : ME.BECS.Jobs.IJobForComponents<TestComponent> {
+        public partial struct CreateEntitiesJob : ME.BECS.Jobs.IJobForComponents<TestComponent> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent data) {
                 
@@ -392,7 +392,6 @@ namespace ME.BECS.Tests {
                 using var world = World.Create(new WorldProperties() {
                     stateProperties = new StateProperties() {
                         entitiesCapacity = 10,
-                        archetypesCapacity = 1,
                     },
                     allocatorProperties = new AllocatorProperties() {
                         sizeInBytesCapacity = 1024 * 1024,
@@ -437,7 +436,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct DestroyEntitiesJob : Unity.Jobs.IJobParallelFor {
+        public partial struct DestroyEntitiesJob : Unity.Jobs.IJobParallelFor {
 
             public World world;
 
@@ -474,9 +473,6 @@ namespace ME.BECS.Tests {
             }
             Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
             Assert.AreEqual(16u, world.state.ptr->entities.FreeCount);
-            #if !ENABLE_BECS_FLAT_QUERIES
-            Assert.AreEqual(0, world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Count);
-            #endif
 
             {
                 DestroyHugeAmountBurstMethod(ref world, amount);
@@ -503,9 +499,6 @@ namespace ME.BECS.Tests {
             }
             Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
             Assert.AreEqual(16u, world.state.ptr->entities.FreeCount);
-            #if !ENABLE_BECS_FLAT_QUERIES
-            Assert.AreEqual(0, world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Count);
-            #endif
             
             {
                 var job = new DestroyEntitiesJob() {

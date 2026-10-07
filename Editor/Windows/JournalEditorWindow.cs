@@ -4,7 +4,7 @@ namespace ME.BECS.Editor {
 
     using scg = System.Collections.Generic;
 
-    public unsafe class JournalEditorWindow {
+    public unsafe partial class JournalEditorWindow {
 
         private StyleSheet styleSheet;
         private VisualElement scrollRoot;
@@ -18,7 +18,7 @@ namespace ME.BECS.Editor {
             }
         }
         
-        public void CreateGUI(VisualElement root) {
+        private void CreateLegacyGUI(VisualElement root) {
 
             this.LoadStyle();
             root.Clear();
@@ -36,7 +36,7 @@ namespace ME.BECS.Editor {
 
         }
 
-        public void Update() {
+        private void UpdateLegacy() {
 
             if (this.world.isCreated == true) {
                 

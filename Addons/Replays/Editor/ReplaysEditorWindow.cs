@@ -1,7 +1,5 @@
-using System.Linq;
 using UnityEngine;
 using UnityEditor;
-using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 using ME.BECS.Network;
 
@@ -9,606 +7,377 @@ namespace ME.BECS.Editor {
 
     public unsafe class ReplaysEditorWindow : EditorWindow {
 
-        private StyleSheet styleSheet;
-        private StyleSheet styleSheetTooltip;
-
-        private VisualElement[] storage;
-        private VisualElement[] events;
-        private VisualElement timeline;
-        private VisualElement timelineCurrent;
-        private VisualElement timelineRealTick;
-        private VisualElement timelineBuffer;
-        private VisualElement timelineStorage;
-        private VisualElement timelineEvents;
-        private VisualElement[] timelineTicks;
-        private Label timelineMax;
-        private Label timelineMin;
-        private ulong maxTick;
-        private bool timelinePressed;
-        private ulong targetTick;
-        private ulong startTick;
-        private ME.BECS.Extensions.GraphProcessor.GridBackground timelineGrid;
-
+        [SerializeField] private System.Collections.Generic.List<int> worldTabs = new System.Collections.Generic.List<int>();
+        [SerializeField] private int selectedWorldId = -1;
+        [SerializeField] private bool pausedForRewind;
         public NetworkWorldInitializer selectedInitializer;
         public NetworkModule selectedNetworkModule;
-        private VisualElement toolbarButtons;
-
-        private long delta;
-
+        private World selectedWorld;
+        private readonly System.Collections.Generic.List<World> aliveWorlds = new System.Collections.Generic.List<World>();
+        private readonly System.Collections.Generic.List<VisualElement> stateMarks = new System.Collections.Generic.List<VisualElement>();
+        private readonly System.Collections.Generic.List<VisualElement> localMarks = new System.Collections.Generic.List<VisualElement>();
+        private readonly System.Collections.Generic.List<VisualElement> remoteMarks = new System.Collections.Generic.List<VisualElement>();
+        private VisualElement tabs, toolbar, content, timeline, states, local, remote, eventRows;
+        private VisualElement currentCursor, targetCursor, buffer;
+        private Label empty, mode, targetLabel, deltaLabel, selectedLabel, stateLabel, footer, minLabel, maxLabel;
+        private readonly System.Collections.Generic.List<Label> axisTicks = new System.Collections.Generic.List<Label>();
+        private TextField tickField;
+        private Slider scrubber;
+        private HelpBox pauseMessage;
+        private ulong startTick, endTick, resetTick, rewindMin, maxTick;
+        private string tabsSignature, detailsSignature;
+        private double nextRefresh;
+        private bool dragging;
+        private bool Connected => this.selectedWorld.isCreated && this.selectedNetworkModule?.Status == TransportStatus.Connected;
         private bool syncMode {
             get => EditorPrefs.GetBool("ME.BECS.Editor.Replays.SyncMode", false);
             set => EditorPrefs.SetBool("ME.BECS.Editor.Replays.SyncMode", value);
         }
 
         [MenuItem("ME.BECS/\u21BB Replays...", priority = 10000)]
-        public static void ShowReplaysWindow() {
-            
-            ReplaysEditorWindow.ShowWindow();
-            
-        }
-
+        public static void ShowReplaysWindow() => ShowWindow();
         public static void ShowWindow() {
-            var win = ReplaysEditorWindow.CreateInstance<ReplaysEditorWindow>();
-            win.titleContent = new GUIContent("Replays", EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/icon-replays.png"));
-            win.LoadStyle();
-            win.Show();
+            var window = GetWindow<ReplaysEditorWindow>();
+            EditorUIUtils.ApplyWindowIcon(window, "Replays", "ME.BECS.Resources/Icons/icon-replays.png");
+            window.Show();
         }
-
-        private void LoadStyle() {
-            if (this.styleSheet == null) {
-                this.styleSheet = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Replays.uss");
-            }
-
-            if (this.styleSheetTooltip == null) {
-                this.styleSheetTooltip = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Tooltip.uss");
-            }
-        }
-
-        private World selectedWorld;
-        private readonly System.Collections.Generic.List<World> aliveWorlds = new System.Collections.Generic.List<World>();
 
         private void UpdateWorlds() {
-            
             this.aliveWorlds.Clear();
-            
             var worlds = Worlds.GetWorlds();
             for (int i = 0; i < worlds.Length; ++i) {
-                
                 var world = worlds.Get(i).world;
-                if (world.isCreated == false) continue;
-                
-                this.aliveWorlds.Add(world);
-                
+                if (world.isCreated) this.aliveWorlds.Add(world);
             }
-            
         }
 
-        private bool pause;
-        private DropdownField toolbarItemsContainer;
-        private readonly System.Collections.Generic.HashSet<World> disabledWorlds = new System.Collections.Generic.HashSet<World>();
-        private readonly System.Collections.Generic.List<string> worldsSelection = new System.Collections.Generic.List<string>();
-        private VisualElement hierarchyRoot;
-        private GradientAnimated logoLine;
+        private bool TryGetWorld(int id, out World world) {
+            foreach (var item in this.aliveWorlds) {
+                if ((int)item.id == id) { world = item; return true; }
+            }
+            world = default;
+            return false;
+        }
+
+        private void SelectWorld(World world) {
+            this.selectedWorldId = (int)world.id;
+            this.selectedWorld = world;
+            this.selectedInitializer = WorldInitializers.GetByWorldName(world.Name) as NetworkWorldInitializer;
+            this.selectedNetworkModule = this.selectedInitializer != null ? this.selectedInitializer.GetModule<NetworkModule>() : null;
+            this.maxTick = 0UL;
+            this.detailsSignature = null;
+            this.tabsSignature = null;
+            this.dragging = false;
+            this.timeline?.ReleaseMouse();
+            this.nextRefresh = 0;
+        }
 
         private void Update() {
-
-            if (this.pause == true) return;
-            
+            if (this.tabs == null || EditorApplication.timeSinceStartup < this.nextRefresh) return;
+            this.nextRefresh = EditorApplication.timeSinceStartup + 0.1;
             this.UpdateWorlds();
+            this.worldTabs.RemoveAll(id => !this.TryGetWorld(id, out _));
+            if (this.TryGetWorld(this.selectedWorldId, out var world)) {
+                var initializer = WorldInitializers.GetByWorldName(world.Name) as NetworkWorldInitializer;
+                var module = initializer != null ? initializer.GetModule<NetworkModule>() : null;
+                if (!this.selectedWorld.Equals(world) || this.selectedInitializer != initializer || this.selectedNetworkModule != module) this.SelectWorld(world);
+            } else {
+                this.selectedWorld = default;
+                this.selectedInitializer = null;
+                this.selectedNetworkModule = null;
+                this.selectedWorldId = -1;
+                if (this.worldTabs.Count > 0 && this.TryGetWorld(this.worldTabs[0], out world)) this.SelectWorld(world);
+            }
             this.DrawToolbar();
-
-            this.DrawBar(this.hierarchyRoot);
-            
+            this.Refresh();
         }
-        
+
         public void DrawToolbar() {
-
-            if (this.toolbarItemsContainer != null) {
-
-                this.disabledWorlds.Clear();
-                this.worldsSelection.Clear();
+            if (this.tabs == null) return;
+            var signature = this.selectedWorldId + ":";
+            foreach (var id in this.worldTabs) {
+                if (this.TryGetWorld(id, out var world)) signature += world.Name + "#" + id + ";";
+            }
+            if (signature == this.tabsSignature) return;
+            this.tabsSignature = signature;
+            this.tabs.Clear();
+            foreach (var id in this.worldTabs) {
+                if (!this.TryGetWorld(id, out var world)) continue;
+                var initializer = WorldInitializers.GetByWorldName(world.Name) as NetworkWorldInitializer;
+                var hasNetwork = initializer != null && initializer.GetModule<NetworkModule>() != null;
+                var button = new Button(() => {
+                    this.UpdateWorlds();
+                    if (this.TryGetWorld(id, out var current)) this.SelectWorld(current);
+                }) { text = world.Name + " · #" + id + (hasNetwork ? "" : "  NO NETWORK") };
+                button.AddToClassList("dashboard-tab");
+                button.EnableInClassList("selected", id == this.selectedWorldId);
+                this.tabs.Add(button);
+            }
+            this.tabs.Add(EditorUIUtils.CreateAddWorldButton(() => {
+                this.UpdateWorlds();
+                var menu = new GenericMenu();
+                var count = 0;
                 foreach (var world in this.aliveWorlds) {
-                    var added = false;
-                    this.worldsSelection.Add(world.FullName);
-                    var initializer = WorldInitializers.GetByWorldName(world.Name);
-                    if (initializer != null) {
-                        var networkModule = initializer.GetModule<NetworkModule>();
-                        if (networkModule != null) {
-                            added = true;
-                        }
-                    }
-
-                    if (added == false) {
-                        this.disabledWorlds.Add(world);
-                    }
-                }
-
-                this.toolbarItemsContainer.choices = this.worldsSelection;
-
-            }
-
-        }
-        
-        private void SelectWorld(World world) {
-
-            this.maxTick = 0UL;
-            this.selectedWorld = world;
-            this.selectedNetworkModule = null;
-            this.selectedInitializer = null;
-            var initializer = WorldInitializers.GetByWorldName(this.selectedWorld.Name);
-            if (initializer is NetworkWorldInitializer networkWorldInitializer) {
-                this.selectedInitializer = networkWorldInitializer;
-                var networkModule = initializer.GetModule<NetworkModule>();
-                if (networkModule != null) {
-                    this.selectedNetworkModule = networkModule;
-                    this.selectedNetworkModule.SetReplayMode(false);
-                }
-            }
-
-        }
-
-        private float GetPositionOnTimeline(ulong tick) {
-            
-            if (tick < this.startTick) return 0f;
-            if (tick > this.targetTick) return this.timeline.localBound.width;
-
-            var size = this.targetTick - this.startTick;
-            var current = tick - this.startTick;
-            return (float)(current / (double)size * this.timeline.localBound.width);
-
-        }
-
-        private void DrawBar(VisualElement root) {
-
-            if (this.selectedWorld.isCreated == true && this.selectedNetworkModule?.Status == TransportStatus.Connected) {
-
-                this.toolbarButtons.style.display = DisplayStyle.Flex;
-                
-                const uint ticksVisibleLabelsCount = 10u;
-                var networkModule = this.selectedNetworkModule;
-                var properties = networkModule.properties;
-                networkModule.GetMinMaxTicks(out var minTick, out var maxTick);
-                if (maxTick > this.maxTick) this.maxTick = maxTick;
-                maxTick = this.maxTick;
-                var currentTick = networkModule.GetCurrentTick();
-                var realTick = networkModule.GetTargetTick();
-                var resetTick = networkModule.GetResetState().ptr->tick;
-                var ticksAmount = properties.statesStorageProperties.copyPerTick * properties.statesStorageProperties.capacity;
-                var offset = properties.statesStorageProperties.copyPerTick;
-                var maxVisible = ticksAmount + offset * 2u;
-                this.targetTick = maxTick + offset;
-                this.startTick = ((this.targetTick - resetTick) > maxVisible ? (this.targetTick - maxVisible) : resetTick);
-                var size = this.targetTick - this.startTick;
-                
-                if (this.timeline == null) {
-                    this.timeline = new VisualElement();
-
-                    void OnMove(IMouseEvent evt) {
-                        if (this.timelinePressed == true) {
-                            var progress = evt.localMousePosition.x / this.timeline.localBound.width;
-                            var tick = (ulong)((this.targetTick - this.startTick) * progress) + this.startTick;
-                            if (tick <= this.targetTick - ticksAmount) {
-                                tick = this.targetTick - ticksAmount;
-                            }
-                            networkModule.RewindTo(tick);
-                            this.TrySync();
-                            this.NotifyReplayMode();
-                        }
-                    }
-                    this.timeline.RegisterCallback<MouseDownEvent>(evt => {
-                        if (evt.button != 0) return;
-                        this.timeline.CaptureMouse();
-                        evt.StopPropagation();
-                        this.timeline.RegisterCallback<MouseMoveEvent>(OnMove);
-                        OnMove(evt);
-                        this.timelinePressed = true;
-                    }, TrickleDown.TrickleDown);
-                    this.timeline.RegisterCallback<MouseUpEvent>(evt => {
-                        this.timeline.UnregisterCallback<MouseMoveEvent>(OnMove);
-                        this.timeline.ReleaseMouse();
-                        OnMove(evt);
-                        this.timelinePressed = false;
+                    var id = (int)world.id;
+                    if (this.worldTabs.Contains(id)) continue;
+                    ++count;
+                    menu.AddItem(new GUIContent((world.Name + " · #" + id).Replace('/', '∕')), false, () => {
+                        this.UpdateWorlds();
+                        if (!this.TryGetWorld(id, out var current)) return;
+                        if (!this.worldTabs.Contains(id)) this.worldTabs.Add(id);
+                        this.SelectWorld(current);
                     });
-                    this.timeline.AddToClassList("timeline");
-                    root.Add(this.timeline);
-                    var grid = new ME.BECS.Extensions.GraphProcessor.GridBackground();
-                    this.timelineGrid = grid;
-                    this.timeline.Add(grid);
-                    
-                    {
-                        this.timelineMin = new Label();
-                        this.timelineMin.pickingMode = PickingMode.Ignore;
-                        this.timeline.Add(this.timelineMin);
-                        this.timelineMin.AddToClassList("min");
-                    }
-                    this.timelineTicks = new VisualElement[ticksVisibleLabelsCount];
-                    for (uint i = 0; i < ticksVisibleLabelsCount; ++i) {
-                        this.timelineTicks[i] = new Label();
-                        this.timelineTicks[i].pickingMode = PickingMode.Ignore;
-                        this.timeline.Add(this.timelineTicks[i]);
-                        this.timelineTicks[i].AddToClassList("tick");
-                    }
-                    {
-                        this.timelineMax = new Label();
-                        this.timelineMax.pickingMode = PickingMode.Ignore;
-                        this.timeline.Add(this.timelineMax);
-                        this.timelineMax.AddToClassList("max");
-                    }
-                    
-                    {
-                        this.timelineBuffer = new VisualElement();
-                        this.timelineBuffer.pickingMode = PickingMode.Ignore;
-                        this.timeline.Add(this.timelineBuffer);
-                        this.timelineBuffer.AddToClassList("buffer");
-                    }
-                    {
-                        this.timelineStorage = new VisualElement();
-                        this.timelineStorage.pickingMode = PickingMode.Ignore;
-                        this.timeline.Add(this.timelineStorage);
-                        this.timelineStorage.AddToClassList("storage");
-                    }
-                    {
-                        this.timelineEvents = new VisualElement();
-                        this.timelineEvents.pickingMode = PickingMode.Ignore;
-                        this.timeline.Add(this.timelineEvents);
-                        this.timelineEvents.AddToClassList("events");
-                    }
-                    {
-                        this.timelineRealTick = new VisualElement();
-                        this.timelineRealTick.pickingMode = PickingMode.Ignore;
-                        this.timeline.Add(this.timelineRealTick);
-                        this.timelineRealTick.AddToClassList("realtick");
-                    }
-                    {
-                        this.timelineCurrent = new VisualElement();
-                        this.timelineCurrent.pickingMode = PickingMode.Ignore;
-                        this.timeline.Add(this.timelineCurrent);
-                        this.timelineCurrent.AddToClassList("current");
-                    }
                 }
-
-                if (this.delta != 0L) {
-                    var tick = ((long)currentTick + this.delta);
-                    if (tick < 0L) tick = 0L;
-                    this.selectedNetworkModule.RewindTo((ulong)tick);
-                    this.TrySync();
-                    this.delta = 0L;
-                }
-                
-                this.timelineCurrent.style.left = new StyleLength(new Length(this.GetPositionOnTimeline(currentTick), LengthUnit.Pixel));
-                this.timelineRealTick.style.left = new StyleLength(new Length(this.GetPositionOnTimeline(realTick), LengthUnit.Pixel));
-                this.timelineBuffer.style.width = new StyleLength(new Length((float)(ticksAmount / (double)size) * 100f, LengthUnit.Percent));
-                
-                this.timelineMin.text = $"{(this.startTick - resetTick)} ({this.GetTime(this.startTick - resetTick)})";
-                this.timelineMax.text = $"{(this.targetTick - resetTick)} ({this.GetTime(this.targetTick - resetTick)})";
-                
-                this.timelineGrid.spacing = this.timeline.localBound.width / size;
-                this.timelineGrid.spacingY = this.timeline.localBound.height;
-                
-                for (uint i = 0; i < ticksVisibleLabelsCount; ++i) {
-                    var lbl = (Label)this.timelineTicks[i];
-                    var tick = (ulong)(this.startTick + (double)size / (ticksVisibleLabelsCount + 1u) * (i + 1u));
-                    lbl.text = (tick - resetTick).ToString();
-                    lbl.style.left = new StyleLength(new Length(this.GetPositionOnTimeline(tick), LengthUnit.Pixel));
-                }
-                
-                { // Events
-                    var data = networkModule.GetUnsafeModule().GetUnsafeData();
-                    var events = data.ptr->eventsStorage.GetEvents();
-                    var capacity = events.Count;
-                    if (this.events == null) this.events = new VisualElement[capacity];
-                    if ((ulong)this.events.Length != capacity) {
-                        if ((ulong)this.events.Length > capacity) {
-                            for (int i = (int)capacity; i < this.events.Length; ++i) {
-                                this.events[i].RemoveFromHierarchy();
-                            }
-                        }
-                        this.logoLine.ThinkOnce();
-
-                        System.Array.Resize(ref this.events, (int)capacity);
-                    }
-
-                    var str = new System.Text.StringBuilder();
-                    string GetEventTooltip(ULongDictionaryAuto<SortedNetworkPackageList>.Entry entry) {
-                        str.Clear();
-                        for (uint i = 0u; i < entry.value.Count; ++i) {
-                            var evt = entry.value[data.ptr->networkWorld.state.ptr->allocator, i];
-                            str.AppendLine($"Player #{evt.playerId}");
-                            str.AppendLine($"Size: {EditorUtils.BytesToString(evt.dataSize)}");
-                            var method = data.ptr->methodsStorage.GetMethodInfo(evt.methodId);
-                            var func = System.Runtime.InteropServices.Marshal.GetDelegateForFunctionPointer<NetworkMethodDelegate>((System.IntPtr)method.methodPtr);
-                            str.AppendLine($"Method {func.Method.Name}");
-                        }
-                        return $"Events ({entry.value.Count}):\n{str.ToString()}";
-                    }
-
-                    bool HasRemovePlayers(ULongDictionaryAuto<SortedNetworkPackageList>.Entry entry) {
-                        var localPlayerId = data.ptr->localPlayerId;
-                        for (uint i = 0u; i < entry.value.Count; ++i) {
-                            var evt = entry.value[data.ptr->networkWorld.state.ptr->allocator, i];
-                            if (localPlayerId != evt.playerId) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    }
-                    
-                    var k = 0u;
-                    foreach (var entry in events) {
-                        ref var step = ref this.events[k];
-                        var tick = entry.key;
-                        if (step == null) {
-                            step = new VisualElement();
-                            step.AddToClassList("entry");
-                            var dot = new VisualElement();
-                            dot.AddToClassList("dot");
-                            step.Add(dot);
-                            step.userData = EditorUIUtils.DrawTooltip(dot, GetEventTooltip(entry));
-                            step.AddManipulator(new ContextualMenuManipulator((ctx) => {
-                                if (entry.value.Count == 1u) {
-                                    ctx.menu.AppendAction("Remove", (evt) => {
-                                        for (uint i = 0u; i < entry.value.Count; ++i) {
-                                            data.ptr->eventsStorage.RemoveEvent(entry.value[data.ptr->networkWorld.state.ptr->allocator, i]);
-                                        }
-                                    });
-                                } else {
-                                    ctx.menu.AppendAction("Remove All", (evt) => {
-                                        for (uint i = 0u; i < entry.value.Count; ++i) {
-                                            data.ptr->eventsStorage.RemoveEvent(entry.value[data.ptr->networkWorld.state.ptr->allocator, i]);
-                                        }
-                                    });
-                                    {
-                                        for (uint i = 0u; i < entry.value.Count; ++i) {
-                                            var package = entry.value[data.ptr->networkWorld.state.ptr->allocator, i];
-                                            ctx.menu.AppendAction($"Remove {package.ToStringShort()}", (evt) => { data.ptr->eventsStorage.RemoveEvent(package); });
-                                        }
-                                    }
-                                }
-                            }));
-                            this.timelineEvents.Add(step);
-                        }
-
-                        if (entry.value.Count > 0u && tick >= this.startTick && tick <= this.targetTick) {
-                            step.RemoveFromClassList("remote");
-                            if (HasRemovePlayers(entry) == true) {
-                                step.AddToClassList("remote");
-                            }
-
-                            var lbl = (Label)step.userData;
-                            lbl.text = GetEventTooltip(entry);
-                            step.style.left = new StyleLength(new Length(this.GetPositionOnTimeline(tick), LengthUnit.Pixel));
-                            step.style.display = DisplayStyle.Flex;
-                        } else {
-                            step.style.display = DisplayStyle.None;
-                        }
-                        ++k;
-                    }
-                }
-                
-                { // Storage
-                    var capacity = properties.statesStorageProperties.capacity;
-                    if (this.storage == null) this.storage = new VisualElement[capacity];
-                    if ((ulong)this.storage.Length != capacity) {
-                        if ((ulong)this.storage.Length > capacity) {
-                            for (int i = (int)capacity; i < this.storage.Length; ++i) {
-                                this.storage[i].RemoveFromHierarchy();
-                            }
-                        }
-
-                        System.Array.Resize(ref this.storage, (int)capacity);
-                    }
-
-                    string GetStateTooltip(UnsafeNetworkModule.StatesStorage.Entry entry) {
-                        if (entry.state.ptr == null) return $"Tick: {entry.tick - resetTick}";
-                        return $"Tick: {entry.tick - resetTick}\nHash: {entry.state.ptr->Hash}";
-                    }
-
-                    var data = networkModule.GetUnsafeModule().GetUnsafeData();
-                    var entries = data.ptr->statesStorage.GetEntries();
-                    for (uint i = 0u; i < capacity; ++i) {
-                        ref var step = ref this.storage[i];
-                        var entry = entries[i];
-                        if (step == null) {
-                            step = new VisualElement();
-                            step.AddToClassList("entry");
-                            var dot = new VisualElement();
-                            dot.AddToClassList("dot");
-                            step.Add(dot);
-                            step.userData = EditorUIUtils.DrawTooltip(dot, GetStateTooltip(entry));
-                            this.timelineStorage.Add(step);
-                        }
-
-                        if (entry.state.ptr != null) {
-                            var lbl = (Label)step.userData;
-                            lbl.text = GetStateTooltip(entry);
-                            step.style.left = new StyleLength(new Length(this.GetPositionOnTimeline(entry.tick), LengthUnit.Pixel));
-                            step.style.display = DisplayStyle.Flex;
-                        } else {
-                            step.style.display = DisplayStyle.None;
-                        }
-                    }
-                }
-
-            } else if (this.toolbarButtons != null) {
-                
-                this.toolbarButtons.style.display = DisplayStyle.None;
-                
-            }
-            
+                if (count == 0) menu.AddDisabledItem(new GUIContent(this.aliveWorlds.Count == 0 ? "No running worlds" : "All running worlds are already open"));
+                menu.ShowAsContext();
+            }, "Open an existing world in a tab"));
         }
 
-        private string GetTime(ulong tick) {
-            var timeInMs = this.selectedNetworkModule.properties.tickTime * tick;
-            return System.TimeSpan.FromMilliseconds(timeInMs).ToString(@"hh\:mm\:ss");
-        }
-
-        private void NotifyReplayMode() {
-            if (this.selectedNetworkModule.IsInReplayMode() == false) {
-                this.selectedNetworkModule.SetReplayMode(true);
-                this.replayModeContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
-            }
-        }
-
-        private void TrySync() {
-            if (this.syncMode == true) {
-                this.selectedInitializer.SyncRewind();
-            }
-        }
-
-        private VisualElement replayModeContainer;
         private void CreateGUI() {
-
-            this.LoadStyle();
-            
-            this.UpdateWorlds();
-            
+            EditorUIUtils.ApplyWindowIcon(this, "Replays", "ME.BECS.Resources/Icons/icon-replays.png");
             var root = this.rootVisualElement;
-            root.style.overflow = new StyleEnum<Overflow>(Overflow.Visible);
+            root.Clear();
             EditorUIUtils.ApplyDefaultStyles(root);
-            root.styleSheets.Add(this.styleSheetTooltip);
-            root.styleSheets.Add(this.styleSheet);
-
-            this.logoLine = EditorUIUtils.AddLogoLine(root);
-            
-            var toolbarContainer = new VisualElement();
-            root.Add(toolbarContainer);
-            toolbarContainer.AddToClassList("toolbar-container");
-            {
-                var toolbar = new Toolbar();
-                toolbar.AddToClassList("toolbar");
-                toolbarContainer.Add(toolbar);
-                { // Worlds selection
-                    var list = new System.Collections.Generic.List<string>();
-                    var selection = new DropdownField(list, -1, formatListItemCallback: (val) => {
-                        if (val == null) return null;
-                        var idx = this.toolbarItemsContainer.choices.IndexOf(val);
-                        if (idx < 0 || idx >= this.aliveWorlds.Count) return null;
-                        var world = this.aliveWorlds[idx];
-                        return $"{world.FullName}{(this.disabledWorlds.Contains(world) == true ? " (NO NETWORK)" : string.Empty)}";
-                    }, formatSelectedValueCallback: (val) => {
-                        if (val == null) return "<b>World</b>";
-                        if (this.toolbarItemsContainer.choices.Count == 0) return null;
-                        var idx = this.toolbarItemsContainer.choices.IndexOf(val);
-                        if (idx < 0 || idx >= this.aliveWorlds.Count) return null;
-                        var world = this.aliveWorlds[idx];
-                        return world.FullName;
-                    });
-                    selection.RegisterValueChangedCallback((evt) => {
-                        var idx = this.toolbarItemsContainer.choices.IndexOf(evt.newValue);
-                        if (idx >= 0) {
-                            this.SelectWorld(this.aliveWorlds[idx]);
-                        }
-                    });
-                    this.toolbarItemsContainer = selection;
-                    toolbar.Add(selection);
-                }
-                {
-                    var replayMode = new Label("\u26A0 Replay mode");
-                    EditorUIUtils.DrawTooltip(replayMode, "Network module state has been changed to Replay Mode. That means network module doesn't use transport's server time. To reset this behaviour, re-select world from list.");
-                    this.replayModeContainer = replayMode;
-                    replayMode.AddToClassList("replay-mode");
-                    toolbar.Add(replayMode);
-                }
-                {
-                    var space = new VisualElement();
-                    space.AddToClassList("space");
-                    toolbar.Add(space);
-                }
-                { // Buttons
-                    var toolbarButtons = new VisualElement();
-                    toolbarButtons.AddToClassList("toolbar-buttons");
-                    this.toolbarButtons = toolbarButtons;
-                    toolbar.Add(toolbarButtons);
-                    { // Replays
-                        Button commands = null;
-                        commands = new Button(() => {
-                            var menu = new GenericMenu();
-                            menu.AddItem(new GUIContent("Save replay..."), false, () => {
-                                var ts = System.DateTime.UtcNow.ToFileTime();
-                                var filepath = EditorUtility.SaveFilePanel("ME.BECS Replays", "", $"replay-{ts}.rep", "rep");
-                                if (string.IsNullOrEmpty(filepath) == false) {
-                                    this.NotifyReplayMode();
-                                    var networkModule = this.selectedNetworkModule;
-                                    var bytes = networkModule.SerializeAllEvents();
-                                    System.IO.File.WriteAllBytes(filepath, bytes);
-                                }
-                            });
-                            menu.AddItem(new GUIContent("Load replay..."), false, () => {
-                                var filepath = EditorUtility.OpenFilePanel("ME.BECS Replays", "", "rep");
-                                if (System.IO.File.Exists(filepath) == true) {
-                                    var bytes = System.IO.File.ReadAllBytes(filepath);
-                                    this.NotifyReplayMode();
-                                    var networkModule = this.selectedNetworkModule;
-                                    if (networkModule.DeserializeAllEvents(bytes) == false) {
-                                        Debug.LogError("Failed to deserialize replay file. Seems like data is corrupted.");
-                                    } else {
-                                        this.maxTick = 0UL;
-                                    }
-                                }
-                            });
-                            menu.DropDown(commands.worldBound);
-                        });
-                        commands.AddToClassList("unity-base-popup-field__input");
-                        var text = new Label("Tools");
-                        text.AddToClassList("unity-base-popup-field__text");
-                        text.AddToClassList("unity-text-element");
-                        commands.Add(text);
-                        var arrow = new VisualElement();
-                        arrow.AddToClassList("unity-base-popup-field__arrow");
-                        commands.Add(arrow);
-                        toolbarButtons.Add(commands);
-                    }
-                    {
-                        Button sync = null;
-                        sync = new Button(() => {
-                            this.syncMode = !this.syncMode;
-                            UpdateSyncModeButton();
-                        });
-                        void UpdateSyncModeButton() {
-                            if (this.syncMode == true) {
-                                sync.text = "Sync Mode: On";
-                                sync.RemoveFromClassList("toggle-off");
-                                sync.AddToClassList("toggle-on");
-                            } else {
-                                sync.text = "Sync Mode: Off";
-                                sync.RemoveFromClassList("toggle-on");
-                                sync.AddToClassList("toggle-off");
-                            }
-                        }
-                        UpdateSyncModeButton();
-                        toolbarButtons.Add(sync);
-                    }
-                    {
-                        var stepLeft = new RepeatButton(() => {
-                            if (this.selectedNetworkModule == null) return;
-                            var currentTick = this.selectedNetworkModule.GetCurrentTick();
-                            if (currentTick > 0UL) {
-                                this.delta -= 1L;
-                            }
-                        }, 100L, 10L);
-                        toolbarButtons.Add(stepLeft);
-                        stepLeft.text = "<";
-                    }
-                    {
-                        var stepRight = new RepeatButton(() => {
-                            if (this.selectedNetworkModule == null) return;
-                            this.delta += 1L;
-                        }, 100L, 10L);
-                        toolbarButtons.Add(stepRight);
-                        stepRight.text = ">";
-                    }
+            // Reuse Worlds Viewer's tab theme, including its BECS button overrides.
+            root.AddToClassList("world-dashboard");
+            root.AddToClassList("replays-window");
+            root.AddToClassList("becs-editor-window");
+            root.EnableInClassList("dark", EditorGUIUtility.isProSkin);
+            root.EnableInClassList("light", !EditorGUIUtility.isProSkin);
+            root.styleSheets.Add(EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/WorldDashboard.uss"));
+            root.styleSheets.Add(EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Replays.uss"));
+            EditorUIUtils.AddLogoLine(root);
+            this.tabs = new VisualElement(); this.tabs.AddToClassList("dashboard-tabs");
+            root.Add(this.tabs);
+            this.toolbar = new VisualElement(); this.toolbar.AddToClassList("replay-toolbar"); root.Add(this.toolbar);
+            this.mode = new Label(); this.mode.AddToClassList("replay-mode"); this.toolbar.Add(this.mode);
+            this.toolbar.Add(new Button(() => { if (this.Connected == true) { this.selectedNetworkModule.SetReplayMode(false); this.nextRefresh = 0; } }) { text = "Live", tooltip = "Resume transport server time" });
+            var space = new VisualElement(); space.AddToClassList("space"); this.toolbar.Add(space);
+            var sync = new Toggle("Sync rewind") { value = this.syncMode, tooltip = "Sync views after rewinding" };
+            sync.RegisterValueChangedCallback(evt => this.syncMode = evt.newValue); this.toolbar.Add(sync);
+            this.toolbar.Add(new Button(this.LoadReplay) { text = "Load…" });
+            this.toolbar.Add(new Button(this.SaveReplay) { text = "Save…" });
+            this.pauseMessage = new HelpBox("Game paused for replay rewind. Use Unity's Pause button to resume; Live only restores server time.", HelpBoxMessageType.Info);
+            this.pauseMessage.AddToClassList("rewind-pause-message");
+            root.Add(this.pauseMessage);
+            this.empty = new Label(); this.empty.AddToClassList("empty-state"); this.empty.AddToClassList("becs-empty-state"); root.Add(this.empty);
+            var scroll = new ScrollView(ScrollViewMode.Vertical); scroll.AddToClassList("replay-scroll"); root.Add(scroll);
+            this.content = scroll;
+            var controls = new VisualElement(); controls.AddToClassList("tick-controls"); scroll.Add(controls);
+            controls.Add(new RepeatButton(() => this.Step(-1), 100, 50) { text = "‹", tooltip = "Previous tick" });
+            this.tickField = new TextField("Tick") { isDelayed = true };
+            this.tickField.RegisterValueChangedCallback(evt => {
+                if (this.Connected && ulong.TryParse(evt.newValue, out var tick) && tick <= ulong.MaxValue - this.resetTick) this.Rewind(this.resetTick + tick);
+                this.nextRefresh = 0;
+            }); controls.Add(this.tickField);
+            controls.Add(new RepeatButton(() => this.Step(1), 100, 50) { text = "›", tooltip = "Next tick" });
+            this.targetLabel = new Label(); controls.Add(this.targetLabel);
+            space = new VisualElement(); space.AddToClassList("space"); controls.Add(space);
+            this.deltaLabel = new Label(); this.deltaLabel.AddToClassList("delta"); controls.Add(this.deltaLabel);
+            var timelineRow = new VisualElement(); timelineRow.AddToClassList("timeline-row"); scroll.Add(timelineRow);
+            var labels = new VisualElement(); labels.AddToClassList("track-labels"); timelineRow.Add(labels);
+            foreach (var text in new[] { "", "States", "Local", "Remote", "Rewind" }) labels.Add(new Label(text));
+            this.timeline = new VisualElement(); this.timeline.AddToClassList("timeline"); timelineRow.Add(this.timeline);
+            var axis = new VisualElement(); axis.AddToClassList("axis"); this.timeline.Add(axis);
+            this.minLabel = new Label(); axis.Add(this.minLabel);
+            this.axisTicks.Clear();
+            for (int i = 0; i < 4; ++i) { var label = new Label(); this.axisTicks.Add(label); axis.Add(label); }
+            this.maxLabel = new Label(); axis.Add(this.maxLabel);
+            this.states = this.AddTrack("states"); this.local = this.AddTrack("local"); this.remote = this.AddTrack("remote");
+            this.currentCursor = new VisualElement(); this.currentCursor.AddToClassList("current-cursor"); this.currentCursor.pickingMode = PickingMode.Ignore; this.timeline.Add(this.currentCursor);
+            this.targetCursor = new VisualElement(); this.targetCursor.AddToClassList("target-cursor"); this.targetCursor.pickingMode = PickingMode.Ignore; this.timeline.Add(this.targetCursor);
+            this.buffer = new VisualElement(); this.buffer.AddToClassList("rewind-buffer"); this.timeline.Add(this.buffer);
+            this.scrubber = new Slider(0, 1); this.scrubber.AddToClassList("scrubber"); this.timeline.Add(this.scrubber);
+            this.scrubber.RegisterValueChangedCallback(evt => this.Rewind(this.startTick + (ulong)((this.endTick - this.startTick) * (double)evt.newValue)));
+            this.timeline.RegisterCallback<MouseDownEvent>(evt => {
+                if (evt.button != 0 || evt.localMousePosition.y < 26 || evt.localMousePosition.y > 158) return;
+                this.dragging = true; this.timeline.CaptureMouse(); this.RewindAt(evt.localMousePosition.x); evt.StopPropagation();
+            });
+            this.timeline.RegisterCallback<MouseMoveEvent>(evt => { if (this.dragging) this.RewindAt(evt.localMousePosition.x); });
+            this.timeline.RegisterCallback<MouseUpEvent>(evt => { if (!this.dragging) return; this.RewindAt(evt.localMousePosition.x); this.dragging = false; this.timeline.ReleaseMouse(); });
+            this.timeline.RegisterCallback<MouseCaptureOutEvent>(_ => this.dragging = false);
+            var summary = new VisualElement(); summary.AddToClassList("selection-summary"); scroll.Add(summary);
+            this.selectedLabel = new Label(); summary.Add(this.selectedLabel); this.stateLabel = new Label(); summary.Add(this.stateLabel);
+            this.eventRows = new VisualElement(); scroll.Add(this.eventRows);
+            this.footer = new Label(); this.footer.AddToClassList("replay-footer"); root.Add(this.footer);
+            this.stateMarks.Clear(); this.localMarks.Clear(); this.remoteMarks.Clear();
+            this.tabsSignature = this.detailsSignature = null;
+            this.UpdateWorlds();
+            if (this.worldTabs.Count == 0) {
+                foreach (var world in this.aliveWorlds) {
+                    var initializer = WorldInitializers.GetByWorldName(world.Name) as NetworkWorldInitializer;
+                    if (initializer == null || initializer.GetModule<NetworkModule>() == null) continue;
+                    this.worldTabs.Add((int)world.id); this.selectedWorldId = (int)world.id; break;
                 }
             }
-
-            var bar = new VisualElement();
-            bar.AddToClassList("bar");
-            EditorUIUtils.AddWindowContent(root, bar);
-            {
-                this.hierarchyRoot = bar;
-            }
-            
+            if (this.TryGetWorld(this.selectedWorldId, out var selected)) this.SelectWorld(selected);
+            this.nextRefresh = 0; this.Update();
         }
 
-    }
+        private VisualElement AddTrack(string name) {
+            var track = new VisualElement(); track.AddToClassList("track"); track.AddToClassList(name); this.timeline.Add(track); return track;
+        }
+        private float Position(ulong tick) => this.endTick <= this.startTick ? 0f : Mathf.Clamp01((float)(((double)tick - this.startTick) / (this.endTick - this.startTick))) * 100f;
+        private void RewindAt(float x) {
+            if (!this.Connected || this.timeline.resolvedStyle.width <= 0) return;
+            this.Rewind(this.startTick + (ulong)((this.endTick - this.startTick) * (double)Mathf.Clamp01(x / this.timeline.resolvedStyle.width)));
+        }
+        private void Rewind(ulong tick) {
+            if (!this.Connected) return;
+            if (EditorApplication.isPlaying && !EditorApplication.isPaused) {
+                EditorApplication.isPaused = true;
+                this.pausedForRewind = true;
+                this.pauseMessage.style.display = DisplayStyle.Flex;
+                this.ShowNotification(new GUIContent("Game paused for replay rewind"));
+            }
+            tick = System.Math.Max(this.rewindMin, System.Math.Min(this.endTick, tick));
+            this.selectedNetworkModule.SetReplayMode(true);
+            this.selectedNetworkModule.RewindTo(tick);
+            if (this.syncMode) this.selectedInitializer.SyncRewind();
+            this.nextRefresh = 0;
+        }
+        private void Step(int direction) {
+            if (!this.Connected) return;
+            var tick = this.selectedNetworkModule.GetCurrentTick();
+            this.Rewind(direction < 0 ? (tick > 0 ? tick - 1 : 0) : (tick < ulong.MaxValue ? tick + 1 : tick));
+        }
+        private static void HideUnused(System.Collections.Generic.List<VisualElement> pool, int used) {
+            for (int i = used; i < pool.Count; ++i) pool[i].style.display = DisplayStyle.None;
+        }
+        private void Mark(VisualElement track, System.Collections.Generic.List<VisualElement> pool, ref int used, ulong tick, string tooltip) {
+            if (tick < this.startTick || tick > this.endTick) return;
+            if (used == pool.Count) {
+                var mark = new VisualElement(); mark.AddToClassList("mark"); pool.Add(mark); track.Add(mark);
+            }
+            var item = pool[used++]; item.style.display = DisplayStyle.Flex;
+            item.style.left = new Length(this.Position(tick), LengthUnit.Percent); item.tooltip = tooltip;
+        }
+        private void Refresh() {
+            if (!EditorApplication.isPlaying || !EditorApplication.isPaused) this.pausedForRewind = false;
+            this.pauseMessage.style.display = this.pausedForRewind ? DisplayStyle.Flex : DisplayStyle.None;
+            this.toolbar.style.display = DisplayStyle.Flex;
+            this.toolbar.SetEnabled(this.Connected);
+            this.content.style.display = this.Connected ? DisplayStyle.Flex : DisplayStyle.None;
+            this.empty.style.display = this.Connected ? DisplayStyle.None : DisplayStyle.Flex;
+            if (this.Connected == false) {
+                this.mode.text = "Not connected";
+                this.empty.text = !this.selectedWorld.isCreated ? "Open a running world with +" : this.selectedNetworkModule == null ? this.selectedWorld.Name + "\nNo NetworkModule" : this.selectedWorld.Name + "\nTransport is not connected";
+                this.footer.text = this.aliveWorlds.Count == 0 ? "No running worlds · enter Play Mode" : "Select a connected network world to inspect replays";
+                return;
+            }
+            var module = this.selectedNetworkModule;
+            module.GetMinMaxTicks(out _, out var latest);
+            this.maxTick = System.Math.Max(this.maxTick, latest);
+            var current = module.GetCurrentTick(); var target = module.GetTargetTick();
+            this.resetTick = module.GetResetState().ptr->tick;
+            var props = module.properties.statesStorageProperties;
+            var span = (ulong)props.copyPerTick * props.capacity;
+            var offset = (ulong)props.copyPerTick;
+            this.endTick = System.Math.Max(this.resetTick, System.Math.Max(this.maxTick, current));
+            this.endTick = this.endTick > ulong.MaxValue - offset ? ulong.MaxValue : this.endTick + offset;
+            var visible = span + offset * 2;
+            this.startTick = this.endTick - this.resetTick > visible ? this.endTick - visible : this.resetTick;
+            this.rewindMin = System.Math.Max(this.resetTick, this.endTick > span ? this.endTick - span : 0UL);
+            var focused = this.tickField.panel?.focusController.focusedElement as VisualElement;
+            if (focused != this.tickField && (focused == null || !this.tickField.Contains(focused))) {
+                this.tickField.SetValueWithoutNotify((current >= this.resetTick ? current - this.resetTick : 0).ToString());
+            }
+            this.targetLabel.text = "Target " + (target >= this.resetTick ? target - this.resetTick : 0);
+            this.deltaLabel.text = current >= target ? "+" + (current - target) + " ticks from target" : "−" + (target - current) + " ticks from target";
+            this.mode.text = module.IsInReplayMode() ? "Replay mode" : "Live";
+            this.minLabel.text = (this.startTick - this.resetTick).ToString(); this.maxLabel.text = (this.endTick - this.resetTick).ToString();
+            var tickLabels = Mathf.Clamp((int)(this.timeline.resolvedStyle.width / 100f) - 1, 0, 4);
+            for (int i = 0; i < this.axisTicks.Count; ++i) {
+                this.axisTicks[i].style.display = i < tickLabels ? DisplayStyle.Flex : DisplayStyle.None;
+                if (i < tickLabels) this.axisTicks[i].text = (this.startTick - this.resetTick + (ulong)((this.endTick - this.startTick) * ((i + 1d) / (tickLabels + 1d)))).ToString();
+            }
+            this.currentCursor.style.left = new Length(this.Position(current), LengthUnit.Percent);
+            this.targetCursor.style.left = new Length(this.Position(target), LengthUnit.Percent);
+            this.buffer.style.left = new Length(this.Position(this.rewindMin), LengthUnit.Percent);
+            this.buffer.style.width = new Length(100 - this.Position(this.rewindMin), LengthUnit.Percent);
+            this.scrubber.SetValueWithoutNotify(this.Position(current) / 100f);
+            this.selectedLabel.text = "Selected tick " + (current >= this.resetTick ? current - this.resetTick : 0);
+            var data = module.GetUnsafeModule().GetUnsafeData();
+            var entries = data.ptr->statesStorage.GetEntries();
+            int stateCount = 0, localCount = 0, remoteCount = 0;
+            ulong nearest = 0; bool hasNearest = false; string nearestText = "No stored state before selected tick";
+            for (uint i = 0; i < props.capacity; ++i) {
+                var entry = entries[i]; if (entry.state.ptr == null) continue;
+                var caption = "Tick " + (entry.tick >= this.resetTick ? entry.tick - this.resetTick : 0) + " · hash " + entry.state.ptr->Hash;
+                this.Mark(this.states, this.stateMarks, ref stateCount, entry.tick, caption);
+                if (entry.tick <= current && (!hasNearest || entry.tick > nearest)) { nearest = entry.tick; hasNearest = true; nearestText = "Nearest state · " + caption; }
+            }
+            this.stateLabel.text = nearestText;
+            var packages = new System.Collections.Generic.List<NetworkPackage>();
+            var signature = this.selectedWorldId + ":" + current + ":" + data.ptr->localPlayerId + ":";
+            foreach (var entry in data.ptr->eventsStorage.GetEvents()) {
+                bool hasLocal = false, hasRemote = false;
+                for (uint i = 0; i < entry.value.Count; ++i) {
+                    var package = entry.value[data.ptr->networkWorld.state.ptr->allocator, i];
+                    if (package.playerId == data.ptr->localPlayerId) hasLocal = true; else hasRemote = true;
+                    if (entry.key == current) {
+                        packages.Add(package); signature += package.playerId + "/" + package.methodId + "/" + package.localOrder + "/" + package.dataSize + ";";
+                    }
+                }
+                if (hasLocal) this.Mark(this.local, this.localMarks, ref localCount, entry.key, "Local events · tick " + entry.key);
+                if (hasRemote) this.Mark(this.remote, this.remoteMarks, ref remoteCount, entry.key, "Remote events · tick " + entry.key);
+            }
+            HideUnused(this.stateMarks, stateCount); HideUnused(this.localMarks, localCount); HideUnused(this.remoteMarks, remoteCount);
+            if (signature != this.detailsSignature) {
+                this.detailsSignature = signature; this.eventRows.Clear();
+                var header = new VisualElement(); header.AddToClassList("event-row"); header.AddToClassList("events-header");
+                foreach (var caption in new[] { "Source", "Player", "Method", "Size", "" }) {
+                    var label = new Label(caption);
+                    if (caption == "Method") label.AddToClassList("event-method");
+                    if (caption == "") label.AddToClassList("event-action");
+                    header.Add(label);
+                }
+                this.eventRows.Add(header);
+                foreach (var package in packages) {
+                    var method = data.ptr->methodsStorage.GetMethodInfo(package.methodId);
+                    var methodName = method.methodPtr == null ? "Method #" + package.methodId : System.Runtime.InteropServices.Marshal.GetDelegateForFunctionPointer<NetworkMethodDelegate>((System.IntPtr)method.methodPtr).Method.Name;
+                    var row = new VisualElement(); row.AddToClassList("event-row");
+                    var source = new Label(package.playerId == data.ptr->localPlayerId ? "Local" : "Remote"); source.AddToClassList(package.playerId == data.ptr->localPlayerId ? "local-source" : "remote-source"); row.Add(source);
+                    row.Add(new Label("#" + package.playerId)); var name = new Label(methodName); name.AddToClassList("event-method"); row.Add(name);
+                    row.Add(new Label(EditorUtils.BytesToString(package.dataSize)));
+                    row.Add(new Button(() => {
+                        if (!this.Connected || this.selectedNetworkModule != module) return;
+                        // Resolve the live package again: a loaded replay can replace its payload allocation.
+                        var live = module.GetUnsafeModule().GetUnsafeData();
+                        var events = live.ptr->eventsStorage.GetEvents(package.tick);
+                        for (uint i = 0; i < events.Count; ++i) {
+                            var candidate = events[live.ptr->networkWorld.state.ptr->allocator, i];
+                            if (candidate.playerId != package.playerId || candidate.methodId != package.methodId || candidate.localOrder != package.localOrder) continue;
+                            live.ptr->eventsStorage.RemoveEvent(candidate); break;
+                        }
+                        this.detailsSignature = null; this.nextRefresh = 0;
+                    }) { text = "Remove" });
+                    this.eventRows.Add(row);
+                }
+                if (packages.Count == 0) {
+                    var noEvents = new Label("No events at this tick"); noEvents.AddToClassList("no-events"); this.eventRows.Add(noEvents);
+                }
+            }
+            this.footer.text = "Connected · " + this.selectedWorld.Name + "    |    Rewind buffer " + (this.rewindMin - this.resetTick) + "–" + (this.endTick - this.resetTick) + " · " + span + " ticks";
+        }
 
+        private void SaveReplay() {
+            if (!this.Connected) return;
+            var path = EditorUtility.SaveFilePanel("ME.BECS Replays", "", "replay-" + System.DateTime.UtcNow.ToFileTime() + ".rep", "rep");
+            if (string.IsNullOrEmpty(path)) return;
+            try { System.IO.File.WriteAllBytes(path, this.selectedNetworkModule.SerializeAllEvents()); }
+            catch (System.Exception exception) { EditorUtility.DisplayDialog("Save replay failed", exception.Message, "OK"); }
+        }
+        private void LoadReplay() {
+            if (!this.Connected) return;
+            var path = EditorUtility.OpenFilePanel("ME.BECS Replays", "", "rep");
+            if (string.IsNullOrEmpty(path)) return;
+            try {
+                var bytes = System.IO.File.ReadAllBytes(path);
+                this.selectedNetworkModule.SetReplayMode(true);
+                if (!this.selectedNetworkModule.DeserializeAllEvents(bytes)) EditorUtility.DisplayDialog("Load replay failed", "Replay data is corrupted or incompatible.", "OK");
+                this.maxTick = 0; this.detailsSignature = null; this.nextRefresh = 0;
+            } catch (System.Exception exception) { EditorUtility.DisplayDialog("Load replay failed", exception.Message, "OK"); }
+        }
+    }
 }
