@@ -452,8 +452,9 @@ namespace ME.BECS.Views {
             if (this.dirty.IsCreated == true) this.dirty.Dispose();
             if (this.toAssign.IsCreated == true) this.toAssign.Dispose();
             if (this.toChange.IsCreated == true) this.toChange.Dispose();
-            if (this.toRemoveTemp.IsCreated == true) this.toChange.Dispose();
-            if (this.toAddTemp.IsCreated == true) this.toChange.Dispose();
+            if (this.toRemoveTemp.IsCreated == true) this.toRemoveTemp.Dispose();
+            if (this.toAddTemp.IsCreated == true) this.toAddTemp.Dispose();
+            if (this.loadingRequests.IsCreated == true) this.loadingRequests.Dispose();
 
             this = default;
 
@@ -477,7 +478,9 @@ namespace ME.BECS.Views {
             if (registeredProviders.Data.IsCreated == false) {
                 registeredProviders.Data = new UnsafeList<ProviderInfo>((int)providerId + 1, Constants.ALLOCATOR_DOMAIN);
             }
-            registeredProviders.Data.Resize((int)providerId + 1, NativeArrayOptions.ClearMemory);
+            if (providerId >= registeredProviders.Data.Length) {
+                registeredProviders.Data.Resize((int)providerId + 1, NativeArrayOptions.ClearMemory);
+            }
 
             ref var item = ref *(registeredProviders.Data.Ptr + providerId);
             item.IsCreated = true;
@@ -507,6 +510,7 @@ namespace ME.BECS.Views {
         [INLINE(256)]
         public static bool AssignView(in Ent ent, in Ent sourceEnt) {
 
+            if (ent.worldId != sourceEnt.worldId) return false;
             if (sourceEnt.TryRead(out ViewComponent viewComponent) == true &&
                 ent.Has<ViewComponent>() == false) {
 

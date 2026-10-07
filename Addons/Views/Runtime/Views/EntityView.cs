@@ -44,6 +44,7 @@ namespace ME.BECS.Views {
         void OnDeInitialize();
     }
 
+    /// <summary>Called after the spawn pose is committed, regardless of culling. Not called for pool prewarming.</summary>
     public interface IViewEnableFromPool : IViewModule {
         void OnEnableFromPool(in ViewData ent);
     }
@@ -229,6 +230,7 @@ namespace ME.BECS.Views {
         [ViewsProviderMask]
         public uint supportedProviders = uint.MaxValue;
         public GroupChangedTracker groupChangedTracker;
+        public GroupChangedTracker groupChangedTrackerParallel;
         public ViewRoot rootInfo;
         [SerializeField]
         internal ViewDataRaw viewDataRaw;

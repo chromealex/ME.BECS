@@ -111,6 +111,14 @@ namespace ME.BECS.Views {
                 list.Add(new ModuleItem<T>(module, ViewsTracker.CreateTracker(module)));
             }
 
+            public void Invalidate(EntityView instance, in EntRO ent) {
+                if (this.methods.TryGetValue(instance, out var list) == true) {
+                    foreach (var item in list) {
+                        item.tracker.Invalidate(in ent, ViewsTracker.GetTracker(item.module));
+                    }
+                }
+            }
+
             [INLINE(256)]
             public void UnregisterMethods(EntityView objInstance) {
                 if (this.methods.TryGetValue(objInstance, out var list) == true) {
@@ -187,6 +195,7 @@ namespace ME.BECS.Views {
         
         private scg::Dictionary<ulong, scg::Stack<Item>> prefabIdToPool;
         private scg::HashSet<EntityView> tempViews;
+        private scg::Dictionary<EntityView, SceneInstanceInfo> pendingEnableViews;
         private scg::List<ViewRoot> roots;
         private scg::List<HeapReference> heaps;
         private TransformAccessArray renderingOnSceneTransforms;
@@ -238,6 +247,7 @@ namespace ME.BECS.Views {
             this.heaps = ListPool<HeapReference>.Get();
             this.prefabIdToPool = DictionaryPool<ulong, scg::Stack<Item>>.Get();
             this.tempViews = HashSetPool<EntityView>.Get();
+            this.pendingEnableViews = DictionaryPool<EntityView, SceneInstanceInfo>.Get();
             this.roots = ListPool<ViewRoot>.Get();
             this.renderingOnSceneTransforms = new TransformAccessArray((int)properties.renderingObjectsCapacity, JobsUtility.JobWorkerCount);
 
@@ -282,6 +292,11 @@ namespace ME.BECS.Views {
                         var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
                         // Replace with the new ent
                         instance.viewDataRaw.logicEnt = new Ent(toEntId, data.ptr->connectedWorld);
+                        EntRO owner = instance.viewDataRaw.logicEnt;
+                        instance.groupChangedTracker.Invalidate(in owner, in instanceInfo.prefabInfo.ptr->typeInfo.tracker);
+                        instance.groupChangedTrackerParallel.Invalidate(in owner, in instanceInfo.prefabInfo.ptr->typeInfo.tracker);
+                        this.applyStateModules.Invalidate(instance, in owner);
+                        this.applyStateParallelModules.Invalidate(instance, in owner);
                     }
                 }
                 marker.End();
@@ -307,9 +322,7 @@ namespace ME.BECS.Views {
                             // call spawn methods
                             var instanceData = data.ptr->renderingOnSceneEnts[(int)index];
                             instance.viewDataRaw = instanceData.ViewData;
-                            if (instanceInfo.prefabInfo.ptr->typeInfo.HasEnableFromPool == true) instance.DoEnableFromPool(instance.viewData);
-                            //if (instanceInfo.prefabInfo.ptr->HasEnableFromPoolModules == true) instance.DoEnableFromPoolChildren(instance.ent);
-                            if (instanceInfo.prefabInfo.ptr->HasEnableFromPoolModules == true) this.enableModules.InvokeForced(instance, instance.viewData, static (IViewEnableFromPool module, in ViewData viewData) => module.OnEnableFromPool(in viewData));
+                            this.QueueEnable(instance, instanceInfo);
                         }
                     }
                 }
@@ -369,6 +382,18 @@ namespace ME.BECS.Views {
                 marker.End();
             }
 
+            if (this.pendingEnableViews.Count > 0) {
+                // Enable callbacks must observe the committed spawn pose, even when ApplyState is culled.
+                dependsOn.Complete();
+                foreach (var item in this.pendingEnableViews) {
+                    var instance = item.Key;
+                    var prefabInfo = item.Value.prefabInfo;
+                    if (prefabInfo.ptr->typeInfo.HasEnableFromPool == true) instance.DoEnableFromPool(instance.viewData);
+                    if (prefabInfo.ptr->HasEnableFromPoolModules == true) this.enableModules.InvokeForced(instance, instance.viewData, static (IViewEnableFromPool module, in ViewData viewData) => module.OnEnableFromPool(in viewData));
+                }
+                this.pendingEnableViews.Clear();
+            }
+
             {
                 ref var allocator = ref data.ptr->viewsWorld.state.ptr->allocator;
                 var continueLoadingRequests = new Unity.Collections.LowLevel.Unsafe.UnsafeList<uint>(data.ptr->loadingRequests.Count, Constants.ALLOCATOR_TEMP);
@@ -401,6 +426,13 @@ namespace ME.BECS.Views {
             
             return dependsOn;
 
+        }
+
+        [INLINE(256)]
+        private void QueueEnable(EntityView instance, SceneInstanceInfo info) {
+            if (info.prefabInfo.ptr->typeInfo.HasEnableFromPool == true || info.prefabInfo.ptr->HasEnableFromPoolModules == true) {
+                this.pendingEnableViews[instance] = info;
+            }
         }
 
         [INLINE(256)]
@@ -535,6 +567,8 @@ namespace ME.BECS.Views {
 
             objInstance.groupChangedTracker = new GroupChangedTracker();
             objInstance.groupChangedTracker.Initialize(in prefabInfo.ptr->typeInfo.tracker);
+            objInstance.groupChangedTrackerParallel = new GroupChangedTracker();
+            objInstance.groupChangedTrackerParallel.Initialize(in prefabInfo.ptr->typeInfo.tracker);
             if (prefabInfo.ptr->HasApplyStateModules == true) this.applyStateModules.Register(objInstance, objInstance.applyStateModules);
             if (prefabInfo.ptr->HasApplyStateParallelModules == true) this.applyStateParallelModules.Register(objInstance, objInstance.applyStateParallelModules);
             if (prefabInfo.ptr->HasUpdateModules == true) this.updateModules.Register(objInstance, objInstance.updateModules);
@@ -555,9 +589,7 @@ namespace ME.BECS.Views {
                 }
 
                 if (prewarm == false) {
-                    if (prefabInfo.ptr->typeInfo.HasEnableFromPool == true) objInstance.DoEnableFromPool(in viewData);
-                    //if (prefabInfo.ptr->HasEnableFromPoolModules == true) objInstance.DoEnableFromPoolChildren(ent);
-                    if (prefabInfo.ptr->HasEnableFromPoolModules == true) this.enableModules.InvokeForced(objInstance, in viewData, static (IViewEnableFromPool module, in ViewData viewData) => module.OnEnableFromPool(in viewData));
+                    this.QueueEnable(objInstance, info);
                 }
             }
 
@@ -616,6 +648,7 @@ namespace ME.BECS.Views {
             }
             instance.viewDataRaw = default;
             instance.groupChangedTracker.Dispose();
+            instance.groupChangedTrackerParallel.Dispose();
 
             var customViewId = instanceInfo.uniqueId;
 
@@ -635,6 +668,7 @@ namespace ME.BECS.Views {
             this.disableModules.UnregisterMethods(instance);
 
             // Store despawn in temp (don't deactivate)
+            this.pendingEnableViews.Remove(instance);
             this.tempViews.Add(instance);
             
             this.BringToPool(instanceInfo.prefabInfo, instance, instanceInfo.obj, customViewId);
@@ -669,7 +703,7 @@ namespace ME.BECS.Views {
             mainMarker.Begin();
             #endif
             {
-                var hasChanged = instanceObj.groupChangedTracker.HasChanged(in entRo, in instanceInfo.prefabInfo.ptr->typeInfo.tracker);
+                var hasChanged = instanceObj.groupChangedTrackerParallel.HasChanged(in entRo, in instanceInfo.prefabInfo.ptr->typeInfo.tracker);
                 if (hasChanged == true) {
                     #if ENABLE_PROFILER
                     var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
@@ -780,6 +814,8 @@ namespace ME.BECS.Views {
             for (uint i = 0u; i < data.ptr->renderingOnScene.Count; ++i) {
                 var instance = data.ptr->renderingOnScene[in state.ptr->allocator, i];
                 var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instance.obj).Target;
+                instanceObj.groupChangedTracker.Dispose();
+                instanceObj.groupChangedTrackerParallel.Dispose();
                 if (instance.prefabInfo.ptr->typeInfo.HasDeInitialize == true) instanceObj.DoDeInitialize();
                 //if (instance.prefabInfo.ptr->HasDeInitializeModules == true) instanceObj.DoDeInitializeChildren();
                 if (instance.prefabInfo.ptr->HasDeInitializeModules == true) this.deinitializeModules.InvokeForced(instanceObj, default, static (IViewDeInitialize module, in ViewData _) => module.OnDeInitialize());
@@ -824,6 +860,7 @@ namespace ME.BECS.Views {
             ListPool<HeapReference>.Release(this.heaps);
             DictionaryPool<ulong, scg::Stack<Item>>.Release(this.prefabIdToPool);
             HashSetPool<EntityView>.Release(this.tempViews);
+            DictionaryPool<EntityView, SceneInstanceInfo>.Release(this.pendingEnableViews);
             ListPool<ViewRoot>.Release(this.roots);
             
             this.applyStateModules.Dispose();

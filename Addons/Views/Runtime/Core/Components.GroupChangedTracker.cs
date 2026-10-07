@@ -21,6 +21,13 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public readonly void Invalidate(in EntRO worldEnt, in ViewsTracker.ViewInfo tracker) {
+            for (uint i = 0u; i < tracker.tracker.Length; ++i) {
+                this.versionByGroup[i] = unchecked((ushort)(worldEnt.GetVersion(tracker.tracker.Get(i)) - 1));
+            }
+        }
+
+        [INLINE(256)]
         public readonly void Dispose() {
             System.Buffers.ArrayPool<ushort>.Shared.Return(this.versionByGroup, false);
         }

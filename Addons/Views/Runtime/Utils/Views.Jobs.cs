@@ -516,12 +516,19 @@ namespace ME.BECS.Views {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AssignViewComponent component) {
 
                 if (component.isUsed == true) return;
-                
+                // Resolve once. If the source was never spawned, the destination's normal
+                // view request will spawn it; it must not steal a later source instance.
+                component.isUsed = true;
+
                 var assignToEntId = ent.id;
                 var sourceEntId = component.sourceEnt.id;
+                if (this.viewsModuleData.ptr->renderingOnSceneBits.IsSet((int)assignToEntId) == true) return;
                 if (this.viewsModuleData.ptr->renderingOnSceneBits.IsSet((int)sourceEntId) == true) {
 
                     ref var allocator = ref this.viewsWorld.state.ptr->allocator;
+                    var sourceIndex = this.viewsModuleData.ptr->renderingOnSceneEntToRenderIndex.ReadValue(in allocator, sourceEntId);
+                    if (this.viewsModuleData.ptr->renderingOnSceneEnts[(int)sourceIndex].element != component.sourceEnt ||
+                        this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in allocator, sourceEntId] != component.source.prefabId) return;
 
                     {
                         // Assign data
@@ -537,35 +544,24 @@ namespace ME.BECS.Views {
                         entData.versionParallel = ent.Version - 1;
                     }
 
-                    var srcHasViewComponent = false;
-                    //var srcIsAlive = false;
-                    if (component.sourceEnt.IsAlive() == true) {
-                        // Check if we have created new view
-                        srcHasViewComponent = component.sourceEnt.Has<ViewComponent>();
-                        //srcIsAlive = true;
+                    // The rendered instance belongs to the destination now. A new view request
+                    // on the source must be spawned independently on the next add pass.
+                    this.viewsModuleData.ptr->renderingOnSceneEntToRenderIndex.Remove(in allocator, sourceEntId);
+                    this.viewsModuleData.ptr->renderingOnSceneBits.Set((int)sourceEntId, false);
+                    this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in allocator, sourceEntId] = 0u;
+                    if (this.viewsModuleData.ptr->renderingOnSceneApplyState.Remove(in allocator, sourceEntId) == true) {
+                        this.viewsModuleData.ptr->renderingOnSceneApplyState.Add(ref allocator, assignToEntId);
                     }
-                    if (srcHasViewComponent == false) {
-                        // If source entity has no view component - Clean up
-                        this.viewsModuleData.ptr->renderingOnSceneBits.Set((int)sourceEntId, false);
-                        if (this.viewsModuleData.ptr->renderingOnSceneApplyState.Remove(in allocator, sourceEntId) == true) {
-                            this.viewsModuleData.ptr->renderingOnSceneApplyState.Add(ref allocator, assignToEntId);
-                        }
-                        if (this.viewsModuleData.ptr->renderingOnSceneUpdate.Remove(in allocator, sourceEntId) == true) {
-                            this.viewsModuleData.ptr->renderingOnSceneUpdate.Add(ref allocator, assignToEntId);
-                        }
+                    if (this.viewsModuleData.ptr->renderingOnSceneApplyStateParallel.Remove(in allocator, sourceEntId) == true) {
+                        this.viewsModuleData.ptr->renderingOnSceneApplyStateParallel.Add(ref allocator, assignToEntId);
                     }
-                    
-                    // Assign provider
-                    /*var providerId = component.source.providerId;
-                    if (providerId > 0u && component.source.providerId < this.registeredProviders.Length) {
-                        ref var item = ref *(this.registeredProviders.Ptr + component.source.providerId);
-                        E.IS_CREATED(item);
-                        if (srcIsAlive == true) component.sourceEnt.Remove(item.typeId);
-                        ent.Set(item.typeId, null);
-                    }*/
+                    if (this.viewsModuleData.ptr->renderingOnSceneUpdate.Remove(in allocator, sourceEntId) == true) {
+                        this.viewsModuleData.ptr->renderingOnSceneUpdate.Add(ref allocator, assignToEntId);
+                    }
+                    if (this.viewsModuleData.ptr->renderingOnSceneUpdateParallel.Remove(in allocator, sourceEntId) == true) {
+                        this.viewsModuleData.ptr->renderingOnSceneUpdateParallel.Add(ref allocator, assignToEntId);
+                    }
 
-                    //ent.Remove<AssignViewComponent>();
-                    component.isUsed = true;
                     this.toAssign.TryAdd(sourceEntId, assignToEntId);
 
                 }

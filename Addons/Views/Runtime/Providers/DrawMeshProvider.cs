@@ -264,6 +264,34 @@ namespace ME.BECS.Views {
             return renderParams;
         }
 
+        // Remove dead provider instances first, then transfer surviving owners as a
+        // batch. Every lookup below refers to the original owner, independent of order.
+        private void ApplyAssignments(safe_ptr<ViewsModuleData> data) {
+            if (data.ptr->toAssign.Count() == 0) return;
+            var transfers = DictionaryPool<Ent, Ent>.Get();
+            try {
+                ref var allocator = ref data.ptr->viewsWorld.state.ptr->allocator;
+                foreach (var assignment in data.ptr->toAssign) {
+                    if (data.ptr->renderingOnSceneEntToRenderIndex.TryGetValue(in allocator, assignment.Value, out var index) == false ||
+                        index >= data.ptr->renderingOnScene.Count) continue;
+                    ref var instance = ref data.ptr->renderingOnScene[in allocator, index];
+                    var source = new Ent((ulong)instance.obj);
+                    var destination = data.ptr->renderingOnSceneEnts[(int)index].element;
+                    if (source == destination) continue;
+                    transfers[source] = destination;
+                    instance.obj = (System.IntPtr)destination.ToULong();
+                }
+                foreach (var pair in this.objectsPerMeshAndMaterial) {
+                    var entities = pair.Value.entities;
+                    for (int i = 0; i < entities.Length; ++i) {
+                        if (transfers.TryGetValue(entities[i], out var destination) == true) entities[i] = destination;
+                    }
+                }
+            } finally {
+                DictionaryPool<Ent, Ent>.Release(transfers);
+            }
+        }
+
         [INLINE(256)]
         public JobHandle Despawn(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
             
@@ -275,6 +303,7 @@ namespace ME.BECS.Views {
                 this.DespawnInstanceHierarchy(data, in worldEnt, in ent);
             }
             
+            this.ApplyAssignments(data);
             return dependsOn;
             
         }

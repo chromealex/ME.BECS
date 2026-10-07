@@ -219,6 +219,41 @@ namespace ME.BECS.Views {
 
         }
 
+        // Remove dead provider instances first, then transfer surviving owners as a
+        // batch. Every lookup below refers to the original owner, independent of order.
+        private void ApplyAssignments(safe_ptr<ViewsModuleData> data) {
+            if (data.ptr->toAssign.Count() == 0) return;
+            var transfers = DictionaryPool<Ent, (Ent destination, uint prefabId, int instanceIndex, uint renderIndex)>.Get();
+            try {
+                ref var allocator = ref data.ptr->viewsWorld.state.ptr->allocator;
+                foreach (var assignment in data.ptr->toAssign) {
+                    if (data.ptr->renderingOnSceneEntToRenderIndex.TryGetValue(in allocator, assignment.Value, out var index) == false ||
+                        index >= data.ptr->renderingOnScene.Count) continue;
+                    ref var instance = ref data.ptr->renderingOnScene[in allocator, index];
+                    var source = new Ent((ulong)instance.obj);
+                    var destination = data.ptr->renderingOnSceneEnts[(int)index].element;
+                    if (source == destination) continue;
+                    transfers[source] = (destination, this.entityToPrefabId[source], this.entityToInstanceIndex[source], index);
+                }
+                foreach (var transfer in transfers) {
+                    this.entityToPrefabId.Remove(transfer.Key);
+                    this.entityToInstanceIndex.Remove(transfer.Key);
+                }
+                foreach (var transfer in transfers) {
+                    var item = transfer.Value;
+                    this.entityToPrefabId.Add(item.destination, item.prefabId);
+                    this.entityToInstanceIndex.Add(item.destination, item.instanceIndex);
+                    var objects = this.objectsPerPrefab[item.prefabId];
+                    objects.entities[item.instanceIndex] = item.destination;
+                    objects.isDirty = true;
+                    this.objectsPerPrefab[item.prefabId] = objects;
+                    data.ptr->renderingOnScene[in allocator, item.renderIndex].obj = (System.IntPtr)item.destination.ToULong();
+                }
+            } finally {
+                DictionaryPool<Ent, (Ent destination, uint prefabId, int instanceIndex, uint renderIndex)>.Release(transfers);
+            }
+        }
+
         public JobHandle Despawn(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
 
             dependsOn.Complete();
@@ -252,6 +287,7 @@ namespace ME.BECS.Views {
 
             }
 
+            this.ApplyAssignments(data);
             return dependsOn;
 
         }
