@@ -121,7 +121,7 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public static void Swap(ref DoubleBuffer buffer, safe_ptr<State> state, uint newSize) {
+            public static void Swap(ref DoubleBuffer buffer, safe_ptr<State> state, uint newSize, uint groupIndex) {
 				using (new AllocatorTag(ALLOC_TAGS.COMPONENTS_PAGES, groupIndex)) {
                 	ref var targetPages = ref GetTargetPages(ref buffer);
 	                targetPages.Resize(ref state.ptr->allocator, newSize, 2);
