@@ -324,7 +324,10 @@ namespace ME.BECS {
 
             if (worldId >= allocatorPersistentValidBurst.Data.Length || allocatorPersistentValidBurst.Data.Get(worldId) == false) return;
             allocatorPersistentValidBurst.Data.Get(worldId) = false;
-            allocatorPersistent.Get(worldId).Dispose();
+            ref var allocator = ref allocatorPersistent.Get(worldId);
+            allocator.Allocator.Dispose();
+            allocator.Dispose();
+            allocator = default;
 
         }
 
@@ -363,7 +366,10 @@ namespace ME.BECS {
             
             if (worldId >= allocatorTempValidBurst.Data.Length || allocatorTempValidBurst.Data.Get(worldId) == false) return;
             allocatorTempValidBurst.Data.Get(worldId) = false;
-            allocatorTemp.Get(worldId).Dispose();
+            ref var allocator = ref allocatorTemp.Get(worldId);
+            allocator.Allocator.Dispose();
+            allocator.Dispose();
+            allocator = default;
             
         }
 

@@ -78,6 +78,14 @@ namespace ME.BECS {
             if (id >= journals.Length) return default;
             return journals.Get(id).journal;
         }
+
+        public static void Dispose(uint id) {
+            var journal = Get(id);
+            if (journal.ptr == null) return;
+            journals.Get(id) = default;
+            journal.ptr->Dispose();
+            _free(ref journal);
+        }
         
     }
 
@@ -320,8 +328,12 @@ namespace ME.BECS {
         public void Dispose() {
 
             if (this.world.ptr == null) return;
-            if (this.data.ptr != null) this.data.ptr->Dispose(this.world.ptr->state);
+            if (this.data.ptr != null) {
+                this.data.ptr->Dispose(this.world.ptr->state);
+                _free(ref this.data);
+            }
             this.world.ptr->Dispose();
+            _free(ref this.world);
             this = default;
 
         }

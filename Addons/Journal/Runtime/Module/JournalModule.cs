@@ -34,9 +34,7 @@ namespace ME.BECS {
 
         public override void DoDestroy() {
 
-            var journal = JournalsStorage.Get(this.worldId);
-            if (journal.ptr == null) return;
-            journal.ptr->Dispose();
+            JournalsStorage.Dispose(this.worldId);
             
         }
 

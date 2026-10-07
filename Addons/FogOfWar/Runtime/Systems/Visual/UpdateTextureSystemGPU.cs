@@ -138,6 +138,11 @@ namespace ME.BECS.FogOfWar {
             this.nodesBuffer.Value.Release();
             this.exploredBuffer.Value.Release();
             this.renderTexture.Value.Release();
+            if (UnityEngine.Application.isPlaying == true) {
+                UnityEngine.Object.Destroy(this.renderTexture.Value);
+            } else {
+                UnityEngine.Object.DestroyImmediate(this.renderTexture.Value);
+            }
             this.nodesBuffer.Dispose();
             this.exploredBuffer.Dispose();
             this.renderTexture.Dispose();
