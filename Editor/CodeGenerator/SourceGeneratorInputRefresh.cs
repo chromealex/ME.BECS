@@ -280,8 +280,28 @@ namespace ME.BECS.Editor {
                     UnityEngine.Debug.LogException(exception);
                 }
             }
+            // Inputs rewritten underneath the sliced publication (a git checkout/restore,
+            // another tool, a manual delete) make validation fail on a half-written
+            // folder. That is not a stable failure: retry once the files settle.
+            if (failed && InputsChangedRecently(15d)) {
+                UnityEngine.Debug.LogWarning("[ME.BECS] Source input files changed while inputs were being published; retrying the export.");
+                UnityEditor.SessionState.EraseString(AutomaticAttemptKey);
+                UnityEditor.SessionState.SetBool(PendingKey, true);
+                due = UnityEditor.EditorApplication.timeSinceStartup + 3d;
+            }
             try { EndPublication(false); }
             finally { FinishBackground(false, UnityEditor.Progress.Status.Failed, notify: true); }
+        }
+
+        private static bool InputsChangedRecently(double seconds) {
+            try {
+                var directory = System.IO.Path.GetDirectoryName(SourceGeneratorInputTransport.InputPath(false));
+                if (string.IsNullOrEmpty(directory) || !System.IO.Directory.Exists(directory)) return true;
+                var threshold = System.DateTime.UtcNow.AddSeconds(-seconds);
+                foreach (var path in System.IO.Directory.EnumerateFileSystemEntries(directory, "*", System.IO.SearchOption.AllDirectories))
+                    if (System.IO.File.GetLastWriteTimeUtc(path) >= threshold) return true;
+                return false;
+            } catch (System.Exception) { return true; }
         }
 
         private static void EndPublication(bool written) {
