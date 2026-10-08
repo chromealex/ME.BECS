@@ -721,8 +721,9 @@ namespace ME.BECS.Editor {
             {
                 if (this.currentInspector == null) {
                     this.currentInspector = ScriptableObject.CreateInstance<Entity>();
-                    this.currentInspector.hideFlags = HideFlags.HideAndDontSave;
                 }
+                // Keep navigation enabled; EntityDrawer locks only value fields.
+                this.currentInspector.hideFlags = HideFlags.HideAndDontSave & ~HideFlags.NotEditable;
                 this.currentInspector.values = this.selected.ToArray();
                 EditorUtility.SetDirty(this.currentInspector);
                 ActiveEditorTracker.sharedTracker.ForceRebuild();

@@ -21,7 +21,8 @@ namespace ME.BECS.Editor {
         private static void SelectEntity(Ent entity) {
             if (selectedEntity == null) {
                 selectedEntity = ScriptableObject.CreateInstance<WorldEntityEditorWindow.TempObject>();
-                selectedEntity.hideFlags = HideFlags.HideAndDontSave;
+                // NotEditable disables the entire Unity inspector, including its foldouts.
+                selectedEntity.hideFlags = HideFlags.HideAndDontSave & ~HideFlags.NotEditable;
                 AssemblyReloadEvents.beforeAssemblyReload -= ReleaseSelection;
                 AssemblyReloadEvents.beforeAssemblyReload += ReleaseSelection;
             }
@@ -169,7 +170,7 @@ namespace ME.BECS.Editor {
                 try {
                     if (this.buffer == null) {
                         this.buffer = ScriptableObject.CreateInstance<TempObject>();
-                        this.buffer.hideFlags = HideFlags.HideAndDontSave;
+                        this.buffer.hideFlags = HideFlags.HideAndDontSave & ~HideFlags.NotEditable;
                         this.buffer.data = new[] { value };
                         this.serialized = new SerializedObject(this.buffer);
                     } else {
@@ -255,7 +256,7 @@ namespace ME.BECS.Editor {
                 if (!changed.propertyPath.StartsWith(prefix, StringComparison.Ordinal)) return;
                 if (this.mergeBuffer == null) {
                     this.mergeBuffer = ScriptableObject.CreateInstance<TempObject>();
-                    this.mergeBuffer.hideFlags = HideFlags.HideAndDontSave;
+                    this.mergeBuffer.hideFlags = HideFlags.HideAndDontSave & ~HideFlags.NotEditable;
                     this.mergeBuffer.data = new object[1];
                     this.mergeSerialized = new SerializedObject(this.mergeBuffer);
                 }

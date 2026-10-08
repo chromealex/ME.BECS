@@ -27,3 +27,8 @@ if (isReady == true) {
     Stop();
 }
 ```
+
+## Entity inspector UI
+
+- Never disable component containers, headers, foldouts, or list navigation to enforce read-only state. Disable only value-editing controls and mutation actions.
+- Temporary entity inspector objects and serialized component buffers must not have `HideFlags.NotEditable`; use `HideFlags.HideAndDontSave & ~HideFlags.NotEditable` so Unity does not disable the entire inspector or bound property tree.
