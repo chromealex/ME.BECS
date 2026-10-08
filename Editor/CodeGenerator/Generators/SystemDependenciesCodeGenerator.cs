@@ -908,8 +908,19 @@ namespace ME.BECS.Editor.Systems {
                         if (!this.scannedBodies.Add(body)) continue;
                         CodeGeneratorTimings.Work(body);
                         if (++bodyCount > 10000) throw new System.InvalidOperationException("Discovery IL traversal limit exceeded: " + method);
-                        var discovered = ILAnalysisSession.Get((typeof(DiscoveryBody), body), () =>
-                            ILPersistentAnalysis.Get("discovery", ILPersistentAnalysis.MethodIdentity(body), () => CollectBody(body), EncodeBody, DecodeBody));
+                        DiscoveryBody discovered;
+                        try {
+                            discovered = ILAnalysisSession.Get((typeof(DiscoveryBody), body), () =>
+                                ILPersistentAnalysis.Get("discovery", ILPersistentAnalysis.MethodIdentity(body), () => CollectBody(body), EncodeBody, DecodeBody));
+                        } catch (System.OperationCanceledException) {
+                            throw;
+                        } catch (System.Exception exception) {
+                            var rootIdentity = type?.AssemblyQualifiedName ?? "<null root type>";
+                            var bodyIdentity = body == null ? "<null body>" :
+                                (body.DeclaringType?.FullName ?? "<global>") + "::" + body.Name;
+                            throw new System.InvalidOperationException("Runtime discovery failed for root '" + rootIdentity + "::" + name +
+                                "' while processing body '" + bodyIdentity + "'.", exception);
+                        }
                         instructionCount = checked(instructionCount + discovered.instructions);
                         if (instructionCount > 1000000) throw new System.InvalidOperationException("Discovery IL instruction limit exceeded: " + method);
                         components.UnionWith(discovered.components);
@@ -955,6 +966,20 @@ namespace ME.BECS.Editor.Systems {
             return body;
         }
 
+        internal static System.Reflection.Assembly GetMethodAssembly(MethodInfo method) {
+            if (method == null) throw new System.ArgumentNullException(nameof(method));
+            if (method.DeclaringType != null) return method.DeclaringType.Assembly;
+            try {
+                var module = method.Module;
+                if (module?.Assembly != null) return module.Assembly;
+            } catch (System.NotSupportedException exception) {
+                throw new System.NotSupportedException("Runtime discovery cannot resolve assembly metadata for method '" + method + "'.", exception);
+            } catch (System.NotImplementedException exception) {
+                throw new System.NotSupportedException("Runtime discovery cannot resolve assembly metadata for method '" + method + "'.", exception);
+            }
+            throw new System.NotSupportedException("Runtime discovery cannot resolve assembly metadata for method '" + method + "': no declaring type or module assembly was provided.");
+        }
+
         private static DiscoveryBody CollectBody(MethodBase body) {
             var result = new DiscoveryBody();
             // Local aspect expansion must not depend on what an earlier root
@@ -970,7 +995,7 @@ namespace ME.BECS.Editor.Systems {
                     // SafetyCheck describes access modes, not all types
                     // reached by a user helper. Keep its body in discovery;
                     // core ECS storage boundaries remain terminal.
-                    if (methodInfo.DeclaringType.Assembly != typeof(Ent).Assembly &&
+                    if (GetMethodAssembly(methodInfo) != typeof(Ent).Assembly &&
                         methodInfo.IsDefined(typeof(SafetyCheckAttribute), false) &&
                         !methodInfo.IsDefined(typeof(CodeGeneratorIgnoreAttribute), false) && methodInfo.GetMethodBody() != null)
                         q.Enqueue(methodInfo);

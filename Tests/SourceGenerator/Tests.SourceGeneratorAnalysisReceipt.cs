@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using NUnit.Framework;
 
 namespace ME.BECS.Tests {
@@ -108,21 +109,100 @@ namespace ME.BECS.Tests {
             }
         }
 
-        [Test]
+        [Test, Timeout(600000)]
         public void BuildMachinePreflightCanReconstructAnalysisWithoutWritingProjectInputs() {
             var directory = System.IO.Path.Combine(UnityEngine.Application.dataPath, "ME.BECS.SourceInputs");
-            var paths = System.IO.Directory.GetFiles(directory, "*.additionalfile", System.IO.SearchOption.AllDirectories)
+            // Unity owns import metadata; publication owns all other files, including both root snapshots.
+            var paths = System.IO.Directory.GetFiles(directory, "*", System.IO.SearchOption.AllDirectories)
+                .Where(path => path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase) == false)
                 .OrderBy(path => path, StringComparer.Ordinal).ToArray();
-            var contents = paths.Select(System.IO.File.ReadAllText).ToArray();
+            var contents = paths.Select(path => Convert.ToBase64String(System.IO.File.ReadAllBytes(path))).ToArray();
             var times = paths.Select(System.IO.File.GetLastWriteTimeUtc).ToArray();
             var method = Receipt.Assembly.GetType("ME.BECS.Editor.SourceGeneratorInputManifest", true)
-                .GetMethod("TryAnalyzePublishedInputs", BindingFlags.Static | BindingFlags.NonPublic);
-            var args = new object[] { null };
-            Assert.IsTrue((bool)method.Invoke(null, args), (string)args[0]);
-            CollectionAssert.AreEqual(paths, System.IO.Directory.GetFiles(directory, "*.additionalfile", System.IO.SearchOption.AllDirectories)
-                .OrderBy(path => path, StringComparer.Ordinal).ToArray());
-            CollectionAssert.AreEqual(contents, paths.Select(System.IO.File.ReadAllText).ToArray());
-            CollectionAssert.AreEqual(times, paths.Select(System.IO.File.GetLastWriteTimeUtc).ToArray());
+                .GetMethod("TryAnalyzePublishedInputs", BindingFlags.Static | BindingFlags.NonPublic, null,
+                    new[] { typeof(string), typeof(string).MakeByRefType() }, null);
+            var readiness = Receipt.Assembly.GetType("ME.BECS.Editor.SourceGeneratorInputRefresh", true)
+                .GetMethod("TryValidateReady", BindingFlags.Static | BindingFlags.NonPublic);
+            var cacheRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ME.BECS.SourceGenerator.Tests", Guid.NewGuid().ToString("N"));
+            var cachePath = System.IO.Path.Combine(cacheRoot, "IncrementalIL.v2.json");
+            var analysisSession = Receipt.Assembly.GetType("ME.BECS.Editor.ILAnalysisSession", true);
+            var fingerprintField = analysisSession.GetField("retainedFingerprint", BindingFlags.Static | BindingFlags.NonPublic);
+            var valuesField = analysisSession.GetField("retainedValues", BindingFlags.Static | BindingFlags.NonPublic);
+            var previousFingerprint = fingerprintField.GetValue(null);
+            var previousValues = valuesField.GetValue(null);
+            var persistentAnalysis = Receipt.Assembly.GetType("ME.BECS.Editor.ILPersistentAnalysis", true);
+            var waitForCacheSave = persistentAnalysis.GetMethod("WaitForPendingSave", BindingFlags.Static | BindingFlags.NonPublic);
+            try {
+                Assert.IsFalse(System.IO.Directory.Exists(cacheRoot), "The cold pass must start with an empty incremental IL cache.");
+                foreach (var pass in new[] { "cold", "warm" }) {
+                    fingerprintField.SetValue(null, null);
+                    valuesField.SetValue(null, null);
+                    var args = new object[] { cachePath, null };
+                    var summaries = new global::System.Collections.Generic.List<string>();
+                    UnityEngine.Application.LogCallback onLog = (condition, stackTrace, type) => {
+                        if (condition.StartsWith("[ME.BECS] Incremental IL summaries:", StringComparison.Ordinal)) summaries.Add(condition);
+                    };
+                    UnityEngine.Application.logMessageReceived += onLog;
+                    try {
+                        Assert.IsTrue((bool)method.Invoke(null, args), pass + " analysis: " + (string)args[1]);
+                        var readyArgs = new object[] { null };
+                        Assert.IsTrue((bool)readiness.Invoke(null, readyArgs), pass + " compiled input readiness: " + (string)readyArgs[0]);
+                    } finally {
+                        UnityEngine.Application.logMessageReceived -= onLog;
+                    }
+                    if (pass == "cold") {
+                        waitForCacheSave.Invoke(null, null);
+                        Assert.IsTrue(System.IO.File.Exists(cachePath), "The cold pass must persist summaries for the warm pass.");
+                    } else {
+                        var warmSummary = string.Join("\n", summaries);
+                        var reused = System.Text.RegularExpressions.Regex.Match(warmSummary, @"discovery: reused=(\d+)");
+                        Assert.IsTrue(reused.Success && int.Parse(reused.Groups[1].Value) > 0,
+                            "The warm pass must reuse discovery summaries from the persistent cache. " + warmSummary);
+                    }
+                    CollectionAssert.AreEqual(paths, System.IO.Directory.GetFiles(directory, "*", System.IO.SearchOption.AllDirectories)
+                        .Where(path => path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase) == false)
+                        .OrderBy(path => path, StringComparer.Ordinal).ToArray());
+                    CollectionAssert.AreEqual(contents, paths.Select(path => Convert.ToBase64String(System.IO.File.ReadAllBytes(path))).ToArray());
+                    CollectionAssert.AreEqual(times, paths.Select(System.IO.File.GetLastWriteTimeUtc).ToArray());
+                }
+            } finally {
+                try {
+                    waitForCacheSave.Invoke(null, null);
+                } finally {
+                    fingerprintField.SetValue(null, previousFingerprint);
+                    valuesField.SetValue(null, previousValues);
+                    if (System.IO.Directory.Exists(cacheRoot)) System.IO.Directory.Delete(cacheRoot, true);
+                }
+            }
+        }
+
+        [Test]
+        public void RuntimeDiscoveryResolvesAssemblyForModuleGlobalMethodMetadata() {
+            var assembly = AssemblyBuilder.DefineDynamicAssembly(
+                new AssemblyName("ME.BECS.GlobalMethod." + Guid.NewGuid().ToString("N")), AssemblyBuilderAccess.Run);
+            var module = assembly.DefineDynamicModule("GlobalMethodModule");
+            var global = module.DefineGlobalMethod("GlobalUsageTarget", MethodAttributes.Public | MethodAttributes.Static,
+                typeof(void), Type.EmptyTypes);
+            global.GetILGenerator().Emit(OpCodes.Ret);
+            module.CreateGlobalFunctions();
+
+            var method = module.GetMethod("GlobalUsageTarget");
+            Assert.IsNotNull(method);
+            var generator = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.Systems.SystemDependenciesCodeGenerator", true);
+            var lookup = generator.GetNestedType("UsedObjectsLookup", BindingFlags.NonPublic);
+            Assert.IsNotNull(lookup);
+            var resolveAssembly = lookup.GetMethod("GetMethodAssembly", BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.IsNotNull(resolveAssembly);
+            var resolvedAssembly = (Assembly)resolveAssembly.Invoke(null, new object[] { method });
+            Assert.AreEqual(assembly.FullName, resolvedAssembly.FullName);
+
+            // Mono may expose emitted globals through <Module>. DynamicMethod
+            // explicitly covers module-associated metadata without a declaring Type.
+            var withoutDeclaringType = new DynamicMethod("GlobalUsageWithoutDeclaringType", typeof(void), Type.EmptyTypes, module);
+            withoutDeclaringType.GetILGenerator().Emit(OpCodes.Ret);
+            Assert.IsNull(withoutDeclaringType.DeclaringType);
+            var fallbackAssembly = (Assembly)resolveAssembly.Invoke(null, new object[] { withoutDeclaringType });
+            Assert.AreEqual(assembly.FullName, fallbackAssembly.FullName);
         }
     }
 }
