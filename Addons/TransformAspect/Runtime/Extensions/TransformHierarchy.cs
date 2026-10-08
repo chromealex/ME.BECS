@@ -62,6 +62,8 @@ namespace ME.BECS.Transforms {
                 queue.Enqueue(entity);
                 while (queue.Count > 0) {
                     var ent = queue.Dequeue();
+                    // An owner's destroy callback may already have released a queued child.
+                    if (ent.IsAlive() == false) continue;
                     var nodes = ent.Read<ChildrenComponent>();
                     for (uint i = 0u; i < nodes.list.Count; ++i) {
                         var node = nodes.list[i];
