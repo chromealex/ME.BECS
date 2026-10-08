@@ -29,9 +29,15 @@ namespace ME.BECS.Views {
     using UnityEngine.Pool;
     using um = Unity.Mathematics;
 
+    /// <summary>
+    /// Stores per-entity state for particles provider tag.
+    /// </summary>
     [ComponentGroup(typeof(ViewsComponentGroup))]
     public struct ParticlesProviderTag : IComponent {}
 
+    /// <summary>
+    /// Updates view presentation for particles provider.
+    /// </summary>
     [BURST]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -40,19 +46,46 @@ namespace ME.BECS.Views {
     #endif
     public unsafe struct ParticlesProvider : IViewProvider<EntityView>, IViewProviderRoot {
 
+        /// <summary>
+        /// Stores particle system info for <c>ParticlesProvider</c>.
+        /// </summary>
         public struct ParticleSystemInfo {
+            /// <summary>
+            /// Particle system used by <c>ParticlesProvider.ParticleSystemInfo</c>.
+            /// </summary>
             public ParticleSystem particleSystem;
         }
 
+        /// <summary>
+        /// Stores particle instance data for <c>ParticlesProvider</c>.
+        /// </summary>
         public struct ParticleInstanceData {
+            /// <summary>
+            /// Position in the coordinate space used by the containing API.
+            /// </summary>
             public float3 position;
+            /// <summary>
+            /// Orientation in the coordinate space used by the containing API.
+            /// </summary>
             public quaternion rotation;
         }
 
+        /// <summary>
+        /// Defines objects per prefab state and operations for <c>ParticlesProvider</c>.
+        /// </summary>
         public struct ObjectsPerPrefab {
 
+            /// <summary>
+            /// Instances used by <c>ParticlesProvider.ObjectsPerPrefab</c>.
+            /// </summary>
             public NativeList<ParticleInstanceData> instances;
+            /// <summary>
+            /// Entity handles processed or stored by this operation.
+            /// </summary>
             public NativeList<Ent> entities;
+            /// <summary>
+            /// Indicates is dirty.
+            /// </summary>
             public bool isDirty;
 
         }
@@ -66,8 +99,14 @@ namespace ME.BECS.Views {
 
         private Transform particlesRoot;
 
+        /// <summary>
+        /// Returns root.
+        /// </summary>
         public Transform GetRoot() => this.particlesRoot;
 
+        /// <summary>
+        /// Initializes particles provider state from the supplied context.
+        /// </summary>
         public void Initialize(uint providerId, World viewsWorld, ViewsModuleProperties properties) {
 
             UnsafeViewsModule.RegisterProviderType<ParticlesProviderTag>(providerId);
@@ -186,6 +225,9 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Creates or reuses a presentation instance for the requested entity.
+        /// </summary>
         public JobHandle Spawn(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
 
             dependsOn.Complete();
@@ -254,6 +296,9 @@ namespace ME.BECS.Views {
             }
         }
 
+        /// <summary>
+        /// Removes an active presentation instance and returns it to its provider.
+        /// </summary>
         public JobHandle Despawn(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
 
             dependsOn.Complete();
@@ -306,6 +351,9 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Commits the accumulated work to its destination.
+        /// </summary>
         public JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn, float dt) {
 
             dependsOn.Complete();
@@ -443,6 +491,9 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this particles provider instance.
+        /// </summary>
         public void Dispose(safe_ptr<State> state, safe_ptr<ViewsModuleData> data) {
 
             foreach (var kv in this.objectsPerPrefab) {
@@ -470,31 +521,47 @@ namespace ME.BECS.Views {
             }
 
             DictionaryPool<uint, ObjectsPerPrefab>.Release(this.objectsPerPrefab);
+            DictionaryPool<uint, ParticleSystemInfo>.Release(this.systemForPrefab);
             DictionaryPool<Ent, uint>.Release(this.entityToPrefabId);
             DictionaryPool<Ent, int>.Release(this.entityToInstanceIndex);
 
         }
 
+        /// <summary>
+        /// Applies logic state during the parallel phase of view processing.
+        /// </summary>
         public void ApplyStateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData) {
 
             return;
 
         }
 
+        /// <summary>
+        /// Applies the current logic state to the presentation instance.
+        /// </summary>
         public void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData) {
 
             return;
 
         }
 
+        /// <summary>
+        /// Provides the <c>OnUpdate</c> callback; this implementation performs no work.
+        /// </summary>
         public void OnUpdate(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData, float dt) {
 
         }
 
+        /// <summary>
+        /// Provides the <c>OnUpdateParallel</c> callback; this implementation performs no work.
+        /// </summary>
         public void OnUpdateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData, float dt) {
 
         }
 
+        /// <summary>
+        /// Loads the registered data required by this operation.
+        /// </summary>
         public void Load(safe_ptr<ViewsModuleData> viewsModuleData, ObjectReferenceRegistryData data) {
 
             viewsModuleData.ptr->prefabId = math.max(viewsModuleData.ptr->prefabId, data.GetSourceId());
@@ -507,6 +574,9 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Registers the supplied instance or type for subsequent lookup.
+        /// </summary>
         public ViewSource Register(safe_ptr<ViewsModuleData> viewsModuleData, EntityView prefab, uint prefabId = 0, bool checkPrefab = true, bool sceneSource = false) {
 
             ViewSource viewSource;
@@ -555,9 +625,9 @@ namespace ME.BECS.Views {
                 info.HasDisableToPoolModules = ProvidersHelper.HasAny<IViewDisableToPool>(prefab.modules);
 
                 var prefabInfo = new SourceRegistry.InfoRef(info);
-                this.GetOrCreateSystem(viewsModuleData.ptr->prefabId, prefabInfo.info);
+                this.GetOrCreateSystem(prefabId, prefabInfo.info);
 
-                viewsModuleData.ptr->prefabIdToInfo.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, prefabId, new SourceRegistry.InfoRef(info));
+                viewsModuleData.ptr->prefabIdToInfo.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, prefabId, prefabInfo);
 
             } else {
 
@@ -576,6 +646,9 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Registers the supplied instance or type for subsequent lookup.
+        /// </summary>
         public void Register(safe_ptr<ViewsModuleData> viewsModuleData, ObjectItem prefab, uint prefabId) {
 
             if (prefab.IsValid() == false) {
@@ -623,7 +696,7 @@ namespace ME.BECS.Views {
 
                 var prefabInfo = new SourceRegistry.InfoRef(info);
                 if (isLoaded == true) {
-                    this.GetOrCreateSystem(viewsModuleData.ptr->prefabId, prefabInfo.info);
+                    this.GetOrCreateSystem(prefabId, prefabInfo.info);
                 } else {
                     viewsModuleData.ptr->loadingRequests.Add(prefabId);
                 }
@@ -634,10 +707,16 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Creates a query over entities in the associated world.
+        /// </summary>
         public void Query(ref QueryBuilder queryBuilder) {
             queryBuilder.With<ParticlesProviderTag>();
         }
 
+        /// <summary>
+        /// Returns view by entity.
+        /// </summary>
         public IView GetViewByEntity(safe_ptr<ViewsModuleData> data, in Ent entity) => null;
 
     }

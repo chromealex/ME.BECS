@@ -20,12 +20,30 @@ namespace ME.BECS.Units {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     #endif
 
+    /// <summary>
+    /// Processes candidates during range moveable aabb unique traversal.
+    /// </summary>
     public struct RangeMoveableAABBUniqueVisitor : NativeTrees.IQuadtreeRangeVisitor<Ent> {
+        /// <summary>
+        /// Destination or stored results of the associated operation.
+        /// </summary>
         public Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<Ent> results;
+        /// <summary>
+        /// Squared range used for distance comparisons without a square root.
+        /// </summary>
         public tfloat rangeSqr;
+        /// <summary>
+        /// Maximum .
+        /// </summary>
         public uint max;
+        /// <summary>
+        /// Sector bounds used by the spatial query.
+        /// </summary>
         public MathSector sector;
 
+        /// <summary>
+        /// Examines a candidate encountered by a spatial traversal.
+        /// </summary>
         public bool OnVisit(in Ent obj, in NativeTrees.AABB2D objBounds, in NativeTrees.AABB2D queryRange) {
             if (this.results.Contains(obj) == true) return true;
             if (this.sector.IsValid(objBounds.Center) == true) {
@@ -42,14 +60,35 @@ namespace ME.BECS.Units {
         }
     }
 
+    /// <summary>
+    /// Processes candidates during octree nearest moveable aabb traversal.
+    /// </summary>
     public struct OctreeNearestMoveableAABBVisitor : NativeTrees.IOctreeNearestVisitor<Ent> {
 
+        /// <summary>
+        /// Nearest candidate selected by the query.
+        /// </summary>
         public Ent nearest;
+        /// <summary>
+        /// Whether the associated search found a matching entry.
+        /// </summary>
         public bool found;
+        /// <summary>
+        /// Sector bounds used by the spatial query.
+        /// </summary>
         public MathSector sector;
+        /// <summary>
+        /// Whether the query excludes the entity that initiated it.
+        /// </summary>
         public bool ignoreSelf;
+        /// <summary>
+        /// Entries excluded from the associated operation.
+        /// </summary>
         public Ent ignore;
 
+        /// <summary>
+        /// Examines a candidate encountered by a spatial traversal.
+        /// </summary>
         public bool OnVisit(Ent obj, NativeTrees.AABB bounds) {
 
             if (this.sector.IsValid(bounds.Center) == false) {
@@ -70,8 +109,14 @@ namespace ME.BECS.Units {
         }
     }
     
+    /// <summary>
+    /// Provides helper operations for unit.
+    /// </summary>
     public static partial class UnitUtils {
 
+        /// <summary>
+        /// Creates selection group.
+        /// </summary>
         [INLINE(256)]
         public static UnitSelectionGroupAspect CreateSelectionGroup(uint capacity = 10u, in JobInfo jobInfo = default) {
 
@@ -82,6 +127,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Creates selection temp group.
+        /// </summary>
         [INLINE(256)]
         public static UnitSelectionTempGroupAspect CreateSelectionTempGroup(uint capacity = 10u, in JobInfo jobInfo = default) {
 
@@ -92,6 +140,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Destroys selection group.
+        /// </summary>
         [INLINE(256)]
         public static void DestroySelectionGroup(in Ent group) {
             
@@ -99,6 +150,9 @@ namespace ME.BECS.Units {
             
         }
 
+        /// <summary>
+        /// Destroys selection group.
+        /// </summary>
         [INLINE(256)]
         public static void DestroySelectionGroup(in UnitSelectionGroupAspect group) {
             
@@ -106,6 +160,9 @@ namespace ME.BECS.Units {
             
         }
 
+        /// <summary>
+        /// Adds to selection group.
+        /// </summary>
         [INLINE(256)]
         public static uint AddToSelectionGroup(in UnitSelectionGroupAspect selectionGroup, in UnitAspect unit) {
 
@@ -117,6 +174,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Handles the transition before the selection group is removed.
+        /// </summary>
         [INLINE(256)]
         public static bool WillRemoveSelectionGroup(in UnitAspect unit) {
             if (unit.unitSelectionGroup.IsAlive() == true) {
@@ -126,6 +186,9 @@ namespace ME.BECS.Units {
             return false;
         }
 
+        /// <summary>
+        /// Removes from selection group.
+        /// </summary>
         [INLINE(256)]
         public static bool RemoveFromSelectionGroup(in UnitAspect unit) {
 
@@ -147,6 +210,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Removes from selection group.
+        /// </summary>
         [INLINE(256)]
         public static bool RemoveFromSelectionGroup(in UnitSelectionGroupAspect selectionGroup, in UnitAspect unit) {
 
@@ -156,12 +222,18 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Creates selection group by type in point.
+        /// </summary>
         [INLINE(256)]
         public static unsafe UnitSelectionGroupAspect CreateSelectionGroupByTypeInPoint(in QuadTreeInsertSystem trees, int treeIndex, float3 position, tfloat? minRange = null,
                                                                                                 tfloat? maxRange = null, JobInfo jobInfo = default) {
             return CreateSelectionGroupByTypeInPoint(in trees, treeIndex, position, minRange != null ? minRange.Value : 0f, maxRange != null ? maxRange.Value : 5f, jobInfo);
         }
 
+        /// <summary>
+        /// Creates selection group by type in point.
+        /// </summary>
         [INLINE(256)]
         public static unsafe UnitSelectionGroupAspect CreateSelectionGroupByTypeInPoint(in QuadTreeInsertSystem trees, int treeIndex, float3 position, tfloat minRange, tfloat maxRange, JobInfo jobInfo = default) {
 
@@ -179,12 +251,18 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Creates selection group by type in point temp.
+        /// </summary>
         [INLINE(256)]
         public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInPointTemp(in QuadTreeInsertSystem trees, int treeIndex, float3 position, tfloat? minRange = null,
                                                                                                 tfloat? maxRange = null, JobInfo jobInfo = default) {
             return CreateSelectionGroupByTypeInPointTemp(in trees, treeIndex, position, minRange != null ? minRange.Value : 0f, maxRange != null ? maxRange.Value : 5f, jobInfo);
         }
 
+        /// <summary>
+        /// Creates selection group by type in point temp.
+        /// </summary>
         [INLINE(256)]
         public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInPointTemp(in QuadTreeInsertSystem trees, int treeIndex, float3 position, tfloat minRange, tfloat maxRange, JobInfo jobInfo = default) {
 
@@ -202,6 +280,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Creates selection group by type in range.
+        /// </summary>
         [INLINE(256)]
         public static unsafe UnitSelectionGroupAspect CreateSelectionGroupByTypeInRange(in SystemContext context, int treeIndex, float3 position, uint unitTypeId, tfloat range, JobInfo jobInfo = default) {
 
@@ -226,6 +307,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Creates selection group by type in range temp.
+        /// </summary>
         [INLINE(256)]
         public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInRangeTemp(in SystemContext context, int treeIndex, float3 position, uint unitTypeId, tfloat range, JobInfo jobInfo = default) {
 
@@ -250,6 +334,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Returns screen points.
+        /// </summary>
         [INLINE(256)]
         public static (float3 p1, float3 p2, float3 p3, float3 p4) GetScreenPoints(float3 screenPos1, float3 screenPos2) {
 
@@ -265,6 +352,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Returns points.
+        /// </summary>
         [INLINE(256)]
         public static (float3 p1, float3 p2, float3 p3, float3 p4) GetPoints(UnityEngine.Camera camera, int layersMask, float distance, float3 screenPos1, float3 screenPos2) {
 
@@ -308,6 +398,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Creates selection group by rect temp.
+        /// </summary>
         [INLINE(256)]
         public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByRectTemp(in QuadTreeInsertSystem trees, int treeIndex, float3 p1, float3 p2, float3 p3, float3 p4, in JobInfo jobInfo = default, bool selectMoveableOnly = false) {
 
@@ -357,6 +450,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Creates selection group by rect.
+        /// </summary>
         [INLINE(256)]
         public static unsafe UnitSelectionGroupAspect CreateSelectionGroupByRect(in QuadTreeInsertSystem trees, int treeIndex, float3 p1, float3 p2, float3 p3, float3 p4, in JobInfo jobInfo = default, bool selectMoveableOnly = false) {
 
@@ -461,6 +557,9 @@ namespace ME.BECS.Units {
             
         }
 
+        /// <summary>
+        /// Tests whether the context is selected.
+        /// </summary>
         [INLINE(256)]
         public static bool IsSelected(ME.BECS.Players.PlayerAspect activePlayer, in EntRO ent) {
             return activePlayer.readCurrentSelection.IsAlive() == true && ent.GetAspect<UnitAspect>().readUnitSelectionGroup == activePlayer.readCurrentSelection;

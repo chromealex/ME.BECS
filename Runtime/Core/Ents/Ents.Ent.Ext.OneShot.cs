@@ -7,6 +7,9 @@ namespace ME.BECS {
     #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Defines the supported one shot type values.
+    /// </summary>
     public enum OneShotType : byte {
         /// <summary>
         /// Component create immediately and will be removed at the end of the current tick
@@ -18,6 +21,9 @@ namespace ME.BECS {
         NextTick,
     }
 
+    /// <summary>
+    /// Provides component, lifecycle and identity operations on entity handles.
+    /// </summary>
     public static unsafe partial class EntExt {
 
         /// <summary>

@@ -10,15 +10,24 @@ namespace ME.BECS.Transforms {
     using Jobs;
     using ME.BECS.NativeCollections;
     
+    /// <summary>
+    /// Coordinates transform world matrix update during the ECS system lifecycle.
+    /// </summary>
     [UnityEngine.Tooltip("Update all entities with TransformAspect (LocalPosition and LocalRotation components are required).")]
     [BURST]
     public partial struct TransformWorldMatrixUpdateSystem : IAwake, IStart, IUpdate, IDestroy {
 
         private NativeParallelList<Transform3DExt.HierarchyItem> hierarchyStack;
         
+        /// <summary>
+        /// Executes calculate local matrix work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct CalculateLocalMatrixJob : IJobForAspects<TransformAspect> {
 
+            /// <summary>
+            /// Processes calculate local matrix using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect) {
 
                 Transform3DExt.CalculateLocalMatrixAndMarkDirty(in aspect);
@@ -27,9 +36,15 @@ namespace ME.BECS.Transforms {
 
         }
 
+        /// <summary>
+        /// Executes calculate local matrix static work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct CalculateLocalMatrixStaticJob : IJobForAspects<TransformAspect> {
 
+            /// <summary>
+            /// Processes calculate local matrix static using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect) {
 
                 Transform3DExt.CalculateLocalMatrixAndMarkDirty(in aspect);
@@ -39,11 +54,20 @@ namespace ME.BECS.Transforms {
 
         }
 
+        /// <summary>
+        /// Executes calculate hierarchy work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct CalculateHierarchyJob : IJobForAspects<TransformAspect> {
 
+            /// <summary>
+            /// Hierarchy stack used by <c>TransformWorldMatrixUpdateSystem.CalculateHierarchyJob</c>.
+            /// </summary>
             public NativeParallelList<Transform3DExt.HierarchyItem> hierarchyStack;
 
+            /// <summary>
+            /// Processes calculate hierarchy using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect) {
 
                 ref var stack = ref this.hierarchyStack.GetThreadList();
@@ -54,6 +78,9 @@ namespace ME.BECS.Transforms {
 
         }
 
+        /// <summary>
+        /// Initializes transform world matrix update system state from the supplied context.
+        /// </summary>
         public void OnAwake(ref SystemContext context) {
 
             var allocator = WorldsPersistentAllocator.allocatorPersistent.Get(context.world.id).Allocator.ToAllocator;
@@ -62,18 +89,27 @@ namespace ME.BECS.Transforms {
 
         }
 
+        /// <summary>
+        /// Starts transform world matrix update system processing for the supplied context.
+        /// </summary>
         public void OnStart(ref SystemContext context) {
             
             Calculate(ref context);
 
         }
 
+        /// <summary>
+        /// Updates transform world matrix update system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             Calculate(ref context);
             
         }
 
+        /// <summary>
+        /// Releases transform world matrix update system state at the end of its owning lifecycle.
+        /// </summary>
         public void OnDestroy(ref SystemContext context) {
 
             this.hierarchyStack.Dispose();

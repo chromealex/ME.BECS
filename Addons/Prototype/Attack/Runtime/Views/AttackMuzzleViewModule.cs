@@ -2,11 +2,23 @@
     
     using ME.BECS.Views;
 
+    /// <summary>
+    /// Updates view presentation for attack muzzle view module.
+    /// </summary>
     public class AttackMuzzleViewModule : IViewApplyState {
 
+        /// <summary>
+        /// Muzzle point used by <c>AttackMuzzleViewModule</c>.
+        /// </summary>
         public UnityEngine.GameObject muzzlePoint;
+        /// <summary>
+        /// Sensor index used to locate the associated entry.
+        /// </summary>
         public uint sensorIndex;
 
+        /// <summary>
+        /// Applies the current logic state to the presentation instance.
+        /// </summary>
         public void ApplyState(in ViewData viewData) {
 
             EntRO ent = viewData;

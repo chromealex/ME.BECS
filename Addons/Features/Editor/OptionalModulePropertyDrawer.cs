@@ -3,9 +3,15 @@ namespace ME.BECS.Editor {
     using UnityEngine.UIElements;
     using UnityEditor;
 
+    /// <summary>
+    /// Draws optional property values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(OptionalModule))]
     public class OptionalPropertyDrawer : PropertyDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
             
             var rootVisualElement = new VisualElement();

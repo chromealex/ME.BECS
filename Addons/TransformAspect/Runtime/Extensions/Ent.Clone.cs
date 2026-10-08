@@ -7,14 +7,23 @@ namespace ME.BECS.Transforms {
     #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides helper operations for ent clone.
+    /// </summary>
     [IgnoreProfiler]
     public static class EntCloneExt {
 
+        /// <summary>
+        /// Creates a copy of the supplied state using the requested allocation context.
+        /// </summary>
         [INLINE(256)]
         public static Ent Clone(this in Ent source, bool cloneHierarchy, in JobInfo jobInfo = default) {
             return source.Clone(source.worldId, cloneHierarchy, in jobInfo);
         }
 
+        /// <summary>
+        /// Creates a copy of the supplied state using the requested allocation context.
+        /// </summary>
         public static Ent Clone(this in Ent source, ushort worldId, bool cloneHierarchy, in JobInfo jobInfo = default) {
 
             if (cloneHierarchy == false) {

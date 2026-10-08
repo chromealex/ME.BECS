@@ -6,6 +6,9 @@ namespace ME.BECS.Editor {
 
     using scg = System.Collections.Generic;
     
+    /// <summary>
+    /// Defines quick start editor window start up state and operations.
+    /// </summary>
     [InitializeOnLoad]
     public static class QuickStartEditorWindowStartUp {
         static QuickStartEditorWindowStartUp() {
@@ -20,27 +23,54 @@ namespace ME.BECS.Editor {
         }
     }
 
+    /// <summary>
+    /// Provides the Unity Editor window for quick start editor.
+    /// </summary>
     public class QuickStartEditorWindow : EditorWindow {
 
+        /// <summary>
+        /// Stores tutorial info for <c>QuickStartEditorWindow</c>.
+        /// </summary>
         public struct TutorialInfo {
 
+            /// <summary>
+            /// Text displayed as the entry's caption.
+            /// </summary>
             public string caption;
+            /// <summary>
+            /// Human-readable explanation of the associated entry.
+            /// </summary>
             public string description;
+            /// <summary>
+            /// Url used by <c>QuickStartEditorWindow.TutorialInfo</c>.
+            /// </summary>
             public string url;
+            /// <summary>
+            /// Texture used by <c>QuickStartEditorWindow.TutorialInfo</c>.
+            /// </summary>
             public Texture2D texture;
             
         }
 
         private StyleSheet styleSheet;
 
+        /// <summary>
+        /// Sets show on start up.
+        /// </summary>
         public static void SetShowOnStartUp(bool state) {
             EditorPrefs.SetBool("ME.BECS.Editor.QuickStartEditorWindow.ShowOnStartUp", state);
         }
 
+        /// <summary>
+        /// Tests whether the context is show on start up.
+        /// </summary>
         public static bool IsShowOnStartUp() {
             return EditorPrefs.GetBool("ME.BECS.Editor.QuickStartEditorWindow.ShowOnStartUp", true);
         }
 
+        /// <summary>
+        /// Opens or focuses the associated editor window.
+        /// </summary>
         public static void ShowWindow() {
             var win = WorldEntityEditorWindow.CreateInstance<QuickStartEditorWindow>();
             win.titleContent = new GUIContent("Quick Start", EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/icon-quickstart.png"));
@@ -55,6 +85,9 @@ namespace ME.BECS.Editor {
             }
         }
         
+        /// <summary>
+        /// Builds the editor window's UI Toolkit hierarchy.
+        /// </summary>
         public void CreateGUI() {
 
             this.LoadStyle();

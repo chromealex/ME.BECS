@@ -7,8 +7,14 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     #endif
     
+    /// <summary>
+    /// Owns an ECS simulation state, entity storage and scheduled system work.
+    /// </summary>
     public unsafe partial struct World {
         
+        /// <summary>
+        /// Creates a copy of the supplied state using the requested allocation context.
+        /// </summary>
         [INLINE(256)]
         public World Clone() {
             E.IS_CREATED(this);
@@ -17,6 +23,9 @@ namespace ME.BECS {
             return newWorld;
         }
 
+        /// <summary>
+        /// Copies the supplied source state into this world instance.
+        /// </summary>
         [INLINE(256)]
         public void CopyFrom(in World srcWorld) {
             

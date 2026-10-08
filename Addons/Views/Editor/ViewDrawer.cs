@@ -7,9 +7,15 @@ namespace ME.BECS.Views.Editor {
 
     using BECS.Views;
 
+    /// <summary>
+    /// Draws view values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(View))]
     public class ViewDrawer : PropertyDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             ObjectReferenceRegistry.Load();

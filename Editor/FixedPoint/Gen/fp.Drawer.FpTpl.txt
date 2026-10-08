@@ -3,13 +3,25 @@ namespace ME.BECS.Editor {
     using UnityEngine.UIElements;
     using UnityEditor.UIElements;
     
+    /// <summary>
+    /// Edits the fixed-point value using raw and floating-point representations.
+    /// </summary>
     [UnityEditor.CustomPropertyDrawer(typeof({{name}}))]
     public class Fp{{name}}PropertyDrawer : UnityEditor.PropertyDrawer {
 
         private int type;
 
+        /// <summary>
+        /// Optional label overriding the serialized property display name.
+        /// </summary>
         public string customName;
+        /// <summary>
+        /// Transforms the raw value before displaying it in the editor controls.
+        /// </summary>
         public System.Func<{{type}}, {{type}}> onValueSet;
+        /// <summary>
+        /// Transforms the edited fixed-point value before writing it to the serialized property.
+        /// </summary>
         public System.Func<{{name}}, {{name}}> onValueChanged;
         
         private static StyleSheet styleSheet;
@@ -20,6 +32,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Creates controls for editing the serialized fixed-point value.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(UnityEditor.SerializedProperty property) {
 
             LoadStyles();

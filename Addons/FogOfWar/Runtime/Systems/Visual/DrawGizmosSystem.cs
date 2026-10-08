@@ -13,11 +13,20 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Players;
     using ME.BECS.Pathfinding;
 
+    /// <summary>
+    /// Coordinates draw gizmos during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     public partial struct DrawGizmosSystem : IDrawGizmos {
 
+        /// <summary>
+        /// Whether draw gizmos behavior or state is selected.
+        /// </summary>
         public bbool drawGizmos;
         
+        /// <summary>
+        /// Draws diagnostic geometry for the associated state.
+        /// </summary>
         public void OnDrawGizmos(ref SystemContext context) {
 
             if (this.drawGizmos == false) return;

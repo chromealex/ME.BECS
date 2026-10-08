@@ -5,12 +5,24 @@ namespace ME.BECS {
     using HIDE_CALLSTACK = UnityEngine.HideInCallstackAttribute;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides conditional runtime assertions and diagnostic exceptions for ECS invariants.
+    /// </summary>
     public partial class E {
 
+        /// <summary>
+        /// Reports a violation of the out of range invariant.
+        /// </summary>
         public class OutOfRangeException : System.Exception {
 
+            /// <summary>
+            /// Initializes <c>OutOfRangeException</c> from the supplied str.
+            /// </summary>
             public OutOfRangeException(string str) : base(str) { }
 
+            /// <summary>
+            /// Throws the diagnostic exception represented by <c>E.OutOfRangeException</c>.
+            /// </summary>
             [HIDE_CALLSTACK][IgnoreProfiler]
             public static void Throw(int index, int startIndex, int count) {
                 ThrowNotBurst(index, startIndex, count);
@@ -25,8 +37,14 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Provides conditional runtime assertions and diagnostic exceptions for ECS invariants.
+    /// </summary>
     public static partial class E {
 
+        /// <summary>
+        /// Checks the range invariant when the corresponding safety checks are enabled.
+        /// </summary>
         [Conditional(COND.EXCEPTIONS_COLLECTIONS)]
         [HIDE_CALLSTACK][IgnoreProfiler]
         public static void RANGE(in int index, int startIndex, in int length) {
@@ -36,6 +54,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Checks the range invariant when the corresponding safety checks are enabled.
+        /// </summary>
         [Conditional(COND.EXCEPTIONS_COLLECTIONS)]
         [HIDE_CALLSTACK][IgnoreProfiler]
         public static void RANGE(in int index, uint startIndex, in uint length) {
@@ -45,6 +66,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Checks the range invariant when the corresponding safety checks are enabled.
+        /// </summary>
         [Conditional(COND.EXCEPTIONS_COLLECTIONS)]
         [HIDE_CALLSTACK][IgnoreProfiler]
         public static void RANGE(in uint index, uint startIndex, in uint length) {
@@ -54,6 +78,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Checks the range invariant when the corresponding safety checks are enabled.
+        /// </summary>
         [Conditional(COND.EXCEPTIONS_COLLECTIONS)]
         [HIDE_CALLSTACK][IgnoreProfiler]
         public static unsafe void RANGE(byte* position, byte* low, byte* high) {
@@ -63,6 +90,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Checks the range inverse invariant when the corresponding safety checks are enabled.
+        /// </summary>
         [Conditional(COND.EXCEPTIONS_COLLECTIONS)]
         [HIDE_CALLSTACK][IgnoreProfiler]
         public static void RANGE_INVERSE(uint index, uint length) {
@@ -72,12 +102,18 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Checks the out of range invariant when the corresponding safety checks are enabled.
+        /// </summary>
         [Conditional(COND.EXCEPTIONS_COLLECTIONS)]
         [HIDE_CALLSTACK][IgnoreProfiler]
         public static void OUT_OF_RANGE() {
             OutOfRangeException.Throw(0, 0, 0);
         }
 
+        /// <summary>
+        /// Checks the out of range invariant when the corresponding safety checks are enabled.
+        /// </summary>
         [Conditional(COND.EXCEPTIONS_COLLECTIONS)]
         [HIDE_CALLSTACK][IgnoreProfiler]
         public static void OUT_OF_RANGE(int index, int startIndex, int count) {

@@ -12,11 +12,20 @@ namespace ME.BECS {
     using Unity.Collections;
     using Unity.Collections.LowLevel.Unsafe;
     
+    /// <summary>
+    /// Registers the systems installed in a world.
+    /// </summary>
     public class WorldSystemRegistry {
 
         private static readonly Unity.Burst.SharedStatic<NativeHashMap<ushort, SystemGroup>> systemGroupsBurst = Unity.Burst.SharedStatic<NativeHashMap<ushort, SystemGroup>>.GetOrCreate<WorldSystemRegistry>();
+        /// <summary>
+        /// System groups used by <c>WorldSystemRegistry</c>.
+        /// </summary>
         public static ref NativeHashMap<ushort, SystemGroup> systemGroups => ref systemGroupsBurst.Data;
 
+        /// <summary>
+        /// Checks the supplied state against the constraints required by this API.
+        /// </summary>
         public static void Validate() {
 
             if (systemGroups.IsCreated == false) {
@@ -27,8 +36,14 @@ namespace ME.BECS {
         
     }
     
+    /// <summary>
+    /// Defines the operations required by inject.
+    /// </summary>
     public interface IInject {}
 
+    /// <summary>
+    /// Supplies inject delta time metadata to annotated declarations.
+    /// </summary>
     public class InjectDeltaTimeAttribute : System.Attribute {
         
     }
@@ -49,16 +64,25 @@ namespace ME.BECS {
             this.link = new SystemLinkPtr((void*)ptr);
         }
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.link.IsCreated;
 
         /// <summary>Creates an injected link to an existing system; does not own its memory.</summary>
         [INLINE(256)]
         public static InjectSystem<T> FromPointer(void* ptr) => new InjectSystem<T>(new System.IntPtr(ptr));
 
+        /// <summary>
+        /// Value wrapped or resolved by this instance.
+        /// </summary>
         public ref T Value => ref this.link.GetValue<T>();
 
     }
 
+    /// <summary>
+    /// Provides pointer access to a registered system link.
+    /// </summary>
     [LAYOUT(System.Runtime.InteropServices.LayoutKind.Explicit, Size = 8)]
     public readonly unsafe struct SystemLinkPtr : IIsCreated {
 
@@ -69,6 +93,9 @@ namespace ME.BECS {
         [FO(0)]
         private readonly void* ptr;
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.ptr != null;
         
         internal SystemLinkPtr(void* ptr) {
@@ -76,6 +103,9 @@ namespace ME.BECS {
             this.ptr = ptr;
         }
 
+        /// <summary>
+        /// Returns value.
+        /// </summary>
         [INLINE(256)]
         public ref T GetValue<T>() where T : unmanaged {
             E.IS_CREATED(this);
@@ -84,17 +114,26 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// References a system through its registered identity.
+    /// </summary>
     public readonly unsafe struct SystemLink<T> : IIsCreated where T : unmanaged {
 
         [NativeDisableUnsafePtrRestriction]
         internal readonly T* ptr;
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.ptr != null;
         
         internal SystemLink(T* ptr) {
             this.ptr = ptr;
         }
 
+        /// <summary>
+        /// Value wrapped or resolved by this instance.
+        /// </summary>
         public ref T Value {
             [INLINE(256)]
             get {
@@ -105,13 +144,22 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Provides helper operations for systems world.
+    /// </summary>
     public static unsafe class SystemsWorldExt {
 
+        /// <summary>
+        /// Runs initialization for the associated lifecycle.
+        /// </summary>
         public static void Awake(this ref World world) {
             Batches.Apply(world.id, world.state);
             world.Awake(default, 0).Complete();
         }
 
+        /// <summary>
+        /// Runs initialization for the associated lifecycle.
+        /// </summary>
         public static JobHandle Awake(this ref World world, JobHandle dependsOn, ushort updateType = 0) {
             
             E.IS_CREATED(world);
@@ -133,6 +181,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Starts systems world ext processing for the supplied context.
+        /// </summary>
         public static JobHandle Start(this ref World world, JobHandle dependsOn, ushort updateType = 0) {
             
             E.IS_CREATED(world);
@@ -154,10 +205,16 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Draws diagnostic geometry for the supplied data.
+        /// </summary>
         public static void DrawGizmos(this ref World world) {
             world.DrawGizmos(default).Complete();
         }
 
+        /// <summary>
+        /// Draws diagnostic geometry for the supplied data.
+        /// </summary>
         public static JobHandle DrawGizmos(this ref World world, JobHandle dependsOn) {
             
             E.IS_CREATED(world);
@@ -198,6 +255,9 @@ namespace ME.BECS {
 
         }      
 
+        /// <summary>
+        /// Returns root system group.
+        /// </summary>
         public static SystemGroup GetRootSystemGroup(this in World world) {
 
             E.IS_CREATED(world);
@@ -213,6 +273,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Assigns the root system group used for this world's lifecycle.
+        /// </summary>
         public static void AssignRootSystemGroup(this in World world, SystemGroup systemGroup) {
 
             E.IS_CREATED(world);
@@ -256,18 +319,27 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns system link.
+        /// </summary>
         public static SystemLink<T> GetSystemLink<T>(this in World world) where T : unmanaged, ISystem {
 
             return new SystemLink<T>(world.GetSystemPtr<T>(throwIfNotFound: false));
             
         }
 
+        /// <summary>
+        /// Returns system.
+        /// </summary>
         public static ref T GetSystem<T>(this in World world) where T : unmanaged, ISystem {
 
             return ref _ref(world.GetSystemPtr<T>());
             
         }
 
+        /// <summary>
+        /// Returns system ptr.
+        /// </summary>
         public static T* GetSystemPtr<T>(this in World world, bool throwIfNotFound = true) where T : unmanaged, ISystem {
             
             E.IS_CREATED(world);

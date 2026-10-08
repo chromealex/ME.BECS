@@ -19,6 +19,9 @@ namespace ME.BECS {
     using static Cuts;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides list auto storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [IgnoreProfiler]
     [System.SerializableAttribute]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(ListAutoProxy<>))]
@@ -29,6 +32,9 @@ namespace ME.BECS {
     #endif
     public unsafe struct ListAuto<T> : IMemList, IUnmanagedList, System.IEquatable<ListAuto<T>> where T : unmanaged {
 
+        /// <summary>
+        /// Traverses the entries exposed by <c>ListAuto</c>.
+        /// </summary>
         public struct Enumerator {
             
             private readonly ListAuto<T> list;
@@ -40,41 +46,74 @@ namespace ME.BECS {
                 this.index = 0u;
             }
 
+            /// <summary>
+            /// Advances the enumerator and reports whether a current element is available.
+            /// </summary>
             [INLINE(256)][CodeGeneratorIgnore]
             public bool MoveNext() {
                 return this.index++ < this.list.Count;
             }
 
+            /// <summary>
+            /// Element at the enumerator's current position.
+            /// </summary>
             [CodeGeneratorIgnore]
             public ref T Current => ref this.list[this.index - 1u];
 
         }
 
         internal MemArrayAuto<T> arr;
+        /// <summary>
+        /// Number of entries currently tracked by this value.
+        /// </summary>
         public uint Count;
 
+        /// <summary>
+        /// Writes collection metadata to the stream without serializing the backing allocator blocks.
+        /// </summary>
         [INLINE(256)]
         public void SerializeHeaders(ref StreamBufferWriter writer) {
             writer.Write(this.arr);
             writer.Write(this.Count);
         }
 
+        /// <summary>
+        /// Restores collection metadata from the stream; backing allocator storage is restored separately.
+        /// </summary>
         [INLINE(256)]
         public void DeserializeHeaders(ref StreamBufferReader reader) {
             reader.Read(ref this.arr);
             reader.Read(ref this.Count);
         }
 
+        /// <summary>
+        /// Returns config ID.
+        /// </summary>
         public uint GetConfigId() => this.Count;
 
+        /// <summary>
+        /// Entity whose components or lifetime are associated with this value.
+        /// </summary>
         public readonly Ent ent => this.arr.ent;
+        /// <summary>
+        /// Entity whose components or lifetime are associated with this value.
+        /// </summary>
         public Ent Ent => this.ent;
         
+        /// <summary>
+        /// Tests equality of the operands.
+        /// </summary>
         [INLINE(256)]
         public static bool operator ==(in ListAuto<T> a, in ListAuto<T> b) => a.arr.arrPtr == b.arr.arrPtr;
+        /// <summary>
+        /// Tests whether the operands differ.
+        /// </summary>
         [INLINE(256)]
         public static bool operator !=(ListAuto<T> a, ListAuto<T> b) => !(a == b);
 
+        /// <summary>
+        /// Number of stored elements exposed by the collection interface.
+        /// </summary>
         public uint ElementsCount => this.Count;
 
         object[] IUnmanagedList.ToManagedArray() {
@@ -85,11 +124,17 @@ namespace ME.BECS {
             return arr;
         }
         
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public readonly bool IsCreated {
             [INLINE(256)]
             get => this.arr.IsCreated;
         }
 
+        /// <summary>
+        /// Number of elements that fit in the currently reserved storage.
+        /// </summary>
         public uint Capacity {
             [INLINE(256)]
             get {
@@ -98,6 +143,9 @@ namespace ME.BECS {
             }
         }
         
+        /// <summary>
+        /// Initializes <c>ListAuto</c> with storage for the requested number of elements.
+        /// </summary>
         [INLINE(256)]
         public ListAuto(in Ent ent, safe_ptr data, uint length) {
 
@@ -107,6 +155,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Initializes <c>ListAuto</c> with storage for the requested number of elements.
+        /// </summary>
         [INLINE(256)]
         public ListAuto(in Ent ent, uint capacity) {
 
@@ -117,6 +168,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes <c>ListAuto</c> from the supplied ent, source.
+        /// </summary>
         [INLINE(256)]
         public ListAuto(in Ent ent, in ListAuto<T> source) {
 
@@ -126,11 +180,17 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Updates cached native access for the requested Burst execution mode.
+        /// </summary>
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             this.arr.BurstMode(in allocator, state);
         }
 
+        /// <summary>
+        /// Disposes the current storage and copies the other collection handle; the two values then refer to the same allocation.
+        /// </summary>
         [INLINE(256)]
         public void ReplaceWith(in ListAuto<T> other) {
             
@@ -143,6 +203,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Copies the supplied source state into this list auto instance.
+        /// </summary>
         [INLINE(256)]
         public void CopyFrom(in ListAuto<T> other) {
 
@@ -160,6 +223,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns the allocator-relative address of the underlying storage.
+        /// </summary>
         [INLINE(256)]
         public readonly MemPtr GetMemPtr() {
             
@@ -168,6 +234,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Returns a borrowed pointer to collection storage; mutation that reallocates storage or disposal invalidates it.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
 
@@ -176,6 +245,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns a borrowed pointer to collection storage; mutation that reallocates storage or disposal invalidates it.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtr() {
 
@@ -184,6 +256,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this list auto instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
 
@@ -193,6 +268,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Schedules release of the owned storage after the supplied dependency and returns the disposal handle.
+        /// </summary>
         [INLINE(256)]
         public Unity.Jobs.JobHandle Dispose(ushort worldId, Unity.Jobs.JobHandle inputDeps) {
 
@@ -210,6 +288,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns an enumerator over the current collection contents.
+        /// </summary>
         [INLINE(256)][CodeGeneratorIgnore]
         public readonly Enumerator GetEnumerator() {
 
@@ -218,6 +299,9 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Removes stored entries while retaining the backing allocation for reuse.
+        /// </summary>
         [INLINE(256)]
         public void Clear() {
 
@@ -226,6 +310,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public ref T this[uint index] {
             [INLINE(256)]
             get {
@@ -234,6 +321,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public ref T this[safe_ptr<State> state, uint index] {
             [INLINE(256)]
             get {
@@ -242,6 +332,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public ref T this[in MemoryAllocator allocator, uint index] {
             [INLINE(256)]
             get {
@@ -250,6 +343,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Grows backing storage when needed to satisfy the requested capacity.
+        /// </summary>
         [INLINE(256)]
         public bool EnsureCapacity(uint capacity) {
 
@@ -258,6 +354,9 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Adds the supplied entry to list auto.
+        /// </summary>
         [INLINE(256)]
         public uint Add(T obj) {
 
@@ -271,22 +370,34 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Orders the stored entries using the supplied comparison.
+        /// </summary>
         [INLINE(256)]
         public void Sort<U>() where U : unmanaged, System.IComparable<U> {
             Unity.Collections.NativeSortExtension.Sort((U*)this.GetUnsafePtr().ptr, (int)this.Count);
         }
 
+        /// <summary>
+        /// Orders the stored entries using the supplied comparison.
+        /// </summary>
         [INLINE(256)]
         public void Sort<U, TComparer>() where U : unmanaged, System.IComparable<U> where TComparer : struct, System.Collections.Generic.IComparer<U> {
             TComparer comparer = default;
             Unity.Collections.NativeSortExtension.Sort((U*)this.GetUnsafePtr().ptr, (int)this.Count, comparer);
         }
 
+        /// <summary>
+        /// Orders the stored entries using the supplied comparison.
+        /// </summary>
         [INLINE(256)]
         public void Sort<U, TComparer>(TComparer comparer) where U : unmanaged, System.IComparable<U> where TComparer : struct, System.Collections.Generic.IComparer<U> {
             Unity.Collections.NativeSortExtension.Sort((U*)this.GetUnsafePtr().ptr, (int)this.Count, comparer);
         }
 
+        /// <summary>
+        /// Tests whether the specified value is present.
+        /// </summary>
         [INLINE(256)]
         public readonly bool Contains<U>(U obj) where U : unmanaged, System.IEquatable<T> {
             
@@ -305,6 +416,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes the specified entry from list auto.
+        /// </summary>
         [INLINE(256)]
         public bool Remove<U>(U obj) where U : unmanaged, System.IEquatable<T> {
 
@@ -325,6 +439,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes fast.
+        /// </summary>
         [INLINE(256)]
         public bool RemoveFast<U>(U obj) where U : unmanaged, System.IEquatable<T> {
 
@@ -345,6 +462,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes at.
+        /// </summary>
         [INLINE(256)]
         public unsafe bool RemoveAt(ref MemoryAllocator allocator, uint index) {
             
@@ -371,6 +491,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes the indexed element by moving a tail element into its place; element order is not preserved.
+        /// </summary>
         [INLINE(256)]
         public bool RemoveAtFast(in MemoryAllocator allocator, uint index) {
             
@@ -386,6 +509,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes at.
+        /// </summary>
         [INLINE(256)]
         public unsafe bool RemoveAt(uint index) {
             
@@ -393,6 +519,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes the indexed element by moving a tail element into its place; element order is not preserved.
+        /// </summary>
         [INLINE(256)]
         public bool RemoveAtFast(uint index) {
             
@@ -400,6 +529,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Adds range.
+        /// </summary>
         [INLINE(256)]
         public void AddRange(in ListAuto<T> collection) {
             
@@ -407,6 +539,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Adds range.
+        /// </summary>
         [INLINE(256)]
         public void AddRange(in ListAuto<T> collection, uint fromIdx, uint toIdx) {
 
@@ -439,6 +574,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Adds range.
+        /// </summary>
         [INLINE(256)]
         public void AddRange(in UnsafeList<T> collection) {
 
@@ -454,6 +592,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Adds range.
+        /// </summary>
         [INLINE(256)]
         public void AddRange(in Unity.Collections.NativeArray<T> collection) {
 
@@ -469,6 +610,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Adds range.
+        /// </summary>
         [INLINE(256)]
         public void AddRange(in Unity.Collections.NativeArray<T> collection, int offset, int collectionLength) {
 
@@ -484,6 +628,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Adds range.
+        /// </summary>
         [INLINE(256)]
         public void AddRange(in UnsafeList<T> collection, int offset, int collectionLength) {
 
@@ -499,6 +646,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Adds range.
+        /// </summary>
         [INLINE(256)]
         public void AddRange(ref MemoryAllocator allocator, Unity.Collections.NativeArray<T> collection) {
 
@@ -514,6 +664,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Adds range.
+        /// </summary>
         [INLINE(256)]
         public void AddRange(ref MemoryAllocator allocator, ListAuto<T> collection) {
 
@@ -529,6 +682,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Copies to.
+        /// </summary>
         [INLINE(256)]
         public readonly void CopyTo(in MemPtr arrPtr, uint srcOffset, uint index, uint count) {
             
@@ -539,6 +695,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Returns the position of the requested entry, using the implementation's missing-value sentinel.
+        /// </summary>
         [INLINE(256)]
         public readonly uint IndexOf<U>(in U element) where U : unmanaged, System.IEquatable<U> {
             for (uint i = 0u; i < this.Count; ++i) {
@@ -550,18 +709,30 @@ namespace ME.BECS {
             return uint.MaxValue;
         }
 
+        /// <summary>
+        /// Returns the amount of reserved storage in bytes.
+        /// </summary>
         public uint GetReservedSizeInBytes() {
             
             return this.arr.GetReservedSizeInBytes();
             
         }
 
+        /// <summary>
+        /// Returns a hash code consistent with this type's equality comparison.
+        /// </summary>
         public override int GetHashCode() => this.arr.GetHashCode();
 
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         public bool Equals(ListAuto<T> other) {
             return this.arr.Equals(other.arr) && this.Count == other.Count;
         }
 
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         public override bool Equals(object obj) {
             return obj is ListAuto<T> other && this.Equals(other);
         }

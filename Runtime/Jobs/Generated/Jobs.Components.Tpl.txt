@@ -6,13 +6,25 @@ namespace ME.BECS.Jobs {
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Burst;
 
+    /// <summary>
+    /// Executes a job for each matching entity with the declared aspect or component access.
+    /// </summary>
     [JobProducerType(typeof(JobComponentsExtensions.JobProcess<{count[,]}>))]
     public interface IJobForComponents<{count(,)[T#i#]}> : IJobForComponentsBase {count( )[where T#i# : unmanaged, IComponentBase]} {
+        /// <summary>
+        /// Processes one matching entity with its job context and requested data references.
+        /// </summary>
         void Execute(in JobInfo jobInfo, in Ent ent, {count(,)[{{inref}} T#i# c#i#]});
     }
 
+    /// <summary>
+    /// Provides scheduling and reflection initialization for the corresponding entity job types.
+    /// </summary>
     public static unsafe partial class QueryScheduleExtensions {
         
+        /// <summary>
+        /// Schedules the job using the query dependency and returns its resulting handle.
+        /// </summary>
         public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job = default) where T : struct, IJobForComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponentBase]} {
             {count( )[builder.With<T#i#>();]}
             builder.commandBuffer.ptr->SetBuilder(ref builder);
@@ -23,18 +35,33 @@ namespace ME.BECS.Jobs {
         
     }
 
+    /// <summary>
+    /// Registers generated job types before their first scheduled execution.
+    /// </summary>
     public static partial class EarlyInit {
+        /// <summary>
+        /// Initializes reflection data for the specified job and its data types.
+        /// </summary>
         public static void DoComponents<T, {count(,)[T#i#]}>()
                 {count( )[where T#i# : unmanaged, IComponentBase]}
                 where T : struct, IJobForComponents<{count(,)[T#i#]}> => JobComponentsExtensions.JobEarlyInitialize<T, {count(,)[T#i#]}>();
     }
 
+    /// <summary>
+    /// Provides scheduling and reflection initialization for the corresponding entity job types.
+    /// </summary>
     public static unsafe partial class JobComponentsExtensions {
         
+        /// <summary>
+        /// Initializes reflection data for the specified job and its data types.
+        /// </summary>
         public static void JobEarlyInitialize<T, {count(,)[T#i#]}>()
             {count( )[where T#i# : unmanaged, IComponentBase]}
             where T : struct, IJobForComponents<{count(,)[T#i#]}> => JobProcess<T, {count(,)[T#i#]}>.Initialize();
 
+        /// <summary>
+        /// Schedules the job against the supplied command buffer after the input dependency.
+        /// </summary>
         [CodeGeneratorIgnore]
         public static JobHandle Schedule<T, {count(,)[T#i#]}>(this T jobData, CommandBuffer* buffer, bool unsafeMode, bool isReadonly, uint innerLoopBatchCount, ScheduleMode scheduleMode, JobHandle dependsOn = default)
             {count( )[where T#i# : unmanaged, IComponentBase]}

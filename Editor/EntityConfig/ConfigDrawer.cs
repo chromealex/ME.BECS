@@ -4,10 +4,16 @@ using UnityEngine.UIElements;
 
 namespace ME.BECS.Views.Editor {
 
+    /// <summary>
+    /// Draws config values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(Config))]
     [CustomPropertyDrawer(typeof(ConfigDrawerAttribute))]
     public class ConfigDrawer : PropertyDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             var sourceId = property.FindPropertyRelative(nameof(Config.sourceId));
@@ -36,6 +42,9 @@ namespace ME.BECS.Views.Editor {
             
         }
         
+        /// <summary>
+        /// Draws the immediate-mode editor interface for the supplied context.
+        /// </summary>
         public override void OnGUI(UnityEngine.Rect position, SerializedProperty property, UnityEngine.GUIContent label) {
 
             var sourceId = property.FindPropertyRelative(nameof(Config.sourceId));

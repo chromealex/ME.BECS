@@ -7,6 +7,9 @@ using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Defines world graph editor window state and operations.
+    /// </summary>
     public unsafe partial class WorldGraphEditorWindow {
 
         [SerializeField] private System.Collections.Generic.List<int> dashboardWorldTabs = new System.Collections.Generic.List<int>();
@@ -35,6 +38,9 @@ namespace ME.BECS.Editor {
             public bool persistentKnown;
         }
 
+        /// <summary>
+        /// Builds the editor window's UI Toolkit hierarchy.
+        /// </summary>
         public void CreateGUI() {
             this.UpdateWorlds();
             this.CreateDashboardGUI();

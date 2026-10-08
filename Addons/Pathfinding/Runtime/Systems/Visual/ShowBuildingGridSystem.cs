@@ -21,12 +21,21 @@ namespace ME.BECS.Pathfinding {
     using ME.BECS.Jobs;
     using static Cuts;
 
+    /// <summary>
+    /// Coordinates show building grid during the ECS system lifecycle.
+    /// </summary>
     public unsafe partial struct ShowBuildingGridSystem : IStart, IUpdate, IDestroy {
 
         private static UnityEngine.Texture2D tempTextureCache;
         
         //public View gridView;
+        /// <summary>
+        /// Grid size used by <c>ShowBuildingGridSystem</c>.
+        /// </summary>
         public uint2 gridSize;
+        /// <summary>
+        /// Node size used by <c>ShowBuildingGridSystem</c>.
+        /// </summary>
         public tfloat nodeSize;
         private Ent currentBuildingGrid;
         private ClassPtr<UnityEngine.Texture2D> texture;
@@ -48,6 +57,9 @@ namespace ME.BECS.Pathfinding {
         }
         */
 
+        /// <summary>
+        /// Starts show building grid system processing for the supplied context.
+        /// </summary>
         public void OnStart(ref SystemContext context) {
             
             var tex = new UnityEngine.Texture2D((int)this.gridSize.x, (int)this.gridSize.y, UnityEngine.TextureFormat.RGBA32, false);
@@ -58,38 +70,83 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Sets placeholder.
+        /// </summary>
         [INLINE(256)]
         public void SetPlaceholder(in Ent placeholder) {
             this.placeholder = placeholder;
         }
         
+        /// <summary>
+        /// Returns texture.
+        /// </summary>
         public UnityEngine.Texture2D GetTexture() => this.texture.Value;
 
+        /// <summary>
+        /// Returns texture ptr.
+        /// </summary>
         public ClassPtr<UnityEngine.Texture2D> GetTexturePtr() => this.texture;
 
+        /// <summary>
+        /// Executes clear texture work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct ClearTextureJob : IJob {
 
+            /// <summary>
+            /// Buffer used to exchange or store the associated data.
+            /// </summary>
             public Unity.Collections.NativeArray<UnityEngine.Color32> buffer;
             
+            /// <summary>
+            /// Processes clear texture using the supplied job inputs.
+            /// </summary>
             public void Execute() {
                 _memclear((safe_ptr)this.buffer.GetUnsafePtr(), (uint)this.buffer.Length * TSize<UnityEngine.Color32>.size);
             }
 
         }
         
+        /// <summary>
+        /// Executes update texture work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct UpdateTextureJob : Unity.Jobs.IJobParallelFor {
 
+            /// <summary>
+            /// World used by the containing operation.
+            /// </summary>
             public World world;
+            /// <summary>
+            /// Graph used by the associated operation.
+            /// </summary>
             public Ent graph;
+            /// <summary>
+            /// Bottom left used by <c>ShowBuildingGridSystem.UpdateTextureJob</c>.
+            /// </summary>
             public int2 bottomLeft;
+            /// <summary>
+            /// Grid size used by <c>ShowBuildingGridSystem.UpdateTextureJob</c>.
+            /// </summary>
             public int2 gridSize;
+            /// <summary>
+            /// Obj bottom left used by <c>ShowBuildingGridSystem.UpdateTextureJob</c>.
+            /// </summary>
             public uint2 objBottomLeft;
+            /// <summary>
+            /// Obj size used by <c>ShowBuildingGridSystem.UpdateTextureJob</c>.
+            /// </summary>
             public uint2 objSize;
+            /// <summary>
+            /// Current buffer used by <c>ShowBuildingGridSystem.UpdateTextureJob</c>.
+            /// </summary>
             [NativeDisableUnsafePtrRestriction]
             public UnityEngine.Color32* currentBuffer;
             
+            /// <summary>
+            /// Processes update texture using the supplied job inputs.
+            /// </summary>
             public void Execute(int index) {
 
                 var root = this.graph.Read<ME.BECS.Pathfinding.RootGraphComponent>();
@@ -110,10 +167,19 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Executes apply texture work through the job scheduler.
+        /// </summary>
         public partial struct ApplyTextureJob : ME.BECS.Jobs.IJobMainThread {
 
+            /// <summary>
+            /// Texture used by <c>ShowBuildingGridSystem.ApplyTextureJob</c>.
+            /// </summary>
             public ClassPtr<UnityEngine.Texture2D> texture;
 
+            /// <summary>
+            /// Processes apply texture using the supplied job inputs.
+            /// </summary>
             public void Execute() {
                 
                 this.texture.Value.Apply(false);
@@ -122,6 +188,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Updates show building grid system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             context.dependsOn.Complete();
@@ -169,6 +238,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Releases show building grid system state at the end of its owning lifecycle.
+        /// </summary>
         public void OnDestroy(ref SystemContext context) {
             tempTextureCache = null;
             UnityEngine.Object.DestroyImmediate(this.texture.Value);

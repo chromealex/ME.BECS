@@ -2,19 +2,37 @@ namespace ME.BECS.Network {
 
     using ME.BECS.Views;
     
+    /// <summary>
+    /// Coordinates initialization of network world.
+    /// </summary>
     [UnityEngine.DefaultExecutionOrder(-10_000)]
     public class NetworkWorldInitializer : BaseWorldInitializer<NetworkWorldInitializer.Graph> {
 
+        /// <summary>
+        /// Initializes the system graph represented by <c>Graph</c>.
+        /// </summary>
         [System.Serializable]
         public struct Graph : IGraphInitialize {
 
+            /// <summary>
+            /// Awake used by <c>NetworkWorldInitializer.Graph</c>.
+            /// </summary>
             [OptionalGraph]
             public FeaturesGraph.SystemsGraph awake;
+            /// <summary>
+            /// Start used by <c>NetworkWorldInitializer.Graph</c>.
+            /// </summary>
             [OptionalGraph]
             public FeaturesGraph.SystemsGraph start;
+            /// <summary>
+            /// Update used by <c>NetworkWorldInitializer.Graph</c>.
+            /// </summary>
             [OptionalGraph]
             public FeaturesGraph.SystemsGraph update;
 
+            /// <summary>
+            /// Initializes graph state from the supplied context.
+            /// </summary>
             public void Initialize(ref SystemGroup group, ref World world) {
                 if (this.awake != null) group.Add(this.awake.DoAwake(ref world, UpdateType.AWAKE));
                 if (this.start != null) group.Add(this.start.DoAwake(ref world, UpdateType.START));
@@ -28,13 +46,28 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Features graph awake used by <c>NetworkWorldInitializer</c>.
+        /// </summary>
         [OptionalGraph]
         public FeaturesGraph.SystemsGraph featuresGraphAwake;
+        /// <summary>
+        /// Features graph start used by <c>NetworkWorldInitializer</c>.
+        /// </summary>
         [OptionalGraph]
         public FeaturesGraph.SystemsGraph featuresGraphStart;
+        /// <summary>
+        /// Features graph update used by <c>NetworkWorldInitializer</c>.
+        /// </summary>
         [UnityEngine.Serialization.FormerlySerializedAsAttribute("featuresGraph")] public FeaturesGraph.SystemsGraph featuresGraphUpdate;
+        /// <summary>
+        /// Network module used by <c>NetworkWorldInitializer</c>.
+        /// </summary>
         protected NetworkModule networkModule;
         
+        /// <summary>
+        /// Invokes world initialization through the configured lifecycle handler.
+        /// </summary>
         protected override void DoWorldAwake() {
             
             var group = SystemGroup.Create(UpdateType.ANY);
@@ -59,6 +92,9 @@ namespace ME.BECS.Network {
             
         }
 
+        /// <summary>
+        /// Starts network world initializer processing for the supplied context.
+        /// </summary>
         protected override void Start() {
 
             if (this.world.isCreated == true) {
@@ -91,6 +127,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Starts network world initializer processing for the supplied context.
+        /// </summary>
         public override Unity.Jobs.JobHandle OnStart(Unity.Jobs.JobHandle dependsOn) {
             
             dependsOn = base.OnStart(dependsOn);
@@ -106,6 +145,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Runs the fixed-step update phase for the associated state.
+        /// </summary>
         public virtual void FixedUpdate() {
             if (this.networkModule is null) {
                 // Use default initializer behaviour if network module not found as FIXED_UPDATE
@@ -116,6 +158,9 @@ namespace ME.BECS.Network {
             }
         }
 
+        /// <summary>
+        /// Updates network world initializer using the current inputs and execution context.
+        /// </summary>
         public virtual void Update() {
             
             //this.previousFrameDependsOn = this.DoUpdate(UpdateType.UPDATE, this.previousFrameDependsOn);
@@ -144,6 +189,9 @@ namespace ME.BECS.Network {
             
         }
 
+        /// <summary>
+        /// Redraws visual.
+        /// </summary>
         public void RedrawVisual() {
             // Update visual - once per frame
             this.previousFrameDependsOn = this.OnUpdate(this.previousFrameDependsOn);
@@ -154,6 +202,9 @@ namespace ME.BECS.Network {
             }
         }
 
+        /// <summary>
+        /// Synchronizes the world with the network rewind state.
+        /// </summary>
         public void SyncRewind() {
             while (this.world.CurrentTick < this.networkModule.GetTargetTick()) {
                 this.Update();
@@ -174,6 +225,9 @@ namespace ME.BECS.Network {
 
         }*/
 
+        /// <summary>
+        /// Releases network world initializer state at the end of its owning lifecycle.
+        /// </summary>
         protected override void OnDestroy() {
             
             WorldStaticCallbacks.UnregisterCallback<ViewsModuleData>(this.ViewsLoad);

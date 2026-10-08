@@ -21,6 +21,9 @@ namespace ME.BECS {
     using System.Runtime.InteropServices;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
+    /// <summary>
+    /// Provides cached ptr storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [IgnoreProfiler]
     [StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
@@ -33,17 +36,26 @@ namespace ME.BECS {
         internal readonly safe_ptr cachedPtr;
         internal readonly ushort version;
         
+        /// <summary>
+        /// Initializes <c>CachedPtr</c> from the supplied allocator, ptr.
+        /// </summary>
         [INLINE(256)]
         public CachedPtr(in MemoryAllocator allocator, safe_ptr ptr) {
             this.version = allocator.version;
             this.cachedPtr = ptr;
         }
 
+        /// <summary>
+        /// Tests whether the context is valid.
+        /// </summary>
         [INLINE(256)]
         public static bool IsValid(in CachedPtr cache, in MemoryAllocator allocator) {
             return cache.version == allocator.version;
         }
         
+        /// <summary>
+        /// Reads ptr.
+        /// </summary>
         [INLINE(256)]
         public static safe_ptr<T> ReadPtr<T>(in CachedPtr cache, in MemoryAllocator allocator) where T : unmanaged {
             if (allocator.version == cache.version) {
@@ -52,6 +64,9 @@ namespace ME.BECS {
             return default;
         }
 
+        /// <summary>
+        /// Reads ptr.
+        /// </summary>
         [INLINE(256)]
         public static safe_ptr ReadPtr(in CachedPtr cache, in MemoryAllocator allocator, in MemPtr arrPtr) {
             if (allocator.version == cache.version) {
@@ -60,6 +75,9 @@ namespace ME.BECS {
             return allocator.GetUnsafePtr(in arrPtr);
         }
 
+        /// <summary>
+        /// Reads the requested value from cached ptr.
+        /// </summary>
         [INLINE(256)]
         public static ref T Read<T>(CachedPtr cache, in MemoryAllocator allocator, MemPtr arrPtr, int index) where T : unmanaged {
             if (allocator.version == cache.version) {
@@ -68,6 +86,9 @@ namespace ME.BECS {
             return ref allocator.RefArray<T>(arrPtr, index);
         }
 
+        /// <summary>
+        /// Reads the requested value from cached ptr.
+        /// </summary>
         [INLINE(256)]
         public static ref T Read<T>(CachedPtr cache, in MemoryAllocator allocator, MemPtr arrPtr, uint index) where T : unmanaged {
             if (allocator.version == cache.version) {
@@ -78,24 +99,45 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Provides mem array data storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [StructLayout(LayoutKind.Explicit, Size = MemArrayData.SIZE)]
     public struct MemArrayData {
 
         #if USE_CACHE_PTR
+        /// <summary>
+        /// Storage size or fixed element count used by this representation.
+        /// </summary>
         public const int SIZE = 24;
         #else
+        /// <summary>
+        /// Storage size or fixed element count used by this representation.
+        /// </summary>
         public const int SIZE = 16;
         #endif
 
+        /// <summary>
+        /// Native pointer or typed storage accessor for arr.
+        /// </summary>
         [FieldOffset(0)]
         public MemPtr arrPtr;
+        /// <summary>
+        /// Number of elements exposed by this value.
+        /// </summary>
         [FieldOffset(8)]
         public volatile uint Length;
         #if USE_CACHE_PTR
+        /// <summary>
+        /// Cached native address; its lifetime is tied to the backing allocation.
+        /// </summary>
         [FieldOffset(12)]
         public CachedPtr cachedPtr;
         #endif
 
+        /// <summary>
+        /// Writes collection metadata to the stream without serializing the backing allocator blocks.
+        /// </summary>
         [INLINE(256)]
         public void SerializeHeaders(ref StreamBufferWriter writer) {
             writer.Write(this.arrPtr);
@@ -105,6 +147,9 @@ namespace ME.BECS {
             #endif
         }
 
+        /// <summary>
+        /// Restores collection metadata from the stream; backing allocator storage is restored separately.
+        /// </summary>
         [INLINE(256)]
         public void DeserializeHeaders(ref StreamBufferReader reader) {
             reader.Read(ref this.arrPtr);
@@ -118,12 +163,21 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Provides mem array storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(MemArrayProxy<>))]
     public unsafe struct MemArray<T> : IIsCreated where T : unmanaged {
 
+        /// <summary>
+        /// Storage size or fixed element count used by this representation.
+        /// </summary>
         public const int SIZE = MemArrayData.SIZE;
         
+        /// <summary>
+        /// Empty used by <c>MemArray</c>.
+        /// </summary>
         public static readonly MemArray<T> Empty = new MemArray<T>() {
             data = new MemArrayData() {
                 arrPtr = MemPtr.Invalid,
@@ -132,9 +186,18 @@ namespace ME.BECS {
         };
 
         private MemArrayData data;
+        /// <summary>
+        /// Number of elements exposed by this value.
+        /// </summary>
         public readonly uint Length => this.data.Length;
+        /// <summary>
+        /// Gets arr ptr; this implementation returns <c>this.data.arrPtr</c>.
+        /// </summary>
         public readonly MemPtr arrPtr => this.data.arrPtr;
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public readonly bool IsCreated {
             [INLINE(256)]
             get => this.data.arrPtr.IsValid() == true || (this.IsInlined == true && this.Length > 0u);
@@ -142,16 +205,25 @@ namespace ME.BECS {
 
         private readonly bool IsInlined => false; // TSize<T>.size * this.Length <= MemPtr.SIZE;
 
+        /// <summary>
+        /// Writes collection metadata to the stream without serializing the backing allocator blocks.
+        /// </summary>
         [INLINE(256)]
         public void SerializeHeaders(ref StreamBufferWriter writer) {
             this.data.SerializeHeaders(ref writer);
         }
 
+        /// <summary>
+        /// Restores collection metadata from the stream; backing allocator storage is restored separately.
+        /// </summary>
         [INLINE(256)]
         public void DeserializeHeaders(ref StreamBufferReader reader) {
             this.data.DeserializeHeaders(ref reader);
         }
 
+        /// <summary>
+        /// Initializes <c>MemArray</c> with storage for the requested number of elements.
+        /// </summary>
         public MemArray(ref MemoryAllocator allocator, uint length, ClearOptions clearOptions = ClearOptions.ClearMemory) {
 
             if (length == 0u) {
@@ -181,6 +253,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes <c>MemArray</c> from the supplied allocator, arr.
+        /// </summary>
         public MemArray(ref MemoryAllocator allocator, in MemArray<T> arr) {
 
             if (arr.Length == 0u) {
@@ -203,6 +278,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes <c>MemArray</c> from the supplied allocator, arr.
+        /// </summary>
         public MemArray(ref MemoryAllocator allocator, in ME.BECS.Internal.Array<T> arr) {
 
             if (arr.Length == 0u) {
@@ -227,6 +305,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Initializes <c>MemArray</c> with storage for the requested number of elements.
+        /// </summary>
         [INLINE(256)]
         public MemArray(MemPtr ptr, uint length) {
 
@@ -238,6 +319,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Exposes the value through the requested typed view.
+        /// </summary>
         [INLINE(256)]
         public readonly ref U As<U>(in MemoryAllocator allocator, uint index) where U : unmanaged {
             E.IS_CREATED(this);
@@ -245,6 +329,9 @@ namespace ME.BECS {
             return ref allocator.RefArray<U>(this.data.arrPtr, index);
         }
         
+        /// <summary>
+        /// Disposes the current storage and copies the other collection handle; the two values then refer to the same allocation.
+        /// </summary>
         [INLINE(256)]
         public void ReplaceWith(ref MemoryAllocator allocator, in MemArray<T> other) {
             
@@ -258,6 +345,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Copies the supplied source state into this mem array instance.
+        /// </summary>
         [INLINE(256)]
         public void CopyFrom(ref MemoryAllocator allocator, in MemArray<T> other) {
 
@@ -273,6 +363,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Releases the resources owned by this mem array instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose(ref MemoryAllocator allocator) {
 
@@ -288,6 +381,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Schedules release of the owned storage after the supplied dependency and returns the disposal handle.
+        /// </summary>
         [INLINE(256)]
         public Unity.Jobs.JobHandle Dispose(ushort worldId, Unity.Jobs.JobHandle inputDeps) {
 
@@ -309,6 +405,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Updates cached native access for the requested Burst execution mode.
+        /// </summary>
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             #if USE_CACHE_PTR
@@ -320,6 +419,9 @@ namespace ME.BECS {
             #endif
         }
 
+        /// <summary>
+        /// Returns a borrowed pointer to collection storage; mutation that reallocates storage or disposal invalidates it.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
 
@@ -334,6 +436,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns a borrowed pointer to collection storage; mutation that reallocates storage or disposal invalidates it.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr<T> GetUnsafePtr(in MemoryAllocator allocator, uint index) {
 
@@ -348,6 +453,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns a borrowed pointer to collection storage; mutation that reallocates storage or disposal invalidates it.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr<T> GetUnsafePtr(safe_ptr<State> state, uint index) {
 
@@ -362,6 +470,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns unsafe ptr cached.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtrCached(in MemoryAllocator allocator) {
 
@@ -380,6 +491,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns alloc ptr.
+        /// </summary>
         [INLINE(256)]
         public readonly MemPtr GetAllocPtr(in MemoryAllocator allocator, uint index) {
             
@@ -392,6 +506,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Reads the requested value from mem array.
+        /// </summary>
         [INLINE(256)]
         public readonly ref T Read(in MemoryAllocator allocator, uint index) {
             
@@ -405,6 +522,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public readonly ref T this[safe_ptr<State> state, int index] {
             [INLINE(256)]
             get {
@@ -414,6 +534,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public readonly ref T this[in MemoryAllocator allocator, int index] {
             [INLINE(256)]
             get {
@@ -423,6 +546,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public readonly ref T this[in MemoryAllocator allocator, uint index] {
             [INLINE(256)]
             get {
@@ -432,6 +558,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public readonly ref T this[safe_ptr<State> state, uint index] {
             [INLINE(256)]
             get {
@@ -441,6 +570,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Grows storage using the requested length and growth factor; returns false when the requested length does not exceed the current length.
+        /// </summary>
         [INLINE(256)]
         public bool Resize(ref MemoryAllocator allocator, uint newLength, ushort growFactor, ClearOptions options = ClearOptions.ClearMemory) {
 
@@ -493,6 +625,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Zeroes the addressed elements while preserving the array length and backing allocation.
+        /// </summary>
         [INLINE(256)]
         public void Clear(ref MemoryAllocator allocator) {
 
@@ -500,6 +635,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Zeroes the addressed elements while preserving the array length and backing allocation.
+        /// </summary>
         [INLINE(256)]
         public void Clear(ref MemoryAllocator allocator, uint index, uint length) {
 
@@ -518,6 +656,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests whether the specified value is present.
+        /// </summary>
         [INLINE(256)]
         public readonly bool Contains<U>(in MemoryAllocator allocator, U obj) where U : unmanaged, System.IEquatable<T> {
             
@@ -537,6 +678,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns the amount of reserved storage in bytes.
+        /// </summary>
         public uint GetReservedSizeInBytes() {
 
             return this.Length * TSize<T>.size;

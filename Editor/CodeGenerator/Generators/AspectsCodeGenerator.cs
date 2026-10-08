@@ -2,11 +2,23 @@ using System.Reflection;
 
 namespace ME.BECS.Editor.Aspects {
 
+    /// <summary>
+    /// Exports aspects registration data for generated code.
+    /// </summary>
     public class AspectsCodeGenerator : CustomCodeGenerator {
 
+        /// <summary>
+        /// Source initialization kind used by <c>AspectsCodeGenerator</c>.
+        /// </summary>
         public override string SourceInitializationKind => this.GetType() == typeof(AspectsCodeGenerator) ? "aspects" : base.SourceInitializationKind;
+        /// <summary>
+        /// Source registration kind used by <c>AspectsCodeGenerator</c>.
+        /// </summary>
         public override string SourceRegistrationKind => this.GetType() == typeof(AspectsCodeGenerator) ? "aspect-construction" : base.SourceRegistrationKind;
 
+        /// <summary>
+        /// Adds the assembly references required by this feature's generated code.
+        /// </summary>
         public override void AddSourceGeneratorReferences(System.Collections.Generic.List<System.Type> references) {
 
             var aspects = this.aspects;

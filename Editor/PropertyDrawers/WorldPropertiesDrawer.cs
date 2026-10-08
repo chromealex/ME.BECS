@@ -10,6 +10,9 @@ using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Draws world properties values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(WorldProperties))]
     public unsafe class WorldPropertiesDrawer : PropertyDrawer {
 
@@ -21,6 +24,9 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
             
             this.LoadStyle();

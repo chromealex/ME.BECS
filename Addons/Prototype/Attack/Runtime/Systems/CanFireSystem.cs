@@ -13,16 +13,28 @@ namespace ME.BECS.Attack {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using ME.BECS.Jobs;
 
+    /// <summary>
+    /// Coordinates can fire during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [UnityEngine.Tooltip("Can Fire system")]
     [RequiredDependencies(typeof(ReloadSystem))]
     public partial struct CanFireSystem : IUpdate {
 
+        /// <summary>
+        /// Executes can fire system work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct Job : IJobForAspects<AttackAspect> {
 
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             public tfloat dt;
             
+            /// <summary>
+            /// Processes the job inputs for <c>CanFireSystem</c>.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect) {
 
                 if (aspect.HasAnyTarget == false) return;
@@ -80,6 +92,9 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Updates can fire system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var dependsOn = context.Query().AsParallel().With<ReloadedComponent>().WithAny<AttackTargetComponent, AttackTargetsComponent>().Schedule<Job, AttackAspect>(new Job() {

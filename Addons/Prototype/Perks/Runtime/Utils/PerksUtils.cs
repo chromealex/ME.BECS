@@ -3,6 +3,9 @@ namespace ME.BECS.Perks {
     using ME.BECS.Transforms;
     using ME.BECS.Players;
 
+    /// <summary>
+    /// Provides helper operations for perks.
+    /// </summary>
     public static class PerksUtils {
 
         /// <summary>

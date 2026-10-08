@@ -4,12 +4,24 @@ namespace ME.BECS {
     using BURST_DISCARD = Unity.Burst.BurstDiscardAttribute;
     using HIDE_CALLSTACK = UnityEngine.HideInCallstackAttribute;
 
+    /// <summary>
+    /// Provides conditional runtime assertions and diagnostic exceptions for ECS invariants.
+    /// </summary>
     public partial class E {
 
+        /// <summary>
+        /// Reports a violation of the world state invariant.
+        /// </summary>
         public unsafe class WorldStateException : System.Exception {
 
+            /// <summary>
+            /// Initializes <c>WorldStateException</c> from the supplied str.
+            /// </summary>
             public WorldStateException(string str) : base(str) { }
 
+            /// <summary>
+            /// Throws the diagnostic exception represented by <c>E.WorldStateException</c>.
+            /// </summary>
             [HIDE_CALLSTACK]
             public static void Throw(WorldState required, WorldState worldState, safe_ptr<State> state) {
                 ThrowNotBurst(required, worldState, state);
@@ -24,8 +36,14 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Provides conditional runtime assertions and diagnostic exceptions for ECS invariants.
+    /// </summary>
     public static unsafe partial class E {
 
+        /// <summary>
+        /// Checks the is in tick invariant when the corresponding safety checks are enabled.
+        /// </summary>
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void IS_IN_TICK(safe_ptr<State> state) {
@@ -42,6 +60,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Checks the is not in tick invariant when the corresponding safety checks are enabled.
+        /// </summary>
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void IS_NOT_IN_TICK(safe_ptr<State> state) {

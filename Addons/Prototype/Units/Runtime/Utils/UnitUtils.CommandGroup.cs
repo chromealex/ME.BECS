@@ -8,8 +8,14 @@ namespace ME.BECS.Units {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     #endif
 
+    /// <summary>
+    /// Provides helper operations for unit.
+    /// </summary>
     public static partial class UnitUtils {
 
+        /// <summary>
+        /// Creates command group.
+        /// </summary>
         [INLINE(256)]
         public static UnitCommandGroupAspect CreateCommandGroup(uint targetsCapacity, uint capacity = 10u, in JobInfo jobInfo = default) {
 
@@ -21,6 +27,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Creates command group.
+        /// </summary>
         [INLINE(256)]
         public static UnitCommandGroupAspect CreateCommandGroup(uint targetsCapacity, in UnitSelectionGroupAspect selectionGroup, in JobInfo jobInfo) {
 
@@ -28,6 +37,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Creates command group.
+        /// </summary>
         [INLINE(256)]
         public static UnitCommandGroupAspect CreateCommandGroup(uint targetsCapacity, in UnitSelectionTempGroupAspect selectionGroup, in JobInfo jobInfo) {
 
@@ -35,6 +47,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Creates command group.
+        /// </summary>
         [INLINE(256)]
         public static UnitCommandGroupAspect CreateCommandGroup(uint targetsCapacity, in ListAuto<Ent> units, in JobInfo jobInfo) {
 
@@ -54,6 +69,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Destroys command group.
+        /// </summary>
         [INLINE(256)]
         public static void DestroyCommandGroup(in UnitCommandGroupAspect commandGroup) {
 
@@ -68,6 +86,9 @@ namespace ME.BECS.Units {
             
         }
 
+        /// <summary>
+        /// Adds to command group.
+        /// </summary>
         [INLINE(256)]
         public static uint AddToCommandGroup(in UnitCommandGroupAspect commandGroup, in UnitAspect unit) {
 
@@ -89,6 +110,9 @@ namespace ME.BECS.Units {
 
         }
         
+        /// <summary>
+        /// Adds to command group.
+        /// </summary>
         [INLINE(256)]
         public static void AddToCommandGroup(in UnitCommandGroupAspect commandGroup, in Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent> list) {
 
@@ -106,6 +130,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Handles the transition before the command group is removed.
+        /// </summary>
         [INLINE(256)]
         public static bool WillRemoveCommandGroup(in UnitAspect unit) {
             if (unit.unitCommandGroup.IsAlive() == true) {
@@ -115,6 +142,9 @@ namespace ME.BECS.Units {
             return false;
         }
 
+        /// <summary>
+        /// Removes from command group.
+        /// </summary>
         [INLINE(256)]
         public static bool RemoveFromCommandGroup(in UnitAspect unit) {
 
@@ -146,6 +176,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Sets next target if available.
+        /// </summary>
         [INLINE(256)]
         public static bool SetNextTargetIfAvailable(in UnitAspect unit) {
 

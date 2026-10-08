@@ -8,12 +8,18 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Burst;
 
+    /// <summary>
+    /// Tracks configuration registries loaded into the current runtime.
+    /// </summary>
     public class EntityConfigsRegistryLoaded {
 
         internal static readonly SharedStatic<bbool> isLoaded = SharedStatic<bbool>.GetOrCreate<EntityConfigsRegistryLoaded>();
 
     }
 
+    /// <summary>
+    /// Stores configuration identities used by bootstrap registration.
+    /// </summary>
     public class EntityConfigsRegistry {
 
         private static readonly SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>> configs = SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>>.GetOrCreate<EntityConfigsRegistry>();
@@ -29,6 +35,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes entity configs registry state from the supplied context.
+        /// </summary>
         public static void Initialize(bool isEditor = false) {
 
             if (StaticTypes.tracker.IsCreated == false) return;
@@ -45,12 +54,18 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Waits until the associated loading operation completes.
+        /// </summary>
         public static async UnityEngine.Awaitable WaitLoaded() {
             while (IsLoaded() == false) {
                 await UnityEngine.Awaitable.NextFrameAsync();
             }
         }
 
+        /// <summary>
+        /// Tests whether the context is loaded.
+        /// </summary>
         public static bool IsLoaded() => EntityConfigsRegistryLoaded.isLoaded.Data == true || UnityEngine.Application.isPlaying == false;
         
         private static void LoadForced(bool isEditor) {
@@ -120,6 +135,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Attempts to add and reports whether the operation succeeded.
+        /// </summary>
         [INLINE(256)]
         public static void TryAdd(uint sourceId, UnsafeEntityConfig unsafeEntityConfig) {
             if (configs.Data.TryAdd(sourceId, unsafeEntityConfig) == false) {
@@ -127,6 +145,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Returns unsafe entity config by source ID.
+        /// </summary>
         [INLINE(256)]
         public static UnsafeEntityConfig GetUnsafeEntityConfigBySourceId(uint sourceId) {
 
@@ -139,6 +160,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns entity config by source ID.
+        /// </summary>
         [INLINE(256)]
         public static EntityConfig GetEntityConfigBySourceId(uint sourceId) {
 

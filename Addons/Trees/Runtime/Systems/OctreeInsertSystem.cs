@@ -24,14 +24,32 @@ namespace ME.BECS {
     using NativeTrees;
     using static Cuts;
 
+    /// <summary>
+    /// Defines configuration-backed entity data for octree box object.
+    /// </summary>
     [ComponentGroup(typeof(OctreeComponentGroup))]
     public struct OctreeBoxObject : IConfigComponent, IConfigInitialize {
 
+        /// <summary>
+        /// Extent along the X dimension.
+        /// </summary>
         public tfloat sizeX;
+        /// <summary>
+        /// Extent along the Y dimension.
+        /// </summary>
         public tfloat sizeY;
+        /// <summary>
+        /// Vertical extent used by the associated geometry or query.
+        /// </summary>
         public tfloat height;
+        /// <summary>
+        /// Tree index used to locate the associated entry.
+        /// </summary>
         public int treeIndex;
         
+        /// <summary>
+        /// Initializes octree box object state from the supplied context.
+        /// </summary>
         public void OnInitialize(in Ent ent) {
 
             var qt = ent.Set<OctreeAspect>();
@@ -43,60 +61,132 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Stores per-entity state for octree element.
+    /// </summary>
     [ComponentGroup(typeof(OctreeComponentGroup))]
     [StructLayout(LayoutKind.Explicit)]
     public struct OctreeElement : IComponent {
 
+        /// <summary>
+        /// Radius used by the associated shape or query.
+        /// </summary>
         [FieldOffset(0)]
         public tfloat radius;
+        /// <summary>
+        /// Extent along the X dimension.
+        /// </summary>
         [FieldOffset(0)]
         public tfloat sizeX;
+        /// <summary>
+        /// Tree index used to locate the associated entry.
+        /// </summary>
         [FieldOffset(4)]
         public int treeIndex;
+        /// <summary>
+        /// Whether the spatial calculation ignores the vertical coordinate.
+        /// </summary>
         [FieldOffset(8)]
         public byte ignoreY;
 
     }
 
+    /// <summary>
+    /// Stores per-entity state for octree element rect.
+    /// </summary>
     [ComponentGroup(typeof(OctreeComponentGroup))]
     public struct OctreeElementRect : IComponent {
 
+        /// <summary>
+        /// Extent along the Y dimension.
+        /// </summary>
         public tfloat sizeY;
         
     }
 
+    /// <summary>
+    /// Stores per-entity state for octree height.
+    /// </summary>
     [ComponentGroup(typeof(OctreeComponentGroup))]
     public struct OctreeHeightComponent : IComponent {
         
+        /// <summary>
+        /// Vertical extent used by the associated geometry or query.
+        /// </summary>
         public tfloat height;
         
     }
 
+    /// <summary>
+    /// Provides typed access to the entity components used for octree.
+    /// </summary>
     [EditorComment("Used by OctreeInsertSystem to filter entities by treeIndex")]
     public partial struct OctreeAspect : IAspect {
         
+        /// <summary>
+        /// Entity whose components or lifetime are associated with this value.
+        /// </summary>
         public Ent ent { get; set; }
 
+        /// <summary>
+        /// Native pointer or typed storage accessor for octree element.
+        /// </summary>
         [QueryWith]
         public AspectDataPtr<OctreeElement> octreeElementPtr;
+        /// <summary>
+        /// Native pointer or typed storage accessor for octree rect.
+        /// </summary>
         public AspectDataPtr<OctreeElementRect> octreeRectPtr;
+        /// <summary>
+        /// Native pointer or typed storage accessor for octree height.
+        /// </summary>
         public AspectDataPtr<OctreeHeightComponent> octreeHeightPtr;
 
+        /// <summary>
+        /// Octree element used by <c>OctreeAspect</c>.
+        /// </summary>
         public readonly ref OctreeElement octreeElement => ref this.octreeElementPtr.Get(this.ent.id, this.ent.gen);
+        /// <summary>
+        /// Read-only access to octree element.
+        /// </summary>
         public readonly ref readonly OctreeElement readOctreeElement => ref this.octreeElementPtr.Read(this.ent.id, this.ent.gen);
+        /// <summary>
+        /// Tree index used to locate the associated entry.
+        /// </summary>
         public readonly ref int treeIndex => ref this.octreeElement.treeIndex;
+        /// <summary>
+        /// Read-only access to tree index.
+        /// </summary>
         public readonly ref readonly int readTreeIndex => ref this.readOctreeElement.treeIndex;
+        /// <summary>
+        /// Indicates is rect.
+        /// </summary>
         public readonly bool isRect => this.ent.Has<OctreeElementRect>();
+        /// <summary>
+        /// Indicates has height.
+        /// </summary>
         public readonly bool hasHeight => this.ent.Has<OctreeHeightComponent>();
+        /// <summary>
+        /// Rect size used by <c>OctreeAspect</c>.
+        /// </summary>
         public readonly float2 rectSize => new float2(this.readOctreeElement.sizeX, this.octreeRectPtr.Read(this.ent.id, this.ent.gen).sizeY);
+        /// <summary>
+        /// Vertical extent used by the associated geometry or query.
+        /// </summary>
         public readonly tfloat height => this.octreeHeightPtr.Read(this.ent.id, this.ent.gen).height;
 
+        /// <summary>
+        /// Sets height.
+        /// </summary>
         public readonly void SetHeight(tfloat height) {
             this.ent.Set(new OctreeHeightComponent() {
                 height = height,
             });
         }
         
+        /// <summary>
+        /// Sets as rect with size.
+        /// </summary>
         public readonly void SetAsRectWithSize(tfloat sizeX, tfloat sizeY) {
             ref var rect = ref this.octreeRectPtr.Get(this.ent.id, this.ent.gen);
             rect.sizeY = sizeY;
@@ -105,25 +195,49 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Coordinates octree insert during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     public unsafe partial struct OctreeInsertSystem : IAwake, IUpdate, IDestroy, IDrawGizmos {
         
+        /// <summary>
+        /// Default settings or value supplied by this type.
+        /// </summary>
         public static OctreeInsertSystem Default => new OctreeInsertSystem() {
             mapSize = new float3(200f, 200f, 200f),
         };
 
+        /// <summary>
+        /// Map position used by the associated spatial operation.
+        /// </summary>
         public float3 mapPosition;
+        /// <summary>
+        /// Map size used by <c>OctreeInsertSystem</c>.
+        /// </summary>
         public float3 mapSize;
         
         private UnsafeList<safe_ptr> trees;
+        /// <summary>
+        /// Trees count for the associated storage.
+        /// </summary>
         public readonly uint treesCount => (uint)this.trees.Length;
         private ushort worldId;
 
+        /// <summary>
+        /// Executes collect rect work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct CollectRectJob : IJobForAspects<OctreeAspect, TransformAspect> {
             
+            /// <summary>
+            /// Spatial trees used by the query or update.
+            /// </summary>
             public UnsafeList<safe_ptr> trees;
 
+            /// <summary>
+            /// Processes collect rect using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref OctreeAspect aspect, ref TransformAspect tr) {
                 
                 var tree = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.trees[aspect.readTreeIndex];
@@ -143,11 +257,20 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Executes collect work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct CollectJob : IJobForAspects<OctreeAspect, TransformAspect> {
             
+            /// <summary>
+            /// Spatial trees used by the query or update.
+            /// </summary>
             public UnsafeList<safe_ptr> trees;
 
+            /// <summary>
+            /// Processes collect using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref OctreeAspect aspect, ref TransformAspect tr) {
                 
                 var tree = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.trees[aspect.readTreeIndex];
@@ -162,11 +285,20 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Executes apply work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct ApplyJob : Unity.Jobs.IJobParallelFor {
 
+            /// <summary>
+            /// Spatial trees used by the query or update.
+            /// </summary>
             public UnsafeList<safe_ptr> trees;
             
+            /// <summary>
+            /// Processes apply using the supplied job inputs.
+            /// </summary>
             public void Execute(int index) {
 
                 var tree = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.trees[index];
@@ -176,11 +308,20 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Executes clear work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct ClearJob : Unity.Jobs.IJobParallelFor {
 
+            /// <summary>
+            /// Spatial trees used by the query or update.
+            /// </summary>
             public UnsafeList<safe_ptr> trees;
 
+            /// <summary>
+            /// Processes clear using the supplied job inputs.
+            /// </summary>
             public void Execute(int index) {
 
                 var item = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.trees[index];
@@ -190,6 +331,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Returns tree.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr<NativeTrees.NativeOctree<Ent>> GetTree(int treeIndex) {
 
@@ -197,6 +341,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Adds tree.
+        /// </summary>
         [INLINE(256)]
         public int AddTree() {
 
@@ -206,6 +353,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes octree insert system state from the supplied context.
+        /// </summary>
         public void OnAwake(ref SystemContext context) {
 
             this.worldId = context.world.id;
@@ -213,6 +363,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Updates octree insert system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var clearJob = new ClearJob() {
@@ -237,6 +390,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases octree insert system state at the end of its owning lifecycle.
+        /// </summary>
         public void OnDestroy(ref SystemContext context) {
 
             for (int i = 0; i < this.trees.Length; ++i) {
@@ -249,6 +405,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Populates results with entries nearest to the requested location.
+        /// </summary>
         public readonly void FillNearest<T>(ref OctreeQueryAspect query, in TransformAspect tr, in T subFilter = default) where T : struct, IOctreeSubFilter<Ent> {
             
             if (tr.IsCalculated == false) return;
@@ -279,11 +438,17 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Returns nearest first.
+        /// </summary>
         public readonly Ent GetNearestFirst(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default,
                                             tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreY = default, bool ignoreSorting = false) {
             return this.GetNearestFirst(mask, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreY, ignoreSorting, new AlwaysTrueOctreeSubFilter());
         }
 
+        /// <summary>
+        /// Returns nearest first.
+        /// </summary>
         public readonly Ent GetNearestFirst<T>(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default, tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreY = default, bool ignoreSorting = default, in T subFilter = default) where T : struct, IOctreeSubFilter<Ent> {
 
             const uint nearestCount = 1u;
@@ -324,10 +489,16 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns nearest.
+        /// </summary>
         public readonly void GetNearest(int mask, ushort nearestCount, ref QueryResults results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, bool ignoreSorting) {
             this.GetNearest(mask, nearestCount, ref results, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreY, ignoreSorting, new AlwaysTrueOctreeSubFilter());
         }
 
+        /// <summary>
+        /// Returns nearest.
+        /// </summary>
         public readonly void GetNearest<T>(int mask, ushort nearestCount, ref QueryResults results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, bool ignoreSorting, in T subFilter = default) where T : struct, IOctreeSubFilter<Ent> {
             
             var bitsCount = math.countbits(mask);
@@ -449,10 +620,16 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Queries geometry intersected by the supplied ray and reports the matching hit.
+        /// </summary>
         public bool Raycast(Ray ray, int mask, tfloat distance, out NativeTrees.OctreeRaycastHit<Ent> raycastHit, bool ignoreSorting = false) {
             return this.Raycast(ray, float2.zero, mask, distance, out raycastHit, ignoreSorting);
         }
 
+        /// <summary>
+        /// Queries geometry intersected by the supplied ray and reports the matching hit.
+        /// </summary>
         public bool Raycast(Ray ray, float2 radius, int mask, tfloat distance, out NativeTrees.OctreeRaycastHit<Ent> raycastHit, bool ignoreSorting = false) {
             raycastHit = default;
             var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeap<NativeTrees.OctreeRaycastHitMinNode<Ent>>(this.treesCount, Constants.ALLOCATOR_TEMP);
@@ -478,6 +655,9 @@ namespace ME.BECS {
             return false;
         }
 
+        /// <summary>
+        /// Draws diagnostic geometry for the associated state.
+        /// </summary>
         public void OnDrawGizmos(ref SystemContext context) {
             UnityEngine.Gizmos.color = UnityEngine.Color.green;
             for (int i = 0; i < this.treesCount; ++i) {

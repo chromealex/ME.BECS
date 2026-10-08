@@ -10,29 +10,68 @@ namespace ME.BECS.FogOfWar {
     using static Cuts;
 
     //[BURST]
+    /// <summary>
+    /// Coordinates update texture during the ECS system lifecycle.
+    /// </summary>
     [RequiredDependencies(typeof(CreateTextureSystem))]
     public unsafe partial struct UpdateTextureSystem : IUpdate {
 
+        /// <summary>
+        /// Fade in speed controlling the associated calculation.
+        /// </summary>
         public sfloat fadeInSpeed;
+        /// <summary>
+        /// Fade out speed controlling the associated calculation.
+        /// </summary>
         public sfloat fadeOutSpeed;
 
         private Ent lastActivePlayer;
         private ulong lastTick;
 
+        /// <summary>
+        /// Executes update work through the job scheduler.
+        /// </summary>
         [BURST(CompileSynchronously = true, FloatMode = Unity.Burst.FloatMode.Fast, FloatPrecision = Unity.Burst.FloatPrecision.Low, OptimizeFor = Unity.Burst.OptimizeFor.Performance)]
         public partial struct UpdateJob : IJobParallelFor {
 
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             public sfloat dt;
+            /// <summary>
+            /// Fade in speed controlling the associated calculation.
+            /// </summary>
             public sfloat fadeInSpeed;
+            /// <summary>
+            /// Fade out speed controlling the associated calculation.
+            /// </summary>
             public sfloat fadeOutSpeed;
+            /// <summary>
+            /// Configuration values used by this operation.
+            /// </summary>
             public FogOfWarStaticComponent props;
+            /// <summary>
+            /// Fog-of-war state used by this operation.
+            /// </summary>
             public FogOfWarComponent fow;
+            /// <summary>
+            /// Texture width used by <c>UpdateTextureSystem.UpdateJob</c>.
+            /// </summary>
             public uint textureWidth;
+            /// <summary>
+            /// Current buffer used by <c>UpdateTextureSystem.UpdateJob</c>.
+            /// </summary>
             [NativeDisableParallelForRestriction]
             [NativeDisableUnsafePtrRestriction]
             public UnityEngine.Color32* currentBuffer;
+            /// <summary>
+            /// Use fade used by <c>UpdateTextureSystem.UpdateJob</c>.
+            /// </summary>
             public byte useFade;
 
+            /// <summary>
+            /// Processes update using the supplied job inputs.
+            /// </summary>
             public void Execute(int index) {
 
                 var w = this.textureWidth;
@@ -67,14 +106,26 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Executes update texture work through the job scheduler.
+        /// </summary>
         [BURST(CompileSynchronously = true, FloatMode = Unity.Burst.FloatMode.Fast, FloatPrecision = Unity.Burst.FloatPrecision.Low, OptimizeFor = Unity.Burst.OptimizeFor.Performance)]
         public partial struct UpdateTextureJob : IJob {
 
+            /// <summary>
+            /// Current buffer used by <c>UpdateTextureSystem.UpdateTextureJob</c>.
+            /// </summary>
             [NativeDisableParallelForRestriction]
             [NativeDisableUnsafePtrRestriction]
             public byte* currentBuffer;
+            /// <summary>
+            /// Fog-of-war state used by this operation.
+            /// </summary>
             public FogOfWarComponent fow;
             
+            /// <summary>
+            /// Processes update texture using the supplied job inputs.
+            /// </summary>
             public void Execute() {
 
                 _memcpy(this.fow.nodes.GetUnsafePtr(), (safe_ptr)this.currentBuffer, this.fow.nodes.Length);
@@ -83,14 +134,26 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Executes clear texture work through the job scheduler.
+        /// </summary>
         [BURST(CompileSynchronously = true, FloatMode = Unity.Burst.FloatMode.Fast, FloatPrecision = Unity.Burst.FloatPrecision.Low, OptimizeFor = Unity.Burst.OptimizeFor.Performance)]
         public partial struct ClearTextureJob : IJob {
 
+            /// <summary>
+            /// Current buffer used by <c>UpdateTextureSystem.ClearTextureJob</c>.
+            /// </summary>
             [NativeDisableParallelForRestriction]
             [NativeDisableUnsafePtrRestriction]
             public UnityEngine.Color32* currentBuffer;
+            /// <summary>
+            /// Number of elements in the associated storage.
+            /// </summary>
             public uint length;
             
+            /// <summary>
+            /// Processes clear texture using the supplied job inputs.
+            /// </summary>
             public void Execute() {
                 
                 FogOfWarUtils.CleanUpTexture(this.currentBuffer, this.length);
@@ -99,11 +162,23 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Executes apply texture work through the job scheduler.
+        /// </summary>
         public partial struct ApplyTextureJob : IJobMainThread {
 
+            /// <summary>
+            /// System instance used by the associated operation.
+            /// </summary>
             public CreateTextureSystem system;
+            /// <summary>
+            /// Color buffer used by <c>UpdateTextureSystem.ApplyTextureJob</c>.
+            /// </summary>
             public NativeArray<byte> colorBuffer;
             
+            /// <summary>
+            /// Processes apply texture using the supplied job inputs.
+            /// </summary>
             public void Execute() {
                 
                 this.system.GetTexture().SetPixelData(this.colorBuffer, 0);
@@ -113,6 +188,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Updates update texture system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var logicWorld = context.world.parent;

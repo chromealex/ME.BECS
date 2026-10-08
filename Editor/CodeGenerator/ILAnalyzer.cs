@@ -6,6 +6,9 @@ namespace ME.BECS.Editor {
     using System.Collections.Generic;
     using System.Reflection.Emit;
 
+    /// <summary>
+    /// Provides IL analyzer operations for the associated BECS data.
+    /// </summary>
     public static class ILAnalyzer {
 
         private enum AccessType {
@@ -15,22 +18,40 @@ namespace ME.BECS.Editor {
 
         };
 
+        /// <summary>
+        /// Stores dependency info for <c>ILAnalyzer</c>.
+        /// </summary>
         public struct DependencyInfo {
 
+            /// <summary>
+            /// Type descriptor used by the associated operation.
+            /// </summary>
             public System.Type type;
+            /// <summary>
+            /// Access used by <c>ILAnalyzer.DependencyInfo</c>.
+            /// </summary>
             public RefOp access;
 
+            /// <summary>
+            /// Initializes <c>DependencyInfo</c> from the supplied type, access.
+            /// </summary>
             public DependencyInfo(System.Type type, RefOp access) {
                 this.type = type;
                 this.access = access;
             }
 
+            /// <summary>
+            /// Formats this value for display or diagnostics.
+            /// </summary>
             public override string ToString() {
                 return $"{this.type.Name}: {this.access}";
             }
 
         }
 
+        /// <summary>
+        /// Analyzes method.
+        /// </summary>
         public static List<DependencyInfo> AnalyzeMethod(MethodInfo method) {
             var temp = new Dictionary<System.Type, HashSet<AccessType>>();
             var instructions = ILAnalysisSession.Instructions(method);

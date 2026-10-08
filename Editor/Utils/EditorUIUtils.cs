@@ -6,8 +6,14 @@ namespace ME.BECS.Editor {
     using UnityEditor.UIElements;
     using UnityEditor;
 
+    /// <summary>
+    /// Provides helper operations for editor UI.
+    /// </summary>
     public static class EditorUIUtils {
 
+        /// <summary>
+        /// Applies component group color.
+        /// </summary>
         public static void ApplyComponentGroupColor(VisualElement element, System.Type componentType) {
             if (EditorUtils.TryGetComponentGroupColor(componentType, out var color) == false) return;
             // Display vivid group colors as subdued accents without changing their source values.
@@ -40,6 +46,9 @@ namespace ME.BECS.Editor {
         }
 
         
+        /// <summary>
+        /// Validates min.
+        /// </summary>
         public static uint ValidateMin(DropdownField dropdown, IntegerField field) {
 
             var minSizeInKb = (int)(MemoryAllocator.MIN_ZONE_SIZE / 1024);
@@ -59,6 +68,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Draws bytes field.
+        /// </summary>
         public static void DrawBytesField(VisualElement foldout, SerializedProperty property) {
 
             var choices = new System.Collections.Generic.List<string>() {
@@ -112,6 +124,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Draws tooltip.
+        /// </summary>
         public static void DrawTooltip(VisualElement container, SerializedProperty property) {
             
             var tooltip = property.tooltip;
@@ -123,11 +138,17 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Draws tooltip.
+        /// </summary>
         public static VisualElement DrawTooltip(VisualElement container, string tooltip) {
             return DrawTooltip(container, tooltip, default);
         }
         
 
+        /// <summary>
+        /// Draws tooltip.
+        /// </summary>
         public static VisualElement DrawTooltip(VisualElement container, string tooltip, StyleLength width) {
             
             if (string.IsNullOrEmpty(tooltip) == false) {
@@ -153,6 +174,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Draws tooltip.
+        /// </summary>
         public static VisualElement DrawTooltip(VisualElement container, System.Func<VisualElement> tooltip, StyleLength width) {
             
             if (tooltip != null) {
@@ -179,12 +203,18 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Removes tooltip.
+        /// </summary>
         public static void RemoveTooltip(VisualElement container) {
             container.RemoveFromClassList("has-tooltip");
             container.Q(className: "tooltip-text").RemoveFromHierarchy();
             container.Q(className: "tooltip").RemoveFromHierarchy();
         }
 
+        /// <summary>
+        /// Draws property field.
+        /// </summary>
         public static void DrawPropertyField(VisualElement root, SerializedProperty property) {
             
             var container = new VisualElement();
@@ -199,6 +229,9 @@ namespace ME.BECS.Editor {
             
         }
 
+        /// <summary>
+        /// Draws u int field.
+        /// </summary>
         public static void DrawUIntField(VisualElement foldout, SerializedProperty property, int minValue = 0) {
 
             var container = new VisualElement();
@@ -224,6 +257,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Draws enum field.
+        /// </summary>
         public static void DrawEnumField<T>(VisualElement foldout, SerializedProperty property) where T : struct, System.Enum {
 
             var container = new VisualElement();
@@ -250,6 +286,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Draws toggle field.
+        /// </summary>
         public static void DrawToggleField(VisualElement foldout, SerializedProperty property) {
 
             var container = new VisualElement();
@@ -274,6 +313,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Draws aspects.
+        /// </summary>
         public static System.Collections.Generic.List<VisualElement> DrawAspects(VisualElement root, System.Collections.Generic.IEnumerable<EditorUtils.AspectItem> aspects, System.Action<VisualElement, Label, EditorUtils.AspectItem> onEdit = null) {
 
             var result = new System.Collections.Generic.List<VisualElement>();
@@ -387,6 +429,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is dark color.
+        /// </summary>
         public static bool IsDarkColor(UnityEngine.Color backColor) {
             UnityEngine.Color color = backColor;
             color = UnityEngine.Color.Lerp(new UnityEngine.Color32(16, 16, 16, 255), color, color.a);
@@ -405,6 +450,9 @@ namespace ME.BECS.Editor {
             EditorApplication.projectChanged += RefreshWindowIcons;
         }
 
+        /// <summary>
+        /// Applies window icon.
+        /// </summary>
         public static void ApplyWindowIcon(EditorWindow window, string title, string resourcePath) {
             void UpdateIcon() {
                 if (window == null) return;
@@ -482,8 +530,14 @@ namespace ME.BECS.Editor {
             themedIcons.Clear();
         }
 
+        /// <summary>
+        /// Adds horizontal scroll fades.
+        /// </summary>
         public static void AddHorizontalScrollFades(ScrollView scroll) => AddScrollFades(scroll, false);
 
+        /// <summary>
+        /// Adds vertical scroll fades.
+        /// </summary>
         public static void AddVerticalScrollFades(ScrollView scroll) => AddScrollFades(scroll, true);
 
         private static void AddScrollFades(ScrollView scroll, bool vertical) {
@@ -530,18 +584,27 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Creates add world button.
+        /// </summary>
         public static Button CreateAddWorldButton(System.Action action, string tooltip) {
             var button = CreateAddButton(action, tooltip);
             button.AddToClassList("add-world-tab");
             return button;
         }
 
+        /// <summary>
+        /// Creates add button.
+        /// </summary>
         public static Button CreateAddButton(System.Action action, string tooltip) {
             var button = new Button(action) { tooltip = tooltip };
             ConfigureAddButton(button);
             return button;
         }
 
+        /// <summary>
+        /// Configures add button.
+        /// </summary>
         public static void ConfigureAddButton(Button button, string label = null) {
             button.text = string.Empty;
             button.AddToClassList("becs-add-button");
@@ -731,6 +794,9 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Applies common styles.
+        /// </summary>
         public static void ApplyCommonStyles(VisualElement container) {
             TrackThinScrollbars(container);
             TrackFieldSliders(container);
@@ -743,6 +809,9 @@ namespace ME.BECS.Editor {
         private static StyleSheet prevThemeStyleSheet;
         private static string themeCurrentSelected;
         private static readonly System.Collections.Generic.HashSet<VisualElement> themeRoots = new System.Collections.Generic.HashSet<VisualElement>();
+        /// <summary>
+        /// Applies default styles.
+        /// </summary>
         public static void ApplyDefaultStyles(VisualElement container) {
             if (themeCurrentSelected != Themes.CurrentTheme) {
                 prevThemeStyleSheet = themeStyleSheet;
@@ -759,6 +828,9 @@ namespace ME.BECS.Editor {
             themeRoots.Add(container);
         }
 
+        /// <summary>
+        /// Refreshes styles.
+        /// </summary>
         public static void RefreshStyles() {
             foreach (var root in themeRoots) {
                 if (root != null) {
@@ -769,6 +841,9 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Adds logo line.
+        /// </summary>
         public static GradientAnimated AddLogoLine(VisualElement root) {
             var logo = root.Q<GradientAnimated>(className: "top-line");
             if (logo == null) {
@@ -779,6 +854,9 @@ namespace ME.BECS.Editor {
             return logo;
         }
 
+        /// <summary>
+        /// Adds window content.
+        /// </summary>
         public static VisualElement AddWindowContent(VisualElement root, VisualElement currentContent) {
             var newRoot = new GradientAnimated();
             newRoot.AddToClassList("window-content-back");

@@ -7,8 +7,17 @@ using ME.BECS.Editor.Systems;
 
 namespace ME.BECS.Editor.Jobs {
     
+    /// <summary>
+    /// Exports jobs early init registration data for generated code.
+    /// </summary>
     public class JobsEarlyInitCodeGenerator : CustomCodeGenerator {
+        /// <summary>
+        /// Source initialization kind used by <c>JobsEarlyInitCodeGenerator</c>.
+        /// </summary>
         public override string SourceInitializationKind => this.GetType() == typeof(JobsEarlyInitCodeGenerator) ? "jobs" : base.SourceInitializationKind;
+        /// <summary>
+        /// Whether cache compiled inputs behavior or state is selected.
+        /// </summary>
         public override bool CacheCompiledInputs => this.GetType() == typeof(JobsEarlyInitCodeGenerator);
 
         private System.Collections.Generic.List<(System.Type job, string call)> earlyInitDiagnostics;
@@ -200,24 +209,48 @@ namespace ME.BECS.Editor.Jobs {
             }
         }
 
+        /// <summary>
+        /// Stores type info for <c>JobsEarlyInitCodeGenerator</c>.
+        /// </summary>
         public struct TypeInfo : System.IEquatable<TypeInfo> {
 
+            /// <summary>
+            /// Type descriptor used by the associated operation.
+            /// </summary>
             public System.Type type;
+            /// <summary>
+            /// Op used by <c>JobsEarlyInitCodeGenerator.TypeInfo</c>.
+            /// </summary>
             public RefOp op;
+            /// <summary>
+            /// Indicates is arg.
+            /// </summary>
             public bool isArg;
 
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             public bool Equals(TypeInfo other) {
                 return Equals(this.type, other.type) && this.op == other.op;
             }
 
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             public override bool Equals(object obj) {
                 return obj is TypeInfo other && this.Equals(other);
             }
 
+            /// <summary>
+            /// Returns a hash code consistent with this type's equality comparison.
+            /// </summary>
             public override int GetHashCode() {
                 return System.HashCode.Combine(this.type, (int)this.op);
             }
 
+            /// <summary>
+            /// Formats this value for display or diagnostics.
+            /// </summary>
             public override string ToString() {
                 return $"{this.type} {this.op} {this.isArg}";
             }
@@ -320,6 +353,9 @@ namespace ME.BECS.Editor.Jobs {
 
         private readonly System.Collections.Generic.HashSet<System.Type> debugInputReferences = new System.Collections.Generic.HashSet<System.Type>();
 
+        /// <summary>
+        /// Adds the assembly references required by this feature's generated code.
+        /// </summary>
         public override void AddSourceGeneratorReferences(System.Collections.Generic.List<System.Type> references) {
             // PrepareActiveInputs serializes the plans before collecting references.
             // Reuse that exact dependency snapshot, including transitive safety types
@@ -334,6 +370,9 @@ namespace ME.BECS.Editor.Jobs {
             references.AddRange(selected.OrderBy(type => type.AssemblyQualifiedName, System.StringComparer.Ordinal));
         }
         
+        /// <summary>
+        /// Returns retired source files.
+        /// </summary>
         public override System.Collections.Generic.IEnumerable<string> GetRetiredSourceFiles() =>
             new[] { "Debug.Cache", "Debug.Func", "Debug.Struct", "Debug.UnsafeStruct" };
 
@@ -361,12 +400,18 @@ namespace ME.BECS.Editor.Jobs {
             public bool sourceSafety;
         }
 
+        /// <summary>
+        /// Adds this feature's registration inputs to the source-generator export.
+        /// </summary>
         public override void AppendSourceGeneratorInputs(System.Text.StringBuilder manifest) {
             var steps = this.AppendSourceGeneratorInputsSteps(manifest);
             while (steps.MoveNext()) { }
         }
 
         // Yields between independent parts and every 64 jobs; the text is identical.
+        /// <summary>
+        /// Produces incremental steps for exporting this feature's source-generator inputs.
+        /// </summary>
         public override System.Collections.IEnumerator AppendSourceGeneratorInputsSteps(System.Text.StringBuilder manifest) {
             this.debugInputReferences.Clear();
             System.Collections.Generic.List<(System.Type job, MethodInfo method)> initialization;
@@ -506,6 +551,9 @@ namespace ME.BECS.Editor.Jobs {
         }
 
 
+        /// <summary>
+        /// Returns method types info.
+        /// </summary>
         public static System.Collections.Generic.HashSet<TypeInfo> GetMethodTypesInfo(MethodInfo root, bool traverseHierarchy = true, bool useAnalyzer = false, bool methodParameters = true, System.Func<Instruction, System.Collections.Generic.Queue<System.Reflection.MethodInfo>, bool> onInstruction = null) {
             return GetBodyTypesInfo(root, traverseHierarchy, useAnalyzer, methodParameters, onInstruction);
         }
@@ -915,16 +963,31 @@ namespace ME.BECS.Editor.Jobs {
             return uniqueTypes;
         }
         
+        /// <summary>
+        /// Stores new ent info for <c>JobsEarlyInitCodeGenerator</c>.
+        /// </summary>
         public struct NewEntInfo {
 
+            /// <summary>
+            /// Number of entries tracked by this value.
+            /// </summary>
             public int[] count;
+            /// <summary>
+            /// Br count for the associated storage.
+            /// </summary>
             public int brCount;
+            /// <summary>
+            /// Loop groups used by <c>JobsEarlyInitCodeGenerator.NewEntInfo</c>.
+            /// </summary>
             public bool[] loopGroups;
 
         }
         
         // Compatibility projection only. The compiler keeps its legacy origin
         // until unresolved dispatch/type initialization are independently covered.
+        /// <summary>
+        /// Returns job ent info.
+        /// </summary>
         public static NewEntInfo GetJobEntInfo(System.Type jobType, CustomCodeGenerator codeGenerator) {
             var allTypes = EntityTypeCodeGenerator.GetAllTypes(codeGenerator, out var groupsCount)
                 .ToDictionary(entry => entry.Item1, entry => entry.Item2);
@@ -946,8 +1009,14 @@ namespace ME.BECS.Editor.Jobs {
             return result;
         }
 
+        /// <summary>
+        /// Stores weights info for <c>JobsEarlyInitCodeGenerator</c>.
+        /// </summary>
         public struct WeightsInfo {
 
+            /// <summary>
+            /// Weight used by <c>JobsEarlyInitCodeGenerator.WeightsInfo</c>.
+            /// </summary>
             public uint weight;
 
         }
@@ -959,6 +1028,9 @@ namespace ME.BECS.Editor.Jobs {
 
         }
         
+        /// <summary>
+        /// Returns job weights info.
+        /// </summary>
         public static WeightsInfo GetJobWeightsInfo(System.Type jobType, System.Collections.Generic.Dictionary<string, uint> contributions = null) {
             contributions?.Clear();
             var config = new System.Collections.Generic.List<MethodWeightInfo>();
@@ -1056,6 +1128,9 @@ namespace ME.BECS.Editor.Jobs {
             };
         }
         
+        /// <summary>
+        /// Returns job types info.
+        /// </summary>
         public static System.Collections.Generic.HashSet<TypeInfo> GetJobTypesInfo(System.Type jobType, System.Func<Instruction, System.Collections.Generic.Queue<System.Reflection.MethodInfo>, bool> onInstruction = null) {
             var result = new System.Collections.Generic.HashSet<TypeInfo>();
             foreach (var root in GetJobExecuteMethods(jobType)) result.UnionWith(GetMethodTypesInfo(root, onInstruction: onInstruction));
@@ -1111,6 +1186,9 @@ namespace ME.BECS.Editor.Jobs {
             return target;
         }
 
+        /// <summary>
+        /// Updates deps.
+        /// </summary>
         public static void UpdateDeps(System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo> uniqueTypes) {
             if (uniqueTypes == null) return;
             var list = uniqueTypes.ToList();

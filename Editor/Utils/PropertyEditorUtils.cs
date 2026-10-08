@@ -2,6 +2,9 @@ using Enumerable = System.Linq.Enumerable;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Provides helper operations for property editor.
+    /// </summary>
     public class PropertyEditorUtils {
 
         private static object GetValue_Imp(object source, string name, out System.Type fieldType) {
@@ -88,6 +91,9 @@ namespace ME.BECS.Editor {
             return tp;
         }
 
+        /// <summary>
+        /// Returns target type of property.
+        /// </summary>
         public static System.Type GetTargetTypeOfProperty(UnityEditor.SerializedProperty prop) {
             if (prop == null) {
                 return null;
@@ -109,10 +115,16 @@ namespace ME.BECS.Editor {
             return obj;
         }
 
+        /// <summary>
+        /// Returns target object of property.
+        /// </summary>
         public static object GetTargetObjectOfProperty(UnityEditor.SerializedProperty prop) {
             return GetTargetObjectOfProperty(prop, out _);
         }
 
+        /// <summary>
+        /// Returns target object of property.
+        /// </summary>
         public static object GetTargetObjectOfProperty(UnityEditor.SerializedProperty prop, out System.Type fieldType) {
             fieldType = null;
             if (prop == null) {
@@ -135,6 +147,9 @@ namespace ME.BECS.Editor {
             return obj;
         }
 
+        /// <summary>
+        /// Returns level.
+        /// </summary>
         public static uint GetLevel(UnityEditor.SerializedProperty prop, out uint arrayIndex) {
             arrayIndex = 0u;
             if (prop == null) {
@@ -155,6 +170,9 @@ namespace ME.BECS.Editor {
             return cnt;
         }
 
+        /// <summary>
+        /// Returns target object of property.
+        /// </summary>
         public static object GetTargetObjectOfProperty(UnityEditor.SerializedProperty prop, object targetObj) {
             var path = prop.propertyPath.Replace(".Array.data[", "[");
             var elements = path.Split('.');
@@ -171,6 +189,9 @@ namespace ME.BECS.Editor {
             return targetObj;
         }
 
+        /// <summary>
+        /// Sets target object of property.
+        /// </summary>
         public static void SetTargetObjectOfProperty(UnityEditor.SerializedProperty prop, object value) {
             var path = prop.propertyPath.Replace(".Array.data[", "[");
             object obj = prop.serializedObject.targetObject;
@@ -218,10 +239,16 @@ namespace ME.BECS.Editor {
             } catch { }
         }
 
+        /// <summary>
+        /// Sets value direct.
+        /// </summary>
         public static bool SetValueDirect(object obj, string sprop, object value) {
             return PropertyEditorUtils.SetValueDirect(obj, sprop, value, null);
         }
 
+        /// <summary>
+        /// Sets value direct.
+        /// </summary>
         public static bool SetValueDirect(object obj, string sprop, object value, params object[] index) {
             if (string.IsNullOrEmpty(sprop)) {
                 return false;
@@ -258,10 +285,16 @@ namespace ME.BECS.Editor {
             return false;
         }
 
+        /// <summary>
+        /// Sets value direct.
+        /// </summary>
         public static bool SetValueDirect(object obj, System.Reflection.MemberInfo member, object value) {
             return PropertyEditorUtils.SetValueDirect(obj, member, value, null);
         }
 
+        /// <summary>
+        /// Sets value direct.
+        /// </summary>
         public static bool SetValueDirect(object obj, System.Reflection.MemberInfo member, object value, params object[] index) {
             if (obj == null) {
                 return false;
@@ -282,6 +315,9 @@ namespace ME.BECS.Editor {
             return false;
         }
 
+        /// <summary>
+        /// Returns value direct.
+        /// </summary>
         public static object GetValueDirect(object obj, string sprop, params object[] args) {
             if (string.IsNullOrEmpty(sprop)) {
                 return null;
@@ -356,6 +392,9 @@ namespace ME.BECS.Editor {
             */
         }
 
+        /// <summary>
+        /// Returns value setter member from type.
+        /// </summary>
         public static System.Reflection.MemberInfo GetValueSetterMemberFromType(System.Type tp, string sprop, System.Type valueType, bool includeNonPublic) {
             const System.Reflection.BindingFlags BINDING_PUBLIC = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance;
             const System.Reflection.BindingFlags PRIV_BINDING =
@@ -417,6 +456,9 @@ namespace ME.BECS.Editor {
             return false;
         }
 
+        /// <summary>
+        /// Tests whether the context is numeric type.
+        /// </summary>
         public static bool IsNumericType(System.Type tp) {
             if (tp == null) {
                 return false;
@@ -425,6 +467,9 @@ namespace ME.BECS.Editor {
             return tp.IsEnum || PropertyEditorUtils.IsNumericType(System.Type.GetTypeCode(tp));
         }
 
+        /// <summary>
+        /// Tests whether the context is numeric type.
+        /// </summary>
         public static bool IsNumericType(System.TypeCode code) {
             switch (code) {
                 case System.TypeCode.SByte:
@@ -477,6 +522,9 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Returns members from type.
+        /// </summary>
         public static System.Collections.Generic.IEnumerable<System.Reflection.MemberInfo> GetMembersFromType(
             System.Type tp, string name, bool includeNonPublic,
             System.Reflection.MemberTypes mask = System.Reflection.MemberTypes.Field | System.Reflection.MemberTypes.Property | System.Reflection.MemberTypes.Method) {
@@ -506,6 +554,9 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Returns return type.
+        /// </summary>
         public static System.Type GetReturnType(System.Reflection.MemberInfo info) {
             if (info == null) {
                 return null;
@@ -522,6 +573,9 @@ namespace ME.BECS.Editor {
         private static readonly System.Reflection.PropertyInfo propertyIsValidMethod =
             typeof(UnityEditor.SerializedProperty).GetProperty("isValid", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
 
+        /// <summary>
+        /// Tests whether the context is valid.
+        /// </summary>
         public static bool IsValid(UnityEditor.SerializedProperty property) {
             if (property == null) {
                 return false;

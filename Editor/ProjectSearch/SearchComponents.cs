@@ -4,6 +4,9 @@ using UnityEditor.Search;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Defines search components data used by entity processing.
+    /// </summary>
     public static class SearchComponents {
 
         [SearchItemProvider]

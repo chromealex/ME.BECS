@@ -12,8 +12,14 @@ namespace ME.BECS {
     using Unity.Jobs.LowLevel.Unsafe;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
+    /// <summary>
+    /// Collects component mutations and applies structural changes to world storage.
+    /// </summary>
     public unsafe partial struct Batches {
 
+        /// <summary>
+        /// Resolves the requested address to a native pointer.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static T* GetPtr<T>(in Ent ent, safe_ptr<State> state) where T : unmanaged, IComponent {
 
@@ -28,6 +34,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns the requested entry from batches.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static ref T Get<T>(in Ent ent, safe_ptr<State> state) where T : unmanaged, IComponent {
 
@@ -42,6 +51,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns or throw.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static ref T GetOrThrow<T>(in Ent ent, safe_ptr<State> state) where T : unmanaged, IComponent {
 
@@ -55,6 +67,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns ptr or throw.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static T* GetPtrOrThrow<T>(in Ent ent, safe_ptr<State> state) where T : unmanaged, IComponent {
 
@@ -68,6 +83,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Stores the supplied value in batches.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static bool Set<T>(in Ent ent, in T data, safe_ptr<State> state) where T : unmanaged, IComponent {
             
@@ -87,6 +105,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Stores the supplied value in batches.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static bool Set(in Ent ent, uint typeId, void* data, safe_ptr<State> state) {
             
@@ -106,6 +127,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes the specified entry from batches.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static bool Remove<T>(in Ent ent, safe_ptr<State> state) where T : unmanaged, IComponent {
 
@@ -122,6 +146,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes the specified entry from batches.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static bool Remove(in Ent ent, uint typeId, safe_ptr<State> state) {
 
@@ -138,6 +165,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Enables the associated component or processing state.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static bool Enable<T>(in Ent ent, safe_ptr<State> state) where T : unmanaged, IComponent {
             
@@ -153,6 +183,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Disables the associated component or processing state.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static bool Disable<T>(in Ent ent, safe_ptr<State> state) where T : unmanaged, IComponent {
 

@@ -8,9 +8,15 @@ namespace ME.BECS.Editor {
 
     using UnityEngine.UIElements;
 
+    /// <summary>
+    /// Draws views provider mask attribute values in the Unity Inspector.
+    /// </summary>
     [UnityEditor.CustomPropertyDrawer(typeof(ViewsProviderMaskAttribute))]
     public class ViewsProviderMaskAttributeDrawer : UnityEditor.PropertyDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             var modules = ViewsModule.providerInfos.Select(x => x.editorName.ToString()).ToArray();

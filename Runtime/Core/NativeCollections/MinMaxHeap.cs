@@ -36,8 +36,14 @@ using static ME.BECS.Cuts;
 
 namespace ME.BECS.NativeCollections {
 
+    /// <summary>
+    /// Defines unsafe utility ex state and operations.
+    /// </summary>
     public static unsafe class UnsafeUtilityEx {
 
+        /// <summary>
+        /// Allocates array.
+        /// </summary>
         public static T* AllocArray<T>(int length, Allocator allocator) where T : unmanaged {
             return (T*)_malloc(length * UnsafeUtility.SizeOf<T>(), UnsafeUtility.AlignOf<T>(), allocator).ptr;
         }
@@ -48,16 +54,28 @@ namespace ME.BECS.NativeCollections {
 
 namespace ME.BECS.NativeCollections {
 
+    /// <summary>
+    /// Provides helper operations for heap.
+    /// </summary>
     public static class HeapUtils {
 
+        /// <summary>
+        /// Returns the parent position in the represented hierarchy.
+        /// </summary>
         public static uint Parent(uint index) {
             return index / 2;
         }
 
+        /// <summary>
+        /// Returns the left-child position in the represented hierarchy.
+        /// </summary>
         public static uint Left(uint index) {
             return index * 2;
         }
 
+        /// <summary>
+        /// Returns the right-child position in the represented hierarchy.
+        /// </summary>
         public static uint Right(uint index) {
             return index * 2 + 1;
         }
@@ -66,6 +84,9 @@ namespace ME.BECS.NativeCollections {
 
     // Sorted heap with a self balancing tree
     // Can act as either a min or max heap
+    /// <summary>
+    /// Stores entries with access to both minimum and maximum priorities.
+    /// </summary>
     public unsafe struct MinMaxHeap<T> : IDisposable where T : unmanaged {
 
         [NativeDisableContainerSafetyRestriction]
@@ -74,16 +95,28 @@ namespace ME.BECS.NativeCollections {
         [NativeDisableContainerSafetyRestriction]
         private safe_ptr<tfloat> values;
 
+        /// <summary>
+        /// Number of entries currently tracked by this value.
+        /// </summary>
         public uint Count;
         private uint m_capacity;
 
+        /// <summary>
+        /// Head value used by <c>MinMaxHeap</c>.
+        /// </summary>
         public tfloat HeadValue => this.values[1];
         private T HeadKey => this.keys[1];
 
+        /// <summary>
+        /// Indicates is full.
+        /// </summary>
         public bool IsFull => this.Count == this.m_capacity;
 
         private Allocator m_allocator;
 
+        /// <summary>
+        /// Initializes <c>MinMaxHeap</c> from the supplied start capacity, allocator.
+        /// </summary>
         public MinMaxHeap(uint startCapacity, Allocator allocator) {
             this.Count = 0;
             this.m_allocator = allocator;
@@ -104,6 +137,9 @@ namespace ME.BECS.NativeCollections {
             this.keys[indexB] = tempKey;
         }
 
+        /// <summary>
+        /// Releases the resources owned by this min max heap instance.
+        /// </summary>
         public void Dispose() {
             _free(this.values, this.m_allocator);
             _free(this.keys, this.m_allocator);
@@ -111,6 +147,9 @@ namespace ME.BECS.NativeCollections {
             this.keys = default;
         }
 
+        /// <summary>
+        /// Changes the storage size to the requested element count.
+        /// </summary>
         public void Resize(uint newSize) {
             // Allocate more spaces
             var newValues = _makeArray<tfloat>(newSize + 1, this.m_allocator);
@@ -226,6 +265,9 @@ namespace ME.BECS.NativeCollections {
             }
         }
 
+        /// <summary>
+        /// Pushes an entry using maximum-priority heap ordering.
+        /// </summary>
         public void PushObjMax(T key, tfloat val) {
             // if heap full
             if (this.Count == this.m_capacity) {
@@ -243,6 +285,9 @@ namespace ME.BECS.NativeCollections {
             }
         }
 
+        /// <summary>
+        /// Pushes an entry using minimum-priority heap ordering.
+        /// </summary>
         public void PushObjMin(T key, tfloat val) {
             // if heap full
             if (this.Count == this.m_capacity) {
@@ -270,12 +315,18 @@ namespace ME.BECS.NativeCollections {
             return result;
         }
 
+        /// <summary>
+        /// Removes the maximum-priority entry from the heap.
+        /// </summary>
         public T PopObjMax() {
             var result = this.PopHeadObj();
             this.BubbleDownMax(1);
             return result;
         }
 
+        /// <summary>
+        /// Removes the minimum-priority entry from the heap.
+        /// </summary>
         public T PopObjMin() {
             var result = this.PopHeadObj();
             this.BubbleDownMin(1);

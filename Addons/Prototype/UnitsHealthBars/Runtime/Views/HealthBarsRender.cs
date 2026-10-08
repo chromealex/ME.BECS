@@ -15,11 +15,20 @@ namespace ME.BECS.UnitsHealthBars {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Collections;
 
+    /// <summary>
+    /// Provides helper operations for health bar.
+    /// </summary>
     [BURST(CompileSynchronously = true, FloatMode = Unity.Burst.FloatMode.Fast, OptimizeFor = Unity.Burst.OptimizeFor.Performance)]
     public static class HealthBarUtils {
 
+        /// <summary>
+        /// Orders values using the bar z sorting comparison.
+        /// </summary>
         public struct BarZSorting : System.Collections.Generic.IComparer<DrawHealthBarsSystem.BarItem> {
             
+            /// <summary>
+            /// Compares the supplied values for ordering.
+            /// </summary>
             public int Compare(DrawHealthBarsSystem.BarItem x, DrawHealthBarsSystem.BarItem y) {
                 return y.position.y.CompareTo(x.position.y);
             }
@@ -27,6 +36,9 @@ namespace ME.BECS.UnitsHealthBars {
         }
 
         //[BURST(CompileSynchronously = true, FloatMode = Unity.Burst.FloatMode.Fast, OptimizeFor = Unity.Burst.OptimizeFor.Performance)]
+        /// <summary>
+        /// Draws the supplied health bars with the configured scale and colors.
+        /// </summary>
         public static void Render(tfloat referenceScale, ref UnityEngine.Color bordersColor, ref UnityEngine.Color backColor, ref UnityEngine.Color minHealthColor, ref UnityEngine.Color maxHealthColor, ref ME.BECS.NativeCollections.NativeParallelList<DrawHealthBarsSystem.BarItem> bars) {
 
             var scale = referenceScale > 0f ? UnityEngine.Screen.height / referenceScale : 1f;
@@ -115,23 +127,53 @@ namespace ME.BECS.UnitsHealthBars {
 
     }
     
+    /// <summary>
+    /// Defines health bars render state and operations.
+    /// </summary>
     [UnityEngine.DefaultExecutionOrder(110)]
     public class HealthBarsRender : UnityEngine.MonoBehaviour {
 
+        /// <summary>
+        /// Bars used by <c>HealthBarsRender</c>.
+        /// </summary>
         public ME.BECS.NativeCollections.NativeParallelList<DrawHealthBarsSystem.BarItem> bars;
+        /// <summary>
+        /// Material used by the associated renderer.
+        /// </summary>
         public UnityEngine.Material material;
+        /// <summary>
+        /// Reference scale used by <c>HealthBarsRender</c>.
+        /// </summary>
         public tfloat referenceScale;
+        /// <summary>
+        /// Borders color used for presentation.
+        /// </summary>
         public UnityEngine.Color bordersColor = new UnityEngine.Color(0.06f, 0.06f, 0.06f);
+        /// <summary>
+        /// Back color used for presentation.
+        /// </summary>
         public UnityEngine.Color backColor = new UnityEngine.Color(0.16f, 0.16f, 0.16f);
+        /// <summary>
+        /// Minimum health color.
+        /// </summary>
         public UnityEngine.Color minHealthColor = new UnityEngine.Color(1f, 0.01f, 0f);
+        /// <summary>
+        /// Maximum health color.
+        /// </summary>
         public UnityEngine.Color maxHealthColor = new UnityEngine.Color(0.13f, 1f, 0f, 1f);
 
+        /// <summary>
+        /// Handles the enable callback.
+        /// </summary>
         public void OnEnable() {
             
             UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering += this.EndCameraRendering;
 
         }
 
+        /// <summary>
+        /// Handles the disable callback.
+        /// </summary>
         public void OnDisable() {
             
             UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering -= this.EndCameraRendering;
@@ -144,12 +186,18 @@ namespace ME.BECS.UnitsHealthBars {
             }
         }
         
+        /// <summary>
+        /// Handles the camera render callback.
+        /// </summary>
         protected void OnCameraRender(UnityEngine.Camera camera) {
             if (this.CheckFilter(camera)) {
                 this.DrawLines();
             }
         }
 
+        /// <summary>
+        /// Handles the post render callback.
+        /// </summary>
         public void OnPostRender() {
             this.DrawLines();
         }

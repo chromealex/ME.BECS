@@ -16,13 +16,28 @@ namespace ME.BECS.FogOfWar {
     using Players;
     using Units;
 
+    /// <summary>
+    /// Updates view presentation for for of war cross fade view module.
+    /// </summary>
     public class ForOfWarCrossFadeViewModule : FogOfWarViewModule {
 
         private static readonly int lodFade = UnityEngine.Shader.PropertyToID("_LODFade");
 
+        /// <summary>
+        /// Material used by the associated renderer.
+        /// </summary>
         public UnityEngine.Material material;
+        /// <summary>
+        /// Cross fade material used by <c>ForOfWarCrossFadeViewModule</c>.
+        /// </summary>
         public UnityEngine.Material crossFadeMaterial;
+        /// <summary>
+        /// Renderers used by <c>ForOfWarCrossFadeViewModule</c>.
+        /// </summary>
         public UnityEngine.Renderer[] renderers;
+        /// <summary>
+        /// Cross fade duration in the time units used by the containing API.
+        /// </summary>
         public float crossFadeDuration = 2f;
 
         private bool crossFade;
@@ -30,6 +45,9 @@ namespace ME.BECS.FogOfWar {
         private UnityEngine.MaterialPropertyBlock propertyBlock;
         private bool targetState;
 
+        /// <summary>
+        /// Activates presentation state when the view is taken from the pool.
+        /// </summary>
         public override void OnEnableFromPool(in ViewData viewData) {
             
             base.OnEnableFromPool(in viewData);
@@ -41,6 +59,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Handles the become visible callback.
+        /// </summary>
         public override void OnBecomeVisible(in EntRO ent) {
             
             base.OnBecomeVisible(in ent);
@@ -55,6 +76,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Handles the become invisible callback.
+        /// </summary>
         public override void OnBecomeInvisible(in EntRO ent) {
             
             base.OnBecomeInvisible(in ent);
@@ -68,6 +92,9 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Updates for of war cross fade view module using the current inputs and execution context.
+        /// </summary>
         public override void OnUpdate(in ViewData viewData, float dt) {
 
             base.OnUpdate(in viewData, dt);
@@ -97,11 +124,20 @@ namespace ME.BECS.FogOfWar {
 
     }
     
+    /// <summary>
+    /// Updates view presentation for fog of war view module.
+    /// </summary>
     public class FogOfWarViewModule : CollectRenderers, IViewUpdate, IViewEnableFromPool, IViewIgnoreTracker {
         
         private bool isVisible;
+        /// <summary>
+        /// Fog-of-war state used by this operation.
+        /// </summary>
         protected CreateSystem fow;
 
+        /// <summary>
+        /// Activates presentation state when the view is taken from the pool.
+        /// </summary>
         public virtual void OnEnableFromPool(in ViewData viewData) {
             
             EntRO ent = viewData;
@@ -110,21 +146,42 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is visible.
+        /// </summary>
         public bool IsVisible() => this.isVisible;
 
+        /// <summary>
+        /// Provides the <c>OnBecomeVisible</c> callback; this implementation performs no work.
+        /// </summary>
         public virtual void OnBecomeVisible(in EntRO ent) {}
+        /// <summary>
+        /// Provides the <c>OnBecomeInvisible</c> callback; this implementation performs no work.
+        /// </summary>
         public virtual void OnBecomeInvisible(in EntRO ent) {}
 
+        /// <summary>
+        /// Updates visibility.
+        /// </summary>
         public virtual void UpdateVisibility(in EntRO ent, bool forced) {
             this.ApplyFowVisibility(in ent, forced);
         }
 
+        /// <summary>
+        /// Applies fow visibility.
+        /// </summary>
         protected void ApplyFowVisibility(in EntRO ent, bool forced) {
             this.ApplyVisibility(in ent, this.IsVisible(in ent), forced);
         }
 
+        /// <summary>
+        /// Returns team.
+        /// </summary>
         public Ent GetTeam(in EntRO ent) => PlayerUtils.GetOwner(in ent).readTeam;
         
+        /// <summary>
+        /// Tests whether the context is visible.
+        /// </summary>
         public bool IsVisible(in EntRO ent) {
             if (ent.Has<OwnerComponent>() == false) return true;
             var activePlayer = PlayerUtils.GetActivePlayer();
@@ -149,6 +206,9 @@ namespace ME.BECS.FogOfWar {
             return state;
         }
 
+        /// <summary>
+        /// Applies visibility.
+        /// </summary>
         protected virtual void ApplyVisibility(in EntRO ent, bool state, bool forced = false) {
             if (state != this.isVisible || forced == true) {
                 this.isVisible = state;
@@ -163,6 +223,9 @@ namespace ME.BECS.FogOfWar {
             }
         }
         
+        /// <summary>
+        /// Updates fog of war view module using the current inputs and execution context.
+        /// </summary>
         public virtual void OnUpdate(in ViewData viewData, float dt) {
             
             EntRO ent = viewData;

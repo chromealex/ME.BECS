@@ -11,6 +11,9 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Collections;
 
+    /// <summary>
+    /// Tracks one-shot component work scheduled for lifecycle cleanup.
+    /// </summary>
     public partial struct OneShotTasks {
 
         [BURST]
@@ -28,6 +31,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Schedules jobs.
+        /// </summary>
         [INLINE(256)]
         [NotThreadSafe]
         public static JobHandle ScheduleJobs(safe_ptr<State> state, OneShotType type, ushort updateType, JobHandle dependsOn) {

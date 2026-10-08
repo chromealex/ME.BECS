@@ -9,6 +9,9 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Allocates relocatable native blocks addressed by zone and offset.
+    /// </summary>
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(AllocatorDebugProxy))]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -17,11 +20,26 @@ namespace ME.BECS {
     #endif
     public unsafe partial struct MemoryAllocator {
 
+        /// <summary>
+        /// Zone header offset constant used by <c>MemoryAllocator</c>.
+        /// </summary>
         public const uint ZONE_HEADER_OFFSET = 4u;
+        /// <summary>
+        /// Min zone size constant used by <c>MemoryAllocator</c>.
+        /// </summary>
         public const uint MIN_ZONE_SIZE = 512u * 1024u;
+        /// <summary>
+        /// Min zone size in kb constant used by <c>MemoryAllocator</c>.
+        /// </summary>
         public const uint MIN_ZONE_SIZE_IN_KB = MIN_ZONE_SIZE / 1024u;
+        /// <summary>
+        /// Default zones capacity constant used by <c>MemoryAllocator</c>.
+        /// </summary>
         public const uint DEFAULT_ZONES_CAPACITY = 10u;
 
+        /// <summary>
+        /// Describes an allocator block and its neighboring or free-list links.
+        /// </summary>
         [IgnoreProfiler]
         #if !BECS_IL2CPP_OPTIONS_DISABLE
         [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -31,14 +49,29 @@ namespace ME.BECS {
         public struct BlockHeader {
 
             // Header
+            /// <summary>
+            /// Free index used to locate the associated entry.
+            /// </summary>
             public uint freeIndex; // Index in free blocks, uint.MaxValue - USED, >= 0 - FREE
+            /// <summary>
+            /// Prev used by <c>MemoryAllocator.BlockHeader</c>.
+            /// </summary>
             public uint prev;  // Prev offset in current zone, uint.MaxValue = null
+            /// <summary>
+            /// Link or index of the next entry in the sequence.
+            /// </summary>
             public uint next;  // Next offset in current zone, uint.MaxValue = null
             
             // Data
+            /// <summary>
+            /// Size of the represented value in the units used by this API.
+            /// </summary>
             public uint size;  // Data size
             // Data placed here
 
+            /// <summary>
+            /// Checks consistency.
+            /// </summary>
             public bool CheckConsistency(in MemoryAllocator allocator, uint nodeId, uint zoneId, bool checkMove = true) {
                 var zone = allocator.zones[zoneId];
                 UnityEngine.Assertions.Assert.IsTrue(this.freeIndex == uint.MaxValue || allocator.freeBlocks.GetPtr(in this).zoneId == zoneId);
@@ -51,12 +84,18 @@ namespace ME.BECS {
                 return true;
             }
 
+            /// <summary>
+            /// Formats this value for display or diagnostics.
+            /// </summary>
             public override string ToString() {
                 return $"FreeIndex: {this.freeIndex}, prev: {this.prev}, next: {this.next}, size: {this.size}";
             }
 
         }
 
+        /// <summary>
+        /// Stores one zone of native allocator memory.
+        /// </summary>
         [IgnoreProfiler]
         #if !BECS_IL2CPP_OPTIONS_DISABLE
         [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -65,11 +104,26 @@ namespace ME.BECS {
         #endif
         public struct Zone {
 
+            /// <summary>
+            /// Data consumed or produced by the containing operation.
+            /// </summary>
             public safe_ptr data;
+            /// <summary>
+            /// Root entry of the represented hierarchy.
+            /// </summary>
             public safe_ptr root => this.data;
+            /// <summary>
+            /// First block used by <c>MemoryAllocator.Zone</c>.
+            /// </summary>
             public safe_ptr firstBlock => this.data + ZONE_HEADER_OFFSET;
+            /// <summary>
+            /// Size of the represented value in the units used by this API.
+            /// </summary>
             public uint size;
 
+            /// <summary>
+            /// Releases the resources owned by this zone instance.
+            /// </summary>
             public void Dispose(Unity.Collections.Allocator allocator) {
                 LeakDetector.FreeAllocatorZone(this.data.ptr, this.size);
                 _free(this.data, allocator);
@@ -77,16 +131,25 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes <c>MemoryAllocator</c> from the supplied allocator.
+        /// </summary>
         public MemoryAllocator(Unity.Collections.Allocator allocator) {
             this = default;
             this.allocatorLabel = allocator;
         }
 
+        /// <summary>
+        /// Initializes memory allocator state from the supplied context.
+        /// </summary>
         [NotThreadSafe][IgnoreProfiler]
         public MemoryAllocator Initialize(uint initialSize) {
             return this.Initialize(DEFAULT_ZONES_CAPACITY, initialSize, Constants.ALLOCATOR_PERSISTENT);
         }
 
+        /// <summary>
+        /// Initializes memory allocator state from the supplied context.
+        /// </summary>
         [NotThreadSafe][IgnoreProfiler]
         public MemoryAllocator Initialize(uint zonesCapacity, uint initialSize, Unity.Collections.Allocator allocator, bool ignoreSizeRestrictions = false) {
             if (ignoreSizeRestrictions == false && zonesCapacity < 1u) zonesCapacity = 1u;

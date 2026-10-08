@@ -9,8 +9,14 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Defines components data used by entity processing.
+    /// </summary>
     public unsafe partial struct Components {
 
+        /// <summary>
+        /// Tests whether the context is enabled.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool IsEnabled<T>(safe_ptr<State> state, in Ent ent) where T : unmanaged, IComponent {
             
@@ -19,6 +25,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Enables the associated component or processing state.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool Enable<T>(safe_ptr<State> state, in Ent ent) where T : unmanaged, IComponent {
             
@@ -28,6 +37,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Disables the associated component or processing state.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool Disable<T>(safe_ptr<State> state, in Ent ent) where T : unmanaged, IComponent {
 
@@ -37,6 +49,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Stores the supplied value in components.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool Set<T>(safe_ptr<State> state, in Ent ent, in T data) where T : unmanaged, IComponent {
 
@@ -46,6 +61,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Removes the specified entry from components.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool Remove<T>(safe_ptr<State> state, in Ent ent) where T : unmanaged, IComponent {
 
@@ -55,6 +73,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes the specified entry from components.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool Remove(safe_ptr<State> state, in Ent ent, uint typeId, uint groupId) {
 
@@ -62,6 +83,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Reads the requested value from components.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static ref readonly T Read<T>(safe_ptr<State> state, uint entId, ushort gen, out bool exists) where T : unmanaged, IComponentBase {
 
@@ -72,6 +96,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Reads the requested value from components.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static ref readonly T Read<T>(safe_ptr<State> state, uint entId, ushort gen) where T : unmanaged, IComponent {
 
@@ -82,6 +109,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Reads ptr.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static T* ReadPtr<T>(safe_ptr<State> state, uint entId, ushort gen, out bool exists) where T : unmanaged, IComponent {
 
@@ -92,6 +122,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Reads ptr.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static T* ReadPtr<T>(safe_ptr<State> state, uint entId, ushort gen) where T : unmanaged, IComponent {
 
@@ -102,6 +135,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests whether the requested entry is present.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool Has<T>(safe_ptr<State> state, uint entId, ushort gen, bool checkEnabled) where T : unmanaged, IComponentBase {
 
@@ -110,9 +146,15 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns the requested entry from components.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static ref T Get<T>(safe_ptr<State> state, in Ent ent) where T : unmanaged, IComponent => ref Get<T>(state, ent);
 
+        /// <summary>
+        /// Returns the requested entry from components.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static ref T Get<T>(safe_ptr<State> state, Ent ent) where T : unmanaged, IComponent {
 
@@ -123,6 +165,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns the requested entry from components.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static T* Get<T>(safe_ptr<State> state, in Ent ent, out bool isNew) where T : unmanaged, IComponent {
             
@@ -133,6 +178,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns or throw.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static T* GetOrThrow<T>(safe_ptr<State> state, in Ent ent, out bool isNew) where T : unmanaged, IComponent {
             
@@ -143,6 +191,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests whether the context has static direct.
+        /// </summary>
         [IgnoreProfiler]
         public static bool HasStaticDirect<T>(Ent ent) where T : unmanaged, IConfigComponentStatic {
 
@@ -150,6 +201,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Reads static direct.
+        /// </summary>
         [IgnoreProfiler]
         public static T ReadStaticDirect<T>(Ent ent) where T : unmanaged, IConfigComponentStatic {
 
@@ -159,6 +213,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is tag direct.
+        /// </summary>
         [IgnoreProfiler]
         public static bool IsTagDirect<T>() where T : unmanaged, IComponentBase {
 
@@ -166,6 +223,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Tests whether the context is enabled direct.
+        /// </summary>
         [IgnoreProfiler]
         public static bool IsEnabledDirect<T>(Ent ent) where T : unmanaged, IComponent {
 
@@ -173,6 +233,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests whether the context has direct.
+        /// </summary>
         [IgnoreProfiler]
         public static bool HasDirect<T>(Ent ent) where T : unmanaged, IComponent {
 
@@ -180,6 +243,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests whether the context has direct enabled.
+        /// </summary>
         [IgnoreProfiler]
         public static bool HasDirectEnabled<T>(Ent ent) where T : unmanaged, IComponent {
 
@@ -187,6 +253,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Reads direct.
+        /// </summary>
         [IgnoreProfiler]
         public static T ReadDirect<T>(Ent ent) where T : unmanaged, IComponent {
 
@@ -196,6 +265,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Sets direct.
+        /// </summary>
         [IgnoreProfiler]
         public static void SetDirect<T>(Ent ent, T data) where T : unmanaged, IComponent {
 

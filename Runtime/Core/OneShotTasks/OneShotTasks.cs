@@ -15,6 +15,9 @@ namespace ME.BECS {
     using Unity.Jobs.LowLevel.Unsafe;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
+    /// <summary>
+    /// Tracks one-shot component work scheduled for lifecycle cleanup.
+    /// </summary>
     [IgnoreProfiler]
     public unsafe partial struct OneShotTasks {
 
@@ -36,16 +39,25 @@ namespace ME.BECS {
         
         private MemArrayThreadCacheLine<ThreadItem> threadItems;
 
+        /// <summary>
+        /// Writes collection metadata to the stream without serializing the backing allocator blocks.
+        /// </summary>
         [INLINE(256)]
         public void SerializeHeaders(ref StreamBufferWriter writer) {
             writer.Write(this.threadItems);
         }
 
+        /// <summary>
+        /// Restores collection metadata from the stream; backing allocator storage is restored separately.
+        /// </summary>
         [INLINE(256)]
         public void DeserializeHeaders(ref StreamBufferReader reader) {
             reader.Read(ref this.threadItems);
         }
 
+        /// <summary>
+        /// Creates <c>OneShotTasks</c> using the supplied creation arguments.
+        /// </summary>
         [INLINE(256)][NotThreadSafe][IgnoreProfiler]
         public static OneShotTasks Create(safe_ptr<State> state, uint capacity) {
             using (new AllocatorTag(ALLOC_TAGS.ONE_SHOT)) {
@@ -61,6 +73,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Adds the supplied entry to one shot tasks.
+        /// </summary>
         [INLINE(256)][CodeGeneratorIgnore]
         public static void Add<T>(safe_ptr<State> state, in Ent ent, in T data, ushort updateType, OneShotType type) where T : unmanaged, IComponent {
 
@@ -71,6 +86,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Adds the supplied entry to one shot tasks.
+        /// </summary>
         [INLINE(256)][CodeGeneratorIgnore]
         public static void Add(safe_ptr<State> state, in Ent ent, uint typeId, ushort updateType, MemAllocatorPtr data, OneShotType type) {
 
@@ -99,6 +117,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Schedules the supplied job after its input dependency and returns a handle to the resulting work.
+        /// </summary>
         [INLINE(256)]
         [NotThreadSafe]
         public static JobHandle Schedule(safe_ptr<State> state, OneShotType type, ushort updateType, JobHandle dependsOn) {
@@ -116,6 +137,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Resolves thread.
+        /// </summary>
         [INLINE(256)]
         public static void ResolveThread(safe_ptr<State> state, OneShotType type, ushort updateType, uint index) {
 

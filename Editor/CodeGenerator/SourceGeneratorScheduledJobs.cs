@@ -4,6 +4,9 @@ namespace ME.BECS.Editor {
     using System.Linq;
     using System.Reflection;
 
+    /// <summary>
+    /// Provides scheduled jobs for BECS source-generator publication.
+    /// </summary>
     public static class SourceGeneratorScheduledJobs {
         private sealed class Entry {
             public string failure;
@@ -16,6 +19,9 @@ namespace ME.BECS.Editor {
 
         // Diagnostic source oracle only. Production Collect uses fresh IL even when
         // this catalog is complete; failed lookup does not partially mutate output.
+        /// <summary>
+        /// Attempts to collect and reports whether the operation succeeded.
+        /// </summary>
         public static bool TryCollect(Type system, HashSet<Type> output, out string reason, Type lifecycle = null) {
             lock (gate) {
                 var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a => !a.IsDynamic).ToArray();
@@ -38,6 +44,9 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Collects matching entries into the supplied results.
+        /// </summary>
         public static void Collect(Type system, HashSet<Type> output, Type lifecycle = null) {
             if (system == null || system.ContainsGenericParameters)
                 throw new InvalidOperationException("Scheduled-job discovery requires a closed system: " + system);

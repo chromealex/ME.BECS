@@ -8,18 +8,48 @@ using Unity.Mathematics;
 
 namespace ME.BECS.Pathfinding {
 
+    /// <summary>
+    /// Defines configuration-backed entity data for graph mask.
+    /// </summary>
     [ComponentGroup(typeof(PathfindingComponentGroup))]
     public struct GraphMaskComponent : IConfigComponent, IConfigInitialize {
 
+        /// <summary>
+        /// Offset into the associated storage or coordinate space.
+        /// </summary>
         public float2 offset;
+        /// <summary>
+        /// Size of the represented value in the units used by this API.
+        /// </summary>
         public uint2 size;
+        /// <summary>
+        /// Vertical extent used by the associated geometry or query.
+        /// </summary>
         public tfloat height;
+        /// <summary>
+        /// Heights size x used by <c>GraphMaskComponent</c>.
+        /// </summary>
         public uint heightsSizeX;
+        /// <summary>
+        /// Obstacle channel used by <c>GraphMaskComponent</c>.
+        /// </summary>
         public ObstacleChannel obstacleChannel;
+        /// <summary>
+        /// Whether ignore graph radius behavior or state is selected.
+        /// </summary>
         public bbool ignoreGraphRadius;
+        /// <summary>
+        /// Cost assigned to this entry by the associated calculation.
+        /// </summary>
         public byte cost;
+        /// <summary>
+        /// Graph mask used to select the applicable bits or entries.
+        /// </summary>
         public int graphMask;
 
+        /// <summary>
+        /// Initializes graph mask component state from the supplied context.
+        /// </summary>
         public void OnInitialize(in Ent ent) {
 
             var tr = ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
@@ -29,13 +59,28 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    /// <summary>
+    /// Defines graph mask runtime component data used by entity processing.
+    /// </summary>
     [ComponentGroup(typeof(PathfindingComponentGroup))]
     public struct GraphMaskRuntimeComponent : IComponentDestroy {
 
+        /// <summary>
+        /// Height samples used by the geometry or graph.
+        /// </summary>
         public MemArrayAuto<tfloat> heights;
+        /// <summary>
+        /// Nodes composing the associated graph.
+        /// </summary>
         public ListAuto<GraphNodeMemory> nodes;
+        /// <summary>
+        /// Nodes lock used by <c>GraphMaskRuntimeComponent</c>.
+        /// </summary>
         public LockSpinner nodesLock;
         
+        /// <summary>
+        /// Destroys the referenced instance and applies its registered destruction handling.
+        /// </summary>
         public unsafe void Destroy(in Ent ent) {
 
             var nextTick = this.nodes.ent.World.CurrentTick + 1UL;
@@ -54,6 +99,9 @@ namespace ME.BECS.Pathfinding {
 
     }
     
+    /// <summary>
+    /// Stores per-entity state for is graph mask dirty.
+    /// </summary>
     [ComponentGroup(typeof(PathfindingComponentGroup))]
     public struct IsGraphMaskDirtyComponent : IComponent {}
 

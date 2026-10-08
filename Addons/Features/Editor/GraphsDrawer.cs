@@ -10,14 +10,23 @@ using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Initializes the system graph represented by <c>GraphTNull</c>.
+    /// </summary>
     public class GraphTNull : IGraphInitialize {
         
+        /// <summary>
+        /// Provides the <c>Initialize</c> callback; this implementation performs no work.
+        /// </summary>
         public void Initialize(ref SystemGroup group, ref World world) {
             
         }
 
     }
     
+    /// <summary>
+    /// Draws graphs values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(BaseWorldInitializer<>.Graphs))]
     public class GraphsDrawer : PropertyDrawer {
 
@@ -29,6 +38,9 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
             
             this.LoadStyle();

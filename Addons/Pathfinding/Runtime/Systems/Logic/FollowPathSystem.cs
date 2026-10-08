@@ -18,19 +18,40 @@ namespace ME.BECS.Pathfinding {
     using ME.BECS.Units;
     using ME.BECS.Transforms;
 
+    /// <summary>
+    /// Coordinates follow path during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [UnityEngine.Tooltip("Schedule building a path.")]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public partial struct FollowPathSystem : IUpdate {
 
+        /// <summary>
+        /// Executes path follow work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct PathFollowJob : IJobForAspects<TransformAspect, UnitAspect> {
 
+            /// <summary>
+            /// World used by the containing operation.
+            /// </summary>
             public World world;
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             public tfloat dt;
+            /// <summary>
+            /// Graph-building system used by this operation.
+            /// </summary>
             public BuildGraphSystem buildGraphSystem;
+            /// <summary>
+            /// Follow path system used by <c>FollowPathSystem.PathFollowJob</c>.
+            /// </summary>
             public FollowPathSystem followPathSystem;
             
+            /// <summary>
+            /// Processes path follow using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit) {
 
                 if (unit.IsPathFollow == false) {
@@ -141,11 +162,20 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Executes speed down on hold work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct SpeedDownOnHoldJob : IJobForAspects<UnitAspect> {
 
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             public tfloat dt;
             
+            /// <summary>
+            /// Processes speed down on hold using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit) {
                 
                 unit.speed = math.lerp(unit.readSpeed, 0f, this.dt * unit.readDecelerationSpeed);
@@ -154,6 +184,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Updates follow path system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var dependsOnFollow = context.Query().Without<IsUnitStaticComponent>().Without<UnitHoldComponent>().AsUnsafe().AsParallel().Schedule<PathFollowJob, TransformAspect, UnitAspect>(new PathFollowJob() {

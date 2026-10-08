@@ -7,6 +7,9 @@ namespace ME.BECS.Editor {
     // Assembly names/locations are selected by the exporter, not the readers.
     // Catalog hashes prove input compilation only. Typed fragment receipts are
     // a separate mandatory readiness check, never inferred from this metadata.
+    /// <summary>
+    /// Provides input catalog for BECS source-generator publication.
+    /// </summary>
     public static class SourceGeneratorInputCatalog {
         internal sealed class Publication {
             internal Assembly Assembly;
@@ -136,7 +139,13 @@ namespace ME.BECS.Editor {
         }
 
         internal static bool TryGet(bool editor, out Publication publication, out string reason) => TryGet(editor, AppDomain.CurrentDomain.GetAssemblies(), out publication, out reason);
+        /// <summary>
+        /// Returns assembly.
+        /// </summary>
         public static Assembly GetAssembly(bool editor) => TryGet(editor, out var publication, out var reason) ? publication.Assembly : throw new InvalidOperationException(reason);
+        /// <summary>
+        /// Returns rows.
+        /// </summary>
         public static string[] GetRows(bool editor) => TryGet(editor, out var publication, out var reason) ? (string[])publication.Rows.Clone() : throw new InvalidOperationException(reason);
     }
 }

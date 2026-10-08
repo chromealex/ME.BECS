@@ -6,15 +6,27 @@ namespace ME.BECS.FogOfWar {
     using Transforms;
     using Unity.Jobs;
 
+    /// <summary>
+    /// Coordinates update during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [RequiredDependencies(typeof(CreateSystem))]
     public partial struct UpdateSystem : IUpdate {
 
+        /// <summary>
+        /// Executes reveal rect work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct RevealRectJob : IJobForComponents<FogOfWarRevealerComponent, OwnerComponent> {
 
+            /// <summary>
+            /// Configuration values used by this operation.
+            /// </summary>
             public FogOfWarStaticComponent props;
             
+            /// <summary>
+            /// Processes reveal rect using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarRevealerComponent revealer, [RO] ref OwnerComponent owner) {
 
                 var tr = ent.GetAspect<TransformAspect>();
@@ -28,11 +40,20 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Executes reveal range work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct RevealRangeJob : IJobForComponents<FogOfWarRevealerComponent, OwnerComponent> {
 
+            /// <summary>
+            /// Configuration values used by this operation.
+            /// </summary>
             public FogOfWarStaticComponent props;
             
+            /// <summary>
+            /// Processes reveal range using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarRevealerComponent revealer, [RO] ref OwnerComponent owner) {
 
                 var tr = ent.GetAspect<TransformAspect>();
@@ -46,11 +67,20 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Executes reveal rect partial work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct RevealRectPartialJob : IJobForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
 
+            /// <summary>
+            /// Configuration values used by this operation.
+            /// </summary>
             public FogOfWarStaticComponent props;
             
+            /// <summary>
+            /// Processes reveal rect partial using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref ParentComponent parent, ref FogOfWarRevealerPartialComponent part, [RO] ref OwnerComponent owner) {
 
                 var tr = ent.GetAspect<TransformAspect>();
@@ -66,11 +96,20 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Executes reveal range partial work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct RevealRangePartialJob : IJobForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
 
+            /// <summary>
+            /// Configuration values used by this operation.
+            /// </summary>
             public FogOfWarStaticComponent props;
             
+            /// <summary>
+            /// Processes reveal range partial using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref ParentComponent parent, ref FogOfWarRevealerPartialComponent part, [RO] ref OwnerComponent owner) {
 
                 var tr = ent.GetAspect<TransformAspect>();
@@ -86,11 +125,20 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Executes reveal range sector work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct RevealRangeSectorJob : IJobForComponents<FogOfWarRevealerComponent, OwnerComponent, FogOfWarSectorRevealerComponent> {
 
+            /// <summary>
+            /// Configuration values used by this operation.
+            /// </summary>
             public FogOfWarStaticComponent props;
             
+            /// <summary>
+            /// Processes reveal range sector using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarRevealerComponent revealer, [RO] ref OwnerComponent owner, ref FogOfWarSectorRevealerComponent sectorComponent) {
 
                 var tr = ent.GetAspect<TransformAspect>();
@@ -105,11 +153,20 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Executes reveal range sector partial work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct RevealRangeSectorPartialJob : IJobForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
 
+            /// <summary>
+            /// Configuration values used by this operation.
+            /// </summary>
             public FogOfWarStaticComponent props;
             
+            /// <summary>
+            /// Processes reveal range sector partial using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref ParentComponent parent, ref FogOfWarRevealerPartialComponent part, [RO] ref OwnerComponent owner) {
 
                 var tr = ent.GetAspect<TransformAspect>();
@@ -126,6 +183,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Updates update system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var fowStaticData = context.world.GetSystem<CreateSystem>().heights.Read<FogOfWarStaticComponent>();

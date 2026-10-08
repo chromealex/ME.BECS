@@ -4,20 +4,35 @@ namespace ME.BECS.Blueprints.Nodes {
     using scg = System.Collections.Generic;
     using ME.BECS.Extensions.GraphProcessor;
 
+    /// <summary>
+    /// Defines ent read state and operations.
+    /// </summary>
     [System.Serializable]
     public class EntRead : Graph.BlueprintGraphNode {
 
+        /// <summary>
+        /// Component data accessed by this instance.
+        /// </summary>
         public ComponentField component;
 
     }
 
+    /// <summary>
+    /// Defines read from component data used by entity processing.
+    /// </summary>
     [System.Serializable]
     [Extensions.GraphProcessor.NodeMenuItem("Read from Component")]
     public class ReadFromComponent : Graph.Node {
 
+        /// <summary>
+        /// Result produced by the associated operation.
+        /// </summary>
         [gp::Output(name = "Result", allowMultiple = true)]
         public string result;
 
+        /// <summary>
+        /// Entity processed or represented by this value.
+        /// </summary>
         [gp::Input(name = "Entity", allowMultiple = false, optional = true, fieldType = typeof(Ent))]
         public string entity = "ent";
 
@@ -28,8 +43,14 @@ namespace ME.BECS.Blueprints.Nodes {
             return "ent";
         }
 
+        /// <summary>
+        /// Component data accessed by this instance.
+        /// </summary>
         public ComponentField component;
 
+        /// <summary>
+        /// Describes the output ports exposed by this graph node.
+        /// </summary>
         [CustomPortOutput("result", typeof(Config))]
         public void CustomOutputConfig(scg::List<SerializableEdge> edges, NodePort outputPort) {
 
@@ -41,6 +62,9 @@ namespace ME.BECS.Blueprints.Nodes {
             
         }
 
+        /// <summary>
+        /// Processes read from component using the supplied job inputs.
+        /// </summary>
         public override void Execute(Writer writer) {
 
             if (this.component.IsValid() == false) {

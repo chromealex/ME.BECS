@@ -1,7 +1,13 @@
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Provides helper operations for object reference registry.
+    /// </summary>
     public static class ObjectReferenceRegistryUtils {
 
+        /// <summary>
+        /// Assigns the supplied state to its destination.
+        /// </summary>
         public static uint Assign(UnityEngine.Object previousValue, UnityEngine.Object newValue) {
             
             if (ObjectReferenceRegistry.data == null) return 0u;

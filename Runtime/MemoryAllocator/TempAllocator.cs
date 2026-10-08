@@ -9,6 +9,9 @@ using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
 namespace ME.BECS {
 
+    /// <summary>
+    /// Defines temp allocator state and operations.
+    /// </summary>
     [IgnoreProfiler]
     [BurstCompile]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
@@ -18,6 +21,9 @@ namespace ME.BECS {
     #endif
     public unsafe struct TempAllocator : AllocatorManager.IAllocator {
 
+        /// <summary>
+        /// Stores a block record used by <c>TempAllocator</c>.
+        /// </summary>
         [IgnoreProfiler]
         #if !BECS_IL2CPP_OPTIONS_DISABLE
         [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -26,6 +32,9 @@ namespace ME.BECS {
         #endif
         public struct Block {
 
+            /// <summary>
+            /// Describes a block of native memory.
+            /// </summary>
             [IgnoreProfiler]
             public struct MemoryBlock {
 
@@ -33,15 +42,27 @@ namespace ME.BECS {
                 private uint position;
                 private uint size;
 
+                /// <summary>
+                /// Number of bytes allocated for the associated storage.
+                /// </summary>
                 public uint BytesAllocated => this.size;
+                /// <summary>
+                /// Number of allocated bytes currently in use.
+                /// </summary>
                 public uint BytesUsed => this.position;
 
+                /// <summary>
+                /// Initializes memory block state from the supplied context.
+                /// </summary>
                 public void Initialize(uint initialSize) {
                     this.data = (byte*)UnsafeUtility.Malloc(initialSize, UnsafeUtility.AlignOf<byte>(), Allocator.Persistent);
                     this.size = initialSize;
                     this.position = 0u;
                 }
                 
+                /// <summary>
+                /// Allocates native storage and returns its allocator-relative address.
+                /// </summary>
                 public byte* Alloc(uint size) {
                     if (this.position + size > this.size) return null;
                     var ptr = this.data + this.position;
@@ -49,10 +70,16 @@ namespace ME.BECS {
                     return ptr;
                 }
 
+                /// <summary>
+                /// Releases the resources owned by this memory block instance.
+                /// </summary>
                 public void Dispose() {
                     UnsafeUtility.Free(this.data, Allocator.Persistent);
                 }
 
+                /// <summary>
+                /// Resets allocation positions for reuse while retaining the allocated storage.
+                /// </summary>
                 public void Rewind() {
                     this.position = 0u;
                 }
@@ -63,8 +90,14 @@ namespace ME.BECS {
             private uint rover;
             private uint initialSize;
 
+            /// <summary>
+            /// Blocks allocated used by <c>TempAllocator.Block</c>.
+            /// </summary>
             public uint BlocksAllocated => (uint)this.data.Length;
 
+            /// <summary>
+            /// Number of bytes allocated for the associated storage.
+            /// </summary>
             public uint BytesAllocated {
                 get {
                     var count = 0u;
@@ -75,6 +108,9 @@ namespace ME.BECS {
                 }
             }
 
+            /// <summary>
+            /// Number of allocated bytes currently in use.
+            /// </summary>
             public uint BytesUsed {
                 get {
                     var count = 0u;
@@ -85,6 +121,9 @@ namespace ME.BECS {
                 }
             }
 
+            /// <summary>
+            /// Initializes block state from the supplied context.
+            /// </summary>
             public void Initialize(uint initialSize) {
                 this.initialSize = initialSize;
                 this.data = new UnsafeList<MemoryBlock>(4, Allocator.Persistent);
@@ -92,6 +131,9 @@ namespace ME.BECS {
                 this.AddBlock(initialSize);
             }
 
+            /// <summary>
+            /// Allocates native storage and returns its allocator-relative address.
+            /// </summary>
             public byte* Alloc(uint size) {
                 while (true) {
                     for (uint i = this.rover; i < this.data.Length; ++i) {
@@ -111,6 +153,9 @@ namespace ME.BECS {
                 this.data.Add(block);
             }
 
+            /// <summary>
+            /// Releases the resources owned by this block instance.
+            /// </summary>
             public void Dispose() {
                 for (uint i = 0u; i < this.data.Length; ++i) {
                     (this.data.Ptr + i)->Dispose();
@@ -118,6 +163,9 @@ namespace ME.BECS {
                 this.data.Dispose();
             }
 
+            /// <summary>
+            /// Resets allocation positions for reuse while retaining the allocated storage.
+            /// </summary>
             public void Rewind() {
                 for (uint i = 0u; i < this.data.Length; ++i) {
                     (this.data.Ptr + i)->Rewind();
@@ -131,6 +179,9 @@ namespace ME.BECS {
 
         private Block* blocksPerThread;
         
+        /// <summary>
+        /// Blocks allocated used by <c>TempAllocator</c>.
+        /// </summary>
         public uint BlocksAllocated {
             get {
                 var count = 0u;
@@ -141,6 +192,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Number of bytes allocated for the associated storage.
+        /// </summary>
         public uint BytesAllocated {
             get {
                 var count = 0u;
@@ -151,6 +205,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Number of allocated bytes currently in use.
+        /// </summary>
         public uint BytesUsed {
             get {
                 var count = 0u;
@@ -161,6 +218,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Initializes temp allocator state from the supplied context.
+        /// </summary>
         public void Initialize(uint initialSize) {
             var count = JobUtils.ThreadsCount;
             this.blocksPerThread = (Block*)UnsafeUtility.Malloc(sizeof(Block) * count, UnsafeUtility.AlignOf<Block>(), Allocator.Persistent);
@@ -169,6 +229,9 @@ namespace ME.BECS {
             }
         }
         
+        /// <summary>
+        /// Releases the resources owned by this temp allocator instance.
+        /// </summary>
         public void Dispose() {
             var count = JobUtils.ThreadsCount;
             for (uint i = 0u; i < count; ++i) {
@@ -177,6 +240,9 @@ namespace ME.BECS {
             UnsafeUtility.Free(this.blocksPerThread, Allocator.Persistent);
         }
 
+        /// <summary>
+        /// Resets the positions of per-thread allocation blocks for reuse while retaining the allocated blocks.
+        /// </summary>
         public void Rewind() {
             var count = JobUtils.ThreadsCount;
             for (uint i = 0u; i < count; ++i) {
@@ -184,6 +250,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Attempts to  and reports whether the operation succeeded.
+        /// </summary>
         public int Try(ref AllocatorManager.Block block) {
             if (block.Range.Pointer == IntPtr.Zero) {
                 // Make the alignment multiple of cacheline size
@@ -216,12 +285,24 @@ namespace ME.BECS {
         [MonoPInvokeCallback(typeof(AllocatorManager.TryFunction))]
         internal static int Try(IntPtr state, ref AllocatorManager.Block block) => ((TempAllocator*)state)->Try(ref block);
 
+        /// <summary>
+        /// Function used by <c>TempAllocator</c>.
+        /// </summary>
         public AllocatorManager.TryFunction Function => Try;
+        /// <summary>
+        /// Handle used by <c>TempAllocator</c>.
+        /// </summary>
         public AllocatorManager.AllocatorHandle Handle {
             get => this.handle;
             set => this.handle = value;
         }
+        /// <summary>
+        /// Gets to allocator; this implementation returns <c>this.handle.ToAllocator</c>.
+        /// </summary>
         public Allocator ToAllocator => this.handle.ToAllocator;
+        /// <summary>
+        /// Gets is custom allocator; this implementation returns <c>this.handle.IsCustomAllocator</c>.
+        /// </summary>
         public bool IsCustomAllocator => this.handle.IsCustomAllocator;
         
     }

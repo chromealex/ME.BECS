@@ -8,11 +8,23 @@ namespace ME.BECS.Editor {
 
     using scg = System.Collections.Generic;
 
+    /// <summary>
+    /// Provides the Unity Editor window for world entity editor.
+    /// </summary>
     public class WorldEntityEditorWindow : UnityEditor.EditorWindow {
 
+        /// <summary>
+        /// Entity processed or represented by this value.
+        /// </summary>
         public Ent entity;
+        /// <summary>
+        /// Temp object used by <c>WorldEntityEditorWindow</c>.
+        /// </summary>
         public TempObject tempObject;
 
+        /// <summary>
+        /// Opens the entity inspector for the specified entity.
+        /// </summary>
         public static void Show(Ent ent) {
             var win = WorldEntityEditorWindow.CreateInstance<WorldEntityEditorWindow>();
             win.entity = ent;
@@ -20,12 +32,21 @@ namespace ME.BECS.Editor {
             win.Show();
         }
 
+        /// <summary>
+        /// Retains a temporary Unity object for the scope managed by this wrapper.
+        /// </summary>
         public class TempObject : ScriptableObject {
 
+            /// <summary>
+            /// Entity processed or represented by this value.
+            /// </summary>
             public Ent entity;
 
         }
 
+        /// <summary>
+        /// Builds the editor window's UI Toolkit hierarchy.
+        /// </summary>
         public void CreateGUI() {
 
             var instance = TempObject.CreateInstance<TempObject>();

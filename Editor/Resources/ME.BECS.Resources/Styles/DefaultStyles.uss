@@ -752,3 +752,10 @@ GradientAnimated {
 .compact-config-inspector .unity-list-view__foldout-header > .unity-foldout__toggle { background-color: var(--config-surface); }
 .compact-config-inspector .unity-list-view__foldout-header > .unity-foldout__toggle:hover { background-color: var(--becs-row-hover); }
 .compact-config-inspector .unity-list-view__footer .becs-list-action { background-image: none; }
+
+/* Runtime state is distinct from permission to edit inspector values. */
+.compact-ecs-hierarchy .h-element.h-inactive > .caption,
+.compact-ecs-hierarchy .h-element.h-inactive > .version { opacity: 0.45; }
+.runtime-entity-inspector .unity-base-field.runtime-readonly-field:disabled { opacity: 1; }
+.runtime-entity-inspector .runtime-readonly-field:disabled > .unity-base-field__label { color: var(--config-text); opacity: 1; }
+.runtime-entity-inspector .runtime-readonly-field:disabled > .unity-base-field__input { opacity: 0.5; }

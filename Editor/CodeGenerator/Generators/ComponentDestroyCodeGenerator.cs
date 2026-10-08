@@ -3,9 +3,18 @@ using System.Linq;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Defines component destroy code generator data used by entity processing.
+    /// </summary>
     public class ComponentDestroyCodeGenerator : CustomCodeGenerator {
+        /// <summary>
+        /// Source registration kind used by <c>ComponentDestroyCodeGenerator</c>.
+        /// </summary>
         public override string SourceRegistrationKind => this.GetType() == typeof(ComponentDestroyCodeGenerator) ? "destroy-callbacks" : base.SourceRegistrationKind;
 
+        /// <summary>
+        /// Adds the assembly references required by this feature's generated code.
+        /// </summary>
         public override void AddSourceGeneratorReferences(System.Collections.Generic.List<System.Type> references) =>
             references.AddRange(GetSelectedComponents(this.editorAssembly, this.asms));
 

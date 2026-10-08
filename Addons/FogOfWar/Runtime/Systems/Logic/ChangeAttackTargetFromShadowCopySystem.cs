@@ -13,15 +13,27 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Players;
     using ME.BECS.Units;
 
+    /// <summary>
+    /// Coordinates change attack target from shadow copy during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [UnityEngine.Tooltip("If target is shadow copy - we need to change it to original if it is visible")]
     public partial struct ChangeAttackTargetFromShadowCopySystem : IUpdate {
 
+        /// <summary>
+        /// Executes target work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct TargetJob : IJobForAspects<AttackAspect> {
 
+            /// <summary>
+            /// Create system used by <c>ChangeAttackTargetFromShadowCopySystem.TargetJob</c>.
+            /// </summary>
             public CreateSystem createSystem;
             
+            /// <summary>
+            /// Processes target using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect) {
 
                 if (aspect.target.IsAlive() == true) {
@@ -36,11 +48,20 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Executes targets work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct TargetsJob : IJobForAspects<AttackAspect> {
 
+            /// <summary>
+            /// Create system used by <c>ChangeAttackTargetFromShadowCopySystem.TargetsJob</c>.
+            /// </summary>
             public CreateSystem createSystem;
 
+            /// <summary>
+            /// Processes targets using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect) {
 
                 if (aspect.targets.Count > 0u) {
@@ -59,6 +80,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Updates change attack target from shadow copy system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var system = context.world.GetSystem<CreateSystem>();

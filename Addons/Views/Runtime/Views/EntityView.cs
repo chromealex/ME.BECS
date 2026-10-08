@@ -4,10 +4,19 @@ using UnityEngine;
 
 namespace ME.BECS.Views {
     
+    /// <summary>
+    /// Defines the operations required by view module.
+    /// </summary>
     public interface IViewModule { }
 
+    /// <summary>
+    /// Defines the operations required by view on validate.
+    /// </summary>
     public interface IViewOnValidate {
 
+        /// <summary>
+        /// Refreshes or validates state after values change in the Unity Inspector.
+        /// </summary>
         void OnValidate(GameObject gameObject);
 
     }
@@ -36,44 +45,98 @@ namespace ME.BECS.Views {
     /// <typeparam name="T">Type to ignore</typeparam>
     public interface IViewTrackIgnore<T> { }
 
+    /// <summary>
+    /// Defines initialization performed once when a view module instance is initialized.
+    /// </summary>
     public interface IViewInitialize : IViewModule {
+        /// <summary>
+        /// Initializes i view initialize state from the supplied context.
+        /// </summary>
         void OnInitialize();
     }
 
+    /// <summary>
+    /// Defines final cleanup of resources owned by a view module instance.
+    /// </summary>
     public interface IViewDeInitialize : IViewModule {
+        /// <summary>
+        /// Releases i view de initialize state at the end of its owning lifecycle.
+        /// </summary>
         void OnDeInitialize();
     }
 
     /// <summary>Called after the spawn pose is committed, regardless of culling. Not called for pool prewarming.</summary>
     public interface IViewEnableFromPool : IViewModule {
+        /// <summary>
+        /// Activates presentation state when the view is taken from the pool.
+        /// </summary>
         void OnEnableFromPool(in ViewData ent);
     }
 
+    /// <summary>
+    /// Defines cleanup of active presentation state when a view returns to the pool.
+    /// </summary>
     public interface IViewDisableToPool : IViewModule {
+        /// <summary>
+        /// Resets active presentation state before the view returns to the pool.
+        /// </summary>
         void OnDisableToPool();
     }
 
+    /// <summary>
+    /// Defines application of logic-entity state to the associated view.
+    /// </summary>
     public interface IViewApplyState : IViewModule {
+        /// <summary>
+        /// Applies the current logic state to the presentation instance.
+        /// </summary>
         void ApplyState(in ViewData ent);
     }
 
+    /// <summary>
+    /// Defines the operations required by view apply state parallel.
+    /// </summary>
     public interface IViewApplyStateParallel : IViewModule {
+        /// <summary>
+        /// Applies logic state during the parallel phase of view processing.
+        /// </summary>
         void ApplyStateParallel(in ViewData ent);
     }
 
+    /// <summary>
+    /// Defines per-frame presentation updates for a view module.
+    /// </summary>
     public interface IViewUpdate : IViewModule {
+        /// <summary>
+        /// Updates i view update using the current inputs and execution context.
+        /// </summary>
         void OnUpdate(in ViewData ent, float dt);
     }
 
+    /// <summary>
+    /// Defines the operations required by view update parallel.
+    /// </summary>
     public interface IViewUpdateParallel : IViewModule {
+        /// <summary>
+        /// Updates presentation during the parallel phase of view processing.
+        /// </summary>
         void OnUpdateParallel(in ViewData ent, float dt);
     }
 
+    /// <summary>
+    /// Associates a view with its logic entity and the state needed by view callbacks.
+    /// </summary>
     public ref struct ViewData {
 
         internal ViewDataRaw data;
 
+        /// <summary>
+        /// Gets logic ent; this implementation returns <c>this.data.logicEnt</c>.
+        /// </summary>
         public EntRO logicEnt => this.data.logicEnt;
+        /// <summary>
+        /// Gets local view ent; this implementation returns <c>this.data.localViewEnt</c>.
+        /// </summary>
         public Ent localViewEnt => this.data.localViewEnt;
 
         internal ViewData(in EntRO ent, in Ent localEnt) {
@@ -81,26 +144,44 @@ namespace ME.BECS.Views {
             this.data.localViewEnt = localEnt;
         }
 
+        /// <summary>
+        /// Converts the supplied value to <c>ViewData</c>.
+        /// </summary>
         public static implicit operator ViewData(ViewDataRaw raw) {
             return new ViewData() {
                 data = raw,
             };
         }
 
+        /// <summary>
+        /// Converts the supplied value to <c>EntRO</c>.
+        /// </summary>
         public static implicit operator EntRO(ViewData data) {
             return data.logicEnt;
         }
         
+        /// <summary>
+        /// Converts the supplied value to <c>Ent</c>.
+        /// </summary>
         public static implicit operator Ent(ViewData data) {
             return data.localViewEnt;
         }
 
     }
 
+    /// <summary>
+    /// Stores the raw entity and transform data used by view processing.
+    /// </summary>
     [System.Serializable]
     public struct ViewDataRaw {
 
+        /// <summary>
+        /// Logic ent used by <c>ViewDataRaw</c>.
+        /// </summary>
         public EntRO logicEnt;
+        /// <summary>
+        /// Local view ent used by <c>ViewDataRaw</c>.
+        /// </summary>
         public Ent localViewEnt;
 
         internal ViewDataRaw(in EntRO ent, in Ent localEnt) {
@@ -108,6 +189,9 @@ namespace ME.BECS.Views {
             this.localViewEnt = localEnt;
         }
         
+        /// <summary>
+        /// Converts the supplied value to <c>ViewDataRaw</c>.
+        /// </summary>
         public static implicit operator ViewDataRaw(ViewData data) {
             return new ViewDataRaw() {
                 logicEnt = data.logicEnt,
@@ -117,6 +201,9 @@ namespace ME.BECS.Views {
 
     }
 
+    /// <summary>
+    /// Defines the supported culling type values.
+    /// </summary>
     public enum CullingType {
         /// <summary>
         /// Apply frustum culling for ApplyState/OnUpdate methods
@@ -136,20 +223,47 @@ namespace ME.BECS.Views {
         FrustumApplyStateOnly = 3,
     }
 
+    /// <summary>
+    /// Defines the supported culling job type values.
+    /// </summary>
     public enum CullingJobType {
+        /// <summary>
+        /// Apply state option for <c>CullingJobType</c>.
+        /// </summary>
         ApplyState,
+        /// <summary>
+        /// Update option for <c>CullingJobType</c>.
+        /// </summary>
         Update,
+        /// <summary>
+        /// Apply state parallel option for <c>CullingJobType</c>.
+        /// </summary>
         ApplyStateParallel,
+        /// <summary>
+        /// Update parallel option for <c>CullingJobType</c>.
+        /// </summary>
         UpdateParallel,
     }
 
+    /// <summary>
+    /// Stores the modules attached to a view and exposes module lookup operations.
+    /// </summary>
     [System.Serializable]
     public struct ViewModules {
 
+        /// <summary>
+        /// Provides lifecycle integration for the  feature.
+        /// </summary>
         [System.Serializable]
         public struct Module {
 
+            /// <summary>
+            /// Whether enabled behavior or state is selected.
+            /// </summary>
             public bool enabled;
+            /// <summary>
+            /// Module used by <c>ViewModules.Module</c>.
+            /// </summary>
             [SerializeReference]
             [ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute(unmanagedTypes = false, runtimeAssembliesOnly = true)]
             [SerializeField]
@@ -157,14 +271,23 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Entries stored by this container.
+        /// </summary>
         public Module[] items;
 
+        /// <summary>
+        /// Creates <c>ViewModules</c> using the supplied creation arguments.
+        /// </summary>
         public static ViewModules Create() {
             return new ViewModules() {
                 items = System.Array.Empty<Module>(),
             };
         }
 
+        /// <summary>
+        /// Checks the supplied state against the constraints required by this API.
+        /// </summary>
         public void Validate(ref IViewModule[] oldModules) {
             if (oldModules.Length == 0) return;
             this.items = oldModules.Select(x => new Module() {
@@ -174,6 +297,9 @@ namespace ME.BECS.Views {
             oldModules = System.Array.Empty<IViewModule>();
         }
 
+        /// <summary>
+        /// Checks the supplied state against the constraints required by this API.
+        /// </summary>
         public void Validate(GameObject gameObject) {
             foreach (var module in this.items) {
                 if (module.module is IViewOnValidate onValidate) {
@@ -182,6 +308,9 @@ namespace ME.BECS.Views {
             }
         }
 
+        /// <summary>
+        /// Returns the first matching entry, or the default value when none exists.
+        /// </summary>
         public IViewModule FirstOrDefault(System.Func<IViewModule, bool> predicate) {
             foreach (var item in this.items) {
                 if (predicate.Invoke(item.module) == true) return item.module;
@@ -189,6 +318,9 @@ namespace ME.BECS.Views {
             return null;
         }
 
+        /// <summary>
+        /// Tests whether any view module satisfies the supplied predicate.
+        /// </summary>
         public bool Any(System.Func<IViewModule, bool> predicate) {
             foreach (var item in this.items) {
                 if (predicate.Invoke(item.module) == true) return true;
@@ -198,13 +330,22 @@ namespace ME.BECS.Views {
 
     }
     
+    /// <summary>
+    /// Presents a logic entity through a pooled Unity object and view lifecycle callbacks.
+    /// </summary>
     public abstract class EntityView : MonoBehaviour, IView {
         
+        /// <summary>
+        /// View modules used by <c>EntityView</c>.
+        /// </summary>
         [HideInInspector]
         [SerializeReference]
         [ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute(unmanagedTypes = false, runtimeAssembliesOnly = true)]
         [SerializeField]
         protected internal IViewModule[] viewModules = System.Array.Empty<IViewModule>();
+        /// <summary>
+        /// Modules used by <c>EntityView</c>.
+        /// </summary>
         [SerializeField]
         protected internal ViewModules modules = ViewModules.Create();
 
@@ -225,22 +366,49 @@ namespace ME.BECS.Views {
         [SerializeField][HideInInspector]
         internal int[] updateParallelModules;
 
+        /// <summary>
+        /// Culling type used by <c>EntityView</c>.
+        /// </summary>
         public CullingType cullingType;
+        /// <summary>
+        /// Pool count for the associated storage.
+        /// </summary>
         public uint poolCount;
+        /// <summary>
+        /// Supported providers used by <c>EntityView</c>.
+        /// </summary>
         [ViewsProviderMask]
         public uint supportedProviders = uint.MaxValue;
+        /// <summary>
+        /// Group changed tracker used by <c>EntityView</c>.
+        /// </summary>
         public GroupChangedTracker groupChangedTracker;
+        /// <summary>
+        /// Group changed tracker parallel used by <c>EntityView</c>.
+        /// </summary>
         public GroupChangedTracker groupChangedTrackerParallel;
+        /// <summary>
+        /// Root info used by <c>EntityView</c>.
+        /// </summary>
         public ViewRoot rootInfo;
         [SerializeField]
         internal ViewDataRaw viewDataRaw;
+        /// <summary>
+        /// Gets view data; this implementation returns <c>this.viewDataRaw</c>.
+        /// </summary>
         public ViewData viewData => this.viewDataRaw;
         
+        /// <summary>
+        /// Entity whose components or lifetime are associated with this value.
+        /// </summary>
         [System.Obsolete("Use viewData instead")]
         public ViewData ent => this.viewData;
 
         ViewData IView.GetViewData() => this.viewData;
 
+        /// <summary>
+        /// Returns module.
+        /// </summary>
         public T GetModule<T>() where T : IViewModule {
             foreach (var module in this.modules.items) {
                 if (module.enabled == true && module.module is T mod) return mod;
@@ -313,22 +481,49 @@ namespace ME.BECS.Views {
             this.OnUpdateParallel(in viewData, dt);
         }
 
+        /// <summary>
+        /// Provides the <c>OnEnableFromPool</c> callback; this implementation performs no work.
+        /// </summary>
         protected internal virtual void OnEnableFromPool(in ViewData viewData) { }
 
+        /// <summary>
+        /// Provides the <c>OnDisableToPool</c> callback; this implementation performs no work.
+        /// </summary>
         protected internal virtual void OnDisableToPool() { }
 
+        /// <summary>
+        /// Provides the <c>OnInitialize</c> callback; this implementation performs no work.
+        /// </summary>
         protected internal virtual void OnInitialize() { }
 
+        /// <summary>
+        /// Provides the <c>OnDeInitialize</c> callback; this implementation performs no work.
+        /// </summary>
         protected internal virtual void OnDeInitialize() { }
 
+        /// <summary>
+        /// Provides the <c>ApplyState</c> callback; this implementation performs no work.
+        /// </summary>
         protected internal virtual void ApplyState(in ViewData viewData) { }
 
+        /// <summary>
+        /// Provides the <c>ApplyStateParallel</c> callback; this implementation performs no work.
+        /// </summary>
         protected internal virtual void ApplyStateParallel(in ViewData viewData) { }
 
+        /// <summary>
+        /// Provides the <c>OnUpdate</c> callback; this implementation performs no work.
+        /// </summary>
         protected internal virtual void OnUpdate(in ViewData viewData, float dt) { }
 
+        /// <summary>
+        /// Provides the <c>OnUpdateParallel</c> callback; this implementation performs no work.
+        /// </summary>
         protected internal virtual void OnUpdateParallel(in ViewData viewData, float dt) { }
 
+        /// <summary>
+        /// Refreshes or validates state after values change in the Unity Inspector.
+        /// </summary>
         public virtual void OnValidate() {
             
             this.modules.Validate(ref this.viewModules);

@@ -10,6 +10,9 @@ namespace ME.BECS {
     #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides u int list hash storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [IgnoreProfiler]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -19,14 +22,26 @@ namespace ME.BECS {
     public unsafe struct UIntListHash : IIsCreated {
 
         private MemArray<uint> arr;
+        /// <summary>
+        /// Indicates hash.
+        /// </summary>
         public uint hash;
+        /// <summary>
+        /// Number of entries currently tracked by this value.
+        /// </summary>
         public uint Count;
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public readonly bool IsCreated {
             [INLINE(256)]
             get => this.arr.IsCreated;
         }
 
+        /// <summary>
+        /// Number of elements that fit in the currently reserved storage.
+        /// </summary>
         public uint Capacity {
             [INLINE(256)]
             get {
@@ -35,6 +50,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Initializes <c>UIntListHash</c> with storage for the requested number of elements.
+        /// </summary>
         [INLINE(256)]
         public UIntListHash(ref MemoryAllocator allocator, uint capacity) {
 
@@ -44,11 +62,17 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Updates cached native access for the requested Burst execution mode.
+        /// </summary>
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             this.arr.BurstMode(in allocator, state);
         }
 
+        /// <summary>
+        /// Returns the allocator-relative address of the underlying storage.
+        /// </summary>
         [INLINE(256)]
         public readonly MemPtr GetMemPtr() {
             
@@ -57,6 +81,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Returns a borrowed pointer to collection storage; mutation that reallocates storage or disposal invalidates it.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
 
@@ -65,6 +92,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this u int list hash instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose(ref MemoryAllocator allocator) {
 
@@ -74,6 +104,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Schedules release of the owned storage after the supplied dependency and returns the disposal handle.
+        /// </summary>
         [INLINE(256)]
         public Unity.Jobs.JobHandle Dispose(ushort worldId, Unity.Jobs.JobHandle inputDeps) {
 
@@ -90,6 +123,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes stored entries while retaining the backing allocation for reuse.
+        /// </summary>
         [INLINE(256)]
         public void Clear() {
 
@@ -99,6 +135,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public ref uint this[in MemoryAllocator allocator, uint index] {
             [INLINE(256)]
             get {
@@ -107,6 +146,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Grows backing storage when needed to satisfy the requested capacity.
+        /// </summary>
         [INLINE(256)]
         public bool EnsureCapacity(ref MemoryAllocator allocator, uint capacity) {
 
@@ -115,6 +157,9 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Adds the supplied entry to u int list hash.
+        /// </summary>
         [INLINE(256)]
         public uint Add(ref MemoryAllocator allocator, uint obj) {
 
@@ -137,6 +182,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Removes fast.
+        /// </summary>
         [INLINE(256)]
         public bool RemoveFast(in MemoryAllocator allocator, uint obj) {
 
@@ -157,6 +205,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Removes the indexed element by moving a tail element into its place; element order is not preserved.
+        /// </summary>
         [INLINE(256)]
         public bool RemoveAtFast(in MemoryAllocator allocator, uint index) {
             
@@ -172,6 +223,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Copies to.
+        /// </summary>
         [INLINE(256)]
         public readonly void CopyTo(ref MemoryAllocator allocator, in MemPtr arrPtr, uint srcOffset, uint index, uint count) {
             
@@ -182,11 +236,17 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Returns hash.
+        /// </summary>
         [INLINE(256)]
         public readonly uint GetHash() {
             return this.hash;
         }
 
+        /// <summary>
+        /// Adds range.
+        /// </summary>
         [INLINE(256)]
         public void AddRange(ref MemoryAllocator allocator, in UIntHashSet collection) {
 
@@ -199,6 +259,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Adds range.
+        /// </summary>
         [INLINE(256)]
         public void AddRange(ref MemoryAllocator allocator, in UIntListHash collection, uint fromIdx, uint toIdx) {
 
@@ -228,6 +291,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Converts the value to managed array.
+        /// </summary>
         public uint[] ToManagedArray(in MemoryAllocator allocator) {
             
             E.IS_CREATED(this);
@@ -251,6 +317,9 @@ namespace ME.BECS {
             gcHandle.Free();
         }
 
+        /// <summary>
+        /// Tests whether the specified value is present.
+        /// </summary>
         public bool Contains(in MemoryAllocator allocator, uint value) {
 
             for (uint i = 0; i < this.Count; ++i) {
@@ -261,6 +330,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns the amount of reserved storage in bytes.
+        /// </summary>
         public uint GetReservedSizeInBytes() {
             return this.arr.GetReservedSizeInBytes();
         }

@@ -21,24 +21,51 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Transforms;
     using ME.BECS.Units;
 
+    /// <summary>
+    /// Coordinates create during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public partial struct CreateSystem : IAwake, IUpdate {
 
+        /// <summary>
+        /// Map position used by the associated spatial operation.
+        /// </summary>
         public float2 mapPosition;
+        /// <summary>
+        /// Map size used by <c>CreateSystem</c>.
+        /// </summary>
         public float2 mapSize;
+        /// <summary>
+        /// Resolution used by <c>CreateSystem</c>.
+        /// </summary>
         public tfloat resolution;
+        /// <summary>
+        /// Pathfinding graph id used to locate the associated entry.
+        /// </summary>
         public uint pathfindingGraphId;
         internal Ent heights;
 
+        /// <summary>
+        /// Returns heights.
+        /// </summary>
         [INLINE(256)]
         public readonly Ent GetHeights() => this.heights;
         
+        /// <summary>
+        /// Executes create work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct CreateJob : IJobForAspects<TeamAspect> {
 
+            /// <summary>
+            /// Fow size used by <c>CreateSystem.CreateJob</c>.
+            /// </summary>
             public uint2 fowSize;
             
+            /// <summary>
+            /// Processes create using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TeamAspect aspect) {
 
                 var map = new FogOfWarComponent() {
@@ -51,9 +78,15 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Executes clean up work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct CleanUpJob : IJobForAspects<TeamAspect> {
             
+            /// <summary>
+            /// Processes clean up using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TeamAspect player) {
                 
                 var fow = player.ent.Read<FogOfWarComponent>();
@@ -63,14 +96,32 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Executes update height work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct UpdateHeightJob : IJobParallelFor {
 
+            /// <summary>
+            /// Dirty chunks used by <c>CreateSystem.UpdateHeightJob</c>.
+            /// </summary>
             public MemArrayAuto<ulong> dirtyChunks;
+            /// <summary>
+            /// World used by the containing operation.
+            /// </summary>
             public World world;
+            /// <summary>
+            /// Height samples used by the geometry or graph.
+            /// </summary>
             public Ent heights;
+            /// <summary>
+            /// Graph used by the associated operation.
+            /// </summary>
             public Ent graph;
 
+            /// <summary>
+            /// Processes update height using the supplied job inputs.
+            /// </summary>
             public void Execute(int index) {
                 
                 if (this.dirtyChunks.IsCreated == true && this.dirtyChunks[index] != this.world.CurrentTick && this.dirtyChunks[index] != this.world.CurrentTick + 1u && this.dirtyChunks[index] != this.world.CurrentTick - 1u) return;
@@ -96,6 +147,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Initializes create system state from the supplied context.
+        /// </summary>
         public void OnAwake(ref SystemContext context) {
             
             // for each player
@@ -126,6 +180,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Updates create system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var pathfinding = context.world.GetSystem<BuildGraphSystem>();
@@ -142,6 +199,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is visible any.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsVisibleAny(in PlayerAspect player, in MemArrayAuto<float3> points) {
 
@@ -150,6 +210,9 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Tests whether the context is visible any.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsVisibleAny(in PlayerAspect player, in MemArrayAuto<UnityEngine.Rect> points) {
 
@@ -158,6 +221,9 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Tests whether the context is visible any.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsVisibleAny(in PlayerAspect player, in MemArrayAuto<RectUInt> points) {
 
@@ -166,6 +232,9 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Tests whether the context is visible any.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsVisibleAny(in Ent team, in MemArrayAuto<float3> points) {
             
@@ -180,6 +249,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is visible any.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsVisibleAny(in Ent team, in MemArrayAuto<UnityEngine.Rect> points) {
             
@@ -199,6 +271,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is visible any.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsVisibleAny(in Ent team, in MemArrayAuto<RectUInt> points) {
             
@@ -222,6 +297,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is explored any.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsExploredAny(in PlayerAspect player, in MemArrayAuto<float3> points) {
 
@@ -230,6 +308,9 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Tests whether the context is explored any.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsExploredAny(in PlayerAspect player, in MemArrayAuto<UnityEngine.Rect> points) {
 
@@ -238,6 +319,9 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Tests whether the context is explored any.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsExploredAny(in PlayerAspect player, in MemArrayAuto<RectUInt> points) {
 
@@ -246,6 +330,9 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Tests whether the context is explored any.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsExploredAny(in Ent team, in MemArrayAuto<float3> points) {
 
@@ -260,6 +347,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is explored any.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsExploredAny(in Ent team, in MemArrayAuto<UnityEngine.Rect> points) {
             
@@ -279,6 +369,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is explored any.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsExploredAny(in Ent team, in MemArrayAuto<RectUInt> points) {
             
@@ -302,6 +395,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is visible.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsVisible(in Ent team, in Ent unit) {
             
@@ -316,6 +412,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is visible.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsVisible(in Ent team, in float3 position) {
             
@@ -326,12 +425,21 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is visible.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsVisible(in PlayerAspect player, in Ent unit) => this.IsVisible(player.readTeam, in unit);
 
+        /// <summary>
+        /// Tests whether the context is visible.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsVisible(in PlayerAspect player, in float3 position) => this.IsVisible(player.readTeam, in position);
 
+        /// <summary>
+        /// Tests whether the context is explored.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsExplored(in Ent team, in float3 position) {
             
@@ -342,6 +450,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is explored.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsExplored(in Ent team, in Ent unit) {
             
@@ -352,9 +463,15 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is explored.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsExplored(in PlayerAspect player, in float3 position) => this.IsExplored(player.readTeam, in position);
 
+        /// <summary>
+        /// Tests whether the context is explored.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsExplored(in PlayerAspect player, in Ent unit) => this.IsExplored(player.readTeam, in unit);
 

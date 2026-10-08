@@ -5,12 +5,21 @@ using ME.BECS.Editor.Jobs;
 
 namespace ME.BECS.Editor.Systems {
 
+    /// <summary>
+    /// Exports system dependencies registration data for generated code.
+    /// </summary>
     public class SystemDependenciesCodeGenerator : CustomCodeGenerator {
+        /// <summary>
+        /// Whether cache compiled inputs behavior or state is selected.
+        /// </summary>
         public override bool CacheCompiledInputs => this.GetType() == typeof(SystemDependenciesCodeGenerator);
         private readonly SourceGeneratorSystemDependencies sourceDependencies = new SourceGeneratorSystemDependencies();
 
         private readonly System.Collections.Generic.HashSet<System.Type> sourceReferences = new System.Collections.Generic.HashSet<System.Type>();
 
+        /// <summary>
+        /// Adds the assembly references required by this feature's generated code.
+        /// </summary>
         public override void AddSourceGeneratorReferences(System.Collections.Generic.List<System.Type> references) =>
             references.AddRange(this.sourceReferences.OrderBy(type => type.AssemblyQualifiedName, System.StringComparer.Ordinal));
 
@@ -35,6 +44,9 @@ namespace ME.BECS.Editor.Systems {
             }
         }
 
+        /// <summary>
+        /// Adds this feature's registration inputs to the source-generator export.
+        /// </summary>
         public override void AppendSourceGeneratorInputs(System.Text.StringBuilder manifest) {
             this.sourceReferences.Clear();
             if (!this.editorAssembly) return;
@@ -87,21 +99,48 @@ namespace ME.BECS.Editor.Systems {
             }
         }
 
+        /// <summary>
+        /// Defines the graph structure used for graph.
+        /// </summary>
         public class Graph {
 
+            /// <summary>
+            /// Defines a node entry in the associated graph.
+            /// </summary>
             public class Node {
 
+                /// <summary>
+                /// System instance used by the associated operation.
+                /// </summary>
                 public System.Type system;
+                /// <summary>
+                /// Dependencies used by <c>SystemDependenciesCodeGenerator.Graph.Node</c>.
+                /// </summary>
                 public System.Collections.Generic.List<System.Type> dependencies;
+                /// <summary>
+                /// Inputs used by <c>SystemDependenciesCodeGenerator.Graph.Node</c>.
+                /// </summary>
                 public System.Collections.Generic.List<System.Type> inputs;
+                /// <summary>
+                /// Outputs used by <c>SystemDependenciesCodeGenerator.Graph.Node</c>.
+                /// </summary>
                 public System.Collections.Generic.List<System.Type> outputs;
+                /// <summary>
+                /// Diagnostics produced while validating or processing the inputs.
+                /// </summary>
                 [System.NonSerializedAttribute]
                 public System.Collections.Generic.List<MethodInfoDependencies.Error> errors; 
 
+                /// <summary>
+                /// Formats this value for display or diagnostics.
+                /// </summary>
                 public override string ToString() {
                     return "// " + this.system.FullName + "\n// |------ " + string.Join("\n// |------ ", this.dependencies.Select(x => x.ToString()).Distinct().OrderBy(x => x).ToArray());
                 }
 
+                /// <summary>
+                /// Tests whether at least one requested value is present.
+                /// </summary>
                 public bool ContainsAny(System.Collections.Generic.List<System.Type> types) {
                     for (int i = 0; i < this.outputs.Count; ++i) {
                         for (int j = 0; j < types.Count; ++j) {
@@ -113,8 +152,14 @@ namespace ME.BECS.Editor.Systems {
 
             }
 
+            /// <summary>
+            /// Nodes composing the associated graph.
+            /// </summary>
             public Node[] nodes;
 
+            /// <summary>
+            /// Initializes <c>Graph</c> from the supplied nodes.
+            /// </summary>
             public Graph(System.Collections.Generic.Dictionary<System.Type, Graph.Node> nodes) {
                 this.nodes = nodes.Select(x => x.Value).ToArray();
                 // find dependencies for each node
@@ -130,21 +175,48 @@ namespace ME.BECS.Editor.Systems {
 
         }
 
+        /// <summary>
+        /// Defines method info dependencies state and operations for <c>SystemDependenciesCodeGenerator</c>.
+        /// </summary>
         public struct MethodInfoDependencies {
 
+            /// <summary>
+            /// Defines error state and operations for <c>SystemDependenciesCodeGenerator.MethodInfoDependencies</c>.
+            /// </summary>
             public struct Error : System.IEquatable<Error> {
 
+                /// <summary>
+                /// Defines the supported code values.
+                /// </summary>
                 public enum Code {
 
+                    /// <summary>
+                    /// Method call required option for <c>SystemDependenciesCodeGenerator.MethodInfoDependencies.Error.Code</c>.
+                    /// </summary>
                     MethodCallRequired,
+                    /// <summary>
+                    /// Method not required option for <c>SystemDependenciesCodeGenerator.MethodInfoDependencies.Error.Code</c>.
+                    /// </summary>
                     MethodNotRequired,
 
                 }
 
+                /// <summary>
+                /// Code used by <c>SystemDependenciesCodeGenerator.MethodInfoDependencies.Error</c>.
+                /// </summary>
                 public Code code;
+                /// <summary>
+                /// Caller method info used by <c>SystemDependenciesCodeGenerator.MethodInfoDependencies.Error</c>.
+                /// </summary>
                 public MethodInfo callerMethodInfo;
+                /// <summary>
+                /// Message used by <c>SystemDependenciesCodeGenerator.MethodInfoDependencies.Error</c>.
+                /// </summary>
                 public string message;
                 
+                /// <summary>
+                /// Returns display message.
+                /// </summary>
                 public string GetDisplayMessage() {
                     if (!string.IsNullOrEmpty(this.message)) return this.message;
                     string msg = string.Empty;
@@ -158,24 +230,42 @@ namespace ME.BECS.Editor.Systems {
                     return msg;
                 }
 
+                /// <summary>
+                /// Tests equality using the identity or value comparison defined by this type.
+                /// </summary>
                 public bool Equals(Error other) {
                     return this.code == other.code && Equals(this.callerMethodInfo, other.callerMethodInfo) &&
                         System.StringComparer.Ordinal.Equals(this.message, other.message);
                 }
 
+                /// <summary>
+                /// Tests equality using the identity or value comparison defined by this type.
+                /// </summary>
                 public override bool Equals(object obj) {
                     return obj is Error other && this.Equals(other);
                 }
 
+                /// <summary>
+                /// Returns a hash code consistent with this type's equality comparison.
+                /// </summary>
                 public override int GetHashCode() {
                     return System.HashCode.Combine((int)this.code, this.callerMethodInfo, this.message);
                 }
 
             }
 
+            /// <summary>
+            /// Ops used by <c>SystemDependenciesCodeGenerator.MethodInfoDependencies</c>.
+            /// </summary>
             public System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo> ops;
+            /// <summary>
+            /// Diagnostics produced while validating or processing the inputs.
+            /// </summary>
             public System.Collections.Generic.List<Error> errors;
 
+            /// <summary>
+            /// Initializes <c>MethodInfoDependencies</c> from the supplied types.
+            /// </summary>
             public MethodInfoDependencies(System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo> types) {
                 this.ops = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
                 this.errors = new System.Collections.Generic.List<Error>();
@@ -184,18 +274,30 @@ namespace ME.BECS.Editor.Systems {
                 }
             }
 
+            /// <summary>
+            /// Adds error.
+            /// </summary>
             public void AddError(Error error) {
                 this.errors.Add(error);
             }
 
+            /// <summary>
+            /// Returns inputs.
+            /// </summary>
             public System.Collections.Generic.List<System.Type> GetInputs() {
                 return this.ops.Where(x => x.op == RefOp.ReadOnly || x.op == RefOp.ReadWrite).Select(x => x.type).OrderBy(x => x.FullName).ToList();
             }
 
+            /// <summary>
+            /// Returns outputs.
+            /// </summary>
             public System.Collections.Generic.List<System.Type> GetOutputs() {
                 return this.ops.Where(x => (x.op == RefOp.WriteOnly || x.op == RefOp.ReadWrite) && typeof(ISystem).IsAssignableFrom(x.type) == false).Select(x => x.type).OrderBy(x => x.FullName).ToList();
             }
 
+            /// <summary>
+            /// Returns dependencies.
+            /// </summary>
             public System.Collections.Generic.List<System.Type> GetDependencies() {
                 return this.ops.Where(x => typeof(ISystem).IsAssignableFrom(x.type) == true).Select(x => x.type).Distinct().OrderBy(x => x.FullName).ToList();
             }
@@ -449,17 +551,41 @@ namespace ME.BECS.Editor.Systems {
             return method1.MetadataToken == method2.MetadataToken && method1.Module == method2.Module && method1.DeclaringType == method2.DeclaringType;
         }
 
+        /// <summary>
+        /// Defines used objects state and operations for <c>SystemDependenciesCodeGenerator</c>.
+        /// </summary>
         public struct UsedObjects {
 
+            /// <summary>
+            /// Systems used by <c>SystemDependenciesCodeGenerator.UsedObjects</c>.
+            /// </summary>
             public System.Collections.Generic.List<System.Type> systems;
+            /// <summary>
+            /// Component storage or descriptors used by this operation.
+            /// </summary>
             public System.Collections.Generic.List<System.Type> components; 
+            /// <summary>
+            /// Components group used by <c>SystemDependenciesCodeGenerator.UsedObjects</c>.
+            /// </summary>
             public System.Collections.Generic.List<System.Type> componentsGroup;
+            /// <summary>
+            /// Job types used by <c>SystemDependenciesCodeGenerator.UsedObjects</c>.
+            /// </summary>
             public System.Collections.Generic.List<System.Type> jobTypes;
+            /// <summary>
+            /// Entity types used by <c>SystemDependenciesCodeGenerator.UsedObjects</c>.
+            /// </summary>
             public System.Collections.Generic.List<System.Type> entityTypes;
+            /// <summary>
+            /// Aspect descriptors used by this operation.
+            /// </summary>
             public System.Collections.Generic.List<System.Type> aspects;
 
         }
 
+        /// <summary>
+        /// Returns used objects.
+        /// </summary>
         public static void GetUsedObjects(bool editorAssembly, out UsedObjects usedObjects) {
             // Editor registers all declared types; source declaration catalogs are
             // appropriate there. Runtime reachability comes from compiled IL.

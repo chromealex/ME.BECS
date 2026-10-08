@@ -8,18 +8,30 @@ using static ME.BECS.Cuts;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Draws aspect values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(IAspect), true)]
     public class AspectDrawer : PropertyDrawer {
 
         private TempObject tempObject;
         private VisualElement prevRoot;
 
+        /// <summary>
+        /// Retains a temporary Unity object for the scope managed by this wrapper.
+        /// </summary>
         public class TempObject : ScriptableObject {
 
+            /// <summary>
+            /// Entity processed or represented by this value.
+            /// </summary>
             public Ent entity;
 
         }
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             var aspect = (IAspect)PropertyEditorUtils.GetTargetObjectOfProperty(property);
@@ -30,6 +42,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Builds the editor window's UI Toolkit hierarchy.
+        /// </summary>
         public void CreateGUI(VisualElement root, Ent ent) {
 
             if (this.tempObject != null && this.tempObject.entity == ent) {

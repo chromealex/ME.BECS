@@ -6,6 +6,9 @@ namespace ME.BECS.Editor.JSON {
 	using System.Text;
 	using System.Globalization;
 
+	/// <summary>
+	/// Provides JSON parser operations for the associated BECS data.
+	/// </summary>
 	public class JsonParser : IDisposable {
 
 		enum Token { None, CurlyOpen, CurlyClose, SquareOpen, SquareClose, Colon, Comma, String, Number, BoolOrNull };
@@ -15,6 +18,9 @@ namespace ME.BECS.Editor.JSON {
 		// Temporary allocated
 		StringBuilder sb = new StringBuilder();
 
+		/// <summary>
+		/// Parses value.
+		/// </summary>
 		public static object ParseValue(string jsonString) {
 			using (var parser = new JsonParser(jsonString)) {
 				return parser.ParseValue();
@@ -25,6 +31,9 @@ namespace ME.BECS.Editor.JSON {
 			json = new StringReader(jsonString);
 		}
 
+		/// <summary>
+		/// Releases the resources owned by this JSON parser instance.
+		/// </summary>
 		public void Dispose() {
 			json.Dispose();
 			json = null;

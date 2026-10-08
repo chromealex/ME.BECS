@@ -11,9 +11,15 @@ namespace ME.BECS {
     #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides component, lifecycle and identity operations on entity handles.
+    /// </summary>
     public static unsafe partial class EntExt {
 
         #if !NO_INLINE
+        /// <summary>
+        /// Tests whether the specified component is enabled on the entity.
+        /// </summary>
         [INLINE(256)]
         #endif
         [CodeGeneratorIgnore][IgnoreProfiler]
@@ -26,6 +32,9 @@ namespace ME.BECS {
         }
 
         #if !NO_INLINE
+        /// <summary>
+        /// Enables an existing component so queries can match it.
+        /// </summary>
         [INLINE(256)]
         #endif
         [CodeGeneratorIgnore][IgnoreProfiler]
@@ -41,6 +50,9 @@ namespace ME.BECS {
         }
 
         #if !NO_INLINE
+        /// <summary>
+        /// Disables an existing component without removing its stored data.
+        /// </summary>
         [INLINE(256)]
         #endif
         [IgnoreProfiler]
@@ -56,6 +68,9 @@ namespace ME.BECS {
         }
 
         #if !NO_INLINE
+        /// <summary>
+        /// Writes component data to the entity and records the change through the batching layer.
+        /// </summary>
         [INLINE(256)]
         #endif
         [IgnoreProfiler]
@@ -69,6 +84,9 @@ namespace ME.BECS {
         }
 
         #if !NO_INLINE
+        /// <summary>
+        /// Removes the component from the entity through the batching layer.
+        /// </summary>
         [INLINE(256)]
         #endif
         [IgnoreProfiler]
@@ -82,6 +100,9 @@ namespace ME.BECS {
         }
 
         #if !NO_INLINE
+        /// <summary>
+        /// Returns writable component data, creating the component when it is absent.
+        /// </summary>
         [INLINE(256)]
         #endif
         [IgnoreProfiler]
@@ -94,6 +115,9 @@ namespace ME.BECS {
         }
 
         #if !NO_INLINE
+        /// <summary>
+        /// Returns writable data for an existing component; the component must already be present.
+        /// </summary>
         [INLINE(256)]
         #endif
         [IgnoreProfiler]
@@ -106,6 +130,9 @@ namespace ME.BECS {
         }
 
         #if !NO_INLINE
+        /// <summary>
+        /// Tests component presence, optionally requiring the component to be enabled.
+        /// </summary>
         [INLINE(256)]
         #endif
         [IgnoreProfiler]
@@ -118,6 +145,9 @@ namespace ME.BECS {
         }
 
         #if !NO_INLINE
+        /// <summary>
+        /// Returns read-only access to the component, or its default value when the component is absent.
+        /// </summary>
         [INLINE(256)]
         #endif
         [IgnoreProfiler]
@@ -130,6 +160,9 @@ namespace ME.BECS {
         }
 
         #if !NO_INLINE
+        /// <summary>
+        /// Reads component data and reports whether the component is present.
+        /// </summary>
         [INLINE(256)]
         #endif
         [IgnoreProfiler]
@@ -142,6 +175,9 @@ namespace ME.BECS {
         }
 
         #if !NO_INLINE
+        /// <summary>
+        /// Reads component data and reports whether the component is present.
+        /// </summary>
         [INLINE(256)]
         #endif
         [IgnoreProfiler]
@@ -155,6 +191,9 @@ namespace ME.BECS {
         }
 
         #if !NO_INLINE
+        /// <summary>
+        /// Adds the tag when the value is true and removes it when the value is false.
+        /// </summary>
         [INLINE(256)]
         #endif
         [IgnoreProfiler]
@@ -171,6 +210,9 @@ namespace ME.BECS {
         }
 
         #if !NO_INLINE
+        /// <summary>
+        /// Compares the tag's presence with the requested boolean value.
+        /// </summary>
         [INLINE(256)]
         #endif
         [IgnoreProfiler]

@@ -18,36 +18,78 @@ namespace ME.BECS.Pathfinding {
     using ME.BECS.Jobs;
     using static Cuts;
 
+    /// <summary>
+    /// Stores result item for the associated pathfinding API.
+    /// </summary>
     public struct ResultItem : System.IEquatable<ResultItem> {
 
+        /// <summary>
+        /// Number of elements in the associated storage.
+        /// </summary>
         public uint length;
+        /// <summary>
+        /// Starting value or source of the associated operation.
+        /// </summary>
         public uint from;
+        /// <summary>
+        /// Ending value or destination of the associated operation.
+        /// </summary>
         public uint to;
+        /// <summary>
+        /// Chunk index used to locate the associated entry.
+        /// </summary>
         public uint chunkIndex;
+        /// <summary>
+        /// To chunk index used to locate the associated entry.
+        /// </summary>
         public uint toChunkIndex;
 
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         public bool Equals(ResultItem other) {
             return (this.from == other.from && this.to == other.to) ||
                    (this.from == other.to && this.to == other.from);
         }
 
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         public override bool Equals(object obj) {
             return obj is ResultItem other && this.Equals(other);
         }
 
+        /// <summary>
+        /// Returns a hash code consistent with this type's equality comparison.
+        /// </summary>
         public override int GetHashCode() {
             return (int)(this.from ^ this.to);
         }
 
     }
 
+    /// <summary>
+    /// Executes build slope work through the job scheduler.
+    /// </summary>
     [BURST]
     public partial struct BuildSlopeJob : IJob {
 
+        /// <summary>
+        /// Graph used by the associated operation.
+        /// </summary>
         public Ent graph;
+        /// <summary>
+        /// World used by the containing operation.
+        /// </summary>
         public World world;
+        /// <summary>
+        /// Chunks composing the associated graph or storage.
+        /// </summary>
         public MemArrayAuto<ChunkComponent> chunks;
 
+        /// <summary>
+        /// Processes build slope using the supplied job inputs.
+        /// </summary>
         public void Execute() {
 
             var root = this.graph.Read<RootGraphComponent>();
@@ -78,14 +120,32 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    /// <summary>
+    /// Executes build chunks work through the job scheduler.
+    /// </summary>
     [BURST]
     public partial struct BuildChunksJob : IJob {
 
+        /// <summary>
+        /// Graph used by the associated operation.
+        /// </summary>
         public Ent graph;
+        /// <summary>
+        /// World used by the containing operation.
+        /// </summary>
         public World world;
+        /// <summary>
+        /// Chunks composing the associated graph or storage.
+        /// </summary>
         public MemArrayAuto<ChunkComponent> chunks;
+        /// <summary>
+        /// Height samples used by the geometry or graph.
+        /// </summary>
         public Heights heights;
 
+        /// <summary>
+        /// Processes build chunks using the supplied job inputs.
+        /// </summary>
         public void Execute() {
 
             var root = this.graph.Read<RootGraphComponent>();
@@ -103,15 +163,33 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    /// <summary>
+    /// Executes update chunks work through the job scheduler.
+    /// </summary>
     [BURST]
     public partial struct UpdateChunksJob : IJob {
 
+        /// <summary>
+        /// Graph used by the associated operation.
+        /// </summary>
         public Ent graph;
+        /// <summary>
+        /// World used by the containing operation.
+        /// </summary>
         public World world;
+        /// <summary>
+        /// Chunks composing the associated graph or storage.
+        /// </summary>
         public MemArrayAuto<ChunkComponent> chunks;
+        /// <summary>
+        /// Changed chunks used by <c>UpdateChunksJob</c>.
+        /// </summary>
         [Unity.Collections.LowLevel.Unsafe.NativeDisableContainerSafetyRestriction]
         public Unity.Collections.NativeArray<ulong> changedChunks;
 
+        /// <summary>
+        /// Processes update chunks using the supplied job inputs.
+        /// </summary>
         public void Execute() {
 
             ref var root = ref this.graph.Get<RootGraphComponent>();
@@ -130,17 +208,38 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    /// <summary>
+    /// Executes calculate connections work through the job scheduler.
+    /// </summary>
     [BURST]
     public partial struct CalculateConnectionsJob : Unity.Jobs.IJobParallelFor {
 
+        /// <summary>
+        /// World used by the containing operation.
+        /// </summary>
         public World world;
+        /// <summary>
+        /// Graph used by the associated operation.
+        /// </summary>
         public Ent graph;
+        /// <summary>
+        /// Chunks composing the associated graph or storage.
+        /// </summary>
         public MemArrayAuto<ChunkComponent> chunks;
+        /// <summary>
+        /// Destination or stored results of the associated operation.
+        /// </summary>
         public Unity.Collections.NativeList<ResultItem>.ParallelWriter results;
+        /// <summary>
+        /// Changed chunks used by <c>CalculateConnectionsJob</c>.
+        /// </summary>
         [Unity.Collections.ReadOnlyAttribute]
         [Unity.Collections.LowLevel.Unsafe.NativeDisableContainerSafetyRestrictionAttribute]
         public Unity.Collections.NativeArray<ulong> changedChunks;
 
+        /// <summary>
+        /// Processes calculate connections using the supplied job inputs.
+        /// </summary>
         public void Execute(int index) {
 
             var chunkIndex = (uint)index;
@@ -197,13 +296,28 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    /// <summary>
+    /// Executes flood fill portal areas work through the job scheduler.
+    /// </summary>
     [BURST]
     public unsafe partial struct FloodFillPortalAreasJob : IJob {
 
+        /// <summary>
+        /// World used by the containing operation.
+        /// </summary>
         public World world;
+        /// <summary>
+        /// Graph used by the associated operation.
+        /// </summary>
         public Ent graph;
+        /// <summary>
+        /// Destination or stored results of the associated operation.
+        /// </summary>
         public Unity.Collections.NativeList<ResultItem> results;
 
+        /// <summary>
+        /// Processes flood fill portal areas using the supplied job inputs.
+        /// </summary>
         public void Execute() {
 
             var allocator = this.world.state.ptr->allocator;
@@ -259,13 +373,28 @@ namespace ME.BECS.Pathfinding {
 
     }
     
+    /// <summary>
+    /// Executes add connections work through the job scheduler.
+    /// </summary>
     [BURST]
     public partial struct AddConnectionsJob : IJob {
 
+        /// <summary>
+        /// World used by the containing operation.
+        /// </summary>
         public World world;
+        /// <summary>
+        /// Graph used by the associated operation.
+        /// </summary>
         public Ent graph;
+        /// <summary>
+        /// Destination or stored results of the associated operation.
+        /// </summary>
         public Unity.Collections.NativeList<ResultItem> results;
         
+        /// <summary>
+        /// Processes add connections using the supplied job inputs.
+        /// </summary>
         public void Execute() {
 
             var root = this.graph.Read<RootGraphComponent>();
@@ -319,19 +448,46 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    /// <summary>
+    /// Executes path directions work through the job scheduler.
+    /// </summary>
     [BURST]
     public partial struct PathDirectionsJob : IJob {
 
+        /// <summary>
+        /// Need to repath used by <c>PathDirectionsJob</c>.
+        /// </summary>
         [Unity.Collections.ReadOnlyAttribute]
         public Unity.Collections.NativeReference<byte> needToRepath;
+        /// <summary>
+        /// Chunks composing the associated graph or storage.
+        /// </summary>
         [Unity.Collections.ReadOnlyAttribute]
         public Unity.Collections.NativeList<uint> chunks;
+        /// <summary>
+        /// Target nodes used by <c>PathDirectionsJob</c>.
+        /// </summary>
         public Unity.Collections.NativeHashSet<Graph.TempNode> targetNodes;
+        /// <summary>
+        /// Path selected or processed by this operation.
+        /// </summary>
         public Path path;
+        /// <summary>
+        /// World used by the containing operation.
+        /// </summary>
         public World world;
+        /// <summary>
+        /// Filter restricting the entries considered by this operation.
+        /// </summary>
         public Filter filter;
+        /// <summary>
+        /// Graph used by the associated operation.
+        /// </summary>
         public Ent graph;
         
+        /// <summary>
+        /// Processes path directions using the supplied job inputs.
+        /// </summary>
         public void Execute() {
 
             if (this.needToRepath.Value == 0) return;
@@ -400,16 +556,37 @@ namespace ME.BECS.Pathfinding {
 
     }
     
+    /// <summary>
+    /// Executes path work through the job scheduler.
+    /// </summary>
     [BURST]
     public unsafe partial struct PathJob : IJob {
 
+        /// <summary>
+        /// Need to repath used by <c>PathJob</c>.
+        /// </summary>
         [Unity.Collections.ReadOnlyAttribute]
         public Unity.Collections.NativeReference<byte> needToRepath;
+        /// <summary>
+        /// World used by the containing operation.
+        /// </summary>
         public World world;
+        /// <summary>
+        /// Graph used by the associated operation.
+        /// </summary>
         public Ent graph;
+        /// <summary>
+        /// Filter restricting the entries considered by this operation.
+        /// </summary>
         public Filter filter;
+        /// <summary>
+        /// Path selected or processed by this operation.
+        /// </summary>
         public Path path;
 
+        /// <summary>
+        /// Processes path using the supplied job inputs.
+        /// </summary>
         public void Execute() {
 
             if (this.needToRepath.Value == 0) return;

@@ -6,6 +6,9 @@ namespace ME.BECS.Trees {
     using Unity.Burst;
     using Unity.Collections.LowLevel.Unsafe;
 
+    /// <summary>
+    /// Provides helper operations for sort job.
+    /// </summary>
     public static unsafe class SortJobExt {
 
         /// <summary>
@@ -24,6 +27,9 @@ namespace ME.BECS.Trees {
             return SortJobDefer((T*)list.GetUnsafeList()->Ptr, comp);
         }
 
+        /// <summary>
+        /// Schedules sorting with a deferred element count.
+        /// </summary>
         [GenerateTestsForBurstCompatibility(GenericTypeArguments = new[] { typeof(int), typeof(NativeSortExtension.DefaultComparer<int>) })]
         public static unsafe SortJobDefer<T, TU> SortJobDefer<T, TU>(T* array, TU comp)
             where T : unmanaged
@@ -31,6 +37,9 @@ namespace ME.BECS.Trees {
             return new SortJobDefer<T, TU>() { data = array, comp = comp };
         }
 
+        /// <summary>
+        /// Calculates segment count.
+        /// </summary>
         public static void CalculateSegmentCount(int count, ME.BECS.NativeCollections.DeferJobCounter* segmentCount) {
             segmentCount->count = (count + 1023) / 1024;
             //int maxThreadCount = JobsUtility.ThreadIndexCount;

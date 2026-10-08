@@ -5,6 +5,9 @@ using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Draws features graph values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(ME.BECS.FeaturesGraph.SystemsGraph))]
     public class FeaturesGraphDrawer : PropertyDrawer {
 
@@ -16,6 +19,9 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
             
             this.LoadStyle();

@@ -7,10 +7,16 @@ using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor.ComponentsViewer {
 
+    /// <summary>
+    /// Provides the Unity Editor window for components viewer editor.
+    /// </summary>
     public class ComponentsViewerEditorWindow : EditorWindow {
 
         private GradientAnimated logoLine;
 
+        /// <summary>
+        /// Opens or focuses the associated editor window.
+        /// </summary>
         [MenuItem("ME.BECS/\u2631 Components Viewer...", priority = 10000)]
         public static void ShowWindow() {
 
@@ -38,14 +44,38 @@ namespace ME.BECS.Editor.ComponentsViewer {
             }
         }
 
+        /// <summary>
+        /// Defines component column info data used by entity processing.
+        /// </summary>
         public class ComponentColumnInfo {
 
+            /// <summary>
+            /// Component type used by <c>ComponentsViewerEditorWindow.ComponentColumnInfo</c>.
+            /// </summary>
             public System.Func<System.Type, bool> componentType;
+            /// <summary>
+            /// Text displayed as the entry's caption.
+            /// </summary>
             public string caption;
+            /// <summary>
+            /// Tooltip on used by <c>ComponentsViewerEditorWindow.ComponentColumnInfo</c>.
+            /// </summary>
             public string tooltipOn;
+            /// <summary>
+            /// Tooltip off used by <c>ComponentsViewerEditorWindow.ComponentColumnInfo</c>.
+            /// </summary>
             public string tooltipOff;
+            /// <summary>
+            /// Callback invoked for add.
+            /// </summary>
             public System.Action<EditorUtils.ComponentGroupItem.ComponentMetaInfo> onAdd;
+            /// <summary>
+            /// Callback invoked for remove.
+            /// </summary>
             public System.Action<EditorUtils.ComponentGroupItem.ComponentMetaInfo> onRemove;
+            /// <summary>
+            /// Toggle used by <c>ComponentsViewerEditorWindow.ComponentColumnInfo</c>.
+            /// </summary>
             public Toggle toggle;
 
         }
@@ -424,6 +454,9 @@ namespace ME.BECS.Editor.ComponentsViewer {
             return (int)gMethod.Invoke(null, null);
         }
 
+        /// <summary>
+        /// Returns size of method.
+        /// </summary>
         public static unsafe int GetSizeOfMethod<T>() where T : unmanaged {
             return sizeof(T);
         }

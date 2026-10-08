@@ -20,18 +20,45 @@ namespace ME.BECS.Views {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     #endif
 
+    /// <summary>
+    /// Provides helper operations for camera.
+    /// </summary>
     public static class CameraUtils {
 
+        /// <summary>
+        /// Defines culling plane state and operations for <c>CameraUtils</c>.
+        /// </summary>
         public struct CullingPlane {
+            /// <summary>
+            /// Normal used by <c>CameraUtils.CullingPlane</c>.
+            /// </summary>
             public float3 normal;
+            /// <summary>
+            /// Absolute normal used by <c>CameraUtils.CullingPlane</c>.
+            /// </summary>
             public float3 absoluteNormal;
+            /// <summary>
+            /// Distance used by <c>CameraUtils.CullingPlane</c>.
+            /// </summary>
             public tfloat distance;
         }
 
+        /// <summary>
+        /// Defines culling snapshot state and operations for <c>CameraUtils</c>.
+        /// </summary>
         public struct CullingSnapshot {
+            /// <summary>
+            /// World bounds used by <c>CameraUtils.CullingSnapshot</c>.
+            /// </summary>
             public Bounds worldBounds;
+            /// <summary>
+            /// Planes used by <c>CameraUtils.CullingSnapshot</c>.
+            /// </summary>
             public Unity.Collections.FixedList512Bytes<CullingPlane> planes;
 
+            /// <summary>
+            /// Tests whether the context is visible.
+            /// </summary>
             public readonly bool IsVisible(in Bounds bounds) {
                 if (this.worldBounds.Intersects(bounds) == false) return false;
                 var center = (float3)bounds.center;
@@ -46,6 +73,9 @@ namespace ME.BECS.Views {
             }
         }
 
+        /// <summary>
+        /// Creates culling snapshot.
+        /// </summary>
         public static CullingSnapshot CreateCullingSnapshot(in CameraAspect camera) {
             var result = new CullingSnapshot() { worldBounds = camera.WorldBounds };
             ref readonly var planes = ref camera.readComponent.localPlanes;
@@ -66,6 +96,9 @@ namespace ME.BECS.Views {
         private static readonly UnityEngine.Plane[] planes = new UnityEngine.Plane[6];
         private static readonly UnityEngine.Vector3[] corners = new UnityEngine.Vector3[4];
         
+        /// <summary>
+        /// Updates camera.
+        /// </summary>
         [INLINE(256)]
         public static void UpdateCamera(in CameraAspect cameraAspect, UnityEngine.Camera camera) {
             
@@ -95,6 +128,9 @@ namespace ME.BECS.Views {
             
         }
 
+        /// <summary>
+        /// Calculates local bounds.
+        /// </summary>
         [INLINE(256)]
         public static Bounds CalculateLocalBounds(UnityEngine.Camera camera, in quaternion rotation) {
 
@@ -114,6 +150,9 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Creates camera.
+        /// </summary>
         [INLINE(256)]
         public static CameraAspect CreateCamera(UnityEngine.Camera camera, in World world) {
 
@@ -123,6 +162,9 @@ namespace ME.BECS.Views {
             
         }
 
+        /// <summary>
+        /// Creates camera.
+        /// </summary>
         [INLINE(256)]
         public static CameraAspect CreateCamera(in World world) {
             
@@ -135,6 +177,9 @@ namespace ME.BECS.Views {
             
         }
 
+        /// <summary>
+        /// Tests planes aabb.
+        /// </summary>
         [INLINE(256)]
         public static bool TestPlanesAABB(in MemArrayAuto<Plane> planes, in Bounds bounds) {
             
@@ -153,6 +198,9 @@ namespace ME.BECS.Views {
             
         }
 
+        /// <summary>
+        /// Tests whether the context is visible.
+        /// </summary>
         [INLINE(256)]
         public static bool IsVisible(in CameraAspect camera, in Bounds bounds) {
             // early exit on camera bounds intersection
@@ -160,6 +208,9 @@ namespace ME.BECS.Views {
             return TestPlanesAABB(in camera.readComponent.localPlanes, in bounds);
         }
 
+        /// <summary>
+        /// Draws frustum.
+        /// </summary>
         [INLINE(256)]
         public static void DrawFrustum(in CameraAspect camera) {
 

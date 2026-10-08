@@ -18,41 +18,101 @@ namespace ME.BECS.Views {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     #endif
     
+    /// <summary>
+    /// Groups camera components for change tracking and queries.
+    /// </summary>
     public struct CameraComponentGroup {
 
+        /// <summary>
+        /// Color used to render or identify this value.
+        /// </summary>
         public static UnityEngine.Color color = new UnityEngine.Color(0.36f, 0.65f, 0.5f);
 
     }
 
+    /// <summary>
+    /// Stores per-entity state for camera.
+    /// </summary>
     [ComponentGroup(typeof(CameraComponentGroup))]
     public struct CameraComponent : IComponent {
 
+        /// <summary>
+        /// Local planes used by <c>CameraComponent</c>.
+        /// </summary>
         public MemArrayAuto<Plane> localPlanes;
+        /// <summary>
+        /// Near clip plane used by <c>CameraComponent</c>.
+        /// </summary>
         public tfloat nearClipPlane;
+        /// <summary>
+        /// Far clip plane used by <c>CameraComponent</c>.
+        /// </summary>
         public tfloat farClipPlane;
+        /// <summary>
+        /// Field of view vertical used by <c>CameraComponent</c>.
+        /// </summary>
         public tfloat fieldOfViewVertical;
+        /// <summary>
+        /// Field of view horizontal used by <c>CameraComponent</c>.
+        /// </summary>
         public tfloat fieldOfViewHorizontal;
+        /// <summary>
+        /// Aspect used by <c>CameraComponent</c>.
+        /// </summary>
         public tfloat aspect;
+        /// <summary>
+        /// Orthographic size used by <c>CameraComponent</c>.
+        /// </summary>
         public tfloat orthographicSize;
+        /// <summary>
+        /// Spatial bounds used by this entry or query.
+        /// </summary>
         public Bounds bounds;
+        /// <summary>
+        /// Whether orthographic behavior or state is selected.
+        /// </summary>
         public bbool orthographic;
 
     }
 
+    /// <summary>
+    /// Provides typed access to the entity components used for camera.
+    /// </summary>
     [EditorComment("Give access to the camera methods")]
     public partial struct CameraAspect : IAspect {
         
+        /// <summary>
+        /// Entity whose components or lifetime are associated with this value.
+        /// </summary>
         public Ent ent { get; set; }
 
+        /// <summary>
+        /// Native pointer or typed storage accessor for camera.
+        /// </summary>
         [QueryWith]
         public AspectDataPtr<CameraComponent> cameraDataPtr;
 
+        /// <summary>
+        /// Component data accessed by this instance.
+        /// </summary>
         public readonly ref CameraComponent component => ref this.cameraDataPtr.Get(this.ent.id, this.ent.gen);
+        /// <summary>
+        /// Read-only access to component.
+        /// </summary>
         public readonly ref readonly CameraComponent readComponent => ref this.cameraDataPtr.Read(this.ent.id, this.ent.gen);
+        /// <summary>
+        /// Spatial bounds used by this entry or query.
+        /// </summary>
         public readonly ref readonly Bounds bounds => ref this.cameraDataPtr.Read(this.ent.id, this.ent.gen).bounds;
 
+        /// <summary>
+        /// World bounds used by <c>CameraAspect</c>.
+        /// </summary>
         public Bounds WorldBounds => new Bounds((float3)this.bounds.center + this.ent.GetAspect<ME.BECS.Transforms.TransformAspect>().GetWorldMatrixPosition(), this.bounds.size);
 
+        /// <summary>
+        /// World to camera matrix used to transform between the associated coordinate spaces.
+        /// </summary>
         public float4x4 worldToCameraMatrix {
             [INLINE(256)]
             get {
@@ -62,6 +122,9 @@ namespace ME.BECS.Views {
             }
         }
         
+        /// <summary>
+        /// Projection matrix used to transform between the associated coordinate spaces.
+        /// </summary>
         public float4x4 projectionMatrix {
             [INLINE(256)]
             get {
@@ -77,6 +140,9 @@ namespace ME.BECS.Views {
             }
         }
 
+        /// <summary>
+        /// Converts a world position to viewport point.
+        /// </summary>
         [INLINE(256)]
         public float3 WorldToViewportPoint(float3 worldPosition) {
 
@@ -89,6 +155,9 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Converts a world position to screen point.
+        /// </summary>
         [INLINE(256)]
         public float3 WorldToScreenPoint(float3 worldPosition) {
 

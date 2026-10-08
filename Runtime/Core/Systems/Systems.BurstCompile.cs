@@ -17,6 +17,9 @@ namespace ME.BECS {
     /// </summary>
     public class WithoutBurstAttribute : System.Attribute {}
     
+    /// <summary>
+    /// Defines the callback signature for function pointer delegate.
+    /// </summary>
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public unsafe delegate void FunctionPointerDelegate(void* systemData, ref SystemContext context);
 

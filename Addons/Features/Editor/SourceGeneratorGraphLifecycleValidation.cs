@@ -7,6 +7,9 @@ namespace ME.BECS.Editor.Systems {
     using ME.BECS.FeaturesGraph;
     using scg = System.Collections.Generic;
 
+    /// <summary>
+    /// Provides graph lifecycle validation for BECS source-generator publication.
+    /// </summary>
     public static class SourceGeneratorGraphLifecycleValidation {
         [UnityEditor.MenuItem("ME.BECS/Source Generator/Inspect Graph Lifecycle Calls")]
         private static void Inspect() {

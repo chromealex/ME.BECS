@@ -15,37 +15,61 @@ namespace ME.BECS.Transforms {
     #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
+    /// <summary>
+    /// Provides helper operations for transform3 d.
+    /// </summary>
     [IgnoreProfiler]
     public static unsafe class Transform3DExt {
 
+        /// <summary>
+        /// Stores hierarchy item for <c>Transform3DExt</c>.
+        /// </summary>
         public struct HierarchyItem {
 
+            /// <summary>
+            /// Entity whose components or lifetime are associated with this value.
+            /// </summary>
             public Ent ent;
+            /// <summary>
+            /// Whether parent dirty behavior or state is selected.
+            /// </summary>
             public bbool parentDirty;
 
         }
 
+        /// <summary>
+        /// Reads parent.
+        /// </summary>
         [INLINE(256)]
         public static Ent ReadParent(this in EntRO ent) {
             return ent.Read<ParentComponent>().value;
         }
 
+        /// <summary>
+        /// Returns parent.
+        /// </summary>
         [INLINE(256)]
         public static ref Ent GetParent(this in Ent ent) {
             return ref ent.Get<ParentComponent>().value;
         }
 
+        /// <summary>
+        /// Reads parent.
+        /// </summary>
         [INLINE(256)]
         public static ref readonly Ent ReadParent(this in Ent ent) {
             return ref ent.Read<ParentComponent>().value;
         }
 
+        /// <summary>
+        /// Changes the entity's transform parent using the requested world-position preservation mode.
+        /// </summary>
         [INLINE(256)]
         public static void SetParent(this in Ent ent, in Ent parent, bool worldPositionStay = false) {
 
             float3 prevPos = default;
             quaternion prevRot = default;
-            if (worldPositionStay == true && parent.IsAlive() == true) {
+            if (worldPositionStay == true) {
                 var aspect = ent.GetOrCreateAspect<TransformAspect>();
                 prevPos = aspect.position;
                 prevRot = aspect.rotation;
@@ -53,7 +77,7 @@ namespace ME.BECS.Transforms {
             
             ent.SetParent_INTERNAL(in parent);
             
-            if (worldPositionStay == true && parent.IsAlive() == true) {
+            if (worldPositionStay == true) {
                 var aspect = ent.GetOrCreateAspect<TransformAspect>();
                 aspect.position = prevPos;
                 aspect.rotation = prevRot;
@@ -107,6 +131,9 @@ namespace ME.BECS.Transforms {
 
         }
         
+        /// <summary>
+        /// Calculates matrix.
+        /// </summary>
         [INLINE(256)]
         public static void CalculateMatrix(in TransformAspect parent, in TransformAspect ent) {
 
@@ -114,6 +141,9 @@ namespace ME.BECS.Transforms {
             
         }
 
+        /// <summary>
+        /// Calculates matrix static.
+        /// </summary>
         [INLINE(256)]
         public static void CalculateMatrixStatic(in TransformAspect parent, in TransformAspect ent) {
 
@@ -122,6 +152,9 @@ namespace ME.BECS.Transforms {
             
         }
 
+        /// <summary>
+        /// Calculates local matrix.
+        /// </summary>
         [INLINE(256)]
         public static void CalculateLocalMatrix(in TransformAspect ent) {
 
@@ -157,6 +190,9 @@ namespace ME.BECS.Transforms {
 
         }
 
+        /// <summary>
+        /// Calculates world matrix.
+        /// </summary>
         [INLINE(256)]
         public static void CalculateWorldMatrix(in TransformAspect ent) {
 
@@ -165,11 +201,17 @@ namespace ME.BECS.Transforms {
 
         }
 
+        /// <summary>
+        /// Calculates world matrix hierarchy.
+        /// </summary>
         [INLINE(256)]
         public static void CalculateWorldMatrixHierarchy(ref TransformAspect aspect) {
             CalculateWorldMatrixHierarchy(aspect.parent, aspect);
         }
 
+        /// <summary>
+        /// Calculates local matrix and mark dirty.
+        /// </summary>
         [INLINE(256)]
         public static void CalculateLocalMatrixAndMarkDirty(in TransformAspect ent) {
 
@@ -185,6 +227,9 @@ namespace ME.BECS.Transforms {
 
         }
 
+        /// <summary>
+        /// Calculates world matrix hierarchy.
+        /// </summary>
         [INLINE(256)]
         public static void CalculateWorldMatrixHierarchy(in TransformAspect root, ref Unity.Collections.LowLevel.Unsafe.UnsafeList<HierarchyItem> stack) {
 
@@ -240,6 +285,9 @@ namespace ME.BECS.Transforms {
 
         }
 
+        /// <summary>
+        /// Calculates world matrix hierarchy.
+        /// </summary>
         [INLINE(256)]
         public static void CalculateWorldMatrixHierarchy(in TransformAspect parent, in TransformAspect ent) {
 
@@ -270,6 +318,9 @@ namespace ME.BECS.Transforms {
 
         }
 
+        /// <summary>
+        /// Clears the current transform3 d ext contents.
+        /// </summary>
         [INLINE(256)]
         public static void Clear(in TransformAspect ent) {
 
@@ -277,6 +328,9 @@ namespace ME.BECS.Transforms {
 
         }
 
+        /// <summary>
+        /// Calculates world matrix level.
+        /// </summary>
         [INLINE(256)]
         public static void CalculateWorldMatrixLevel(in TransformAspect parent, in TransformAspect ent) {
             
@@ -290,6 +344,9 @@ namespace ME.BECS.Transforms {
             
         }
 
+        /// <summary>
+        /// Calculates world matrix level static.
+        /// </summary>
         [INLINE(256)]
         public static void CalculateWorldMatrixLevelStatic(in TransformAspect parent, in TransformAspect ent) {
             
@@ -303,6 +360,9 @@ namespace ME.BECS.Transforms {
             
         }
 
+        /// <summary>
+        /// Calculates world matrix parent.
+        /// </summary>
         [INLINE(256)]
         public static void CalculateWorldMatrixParent(in TransformAspect parent, in TransformAspect ent) {
             

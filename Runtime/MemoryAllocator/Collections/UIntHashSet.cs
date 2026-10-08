@@ -7,6 +7,9 @@ namespace ME.BECS {
     #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
+    /// <summary>
+    /// Provides u int hash set storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(UIntHashSetProxy))]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
@@ -16,6 +19,9 @@ namespace ME.BECS {
     #endif
     public unsafe struct UIntHashSet : IIsCreated {
 
+        /// <summary>
+        /// Traverses the entries exposed by <c>UIntHashSet</c>.
+        /// </summary>
         public struct Enumerator {
 
             private int lastIndex;
@@ -39,6 +45,9 @@ namespace ME.BECS {
                 this.current = default;
             }
 
+            /// <summary>
+            /// Advances the enumerator and reports whether a current element is available.
+            /// </summary>
             [INLINE(256)]
             public bool MoveNext() {
                 while (this.index < this.lastIndex) {
@@ -57,16 +66,25 @@ namespace ME.BECS {
                 return false;
             }
 
+            /// <summary>
+            /// Element at the enumerator's current position.
+            /// </summary>
             public uint Current => this.current;
 
         }
 
+        /// <summary>
+        /// Stores a slot record used by <c>UIntHashSet</c>.
+        /// </summary>
         public struct Slot {
             internal int hashCode;      // Lower 31 bits of hash code, -1 if unused
             internal int next;          // Index of next entry, -1 if last
             internal uint value;
         }
         
+        /// <summary>
+        /// Lower31 bit mask used to select the applicable bits or entries.
+        /// </summary>
         public const int LOWER31_BIT_MASK = 0x7FFFFFFF;
         
         internal MemArray<int> buckets;
@@ -75,18 +93,30 @@ namespace ME.BECS {
         internal int lastIndex;
         internal int freeList;
         internal int version;
+        /// <summary>
+        /// Indicates hash.
+        /// </summary>
         public uint hash;
         
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated {
             [INLINE(256)]
             get => this.buckets.IsCreated;
         }
 
+        /// <summary>
+        /// Number of entries currently tracked by this value.
+        /// </summary>
         public uint Count {
             [INLINE(256)]
             get => (uint)this.count;
         }
 
+        /// <summary>
+        /// Initializes <c>UIntHashSet</c> with storage for the requested number of elements.
+        /// </summary>
         [INLINE(256)]
         public UIntHashSet(ref MemoryAllocator allocator, uint capacity) {
 
@@ -95,6 +125,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes <c>UIntHashSet</c> from the supplied allocator, other.
+        /// </summary>
         [INLINE(256)]
         public UIntHashSet(ref MemoryAllocator allocator, in UIntHashSet other) {
 
@@ -106,6 +139,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         [INLINE(256)]
         public bool Equals(in MemoryAllocator allocator, in UIntHashSet other) {
 
@@ -134,6 +170,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Stores the supplied value in u int hash set.
+        /// </summary>
         [INLINE(256)]
         public void Set(ref MemoryAllocator allocator, in UIntHashSet other) {
             
@@ -143,12 +182,18 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Updates cached native access for the requested Burst execution mode.
+        /// </summary>
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             this.buckets.BurstMode(in allocator, state);
             this.slots.BurstMode(in allocator, state);
         }
         
+        /// <summary>
+        /// Releases the resources owned by this u int hash set instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose(ref MemoryAllocator allocator) {
             
@@ -158,6 +203,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Returns the allocator-relative address of the underlying storage.
+        /// </summary>
         [INLINE(256)]
         public readonly MemPtr GetMemPtr() {
             
@@ -166,6 +214,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Disposes the current storage and copies the other collection handle; the two values then refer to the same allocation.
+        /// </summary>
         [INLINE(256)]
         public void ReplaceWith(ref MemoryAllocator allocator, in UIntHashSet other) {
 
@@ -178,6 +229,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns an enumerator over the current collection contents.
+        /// </summary>
         [INLINE(256)]
         public readonly Enumerator GetEnumerator(World world) {
             
@@ -185,6 +239,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Returns an enumerator over the current collection contents.
+        /// </summary>
         [INLINE(256)]
         public readonly Enumerator GetEnumerator(safe_ptr<State> state) {
             
@@ -192,6 +249,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Returns an enumerator over the current collection contents.
+        /// </summary>
         [INLINE(256)]
         public readonly Enumerator GetEnumerator(in MemoryAllocator allocator) {
             
@@ -242,6 +302,9 @@ namespace ME.BECS {
             return false;
         }
         
+        /// <summary>
+        /// Tests whether the specified value is present.
+        /// </summary>
         [INLINE(256)]
         public readonly bool Contains(uint item, safe_ptr<Slot> slotsPtr, safe_ptr<int> bucketsPtr) {
             uint hashCode = item & UIntHashSet.LOWER31_BIT_MASK;
@@ -254,6 +317,9 @@ namespace ME.BECS {
             return false;
         }
 
+        /// <summary>
+        /// Tests whether the specified value is present.
+        /// </summary>
         [INLINE(256)]
         public readonly bool Contains(uint item, uint hashCode, Slot* slotsPtr, int* bucketsPtr) {
             for (int i = bucketsPtr[hashCode % this.buckets.Length] - 1; i >= 0; i = (slotsPtr + i)->next) {
@@ -265,6 +331,9 @@ namespace ME.BECS {
             return false;
         }
 
+        /// <summary>
+        /// Removes except.
+        /// </summary>
         [INLINE(256)]
         public void RemoveExcept(ref MemoryAllocator allocator, in UIntHashSet other) {
             var slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
@@ -281,6 +350,9 @@ namespace ME.BECS {
         }
 
 
+        /// <summary>
+        /// Removes the specified entry from u int hash set.
+        /// </summary>
         [INLINE(256)]
         public void Remove(ref MemoryAllocator allocator, in UIntHashSet other) {
             var slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
@@ -296,6 +368,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Adds the supplied entry to u int hash set.
+        /// </summary>
         [INLINE(256)]
         public void Add(ref MemoryAllocator allocator, in UIntHashSet other) {
             var slotsPtr = (safe_ptr<Slot>)other.slots.GetUnsafePtrCached(in allocator);
@@ -430,6 +505,9 @@ namespace ME.BECS {
             return this.Add(ref allocator, value, ref buckets, ref slots);
         }
         
+        /// <summary>
+        /// Adds the supplied entry to u int hash set.
+        /// </summary>
         [INLINE(256)]
         public bool Add(ref MemoryAllocator allocator, uint value, ref safe_ptr<int> buckets, ref safe_ptr<Slot> slots) {
             
@@ -473,6 +551,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Copies the supplied source state into this u int hash set instance.
+        /// </summary>
         [INLINE(256)]
         public void CopyFrom(ref MemoryAllocator allocator, in UIntHashSet other) {
 
@@ -486,6 +567,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns the amount of reserved storage in bytes.
+        /// </summary>
         public uint GetReservedSizeInBytes() {
             return this.buckets.GetReservedSizeInBytes() + this.slots.GetReservedSizeInBytes();
         }

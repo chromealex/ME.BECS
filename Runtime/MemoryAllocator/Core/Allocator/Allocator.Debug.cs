@@ -1,19 +1,37 @@
 namespace ME.BECS {
 
+    /// <summary>
+    /// Exposes allocator debug data for debugger inspection.
+    /// </summary>
     public unsafe class AllocatorDebugProxy {
 
+        /// <summary>
+        /// Describes a native allocator zone.
+        /// </summary>
         public struct ZoneInfo {
 
+            /// <summary>
+            /// Zone used by <c>AllocatorDebugProxy.ZoneInfo</c>.
+            /// </summary>
             public MemoryAllocator.Zone zone;
+            /// <summary>
+            /// Blocks used by <c>AllocatorDebugProxy.ZoneInfo</c>.
+            /// </summary>
             public string[] blocks;
 
         }
 
         private readonly MemoryAllocator allocator;
+        /// <summary>
+        /// Initializes <c>AllocatorDebugProxy</c> from the supplied allocator.
+        /// </summary>
         public AllocatorDebugProxy(MemoryAllocator allocator) {
             this.allocator = allocator;
         }
 
+        /// <summary>
+        /// Diagnostics produced while validating or processing the inputs.
+        /// </summary>
         public string[] errors {
             get {
                 var errors = new System.Collections.Generic.List<string>(10);
@@ -70,6 +88,9 @@ namespace ME.BECS {
             }
         }
         
+        /// <summary>
+        /// Zones used by <c>AllocatorDebugProxy</c>.
+        /// </summary>
         public ZoneInfo[] zones {
             get {
                 var zones = new ZoneInfo[this.allocator.zonesCount];
@@ -122,12 +143,21 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Free allocator blocks available for reuse.
+        /// </summary>
         public FreeBlocks freeBlocks => this.allocator.freeBlocks;
 
     }
 
+    /// <summary>
+    /// Allocates relocatable native blocks addressed by zone and offset.
+    /// </summary>
     public unsafe partial struct MemoryAllocator {
         
+        /// <summary>
+        /// Checks consistency.
+        /// </summary>
         public void CheckConsistency() {
             this.lockSpinner.Lock();
             for (uint i = 0u; i < this.zonesCount; ++i) {
@@ -151,6 +181,9 @@ namespace ME.BECS {
             this.lockSpinner.Unlock();
         }
 
+        /// <summary>
+        /// Checks ptr.
+        /// </summary>
         [System.Diagnostics.ConditionalAttribute(COND.ALLOCATOR_VALIDATION)]
         public static void CheckPtr(in MemoryAllocator allocator, MemPtr ptr) {
             var root = allocator.zones[ptr.zoneId].ptr->root.ptr;
@@ -166,11 +199,17 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Checks consistency.
+        /// </summary>
         [System.Diagnostics.ConditionalAttribute(COND.ALLOCATOR_VALIDATION)]
         public static void CheckConsistency(ref MemoryAllocator allocator) {
             allocator.CheckConsistency();
         }
         
+        /// <summary>
+        /// Validates consistency.
+        /// </summary>
         [System.Diagnostics.ConditionalAttribute(COND.ALLOCATOR_VALIDATION)]
         public static void ValidateConsistency(ref MemoryAllocator allocator) {
             allocator.CheckConsistency();

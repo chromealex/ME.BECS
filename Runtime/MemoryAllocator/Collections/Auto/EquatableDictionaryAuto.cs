@@ -7,6 +7,9 @@ namespace ME.BECS {
     #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides equatable dictionary auto storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(EquatableDictionaryProxy<,>))]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
@@ -16,6 +19,9 @@ namespace ME.BECS {
     #endif
     public unsafe struct EquatableDictionaryAuto<TKey, TValue> : IIsCreated where TKey : unmanaged, System.IEquatable<TKey> where TValue : unmanaged {
 
+        /// <summary>
+        /// Traverses the entries exposed by <c>EquatableDictionaryAuto</c>.
+        /// </summary>
         public struct Enumerator {
 
             private uint count;
@@ -29,6 +35,9 @@ namespace ME.BECS {
                 this.index = 0u;
             }
 
+            /// <summary>
+            /// Advances the enumerator and reports whether a current element is available.
+            /// </summary>
             [INLINE(256)]
             public bool MoveNext() {
 
@@ -43,15 +52,33 @@ namespace ME.BECS {
                 return false;
             }
 
+            /// <summary>
+            /// Element at the enumerator's current position.
+            /// </summary>
             public ref Entry Current => ref *(this.entries + this.index - 1u).ptr;
 
         }
 
+        /// <summary>
+        /// Stores a entry record used by <c>EquatableDictionaryAuto</c>.
+        /// </summary>
         public struct Entry {
 
+            /// <summary>
+            /// Indicates hash code.
+            /// </summary>
             public int hashCode; // Lower 31 bits of hash code, -1 if unused
+            /// <summary>
+            /// Link or index of the next entry in the sequence.
+            /// </summary>
             public int next; // Index of next entry, -1 if last
+            /// <summary>
+            /// Key used to identify an entry in the associated lookup.
+            /// </summary>
             public TKey key; // Key of entry
+            /// <summary>
+            /// Stored value used by this instance.
+            /// </summary>
             public TValue value; // Value of entry
 
         }
@@ -63,18 +90,30 @@ namespace ME.BECS {
         internal int freeList;
         internal uint freeCount;
 
+        /// <summary>
+        /// Entity whose components or lifetime are associated with this value.
+        /// </summary>
         public readonly Ent ent => this.buckets.ent;
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated {
             [INLINE(256)]
             get => this.buckets.IsCreated;
         }
 
+        /// <summary>
+        /// Number of entries currently tracked by this value.
+        /// </summary>
         public readonly uint Count {
             [INLINE(256)]
             get => this.count - this.freeCount;
         }
 
+        /// <summary>
+        /// Initializes <c>EquatableDictionaryAuto</c> with storage for the requested number of elements.
+        /// </summary>
         [INLINE(256)]
         public EquatableDictionaryAuto(in Ent ent, uint capacity) {
 
@@ -83,6 +122,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes <c>EquatableDictionaryAuto</c> from the supplied ent, source.
+        /// </summary>
         [INLINE(256)]
         public EquatableDictionaryAuto(in Ent ent, in EquatableDictionaryAuto<TKey, TValue> source) {
 
@@ -96,12 +138,18 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Updates cached native access for the requested Burst execution mode.
+        /// </summary>
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             this.buckets.BurstMode(in allocator, state);
             this.entries.BurstMode(in allocator, state);
         }
 
+        /// <summary>
+        /// Releases the resources owned by this equatable dictionary auto instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
 
@@ -111,6 +159,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns the allocator-relative address of the underlying storage.
+        /// </summary>
         [INLINE(256)]
         public readonly MemPtr GetMemPtr() {
 
@@ -118,6 +169,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Disposes the current storage and copies the other collection handle; the two values then refer to the same allocation.
+        /// </summary>
         [INLINE(256)]
         public void ReplaceWith(in EquatableDictionaryAuto<TKey, TValue> other) {
             
@@ -128,6 +182,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Copies the supplied source state into this equatable dictionary auto instance.
+        /// </summary>
         [INLINE(256)]
         public void CopyFrom(in EquatableDictionaryAuto<TKey, TValue> other) {
 
@@ -148,6 +205,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns an enumerator over the current collection contents.
+        /// </summary>
         [INLINE(256)]
         public readonly Enumerator GetEnumerator() {
 
@@ -169,6 +229,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Returns value.
+        /// </summary>
         [INLINE(256)]
         public ref TValue GetValue(TKey key) {
 
@@ -182,6 +245,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns value.
+        /// </summary>
         [INLINE(256)]
         public ref TValue GetValue(TKey key, out bool exist) {
             
@@ -197,6 +263,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes the keyed entry and returns its value, or the fallback value when the key is absent.
+        /// </summary>
         [INLINE(256)]
         public TValue GetValueAndRemove(TKey key) {
 
@@ -470,11 +539,17 @@ namespace ME.BECS {
             return false;
         }
 
+        /// <summary>
+        /// Attempts to add and reports whether the operation succeeded.
+        /// </summary>
         [INLINE(256)]
         public bool TryAdd(TKey key, TValue value) {
             return this.TryInsert(key, value, InsertionBehavior.None);
         }
 
+        /// <summary>
+        /// Grows backing storage when needed to satisfy the requested capacity.
+        /// </summary>
         [INLINE(256)]
         public uint EnsureCapacity(uint capacity) {
             E.IS_CREATED(this);
@@ -493,6 +568,9 @@ namespace ME.BECS {
             return prime;
         }
 
+        /// <summary>
+        /// Returns a hash code consistent with this type's equality comparison.
+        /// </summary>
         [INLINE(256)]
         public static int GetHashCode(TKey key) {
             return key.GetHashCode();

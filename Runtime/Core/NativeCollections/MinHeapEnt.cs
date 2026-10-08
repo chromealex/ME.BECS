@@ -18,8 +18,14 @@ namespace ME.BECS.NativeCollections {
     using Unity.Collections.LowLevel.Unsafe;
     using static Cuts;
 
+    /// <summary>
+    /// Stores entity entries ordered by minimum priority.
+    /// </summary>
     public struct NativeMinHeapEnt : IDisposable {
 
+        /// <summary>
+        /// Number of entries currently tracked by this value.
+        /// </summary>
         public uint Count => (uint)this.mHeapLength;
 
         private safe_ptr<MinHeapNodeEnt> mBuffer;
@@ -30,6 +36,9 @@ namespace ME.BECS.NativeCollections {
         //private int mMinIndex;
         //private int mMaxIndex;
 
+        /// <summary>
+        /// Initializes <c>NativeMinHeapEnt</c> from the supplied capacity, allocator.
+        /// </summary>
         [INLINE(256)]
         public NativeMinHeapEnt(uint capacity, Allocator allocator /*, NativeArrayOptions options = NativeArrayOptions.ClearMemory*/) {
             Allocate(capacity, allocator, out this);
@@ -59,11 +68,17 @@ namespace ME.BECS.NativeCollections {
 
         }
 
+        /// <summary>
+        /// Tests whether the context has next.
+        /// </summary>
         [INLINE(256)]
         public bool HasNext() {
             return this.mHeapLength > 0;
         }
 
+        /// <summary>
+        /// Grows backing storage when needed to satisfy the requested capacity.
+        /// </summary>
         [INLINE(256)]
         public void EnsureCapacity(uint capacity) {
 
@@ -74,6 +89,9 @@ namespace ME.BECS.NativeCollections {
 
         }
 
+        /// <summary>
+        /// Adds an entry according to this container's ordering.
+        /// </summary>
         [INLINE(256)]
         public void Push(MinHeapNodeEnt node) {
             if ((uint)this.mHeapLength == this.mCapacity) {
@@ -93,6 +111,9 @@ namespace ME.BECS.NativeCollections {
             ++this.mHeapLength;
         }
 
+        /// <summary>
+        /// Removes and returns the next entry according to this container's ordering.
+        /// </summary>
         [INLINE(256)]
         public int Pop() {
             var result = this.mBuffer[0];
@@ -116,8 +137,14 @@ namespace ME.BECS.NativeCollections {
             return this.mHeapLength;
         }
 
+        /// <summary>
+        /// Provides indexed access to the requested entry.
+        /// </summary>
         public MinHeapNodeEnt this[int index] => this.mBuffer[index];
 
+        /// <summary>
+        /// Clears the current native min heap ent contents.
+        /// </summary>
         [INLINE(256)]
         public void Clear() {
             this.mHeapLength = 0;
@@ -130,6 +157,9 @@ namespace ME.BECS.NativeCollections {
             return a.data.CompareTo(b.data) < 0;
         }
 
+        /// <summary>
+        /// Releases the resources owned by this native min heap ent instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
             if (!UnsafeUtility.IsValidAllocator(this.mAllocatorLabel)) {
@@ -143,8 +173,14 @@ namespace ME.BECS.NativeCollections {
 
     }
 
+    /// <summary>
+    /// Defines min heap node ent state and operations.
+    /// </summary>
     public struct MinHeapNodeEnt {
 
+        /// <summary>
+        /// Initializes <c>MinHeapNodeEnt</c> from the supplied data, expected cost.
+        /// </summary>
         [INLINE(256)]
         public MinHeapNodeEnt(Ent data, tfloat expectedCost) {
             this.data = data;
@@ -152,8 +188,17 @@ namespace ME.BECS.NativeCollections {
             this.next = -1;
         }
 
+        /// <summary>
+        /// Data consumed or produced by the containing operation.
+        /// </summary>
         public readonly Ent data;
+        /// <summary>
+        /// Expected cost used by <c>MinHeapNodeEnt</c>.
+        /// </summary>
         public readonly tfloat expectedCost;
+        /// <summary>
+        /// Link or index of the next entry in the sequence.
+        /// </summary>
         public int next;
 
     }

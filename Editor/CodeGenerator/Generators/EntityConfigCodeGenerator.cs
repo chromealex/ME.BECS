@@ -3,10 +3,22 @@ using System.Reflection;
 
 namespace ME.BECS.Editor.Aspects {
 
+    /// <summary>
+    /// Exports entity config registration data for generated code.
+    /// </summary>
     public class EntityConfigCodeGenerator : CustomCodeGenerator {
+        /// <summary>
+        /// Source initialization kind used by <c>EntityConfigCodeGenerator</c>.
+        /// </summary>
         public override string SourceInitializationKind => this.GetType() == typeof(EntityConfigCodeGenerator) ? "config-counts" : base.SourceInitializationKind;
+        /// <summary>
+        /// Source registration kind used by <c>EntityConfigCodeGenerator</c>.
+        /// </summary>
         public override string SourceRegistrationKind => this.GetType() == typeof(EntityConfigCodeGenerator) ? "config-callbacks" : base.SourceRegistrationKind;
 
+        /// <summary>
+        /// Adds the assembly references required by this feature's generated code.
+        /// </summary>
         public override void AddSourceGeneratorReferences(System.Collections.Generic.List<System.Type> references) {
             references.AddRange(GetMaskComponents(this.editorAssembly, this.asms));
             references.AddRange(GetCollectionComponents(this.editorAssembly, this.asms));

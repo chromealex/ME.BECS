@@ -3,10 +3,16 @@ using System.Reflection;
 
 namespace ME.BECS.Editor.Aspects {
 
+    /// <summary>
+    /// Exports copy from registration data for generated code.
+    /// </summary>
     public class CopyFromCodeGenerator : CustomCodeGenerator {
 
         // CopyFrom remains disabled pending its separate investigation. Do not emit
         // an empty legacy registration method for the built-in no-op feeder.
+        /// <summary>
+        /// Source registration kind used by <c>CopyFromCodeGenerator</c>.
+        /// </summary>
         public override string SourceRegistrationKind => this.GetType() == typeof(CopyFromCodeGenerator) ? "none" : base.SourceRegistrationKind;
 
         // Kept only for the deferred CopyFrom investigation, never called by export.

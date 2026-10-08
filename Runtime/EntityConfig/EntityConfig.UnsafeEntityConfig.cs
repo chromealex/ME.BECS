@@ -12,25 +12,55 @@ namespace ME.BECS {
     using static Cuts;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides native access to registered configuration data and its application callbacks.
+    /// </summary>
     public readonly unsafe partial struct UnsafeEntityConfig : IIsCreated {
 
+        /// <summary>
+        /// Caches generic data for reuse.
+        /// </summary>
         public static class GenericCache {
 
+            /// <summary>
+            /// Stores a key record used by <c>UnsafeEntityConfig.GenericCache</c>.
+            /// </summary>
             public struct Key : System.IEquatable<Key> {
 
+                /// <summary>
+                /// Type1 used by <c>UnsafeEntityConfig.GenericCache.Key</c>.
+                /// </summary>
                 public System.Type type1;
+                /// <summary>
+                /// Type2 used by <c>UnsafeEntityConfig.GenericCache.Key</c>.
+                /// </summary>
                 public System.Type type2;
+                /// <summary>
+                /// Method name used by <c>UnsafeEntityConfig.GenericCache.Key</c>.
+                /// </summary>
                 public string methodName;
+                /// <summary>
+                /// Delegate type used by <c>UnsafeEntityConfig.GenericCache.Key</c>.
+                /// </summary>
                 public System.Type delegateType;
 
+                /// <summary>
+                /// Tests equality using the identity or value comparison defined by this type.
+                /// </summary>
                 public bool Equals(Key other) {
                     return Equals(this.type1, other.type1) && Equals(this.type2, other.type2) && this.methodName == other.methodName && Equals(this.delegateType, other.delegateType);
                 }
 
+                /// <summary>
+                /// Tests equality using the identity or value comparison defined by this type.
+                /// </summary>
                 public override bool Equals(object obj) {
                     return obj is Key other && this.Equals(other);
                 }
 
+                /// <summary>
+                /// Returns a hash code consistent with this type's equality comparison.
+                /// </summary>
                 public override int GetHashCode() {
                     return System.HashCode.Combine(this.type1, this.type2, this.methodName, this.delegateType);
                 }
@@ -39,6 +69,9 @@ namespace ME.BECS {
 
             internal static readonly System.Collections.Generic.Dictionary<Key, System.Delegate> cache = new System.Collections.Generic.Dictionary<Key, System.Delegate>();
 
+            /// <summary>
+            /// Returns the requested entry from generic cache.
+            /// </summary>
             public static System.Delegate Get(System.Type objType, System.Type callerType, string methodName, System.Type delegateType) {
                 var key = new Key() {
                     type1 = callerType,
@@ -57,9 +90,15 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Defines the callback signature for method caller delegate.
+        /// </summary>
         [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
         public delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
         
+        /// <summary>
+        /// Defines the callback signature for method mask caller delegate.
+        /// </summary>
         [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
         public delegate void MethodMaskCallerDelegate(in UnsafeEntityConfig config, void* component, void* configComponent, void* mask, in Ent ent);
 
@@ -705,6 +744,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Stores static data for <c>UnsafeEntityConfig</c>.
+        /// </summary>
         [IgnoreProfiler]
         public readonly struct StaticData {
 
@@ -720,10 +762,16 @@ namespace ME.BECS {
 
             }
 
+            /// <summary>
+            /// Static data ent used by <c>UnsafeEntityConfig.StaticData</c>.
+            /// </summary>
             public readonly Ent staticDataEnt;
             internal readonly safe_ptr<uint> typeIds;
             private readonly uint count;
 
+            /// <summary>
+            /// Initializes <c>StaticData</c> from the supplied ent, source config, config.
+            /// </summary>
             public StaticData(in Ent ent, EntityConfig sourceConfig, in UnsafeEntityConfig config) {
                 
                 this.staticDataEnt = ent;
@@ -753,6 +801,9 @@ namespace ME.BECS {
 
             }
             
+            /// <summary>
+            /// Applies the supplied data or pending changes to the target state.
+            /// </summary>
             [INLINE(256)]
             public void Apply(in UnsafeEntityConfig config, in Ent ent, Config.JoinOptions options) {
                 
@@ -773,6 +824,9 @@ namespace ME.BECS {
                 
             }
 
+            /// <summary>
+            /// Tests whether the context has static.
+            /// </summary>
             [INLINE(256)]
             public bool HasStatic<T>() where T : unmanaged, IConfigComponentStatic {
 
@@ -782,6 +836,9 @@ namespace ME.BECS {
 
             }
 
+            /// <summary>
+            /// Reads static.
+            /// </summary>
             [INLINE(256)]
             public T ReadStatic<T>() where T : unmanaged, IConfigComponentStatic {
 
@@ -791,6 +848,9 @@ namespace ME.BECS {
 
             }
 
+            /// <summary>
+            /// Attempts to read static and reports whether the operation succeeded.
+            /// </summary>
             [INLINE(256)]
             public bool TryReadStatic<T>(out T component) where T : unmanaged, IConfigComponentStatic {
 
@@ -803,6 +863,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Identifier used to address this entry within its containing registry.
+        /// </summary>
         public readonly uint id;
         private readonly safe_ptr<UnsafeEntityConfig> baseConfig;
         private readonly Data data;
@@ -810,10 +873,19 @@ namespace ME.BECS {
         private readonly DataInitialize dataInitialize;
         private readonly Aspect aspects;
         private readonly CollectionsData collectionsData;
+        /// <summary>
+        /// Static data used by <c>UnsafeEntityConfig</c>.
+        /// </summary>
         public readonly StaticData staticData;
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.IsValid();
 
+        /// <summary>
+        /// Initializes <c>UnsafeEntityConfig</c> from the supplied config, ID, static data ent, auto register config.
+        /// </summary>
         [INLINE(256)]
         public UnsafeEntityConfig(EntityConfig config, uint id = 0u, Ent staticDataEnt = default, bool autoRegisterConfig = true) {
 
@@ -836,11 +908,17 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns collection by ID.
+        /// </summary>
         [INLINE(256)]
         public bool GetCollectionById(uint id, out safe_ptr<byte> data, out uint length) {
             return this.collectionsData.GetById(id, out data, out length);
         }
 
+        /// <summary>
+        /// Attempts to read and reports whether the operation succeeded.
+        /// </summary>
         [INLINE(256)]
         public bool TryRead<T>(out T data) where T : unmanaged, IComponent {
             if (this.data.TryRead<T>(out data) == false) {
@@ -852,6 +930,9 @@ namespace ME.BECS {
             return true;
         }
 
+        /// <summary>
+        /// Tests whether the requested entry is present.
+        /// </summary>
         [INLINE(256)]
         public bool Has<T>() where T : unmanaged, IComponent {
             if (this.data.Has<T>() == false) {
@@ -863,6 +944,9 @@ namespace ME.BECS {
             return true;
         }
 
+        /// <summary>
+        /// Applies the supplied data or pending changes to the target state.
+        /// </summary>
         [INLINE(256)]
         public void Apply(in Ent ent, Config.JoinOptions options = Config.JoinOptions.FullJoin) {
             
@@ -904,6 +988,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Schedules release of the owned storage after the supplied dependency and returns the disposal handle.
+        /// </summary>
         [INLINE(256)]
         public Unity.Jobs.JobHandle Dispose(Unity.Jobs.JobHandle dependsOn) {
             dependsOn = new ConfigDisposeJob() {
@@ -912,6 +999,9 @@ namespace ME.BECS {
             return dependsOn;
         }
         
+        /// <summary>
+        /// Releases the resources owned by this unsafe entity config instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
 
@@ -932,11 +1022,17 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is valid.
+        /// </summary>
         [INLINE(256)]
         public bool IsValid() {
             return this.id > 0u;
         }
 
+        /// <summary>
+        /// Tests whether the context has static.
+        /// </summary>
         [INLINE(256)]
         [SafetyCheck(RefOp.ReadOnly)] public bool HasStatic<T>() where T : unmanaged, IConfigComponentStatic {
 
@@ -944,6 +1040,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Reads static.
+        /// </summary>
         [INLINE(256)]
         [SafetyCheck(RefOp.ReadOnly)] public T ReadStatic<T>() where T : unmanaged, IConfigComponentStatic {
 
@@ -951,6 +1050,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Attempts to read static and reports whether the operation succeeded.
+        /// </summary>
         [INLINE(256)]
         [SafetyCheck(RefOp.ReadOnly)] public bool TryReadStatic<T>(out T component) where T : unmanaged, IConfigComponentStatic {
 

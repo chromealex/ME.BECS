@@ -10,15 +10,27 @@ using Bounds = UnityEngine.Bounds;
 
 namespace ME.BECS.Bullets {
 
+    /// <summary>
+    /// Groups bullet components for change tracking and queries.
+    /// </summary>
     public struct BulletComponentGroup {
         
+        /// <summary>
+        /// Color used to render or identify this value.
+        /// </summary>
         public static UnityEngine.Color color = UnityEngine.Color.red;
 
     }
     
+    /// <summary>
+    /// Defines configuration-backed entity data for is bullet custom fly.
+    /// </summary>
     [ComponentGroup(typeof(BulletComponentGroup))]
     public struct IsBulletCustomFlyComponent : IConfigComponent {}
     
+    /// <summary>
+    /// Defines configuration-backed entity data for bullet config.
+    /// </summary>
     [ComponentGroup(typeof(BulletComponentGroup))]
     public struct BulletConfigComponent : IConfigComponent {
 
@@ -39,6 +51,9 @@ namespace ME.BECS.Bullets {
         [ValueSqr]
         public tfloat hitRangeSqr;
 
+        /// <summary>
+        /// Movement or transition rate in the units used by this API.
+        /// </summary>
         public tfloat speed;
 
         /// <summary>
@@ -48,37 +63,73 @@ namespace ME.BECS.Bullets {
 
     }
 
+    /// <summary>
+    /// Defines immutable configuration data for bullet effect on destroy.
+    /// </summary>
     [ComponentGroup(typeof(BulletComponentGroup))]
     public struct BulletEffectOnDestroy : IConfigComponentStatic {
 
+        /// <summary>
+        /// Effect configuration or instance used by this operation.
+        /// </summary>
         public ME.BECS.Effects.EffectConfig effect;
 
     }
 
+    /// <summary>
+    /// Stores per-entity state for fire point.
+    /// </summary>
     [ComponentGroup(typeof(BulletComponentGroup))]
     public struct FirePointComponent : IComponent {
 
+        /// <summary>
+        /// Points used by the associated geometry or query.
+        /// </summary>
         public ListAuto<Ent> points;
+        /// <summary>
+        /// Index of this entry within its containing storage.
+        /// </summary>
         public uint index;
 
     }
 
+    /// <summary>
+    /// Defines immutable configuration data for bullet view point.
+    /// </summary>
     [ComponentGroup(typeof(BulletComponentGroup))]
     public struct BulletViewPoint : IConfigComponentStatic {
 
+        /// <summary>
+        /// Default settings or value supplied by this type.
+        /// </summary>
         public static BulletViewPoint Default = new BulletViewPoint() {
             rotation = quaternion.identity,
         };
 
+        /// <summary>
+        /// Identifier used to address this entry within its containing registry.
+        /// </summary>
         public uint id;
+        /// <summary>
+        /// Position in the coordinate space used by the containing API.
+        /// </summary>
         public float3 position;
+        /// <summary>
+        /// Orientation in the coordinate space used by the containing API.
+        /// </summary>
         public quaternion rotation;
 
     }
 
+    /// <summary>
+    /// Defines immutable configuration data for bullet view points.
+    /// </summary>
     [ComponentGroup(typeof(BulletComponentGroup))]
     public struct BulletViewPoints : IConfigComponentStatic {
 
+        /// <summary>
+        /// Points used by the associated geometry or query.
+        /// </summary>
         public MemArrayAuto<BulletViewPoint> points;
 
     }

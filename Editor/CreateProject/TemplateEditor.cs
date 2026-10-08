@@ -2,9 +2,15 @@ namespace ME.BECS.Editor {
     
     using CreateProject;
 
+    /// <summary>
+    /// Provides Unity Editor controls for template editor.
+    /// </summary>
     public static class TemplateEditor {
 
         #if ME_BECS_EDITOR_INTERNAL
+        /// <summary>
+        /// Exports meta.
+        /// </summary>
         [UnityEditor.MenuItem("ME.BECS/Internal/Export Template")]
         public static void ExportMeta() {
 

@@ -2,35 +2,80 @@ namespace ME.BECS {
 
     using System.Runtime.CompilerServices;
     
+    /// <summary>
+    /// Defines the operations required by is created.
+    /// </summary>
     public interface IIsCreated {
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         bool IsCreated { get; }
 
     }
 
+    /// <summary>
+    /// Defines the operations required by unmanaged list.
+    /// </summary>
     public interface IUnmanagedList : IIsCreated {
 
+        /// <summary>
+        /// Number of stored elements exposed by the collection interface.
+        /// </summary>
         uint ElementsCount { get; }
+        /// <summary>
+        /// Converts the value to managed array.
+        /// </summary>
         object[] ToManagedArray();
+        /// <summary>
+        /// Entity whose components or lifetime are associated with this value.
+        /// </summary>
         Ent Ent { get; }
+        /// <summary>
+        /// Returns config ID.
+        /// </summary>
         uint GetConfigId();
 
     }
 
+    /// <summary>
+    /// Defines the operations required by mem array.
+    /// </summary>
     public interface IMemArray { }
 
+    /// <summary>
+    /// Defines the operations required by mem list.
+    /// </summary>
     public interface IMemList { }
 
+    /// <summary>
+    /// Defines the supported insertion behavior values.
+    /// </summary>
     public enum InsertionBehavior {
 
+        /// <summary>
+        /// None option for <c>InsertionBehavior</c>.
+        /// </summary>
         None = 0,
+        /// <summary>
+        /// Overwrite existing option for <c>InsertionBehavior</c>.
+        /// </summary>
         OverwriteExisting,
+        /// <summary>
+        /// Throw on existing option for <c>InsertionBehavior</c>.
+        /// </summary>
         ThrowOnExisting,
 
     }
 
+    /// <summary>
+    /// Provides helpers operations within <c>ME.BECS</c>.
+    /// </summary>
     public static class Helpers {
 
+        /// <summary>
+        /// Returns the next supported power-of-two size for the supplied value.
+        /// </summary>
         public static uint NextPot(uint n) {
 
             --n;

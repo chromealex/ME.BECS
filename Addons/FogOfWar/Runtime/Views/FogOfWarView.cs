@@ -11,6 +11,9 @@ namespace ME.BECS.FogOfWar {
     using Views;
     using UnityEngine;
 
+    /// <summary>
+    /// Presents fog of war view state through the associated view.
+    /// </summary>
     public class FogOfWarView : EntityView {
 
         private static readonly int fogTex = Shader.PropertyToID("_FogTex");
@@ -21,14 +24,29 @@ namespace ME.BECS.FogOfWar {
         private static readonly int @params = Shader.PropertyToID("_Params");
         private static readonly int padding = Shader.PropertyToID("_Padding");
 
+        /// <summary>
+        /// Material used by the associated renderer.
+        /// </summary>
         public Material material;
+        /// <summary>
+        /// Mesh renderer used by <c>FogOfWarView</c>.
+        /// </summary>
         public MeshRenderer meshRenderer;
+        /// <summary>
+        /// Transform scale used by <c>FogOfWarView</c>.
+        /// </summary>
         public Transform transformScale;
+        /// <summary>
+        /// X - top, Y - right, Z - bottom, W - left.
+        /// </summary>
         [Tooltip("X - top, Y - right, Z - bottom, W - left")]
         public Vector4 paddingSize;
         private float2 worldSize;
         private Vector3 offset;
 
+        /// <summary>
+        /// Initializes fog of war view state from the supplied context.
+        /// </summary>
         protected override void OnInitialize() {
             
             EntRO ent = viewData;
@@ -48,6 +66,9 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Updates fog of war view using the current inputs and execution context.
+        /// </summary>
         protected override void OnUpdate(in ViewData viewData, float dt) {
 
             // this.SetScale();

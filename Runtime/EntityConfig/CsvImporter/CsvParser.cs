@@ -2,9 +2,15 @@ namespace ME.BECS.CsvImporter {
     
     using scg = System.Collections.Generic;
 
+    /// <summary>
+    /// Provides CSV parser operations for the associated BECS data.
+    /// </summary>
     public static class CSVParser {
 
         #region CSV
+        /// <summary>
+        /// Reads CSV.
+        /// </summary>
         public static scg::List<string[]> ReadCSV(string text) {
 
             var iStart = 0;
@@ -132,12 +138,21 @@ namespace ME.BECS.CsvImporter {
 
     }
 
+    /// <summary>
+    /// Provides helper operations for string.
+    /// </summary>
     public static class StringExt {
 
+        /// <summary>
+        /// Splits the supplied text into lines.
+        /// </summary>
         public static string[] SplitLines(this string str) {
             return str.Split(new string[] { "\r\n", "\n", "\r" }, System.StringSplitOptions.RemoveEmptyEntries);
         }
 
+        /// <summary>
+        /// Removes boundary whitespace from the supplied text.
+        /// </summary>
         public static string TrimFast(this string str) {
 
             if (str == null || str.Length == 0) {

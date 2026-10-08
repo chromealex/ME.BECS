@@ -6,8 +6,14 @@ namespace ME.BECS.Editor.Systems {
     using ME.BECS.FeaturesGraph;
     
     // Retirement names and compatibility query only. Graph bodies are compiler-owned.
+    /// <summary>
+    /// Exports systems registration data for generated code.
+    /// </summary>
     public class SystemsCodeGenerator : CustomCodeGenerator {
 
+        /// <summary>
+        /// Returns retired source files.
+        /// </summary>
         public override scg::IEnumerable<string> GetRetiredSourceFiles() {
             if (this.editorAssembly) yield break;
             foreach (var guid in UnityEditor.AssetDatabase.FindAssets("t:SystemsGraph").OrderBy(value => value, System.StringComparer.Ordinal)) {
@@ -19,6 +25,9 @@ namespace ME.BECS.Editor.Systems {
             }
         }
 
+        /// <summary>
+        /// Returns systems count.
+        /// </summary>
         public static int GetSystemsCount(SystemsGraph graph) {
             return SourceGeneratorInputManifest.GetSystemsCount(graph);
         }

@@ -7,6 +7,9 @@ using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Provides Unity Editor controls for entity config editor.
+    /// </summary>
     public partial class EntityConfigEditor {
 
         private static readonly string[] MultiStorages = { "data", "staticData", "sharedData" };

@@ -17,10 +17,19 @@ namespace ME.BECS {
     #endif
     using Unity.Jobs.LowLevel.Unsafe;
 
+    /// <summary>
+    /// Produces random values from the associated deterministic state.
+    /// </summary>
     public struct RandomProcessor {
 
+        /// <summary>
+        /// Random used by <c>RandomProcessor</c>.
+        /// </summary>
         public Random random;
         
+        /// <summary>
+        /// Initializes <c>RandomProcessor</c> from the supplied seed.
+        /// </summary>
         public RandomProcessor(uint seed) {
             var rnd = new Random(seed);
             rnd.NextFloat4(); // process 4 NextState because of seed may be closed to the next one
@@ -29,30 +38,54 @@ namespace ME.BECS {
         
     }
     
+    /// <summary>
+    /// Stores deterministic random-generator state.
+    /// </summary>
     public struct RandomData {
 
+        /// <summary>
+        /// Data consumed or produced by the containing operation.
+        /// </summary>
         public uint data;
+        /// <summary>
+        /// Index of the synchronization lock used for this entry.
+        /// </summary>
         public LockSpinner lockIndex;
         
+        /// <summary>
+        /// Indicates hash.
+        /// </summary>
         public int Hash => Utils.Hash(this.data);
 
+        /// <summary>
+        /// Writes collection metadata to the stream without serializing the backing allocator blocks.
+        /// </summary>
         [INLINE(256)]
         public void SerializeHeaders(ref StreamBufferWriter writer) {
             writer.Write(this.data);
             writer.Write(this.lockIndex);
         }
 
+        /// <summary>
+        /// Restores collection metadata from the stream; backing allocator storage is restored separately.
+        /// </summary>
         [INLINE(256)]
         public void DeserializeHeaders(ref StreamBufferReader reader) {
             reader.Read(ref this.data);
             reader.Read(ref this.lockIndex);
         }
 
+        /// <summary>
+        /// Sets seed.
+        /// </summary>
         [INLINE(256)]
         public void SetSeed(safe_ptr<State> statePtr, uint seed) {
             this.data = seed;
         }
 
+        /// <summary>
+        /// Creates <c>RandomData</c> using the supplied creation arguments.
+        /// </summary>
         public static RandomData Create(safe_ptr<State> statePtr) {
             return new RandomData() { data = 1u };
         }

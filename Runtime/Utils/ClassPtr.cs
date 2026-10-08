@@ -8,6 +8,9 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Stores a managed reference behind a handle that must be released by its owner.
+    /// </summary>
     [IgnoreProfiler]
     public unsafe struct ClassPtr<T> : System.IEquatable<ClassPtr<T>> where T : class {
 
@@ -16,8 +19,14 @@ namespace ME.BECS {
         [NativeDisableUnsafePtrRestriction]
         private System.Runtime.InteropServices.GCHandle gcHandle;
 
+        /// <summary>
+        /// Indicates is valid.
+        /// </summary>
         public bool IsValid => this.ptr.ToPointer() != null;
 
+        /// <summary>
+        /// Value wrapped or resolved by this instance.
+        /// </summary>
         public T Value {
             get {
                 if (this.gcHandle.IsAllocated == false) return null;
@@ -25,12 +34,18 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Initializes <c>ClassPtr</c> from the supplied data.
+        /// </summary>
         [INLINE(256)]
         public ClassPtr(T data) {
             this.gcHandle = (data != null ? System.Runtime.InteropServices.GCHandle.Alloc(data, System.Runtime.InteropServices.GCHandleType.Normal) : default);
             this.ptr = System.Runtime.InteropServices.GCHandle.ToIntPtr(this.gcHandle);
         }
 
+        /// <summary>
+        /// Frees the managed reference handle; it does not dispose or destroy the referenced object.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
             if (this.gcHandle.IsAllocated == true) {
@@ -39,6 +54,9 @@ namespace ME.BECS {
             this = default;
         }
 
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         [INLINE(256)]
         public bool Equals(ClassPtr<T> other) {
             return other.ptr == ptr;

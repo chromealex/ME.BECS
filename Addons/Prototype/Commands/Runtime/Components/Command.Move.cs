@@ -12,12 +12,24 @@ using Rect = UnityEngine.Rect;
 
 namespace ME.BECS.Commands {
     
+    /// <summary>
+    /// Defines command move state and operations.
+    /// </summary>
     [ComponentGroup(typeof(CommandComponentsGroup))]
     public struct CommandMove : ICommandComponent {
 
+        /// <summary>
+        /// Gets target position; this implementation returns <c>this.targetPosition</c>.
+        /// </summary>
         public float3 TargetPosition => this.targetPosition;
 
+        /// <summary>
+        /// Target position used by the associated spatial operation.
+        /// </summary>
         public float3 targetPosition;
+        /// <summary>
+        /// Targets considered by the associated operation.
+        /// </summary>
         public ListAuto<float3> targets;
 
     }

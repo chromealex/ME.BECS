@@ -32,46 +32,85 @@ using System.Text;
 
 namespace ME.BECS.Mono.Reflection {
 
+    /// <summary>
+    /// Stores loop info for the associated runtime API.
+    /// </summary>
     public struct LoopInfo {
 
+        /// <summary>
+        /// Open count for the associated storage.
+        /// </summary>
         public int openCount;
+        /// <summary>
+        /// Close count for the associated storage.
+        /// </summary>
         public int closeCount;
 
+        /// <summary>
+        /// Indicates is loop.
+        /// </summary>
         public bool IsLoop => this.openCount > 0 || this.closeCount > 0;
 
+        /// <summary>
+        /// Formats this value for display or diagnostics.
+        /// </summary>
         public override string ToString() => $"o:{this.openCount}/c:{this.closeCount}";
 
     }
     
+    /// <summary>
+    /// Defines instruction state and operations.
+    /// </summary>
     public sealed class Instruction {
 
         private int offset;
         private OpCode opcode;
         private object operand;
+        /// <summary>
+        /// Loop info used by <c>Instruction</c>.
+        /// </summary>
         public LoopInfo loopInfo;
 
         private Instruction previous;
         private Instruction next;
 
+        /// <summary>
+        /// Gets offset; this implementation returns <c>this.offset</c>.
+        /// </summary>
         public int Offset => this.offset;
 
+        /// <summary>
+        /// Gets op code; this implementation returns <c>this.opcode</c>.
+        /// </summary>
         public OpCode OpCode => this.opcode;
 
+        /// <summary>
+        /// Operand used by <c>Instruction</c>.
+        /// </summary>
         public object Operand {
             get => this.operand;
             internal set => this.operand = value;
         }
 
+        /// <summary>
+        /// Previous used by <c>Instruction</c>.
+        /// </summary>
         public Instruction Previous {
             get => this.previous;
             internal set => this.previous = value;
         }
 
+        /// <summary>
+        /// Next entry in the represented sequence.
+        /// </summary>
         public Instruction Next {
             get => this.next;
             internal set => this.next = value;
         }
 
+        /// <summary>
+        /// Size of the represented value in the units used by this API.
+        /// </summary>
         public int Size {
             get {
                 var size = this.opcode.Size;
@@ -117,6 +156,9 @@ namespace ME.BECS.Mono.Reflection {
             this.opcode = opcode;
         }
 
+        /// <summary>
+        /// Formats this value for display or diagnostics.
+        /// </summary>
         public override string ToString() {
             var instruction = new StringBuilder();
 

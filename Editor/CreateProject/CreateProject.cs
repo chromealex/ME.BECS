@@ -5,39 +5,105 @@ namespace ME.BECS.Editor.CreateProject {
     using System.Linq;
     using scg = System.Collections.Generic;
 
+    /// <summary>
+    /// Defines package import state and operations.
+    /// </summary>
     public struct PackageImport {
 
+        /// <summary>
+        /// Selected execution or presentation mode.
+        /// </summary>
         public TemplateJson.ModeJson mode;
+        /// <summary>
+        /// Target path used by <c>PackageImport</c>.
+        /// </summary>
         public string targetPath;
+        /// <summary>
+        /// Project name used by <c>PackageImport</c>.
+        /// </summary>
         public string projectName;
+        /// <summary>
+        /// Options used by <c>PackageImport</c>.
+        /// </summary>
         public OptionJson[] options;
 
     }
     
+    /// <summary>
+    /// Defines the supported mode values.
+    /// </summary>
     public enum Mode {
+        /// <summary>
+        /// Single player option for <c>Mode</c>.
+        /// </summary>
         SinglePlayer = 0,
+        /// <summary>
+        /// Multiplayer option for <c>Mode</c>.
+        /// </summary>
         Multiplayer  = 1,
     }
 
+    /// <summary>
+    /// Stores option info for the associated editor API.
+    /// </summary>
     public struct OptionInfo {
 
+        /// <summary>
+        /// Text displayed as the entry's caption.
+        /// </summary>
         public string caption;
+        /// <summary>
+        /// Human-readable explanation of the associated entry.
+        /// </summary>
         public string description;
+        /// <summary>
+        /// Callback invoked for action.
+        /// </summary>
         public System.Action<bool> action;
+        /// <summary>
+        /// State accessed by the containing operation.
+        /// </summary>
         public bool state;
 
     }
 
+    /// <summary>
+    /// Stores template info for the associated editor API.
+    /// </summary>
     public struct TemplateInfo {
 
+        /// <summary>
+        /// Icon used by <c>TemplateInfo</c>.
+        /// </summary>
         public Texture icon;
+        /// <summary>
+        /// Text displayed as the entry's caption.
+        /// </summary>
         public string caption;
+        /// <summary>
+        /// Human-readable explanation of the associated entry.
+        /// </summary>
         public string description;
+        /// <summary>
+        /// Template used by <c>TemplateInfo</c>.
+        /// </summary>
         public string template;
+        /// <summary>
+        /// Supported modes for the associated operation.
+        /// </summary>
         public TemplateInfoJson.ModeJson[] modes;
+        /// <summary>
+        /// Selected execution or presentation mode.
+        /// </summary>
         public Mode mode;
+        /// <summary>
+        /// Template path used by <c>TemplateInfo</c>.
+        /// </summary>
         public string templatePath;
 
+        /// <summary>
+        /// Initializes <c>TemplateInfo</c> from the supplied path, JSON.
+        /// </summary>
         public TemplateInfo(string path, TemplateInfoJson json) {
             this.caption = json.caption;
             this.description = json.description;
@@ -49,6 +115,9 @@ namespace ME.BECS.Editor.CreateProject {
             this.mode = default;
         }
 
+        /// <summary>
+        /// Returns modes.
+        /// </summary>
         public scg::List<TemplateInfo> GetModes(TemplateInfo[] allModes) {
             var modes = this.modes;
             var templatePath = this.templatePath;
@@ -64,74 +133,158 @@ namespace ME.BECS.Editor.CreateProject {
         
     }
 
+    /// <summary>
+    /// Defines template info JSON state and operations.
+    /// </summary>
     public struct TemplateInfoJson {
 
+        /// <summary>
+        /// Defines mode JSON state and operations for <c>TemplateInfoJson</c>.
+        /// </summary>
         [System.Serializable]
         public struct ModeJson {
 
+            /// <summary>
+            /// Selected execution or presentation mode.
+            /// </summary>
             public int mode;
+            /// <summary>
+            /// Package used by <c>TemplateInfoJson.ModeJson</c>.
+            /// </summary>
             public string package;
 
         }
 
+        /// <summary>
+        /// Text displayed as the entry's caption.
+        /// </summary>
         public string caption;
+        /// <summary>
+        /// Human-readable explanation of the associated entry.
+        /// </summary>
         public string description;
+        /// <summary>
+        /// Supported modes for the associated operation.
+        /// </summary>
         public ModeJson[] modes;
 
+        /// <summary>
+        /// Tests whether the context is valid.
+        /// </summary>
         public bool IsValid() {
             return string.IsNullOrEmpty(this.caption) == false;
         }
 
     }
 
+    /// <summary>
+    /// Defines template JSON state and operations.
+    /// </summary>
     [System.Serializable]
     public struct TemplateJson {
 
+        /// <summary>
+        /// Defines mode JSON state and operations for <c>TemplateJson</c>.
+        /// </summary>
         [System.Serializable]
         public struct ModeJson {
 
+            /// <summary>
+            /// Package used by <c>TemplateJson.ModeJson</c>.
+            /// </summary>
             public string package;
+            /// <summary>
+            /// Dependencies used by <c>TemplateJson.ModeJson</c>.
+            /// </summary>
             public string[] dependencies;
+            /// <summary>
+            /// Defines used by <c>TemplateJson.ModeJson</c>.
+            /// </summary>
             public string[] defines;
+            /// <summary>
+            /// Selected execution or presentation mode.
+            /// </summary>
             public int mode;
 
         }
 
+        /// <summary>
+        /// Supported modes for the associated operation.
+        /// </summary>
         public ModeJson[] modes;
 
     }
 
+    /// <summary>
+    /// Defines template inner JSON state and operations.
+    /// </summary>
     [System.Serializable]
     public struct TemplateInnerJson {
 
+        /// <summary>
+        /// Defines file state and operations for <c>TemplateInnerJson</c>.
+        /// </summary>
         [System.Serializable]
         public struct File {
 
+            /// <summary>
+            /// Search used by <c>TemplateInnerJson.File</c>.
+            /// </summary>
             public string search;
+            /// <summary>
+            /// Destination or target of the associated operation.
+            /// </summary>
             public string target;
+            /// <summary>
+            /// File used by <c>TemplateInnerJson.File</c>.
+            /// </summary>
             public string file;
 
         }
 
+        /// <summary>
+        /// Files used by <c>TemplateInnerJson</c>.
+        /// </summary>
         public File[] files;
+        /// <summary>
+        /// Configurations supplying values for this operation.
+        /// </summary>
         public File[] configs;
+        /// <summary>
+        /// Views used by <c>TemplateInnerJson</c>.
+        /// </summary>
         public File[] views;
 
     }
 
+    /// <summary>
+    /// Defines option JSON state and operations.
+    /// </summary>
     [System.Serializable]
     public struct OptionJson {
 
+        /// <summary>
+        /// State accessed by the containing operation.
+        /// </summary>
         public bool state;
 
+        /// <summary>
+        /// Initializes <c>OptionJson</c> from the supplied option info.
+        /// </summary>
         public OptionJson(OptionInfo optionInfo) {
             this.state = optionInfo.state;
         }
 
     }
     
+    /// <summary>
+    /// Defines new project state and operations.
+    /// </summary>
     public static class NewProject {
 
+        /// <summary>
+        /// Options used by <c>NewProject</c>.
+        /// </summary>
         public static readonly OptionInfo[] options = new OptionInfo[] {
             new OptionInfo() {
                 state = false,
@@ -179,6 +332,9 @@ namespace ME.BECS.Editor.CreateProject {
             },
         };
 
+        /// <summary>
+        /// Initializes the supplied storage or context.
+        /// </summary>
         public static void Create(string path, string projectName, string template, Mode mode) {
             path = $"{path}/{projectName}";
             path = UnityEditor.AssetDatabase.GenerateUniqueAssetPath(path);
@@ -290,6 +446,9 @@ namespace ME.BECS.Editor.CreateProject {
 
         }
 
+        /// <summary>
+        /// Applies options.
+        /// </summary>
         public static void ApplyOptions(OptionJson[] options) {
 
             for (int i = 0; i < options.Length; ++i) {
@@ -299,6 +458,9 @@ namespace ME.BECS.Editor.CreateProject {
 
         }
 
+        /// <summary>
+        /// Adds defines.
+        /// </summary>
         public static void AddDefines(string[] defines) {
             if (defines == null) return;
             BuildTargetGroup buildTargetGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
@@ -316,6 +478,9 @@ namespace ME.BECS.Editor.CreateProject {
             PlayerSettings.SetScriptingDefineSymbols(name, currentDefines);
         }
 
+        /// <summary>
+        /// Handles the script reloaded callback.
+        /// </summary>
         [UnityEditor.Callbacks.DidReloadScripts]
         public static void OnScriptReloaded() {
             if (EditorPrefs.HasKey("ME.BECS.Editor.AwaitPackageImportData") == false) return;

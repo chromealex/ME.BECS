@@ -7,8 +7,14 @@ namespace ME.BECS {
     #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides component, lifecycle and identity operations on entity handles.
+    /// </summary>
     public static unsafe partial class EntExt {
 
+        /// <summary>
+        /// Writes component data to the entity and records the change through the batching layer.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool Set(in this Ent ent, uint typeId, void* data) {
 
@@ -18,6 +24,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes the component from the entity through the batching layer.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool Remove(in this Ent ent, uint typeId) {
 
@@ -27,6 +36,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Sets ptr.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool SetPtr(in this Ent ent, uint typeId, void* data) {
 
@@ -36,6 +48,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Sets ptr.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool SetPtr<T>(in this Ent ent, T* data) where T : unmanaged, IComponent {
 
@@ -45,6 +60,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Resolves the requested address to a native pointer.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static T* GetPtr<T>(in this Ent ent) where T : unmanaged, IComponent {
 
@@ -54,6 +72,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Reads ptr.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static void* ReadPtr(in this Ent ent, uint typeId) {
 
@@ -63,6 +84,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Reads ptr.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static T* ReadPtr<T>(in this Ent ent) where T : unmanaged, IComponent {
 
@@ -72,6 +96,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Attempts to read ptr and reports whether the operation succeeded.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static T* TryReadPtr<T>(in this Ent ent, out bool exists) where T : unmanaged, IComponent {
 
@@ -81,6 +108,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Attempts to read ptr and reports whether the operation succeeded.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool TryReadPtr<T>(in this Ent ent, out T* component) where T : unmanaged, IComponent {
 

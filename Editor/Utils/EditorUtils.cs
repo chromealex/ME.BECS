@@ -3,21 +3,51 @@ using System.Reflection;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Defines component dependency graph info data used by entity processing.
+    /// </summary>
     public struct ComponentDependencyGraphInfo {
 
+        /// <summary>
+        /// Type descriptor used by the associated operation.
+        /// </summary>
         public System.Type type;
+        /// <summary>
+        /// Op used by <c>ComponentDependencyGraphInfo</c>.
+        /// </summary>
         public byte op;
+        /// <summary>
+        /// Diagnostics produced while validating or processing the inputs.
+        /// </summary>
         public System.Collections.Generic.List<ME.BECS.Editor.Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error> errors;
         
     }
     
+    /// <summary>
+    /// Stores assembly info for the associated editor API.
+    /// </summary>
     public struct AssemblyInfo {
 
+        /// <summary>
+        /// Display or lookup name of this entry.
+        /// </summary>
         public string name;
+        /// <summary>
+        /// Include platforms used by <c>AssemblyInfo</c>.
+        /// </summary>
         public string[] includePlatforms;
+        /// <summary>
+        /// References used by <c>AssemblyInfo</c>.
+        /// </summary>
         public string[] references;
+        /// <summary>
+        /// Indicates is editor.
+        /// </summary>
         public bool isEditor;
 
+        /// <summary>
+        /// Initializes assembly info state from the supplied context.
+        /// </summary>
         public AssemblyInfo Init() {
 
             this.isEditor = false;
@@ -46,21 +76,45 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Tests whether the context has reference.
+        /// </summary>
         public bool HasReference(string asm) {
             return System.Array.IndexOf(this.references, asm) >= 0;
         }
 
     }
 
+    /// <summary>
+    /// Provides helper operations for editor.
+    /// </summary>
     public static class EditorUtils {
 
+        /// <summary>
+        /// Stores aspect item for <c>EditorUtils</c>.
+        /// </summary>
         public struct AspectItem : System.IEquatable<AspectItem> {
 
+            /// <summary>
+            /// Stored value used by this instance.
+            /// </summary>
             public string value;
+            /// <summary>
+            /// Type descriptor used by the associated operation.
+            /// </summary>
             public System.Type type;
+            /// <summary>
+            /// Metadata describing the associated entry.
+            /// </summary>
             public ComponentGroupItem.ComponentMetaInfo info;
+            /// <summary>
+            /// Index of this entry within its containing storage.
+            /// </summary>
             public int index;
 
+            /// <summary>
+            /// Initializes <c>AspectItem</c> from the supplied data.
+            /// </summary>
             public AspectItem(ComponentGroupsXml.AspectItem data) {
 
                 this.type = data.type != null ? System.Type.GetType(data.type) : null;
@@ -72,34 +126,79 @@ namespace ME.BECS.Editor {
                 
             }
 
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             public bool Equals(AspectItem other) {
                 return Equals(this.type, other.type);
             }
 
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             public override bool Equals(object obj) {
                 return obj is AspectItem other && this.Equals(other);
             }
 
+            /// <summary>
+            /// Returns a hash code consistent with this type's equality comparison.
+            /// </summary>
             public override int GetHashCode() {
                 return (this.type != null ? this.type.GetHashCode() : 0);
             }
 
         }
         
+        /// <summary>
+        /// Defines component group item data used by entity processing.
+        /// </summary>
         public struct ComponentGroupItem : System.IEquatable<ComponentGroupItem> {
 
+            /// <summary>
+            /// Defines component meta info data used by entity processing.
+            /// </summary>
             public class ComponentMetaInfo : System.IEquatable<ComponentMetaInfo> {
 
+                /// <summary>
+                /// Type descriptor used by the associated operation.
+                /// </summary>
                 public System.Type type;
+                /// <summary>
+                /// File used by <c>EditorUtils.ComponentGroupItem.ComponentMetaInfo</c>.
+                /// </summary>
                 public UnityEditor.MonoScript file;
+                /// <summary>
+                /// Line number used by <c>EditorUtils.ComponentGroupItem.ComponentMetaInfo</c>.
+                /// </summary>
                 public int lineNumber;
+                /// <summary>
+                /// Column number used by <c>EditorUtils.ComponentGroupItem.ComponentMetaInfo</c>.
+                /// </summary>
                 public int columnNumber;
+                /// <summary>
+                /// Whether file is ready behavior or state is selected.
+                /// </summary>
                 public bool fileIsReady;
+                /// <summary>
+                /// On file ready used by <c>EditorUtils.ComponentGroupItem.ComponentMetaInfo</c>.
+                /// </summary>
                 public System.Action<bool> onFileReady;
+                /// <summary>
+                /// Indicates is built in.
+                /// </summary>
                 public bool isBuiltIn;
+                /// <summary>
+                /// Editor comment used by <c>EditorUtils.ComponentGroupItem.ComponentMetaInfo</c>.
+                /// </summary>
                 public string editorComment;
+                /// <summary>
+                /// Default editor comment used by <c>EditorUtils.ComponentGroupItem.ComponentMetaInfo</c>.
+                /// </summary>
                 public string defaultEditorComment;
 
+                /// <summary>
+                /// Initializes <c>ComponentMetaInfo</c> from the supplied type.
+                /// </summary>
                 public ComponentMetaInfo(System.Type type) {
                     this.type = type;
                     this.file = null;
@@ -115,6 +214,9 @@ namespace ME.BECS.Editor {
                     }
                 }
 
+                /// <summary>
+                /// Returns editor comment.
+                /// </summary>
                 public string GetEditorComment() {
                     if (this.type == null) return string.Empty;
                     var result = string.IsNullOrEmpty(this.editorComment) == true ? this.defaultEditorComment : this.editorComment;
@@ -125,14 +227,23 @@ namespace ME.BECS.Editor {
                     return string.Empty;
                 }
 
+                /// <summary>
+                /// Returns fields.
+                /// </summary>
                 public FieldInfo[] GetFields() {
                     return this.type != null ? this.type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) : new FieldInfo[0];
                 }
 
+                /// <summary>
+                /// Returns tooltip.
+                /// </summary>
                 public string GetTooltip() {
                     return this.file != null ? this.file.name + ":" + this.lineNumber + ",col:" + this.columnNumber : string.Empty;
                 }
 
+                /// <summary>
+                /// Tests equality using the identity or value comparison defined by this type.
+                /// </summary>
                 public bool Equals(ComponentMetaInfo other) {
                     if (other is null) {
                         return false;
@@ -145,6 +256,9 @@ namespace ME.BECS.Editor {
                     return Equals(this.type, other.type);
                 }
 
+                /// <summary>
+                /// Tests equality using the identity or value comparison defined by this type.
+                /// </summary>
                 public override bool Equals(object obj) {
                     if (obj is null) {
                         return false;
@@ -161,19 +275,43 @@ namespace ME.BECS.Editor {
                     return this.Equals((ComponentMetaInfo)obj);
                 }
 
+                /// <summary>
+                /// Returns a hash code consistent with this type's equality comparison.
+                /// </summary>
                 public override int GetHashCode() {
                     return (this.type != null ? this.type.GetHashCode() : 0);
                 }
 
             }
             
+            /// <summary>
+            /// Stored value used by this instance.
+            /// </summary>
             public string value;
+            /// <summary>
+            /// Type descriptor used by the associated operation.
+            /// </summary>
             public System.Type type;
+            /// <summary>
+            /// Component storage or descriptors used by this operation.
+            /// </summary>
             public System.Collections.Generic.List<ComponentMetaInfo> components;
+            /// <summary>
+            /// Index of this entry within its containing storage.
+            /// </summary>
             public int index;
+            /// <summary>
+            /// Order used by <c>EditorUtils.ComponentGroupItem</c>.
+            /// </summary>
             public int order;
+            /// <summary>
+            /// Value short used by <c>EditorUtils.ComponentGroupItem</c>.
+            /// </summary>
             public string ValueShort => EditorUtils.GetShortName(this.value);
 
+            /// <summary>
+            /// Initializes <c>ComponentGroupItem</c> from the supplied data.
+            /// </summary>
             public ComponentGroupItem(ComponentGroupsXml.Item data) {
 
                 this.type = data.type != null ? System.Type.GetType(data.type) : null;
@@ -189,64 +327,124 @@ namespace ME.BECS.Editor {
 
             }
 
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             public bool Equals(ComponentGroupItem other) {
                 return Equals(this.type, other.type);
             }
 
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             public override bool Equals(object obj) {
                 return obj is ComponentGroupItem other && this.Equals(other);
             }
 
+            /// <summary>
+            /// Returns a hash code consistent with this type's equality comparison.
+            /// </summary>
             public override int GetHashCode() {
                 return (this.type != null ? this.type.GetHashCode() : 0);
             }
 
         }
 
+        /// <summary>
+        /// Returns short name.
+        /// </summary>
         public static string GetShortName(string value) {
             return string.Join(string.Empty, System.Text.RegularExpressions.Regex.Matches(value, @"\b[a-zA-Z]").Select(x => x.Value).ToArray());
         }
 
         private static readonly string UNKNOWN_GROUP_NAME = "Ungrouped";
 
+        /// <summary>
+        /// Defines component groups xml data used by entity processing.
+        /// </summary>
         [System.Serializable]
         [System.Xml.Serialization.XmlRoot("ComponentGroupsXml")]
         public class ComponentGroupsXml {
 
+            /// <summary>
+            /// Stores a item record used by <c>EditorUtils.ComponentGroupsXml</c>.
+            /// </summary>
             [System.Serializable]
             public class Item {
 
+                /// <summary>
+                /// Defines component meta data used by entity processing.
+                /// </summary>
                 [System.Serializable]
                 public class ComponentMeta {
 
+                    /// <summary>
+                    /// Type descriptor used by the associated operation.
+                    /// </summary>
                     public string type;
+                    /// <summary>
+                    /// Editor comment used by <c>EditorUtils.ComponentGroupsXml.Item.ComponentMeta</c>.
+                    /// </summary>
                     public string editorComment;
 
                 }
 
+                /// <summary>
+                /// Identifier used to address this entry within its containing registry.
+                /// </summary>
                 public int id;
+                /// <summary>
+                /// Type descriptor used by the associated operation.
+                /// </summary>
                 public string type;
+                /// <summary>
+                /// Component storage or descriptors used by this operation.
+                /// </summary>
                 [System.Xml.Serialization.XmlArrayAttribute("Components")]
                 [System.Xml.Serialization.XmlArrayItemAttribute("Component", typeof(ComponentMeta))]
                 public ComponentMeta[] components;
 
             }
 
+            /// <summary>
+            /// Stores aspect item for <c>EditorUtils.ComponentGroupsXml</c>.
+            /// </summary>
             [System.Serializable]
             public class AspectItem {
 
+                /// <summary>
+                /// Identifier used to address this entry within its containing registry.
+                /// </summary>
                 public int id;
+                /// <summary>
+                /// Type descriptor used by the associated operation.
+                /// </summary>
                 public string type;
+                /// <summary>
+                /// Metadata describing the associated entry.
+                /// </summary>
                 public Item.ComponentMeta info;
 
             }
 
+            /// <summary>
+            /// Next id used to locate the associated entry.
+            /// </summary>
             public int nextId;
+            /// <summary>
+            /// Entries stored by this container.
+            /// </summary>
             [System.Xml.Serialization.XmlArrayAttribute("Items")]
             [System.Xml.Serialization.XmlArrayItemAttribute("Item", typeof(Item))]
             public Item[] items;
 
+            /// <summary>
+            /// Next aspect id used to locate the associated entry.
+            /// </summary>
             public int nextAspectId;
+            /// <summary>
+            /// Aspect items used by <c>EditorUtils.ComponentGroupsXml</c>.
+            /// </summary>
             [System.Xml.Serialization.XmlArrayAttribute("Aspects")]
             [System.Xml.Serialization.XmlArrayItemAttribute("AspectItem", typeof(AspectItem))]
             public AspectItem[] aspectItems;
@@ -254,6 +452,9 @@ namespace ME.BECS.Editor {
         }
 
         private static object loadComponentGroupLock = new object();
+        /// <summary>
+        /// Loads component groups.
+        /// </summary>
         public static void LoadComponentGroups() {
 
             lock (loadComponentGroupLock) {
@@ -303,6 +504,9 @@ namespace ME.BECS.Editor {
             
         }
         
+        /// <summary>
+        /// Saves component groups.
+        /// </summary>
         public static void SaveComponentGroups() {
 
             lock (loadComponentGroupLock) {
@@ -362,6 +566,9 @@ namespace ME.BECS.Editor {
             
         }
 
+        /// <summary>
+        /// Returns components by group.
+        /// </summary>
         public static System.Collections.Generic.List<System.Type> GetComponentsByGroup(System.Type type) {
 
             var result = new System.Collections.Generic.List<System.Type>();
@@ -410,6 +617,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Returns a typed aspect view over the existing entity components.
+        /// </summary>
         public static AspectItem GetAspect(System.Type type) {
             if (aspects == null) LoadComponentGroups();
             if (aspects == null || aspects.Count == 0) aspects = GetAspects();
@@ -423,6 +633,9 @@ namespace ME.BECS.Editor {
             return aspects.FirstOrDefault(x => x.type == type);
         }
 
+        /// <summary>
+        /// Returns component.
+        /// </summary>
         public static ComponentGroupItem.ComponentMetaInfo GetComponent(System.Type type) {
             if (componentGroups == null) LoadComponentGroups();
             if (componentGroups == null || componentGroups.Count == 0) componentGroups = GetComponentGroups();
@@ -439,6 +652,9 @@ namespace ME.BECS.Editor {
 
         private static int aspectNextId;
         private static System.Collections.Generic.List<AspectItem> aspects;
+        /// <summary>
+        /// Returns aspects.
+        /// </summary>
         public static System.Collections.Generic.List<AspectItem> GetAspects() {
             
             if (aspects != null && aspects.Count > 0) return aspects;
@@ -487,6 +703,9 @@ namespace ME.BECS.Editor {
 
         private static int componentGroupsNextId;
         private static System.Collections.Generic.List<ComponentGroupItem> componentGroups;
+        /// <summary>
+        /// Returns component groups.
+        /// </summary>
         public static System.Collections.Generic.List<ComponentGroupItem> GetComponentGroups(bool withUnknownGroup = true) {
 
             if (componentGroups != null) {
@@ -547,14 +766,23 @@ namespace ME.BECS.Editor {
 
         }
         
+        /// <summary>
+        /// Returns entity name.
+        /// </summary>
         public static string GetEntityName(Ent ent) {
             return ent.ToString(withWorld: false).ToString();
         }
 
+        /// <summary>
+        /// Formats a byte count as a readable size.
+        /// </summary>
         public static string BytesToString(int bytes) {
             return BytesToString((uint)bytes);
         }
 
+        /// <summary>
+        /// Formats a byte count as a readable size.
+        /// </summary>
         public static string BytesToString(uint bytes) {
 
             var postfix = "B";
@@ -576,6 +804,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Converts a byte count into a display value and size category.
+        /// </summary>
         public static int BytesToInt(uint bytes, out byte cat) {
 
             cat = 0;
@@ -597,6 +828,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Converts a display value and size category into a byte count.
+        /// </summary>
         public static uint IntToBytes(int val, int cat) {
 
             if (cat == 1) {
@@ -609,21 +843,33 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Returns component name.
+        /// </summary>
         public static string GetComponentName(System.Type type) {
             if (type == null) return "<null>";
             return UnityEditor.ObjectNames.NicifyVariableName(type.Namespace?.Length > 0 ? type.FullName.Substring(type.Namespace.Length + 1) : type.Name);
         }
 
+        /// <summary>
+        /// Returns component namespace.
+        /// </summary>
         public static string GetComponentNamespace(System.Type type) {
             if (type == null) return "<null>";
             return type.Namespace;
         }
 
+        /// <summary>
+        /// Returns component full name.
+        /// </summary>
         public static string GetComponentFullName(System.Type type) {
             if (type == null) return "<null>";
             return UnityEditor.ObjectNames.NicifyVariableName(type.FullName);
         }
 
+        /// <summary>
+        /// Returns type from property field.
+        /// </summary>
         public static System.Type GetTypeFromPropertyField(string typeName, bool isType = false) {
             if (isType == true) return System.Type.GetType(typeName);
             if (typeName == string.Empty) return null;
@@ -632,6 +878,9 @@ namespace ME.BECS.Editor {
             return assembly.GetType(typeName.Substring(splitIndex + 1));
         }
 
+        /// <summary>
+        /// Shows popup.
+        /// </summary>
         public static void ShowPopup(UnityEngine.Rect popupPosition, System.Action<System.Type> onSelect, System.Type baseType, bool unmanagedTypes, bool runtimeAssembliesOnly, bool showNullElement = true) {
 
             var assembliesInfo = EditorUtils.GetAssembliesInfo();
@@ -671,6 +920,9 @@ namespace ME.BECS.Editor {
             
         }
         
+        /// <summary>
+        /// Shows popup.
+        /// </summary>
         public static void ShowPopup(UnityEngine.Rect popupPosition, System.Action<System.Type> onSelect, System.Type[] types, bool showNullElement = true) {
             
             var state = new UnityEditor.IMGUI.Controls.AdvancedDropdownState();
@@ -701,6 +953,9 @@ namespace ME.BECS.Editor {
             "Assets/",
         };
         
+        /// <summary>
+        /// Loads resource.
+        /// </summary>
         public static T LoadResource<T>(string path, bool isRequired = true) where T : UnityEngine.Object {
 
             if (path.StartsWith("Assets/") == true) {
@@ -784,14 +1039,29 @@ namespace ME.BECS.Editor {
             
         }
 
+        /// <summary>
+        /// Stores aspect item type info for <c>EditorUtils</c>.
+        /// </summary>
         public struct AspectItemTypeInfo {
 
+            /// <summary>
+            /// Field type used by <c>EditorUtils.AspectItemTypeInfo</c>.
+            /// </summary>
             public System.Type fieldType;
+            /// <summary>
+            /// Whether required behavior or state is selected.
+            /// </summary>
             public bool required;
+            /// <summary>
+            /// Configuration supplying values for this instance.
+            /// </summary>
             public bool config;
 
         }
         
+        /// <summary>
+        /// Returns aspect types.
+        /// </summary>
         public static AspectItemTypeInfo[] GetAspectTypes(System.Type type) {
 
             var result = new System.Collections.Generic.List<AspectItemTypeInfo>();
@@ -816,6 +1086,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Attempts to get component group color and reports whether the operation succeeded.
+        /// </summary>
         public static bool TryGetComponentGroupColor(System.Type componentType, out UnityEngine.Color color) {
 
             color = default;
@@ -829,6 +1102,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Attempts to get group color and reports whether the operation succeeded.
+        /// </summary>
         public static bool TryGetGroupColor(System.Type groupType, out UnityEngine.Color color) {
 
             color = default;
@@ -843,16 +1119,31 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Stores script meta info for <c>EditorUtils</c>.
+        /// </summary>
         public struct ScriptMetaInfo {
 
+            /// <summary>
+            /// Text displayed or processed by this entry.
+            /// </summary>
             public string text;
+            /// <summary>
+            /// Display or lookup name of this entry.
+            /// </summary>
             public string name;
+            /// <summary>
+            /// Script used by <c>EditorUtils.ScriptMetaInfo</c>.
+            /// </summary>
             public UnityEditor.MonoScript script;
 
         }
         
         private static System.Collections.Generic.List<ScriptMetaInfo> scriptsMetaInfo;
         
+        /// <summary>
+        /// Finds script from class name.
+        /// </summary>
         public static UnityEditor.MonoScript FindScriptFromClassName(string className, string @namespace) {
             
             var scriptGUIDs = UnityEditor.AssetDatabase.FindAssets($"t:script {className}");
@@ -869,6 +1160,9 @@ namespace ME.BECS.Editor {
             
         }
 
+        /// <summary>
+        /// Finds component from struct name.
+        /// </summary>
         public static void FindComponentFromStructName(string structName, string @namespace, System.Action<UnityEditor.MonoScript, int, int> callback) {
 
             if (scriptsMetaInfo == null) {
@@ -908,6 +1202,9 @@ namespace ME.BECS.Editor {
 
         }
         
+        /// <summary>
+        /// Finds the line and column containing the specified character position.
+        /// </summary>
         public static int LineFromPos(string input, int indexPosition, out int columnNumber) {
             var lineNumber = 1;
             var lastIndex = 0;
@@ -921,6 +1218,9 @@ namespace ME.BECS.Editor {
             return lineNumber;
         }
 
+        /// <summary>
+        /// Updates component script.
+        /// </summary>
         public static bool UpdateComponentScript(ComponentGroupItem.ComponentMetaInfo component, System.Type type, bool state) {
 
             var text = component.file.text;
@@ -982,6 +1282,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Returns assembly info.
+        /// </summary>
         public static AssemblyInfo GetAssemblyInfo(ME.BECS.Extensions.GraphProcessor.BaseGraph graph) {
             var path = UnityEditor.AssetDatabase.GetAssetPath(graph);
             path = path.Replace("\\", "/");
@@ -999,21 +1302,33 @@ namespace ME.BECS.Editor {
             return default;
         }
 
+        /// <summary>
+        /// Returns code name.
+        /// </summary>
         public static string GetCodeName(string name) {
             name = System.Text.RegularExpressions.Regex.Replace(name, @"[^a-zA-Z0-9]", "_");
             return name;
         }
 
+        /// <summary>
+        /// Tests whether the context is valid project name.
+        /// </summary>
         public static bool IsValidProjectName(string name) {
             if (string.IsNullOrEmpty(name) == true) return false;
             return System.Text.RegularExpressions.Regex.IsMatch(name, @"^[A-Z]+[a-zA-Z_0-9]*[a-zA-Z0-9]+$");
         }
 
+        /// <summary>
+        /// Returns the text with its initial character converted to uppercase.
+        /// </summary>
         public static string UpperFirstLetter(string value) {
             if (string.IsNullOrEmpty(value) == true) return value;
             return $"{value.Substring(0, 1).ToUpper()}{value.Substring(1)}";
         }
 
+        /// <summary>
+        /// Returns type name.
+        /// </summary>
         public static string GetTypeName(System.Type type, bool useFullName = true, bool showGenericType = true) {
             var name = type.Name;
             if (useFullName == true) {
@@ -1027,10 +1342,16 @@ namespace ME.BECS.Editor {
             return name.Replace("+", ".").Replace("`1", "");
         }
 
+        /// <summary>
+        /// Returns data type name.
+        /// </summary>
         public static string GetDataTypeName(System.Type type) {
             return type.Namespace + "." + type.Name.Replace("+", ".").Replace("`1", "");
         }
 
+        /// <summary>
+        /// Formats code.
+        /// </summary>
         public static string FormatCode(string[] content, int indentSize = 4, int defaultIndent = 2) {
 
             var result = new System.Text.StringBuilder(content.Length * 256);
@@ -1055,6 +1376,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Reformats code.
+        /// </summary>
         public static string ReFormatCode(string text) {
 
             text = new System.Text.RegularExpressions.Regex(@"^[^\S\n]+(.+?)\s*$", System.Text.RegularExpressions.RegexOptions.Multiline).Replace(text, "$1");
@@ -1062,16 +1386,25 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Copies data between the supplied source and destination.
+        /// </summary>
         public static void Copy(string json) {
             UnityEngine.GUIUtility.systemCopyBuffer = json;
         }
 
+        /// <summary>
+        /// Reads copy buffer.
+        /// </summary>
         public static string ReadCopyBuffer() {
             return UnityEngine.GUIUtility.systemCopyBuffer;
         }
 
         
         private static System.Collections.Generic.List<AssemblyInfo> loadedAssemblies;
+        /// <summary>
+        /// Returns assemblies info.
+        /// </summary>
         public static System.Collections.Generic.List<AssemblyInfo> GetAssembliesInfo() {
             if (loadedAssemblies == null) {
                 var list = new System.Collections.Generic.List<AssemblyInfo>();
@@ -1106,6 +1439,9 @@ namespace ME.BECS.Editor {
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<System.Reflection.Assembly, string> assemblyNames =
             new System.Collections.Concurrent.ConcurrentDictionary<System.Reflection.Assembly, string>();
 
+        /// <summary>
+        /// Tests whether the context is valid type for assembly.
+        /// </summary>
         public static bool IsValidTypeForAssembly(bool editorAssembly, System.Type type, System.Collections.Generic.List<AssemblyInfo> asms = null, bool runtimeInEditor = true) {
             
             if (type == null) return false;
@@ -1127,6 +1463,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Creates directories by path.
+        /// </summary>
         public static void CreateDirectoriesByPath(string fullPath) {
             var items = fullPath.Split('/');
             var path = items[0];
@@ -1139,6 +1478,9 @@ namespace ME.BECS.Editor {
             }
         }
         
+        /// <summary>
+        /// Returns full path without extension.
+        /// </summary>
         public static string GetFullPathWithoutExtension(string path) {
             var dir = System.IO.Path.GetDirectoryName(path);
             if (string.IsNullOrEmpty(dir) == false) {
@@ -1150,6 +1492,9 @@ namespace ME.BECS.Editor {
             return path.Replace('\\', '/');
         }
         
+        /// <summary>
+        /// Returns asset by path part.
+        /// </summary>
         public static T GetAssetByPathPart<T>(string pathPart) where T : UnityEngine.Object {
             pathPart = GetFullPathWithoutExtension(pathPart);
             var items = ObjectReferenceRegistry.data.objects.Select(x => x.data).Concat(ObjectReferenceRegistry.additionalRuntimeObjects).Where(x => x.Is<T>(ignoreErrors: true)).OrderByDescending(x => UnityEditor.AssetDatabase.GetAssetPath(new ObjectItem(x).Load<T>())).ToArray();
@@ -1188,6 +1533,9 @@ namespace ME.BECS.Editor {
             return null;
         }
 
+        /// <summary>
+        /// Returns entity collection.
+        /// </summary>
         public static uint GetEntityCollection(UnityEditor.SerializedObject config, uint id, out UnityEditor.SerializedProperty data, out int index) {
             var collectionsData = config.FindProperty(nameof(EntityConfig.collectionsData));
             if (id == 0u) id = ++collectionsData.FindPropertyRelative(nameof(EntityConfig.collectionsData.nextId)).uintValue;
@@ -1211,45 +1559,69 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Returns array size.
+        /// </summary>
         public static uint GetArraySize(UnityEditor.SerializedProperty arr) {
             var arrId = arr.FindPropertyRelative("data").FindPropertyRelative("Length");
             arrId.uintValue = GetEntityCollection(arr.serializedObject, arrId.uintValue, out var data, out _);
             return (uint)data.FindPropertyRelative("array").arraySize;
         }
 
+        /// <summary>
+        /// Sets array size.
+        /// </summary>
         public static void SetArraySize(UnityEditor.SerializedProperty arr, uint size) {
             var arrId = arr.FindPropertyRelative("data").FindPropertyRelative("Length");
             arrId.uintValue = GetEntityCollection(arr.serializedObject, arrId.uintValue, out var data, out _);
             data.FindPropertyRelative("array").arraySize = (int)size;
         }
 
+        /// <summary>
+        /// Returns array element by index.
+        /// </summary>
         public static UnityEditor.SerializedProperty GetArrayElementByIndex(UnityEditor.SerializedProperty arr, uint index) {
             var arrId = arr.FindPropertyRelative("data").FindPropertyRelative("Length");
             arrId.uintValue = GetEntityCollection(arr.serializedObject, arrId.uintValue, out var data, out _);
             return data.FindPropertyRelative("array").GetArrayElementAtIndex((int)index);
         }
 
+        /// <summary>
+        /// Removes array element by index.
+        /// </summary>
         public static void RemoveArrayElementByIndex(UnityEditor.SerializedProperty arr, uint index) {
             var arrId = arr.FindPropertyRelative("data").FindPropertyRelative("Length");
             arrId.uintValue = GetEntityCollection(arr.serializedObject, arrId.uintValue, out var data, out _);
             data.FindPropertyRelative("array").DeleteArrayElementAtIndex((int)index);
         }
 
+        /// <summary>
+        /// Returns first interface constraint type.
+        /// </summary>
         public static System.Type GetFirstInterfaceConstraintType(System.Type type) {
             if (type.IsGenericTypeDefinition == false) type = type.GetGenericTypeDefinition();
             var constrains = type.GetGenericArguments()[0].GetGenericParameterConstraints();
             return constrains.FirstOrDefault(x => x.IsInterface == true);
         }
 
+        /// <summary>
+        /// Returns first generic constraint type.
+        /// </summary>
         public static System.Type GetFirstGenericConstraintType(System.Type type) {
             var interfaceType = GetFirstInterfaceConstraintType(type);
             return UnityEditor.TypeCache.GetTypesDerivedFrom(interfaceType).OrderBy(x => x.FullName).FirstOrDefault();
         }
 
+        /// <summary>
+        /// Creates generic constraint type.
+        /// </summary>
         public static System.Type MakeGenericConstraintType(System.Type type) {
             return type.MakeGenericType(GetFirstGenericConstraintType(type));
         }
 
+        /// <summary>
+        /// Returns types derived from.
+        /// </summary>
         public static System.Type[] GetTypesDerivedFrom(System.Type genType, System.Type baseTypeWithout) {
             if (typeof(ISystem).IsAssignableFrom(baseTypeWithout) == false) {
                 return GetTypesDerivedFrom(genType, baseTypeWithout.GetInterfaces().Where(x => typeof(IGenericWithout).IsAssignableFrom(x)).ToArray());
@@ -1281,6 +1653,9 @@ namespace ME.BECS.Editor {
                 .All(field => IsUnmanagedGenericComponent(field.FieldType, visited));
         }
 
+        /// <summary>
+        /// Returns types derived from.
+        /// </summary>
         public static System.Type[] GetTypesDerivedFrom(System.Type genType, System.Type[] withoutTypes = null) {
             var types = SourceGeneratorBridge.GetDerivedTypesSnapshot(genType).Where(x => x.IsValueType).OrderBy(x => x.Namespace?.StartsWith("ME.BECS") == false).ThenBy(x => x.FullName);
             if (withoutTypes != null) {

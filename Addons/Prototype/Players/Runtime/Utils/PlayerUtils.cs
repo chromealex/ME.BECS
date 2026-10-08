@@ -6,29 +6,50 @@ namespace ME.BECS.Players {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     #endif
 
+    /// <summary>
+    /// Stores the active-player handle shared by player utility operations.
+    /// </summary>
     public class PlayerStatic {
 
+        /// <summary>
+        /// Active player used by <c>PlayerStatic</c>.
+        /// </summary>
         public static readonly Unity.Burst.SharedStatic<Ent> activePlayer = Unity.Burst.SharedStatic<Ent>.GetOrCreate<PlayerStatic>();
 
     }
     
+    /// <summary>
+    /// Provides helper operations for player.
+    /// </summary>
     public static class PlayerUtils {
 
+        /// <summary>
+        /// Returns team index.
+        /// </summary>
         [INLINE(256)]
         public static uint GetTeamIndex(uint teamId) {
             return teamId - 1u;
         }
 
+        /// <summary>
+        /// Returns team index.
+        /// </summary>
         [INLINE(256)]
         public static uint GetTeamIndex(in Ent team) {
             return GetTeamIndex(team.Read<TeamComponent>().id);
         }
 
+        /// <summary>
+        /// Returns the player selected as active for the current context.
+        /// </summary>
         [INLINE(256)]
         public static PlayerAspect GetActivePlayer() {
             return GetActivePlayer(JobInfo.Create(Context.world.id));
         }
         
+        /// <summary>
+        /// Returns the player selected as active for the current context.
+        /// </summary>
         [INLINE(256)]
         public static PlayerAspect GetActivePlayer(in JobInfo jobInfo) {
             E.IS_NOT_IN_TICK(Worlds.GetWorld(jobInfo.worldId).state);
@@ -36,9 +57,15 @@ namespace ME.BECS.Players {
             return PlayerStatic.activePlayer.Data.GetAspect<PlayerAspect>();
         }
 
+        /// <summary>
+        /// Selects the player used by active-player lookups.
+        /// </summary>
         [INLINE(256)]
         public static void SetActivePlayer(in PlayerAspect playerAspect) => PlayerStatic.activePlayer.Data = playerAspect.ent;
 
+        /// <summary>
+        /// Creates player.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreatePlayer(uint index, in Ent team, in JobInfo jobInfo) {
             var ent = Ent.New<PlayerEntityType>(in jobInfo, editorName: $"Player#{index}");
@@ -48,6 +75,9 @@ namespace ME.BECS.Players {
             return ent;
         }
 
+        /// <summary>
+        /// Attempts to get owner and reports whether the operation succeeded.
+        /// </summary>
         [INLINE(256)]
         public static bool TryGetOwner(in Ent entity, out PlayerAspect playerAspect) {
             playerAspect = default;
@@ -56,18 +86,27 @@ namespace ME.BECS.Players {
             return true;
         }
 
+        /// <summary>
+        /// Returns the player associated with the entity's ownership component.
+        /// </summary>
         [INLINE(256)]
         public static PlayerAspect GetOwner(in Ent entity) {
             E.REQUIRED<OwnerComponent>(in entity);
             return entity.Read<OwnerComponent>().ent.GetAspect<PlayerAspect>();
         }
 
+        /// <summary>
+        /// Returns the player associated with the entity's ownership component.
+        /// </summary>
         [INLINE(256)]
         public static PlayerAspect GetOwner(in EntRO entity) {
             E.REQUIRED<OwnerComponent>(entity.GetEntity());
             return entity.Read<OwnerComponent>().ent.GetAspect<PlayerAspect>();
         }
 
+        /// <summary>
+        /// Assigns the entity to a player and records an ownership change when the owner differs.
+        /// </summary>
         [INLINE(256)]
         public static void SetOwner(in Ent entity, in PlayerAspect player) {
             E.REQUIRED<PlayerComponent>(player.ent);
@@ -82,11 +121,17 @@ namespace ME.BECS.Players {
             
         }
 
+        /// <summary>
+        /// Returns player ID.
+        /// </summary>
         [INLINE(256)]
         public static uint GetPlayerId(in PlayerAspect player) {
             return player.readIndex;
         }
 
+        /// <summary>
+        /// Returns team.
+        /// </summary>
         [INLINE(256)]
         public static Ent GetTeam(in PlayerAspect player) {
             return player.readTeam;

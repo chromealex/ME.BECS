@@ -5,12 +5,21 @@ using ME.BECS.Network;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Provides the Unity Editor window for replays editor.
+    /// </summary>
     public unsafe class ReplaysEditorWindow : EditorWindow {
 
         [SerializeField] private System.Collections.Generic.List<int> worldTabs = new System.Collections.Generic.List<int>();
         [SerializeField] private int selectedWorldId = -1;
         [SerializeField] private bool pausedForRewind;
+        /// <summary>
+        /// Selected initializer used by <c>ReplaysEditorWindow</c>.
+        /// </summary>
         public NetworkWorldInitializer selectedInitializer;
+        /// <summary>
+        /// Selected network module used by <c>ReplaysEditorWindow</c>.
+        /// </summary>
         public NetworkModule selectedNetworkModule;
         private World selectedWorld;
         private readonly System.Collections.Generic.List<World> aliveWorlds = new System.Collections.Generic.List<World>();
@@ -34,8 +43,14 @@ namespace ME.BECS.Editor {
             set => EditorPrefs.SetBool("ME.BECS.Editor.Replays.SyncMode", value);
         }
 
+        /// <summary>
+        /// Shows replays window.
+        /// </summary>
         [MenuItem("ME.BECS/\u21BB Replays...", priority = 10000)]
         public static void ShowReplaysWindow() => ShowWindow();
+        /// <summary>
+        /// Opens or focuses the associated editor window.
+        /// </summary>
         public static void ShowWindow() {
             var window = GetWindow<ReplaysEditorWindow>();
             EditorUIUtils.ApplyWindowIcon(window, "Replays", "ME.BECS.Resources/Icons/icon-replays.png");
@@ -92,6 +107,9 @@ namespace ME.BECS.Editor {
             this.Refresh();
         }
 
+        /// <summary>
+        /// Draws toolbar.
+        /// </summary>
         public void DrawToolbar() {
             if (this.tabs == null) return;
             var signature = this.selectedWorldId + ":";

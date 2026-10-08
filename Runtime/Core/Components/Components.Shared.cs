@@ -13,20 +13,38 @@ namespace ME.BECS {
     /// </summary>
     public unsafe partial struct Components {
 
+        /// <summary>
+        /// Component shared default hash constant used by <c>Components</c>.
+        /// </summary>
         public const uint COMPONENT_SHARED_DEFAULT_HASH = 0u;
 
+        /// <summary>
+        /// Defines shared component storage unknown data used by entity processing.
+        /// </summary>
         [StructLayout(LayoutKind.Sequential)]
         public struct SharedComponentStorageUnknown {
 
+            /// <summary>
+            /// Entity handles processed or stored by this operation.
+            /// </summary>
             public UIntHashSet entities;
+            /// <summary>
+            /// Data consumed or produced by the containing operation.
+            /// </summary>
             public MemAllocatorPtr data;
             
+            /// <summary>
+            /// Initializes <c>SharedComponentStorageUnknown</c> from the supplied state, data, data size.
+            /// </summary>
             public SharedComponentStorageUnknown(safe_ptr<State> state, safe_ptr data, uint dataSize) {
                 this = default;
                 this.data.Set(ref state.ptr->allocator, data, dataSize);
                 this.entities = new UIntHashSet(ref state.ptr->allocator, 1u);
             }
 
+            /// <summary>
+            /// Releases the resources owned by this shared component storage unknown instance.
+            /// </summary>
             public void Dispose(ref MemoryAllocator allocator) {
                 this.entities.Dispose(ref allocator);
                 this = default;
@@ -127,6 +145,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Sets shared.
+        /// </summary>
         [INLINE(256)]
         public static bool SetShared<T>(safe_ptr<State> state, in Ent ent, in T data, uint hash = 0u) where T : unmanaged, IComponentShared {
 
@@ -140,6 +161,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Sets shared.
+        /// </summary>
         [INLINE(256)]
         public static bool SetShared(safe_ptr<State> state, in Ent ent, uint groupId, void* data, uint dataSize, uint sharedTypeId, uint hash, out safe_ptr dataPtr) {
 
@@ -176,6 +200,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Clears shared.
+        /// </summary>
         [INLINE(256)]
         public static void ClearShared(safe_ptr<State> state, uint entId) {
 
@@ -195,6 +222,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Removes shared.
+        /// </summary>
         [INLINE(256)]
         public static bool RemoveShared<T>(safe_ptr<State> state, in Ent ent, uint hash = 0u) where T : unmanaged, IComponentShared {
 
@@ -217,6 +247,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Reads shared.
+        /// </summary>
         [INLINE(256)]
         public static ref readonly T ReadShared<T>(safe_ptr<State> state, uint entId, uint hash = 0u) where T : unmanaged, IComponentShared {
 
@@ -234,6 +267,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns shared.
+        /// </summary>
         [INLINE(256)]
         public static ref T GetShared<T>(safe_ptr<State> state, in Ent ent, uint hash, out bool isNew) where T : unmanaged, IComponentShared {
 
@@ -264,6 +300,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Tests whether the context has shared.
+        /// </summary>
         [INLINE(256)]
         public static bool HasShared<T>(safe_ptr<State> state, uint entId, uint hash = 0u) where T : unmanaged, IComponentShared {
 
@@ -282,18 +321,27 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests whether the context has shared direct.
+        /// </summary>
         public static bool HasSharedDirect<T>(Ent ent) where T : unmanaged, IComponentShared {
 
             return Components.HasShared<T>(ent.World.state, ent.id);
 
         }
 
+        /// <summary>
+        /// Reads shared direct.
+        /// </summary>
         public static T ReadSharedDirect<T>(Ent ent) where T : unmanaged, IComponentShared {
 
             return Components.ReadShared<T>(ent.World.state, ent.id);
 
         }
 
+        /// <summary>
+        /// Sets shared direct.
+        /// </summary>
         public static void SetSharedDirect<T>(Ent ent, T data) where T : unmanaged, IComponentShared {
 
             Components.SetShared(ent.World.state, in ent, in data);

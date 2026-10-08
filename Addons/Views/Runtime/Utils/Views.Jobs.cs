@@ -24,15 +24,33 @@ namespace ME.BECS.Views {
     using um = Unity.Mathematics;
     using static CutsPool;
     
+    /// <summary>
+    /// Provides shared job execution and scheduling infrastructure.
+    /// </summary>
     [BURST]
     public unsafe partial struct Jobs {
 
+        /// <summary>
+        /// Executes apply state parallel work through the job scheduler.
+        /// </summary>
         public partial struct ApplyStateParallelJob<TEntityView> : IJobParallelForDefer where TEntityView : IView {
 
+            /// <summary>
+            /// Data consumed or produced by the containing operation.
+            /// </summary>
             public safe_ptr<ViewsModuleData> data;
+            /// <summary>
+            /// Allocator used to access or manage the associated native storage.
+            /// </summary>
             public MemoryAllocator allocator;
+            /// <summary>
+            /// Provider responsible for the associated presentation or service.
+            /// </summary>
             public ClassPtr<IViewProvider<TEntityView>> provider;
 
+            /// <summary>
+            /// Processes apply state parallel using the supplied job inputs.
+            /// </summary>
             public void Execute(int i) {
                 var entId = this.data.ptr->renderingOnSceneApplyStateParallel.sparseSet.dense[in this.allocator, i];
                 if (this.data.ptr->renderingOnSceneApplyStateParallelCulling[in this.allocator, entId] == true) return;
@@ -48,13 +66,31 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Executes update parallel work through the job scheduler.
+        /// </summary>
         public partial struct UpdateParallelJob<TEntityView> : IJobParallelForDefer where TEntityView : IView {
 
+            /// <summary>
+            /// Data consumed or produced by the containing operation.
+            /// </summary>
             public safe_ptr<ViewsModuleData> data;
+            /// <summary>
+            /// Allocator used to access or manage the associated native storage.
+            /// </summary>
             public MemoryAllocator allocator;
+            /// <summary>
+            /// Provider responsible for the associated presentation or service.
+            /// </summary>
             public ClassPtr<IViewProvider<TEntityView>> provider;
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             public float dt;
 
+            /// <summary>
+            /// Processes update parallel using the supplied job inputs.
+            /// </summary>
             public void Execute(int i) {
                 var entId = this.data.ptr->renderingOnSceneUpdateParallel.sparseSet.dense[in this.allocator, i];
                 if (this.data.ptr->renderingOnSceneUpdateParallelCulling[in this.allocator, entId] == true) return;
@@ -68,6 +104,9 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Executes job spawn views work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct JobSpawnViews : IJobSingle {
 
@@ -86,10 +125,22 @@ namespace ME.BECS.Views {
 
             }
 
+            /// <summary>
+            /// World associated with this connection.
+            /// </summary>
             public World connectedWorld;
+            /// <summary>
+            /// World containing the presentation-side entities.
+            /// </summary>
             public World viewsWorld;
+            /// <summary>
+            /// Data consumed or produced by the containing operation.
+            /// </summary>
             public safe_ptr<ViewsModuleData> data;
 
+            /// <summary>
+            /// Processes job spawn views using the supplied job inputs.
+            /// </summary>
             public void Execute() {
                 
                 if (this.data.ptr->toAdd.Count() > 0) {
@@ -183,12 +234,24 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Executes job despawn views work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct JobDespawnViews : IJobSingle {
 
+            /// <summary>
+            /// World containing the presentation-side entities.
+            /// </summary>
             public World viewsWorld;
+            /// <summary>
+            /// Data consumed or produced by the containing operation.
+            /// </summary>
             public safe_ptr<ViewsModuleData> data;
             
+            /// <summary>
+            /// Processes job despawn views using the supplied job inputs.
+            /// </summary>
             public void Execute() {
                 
                 if (this.data.ptr->toRemove.Count() > 0) {
@@ -259,12 +322,24 @@ namespace ME.BECS.Views {
 
         }
         
+        /// <summary>
+        /// Executes job update transforms work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct JobUpdateTransforms : IJobParallelForTransform {
 
+            /// <summary>
+            /// Entity handles with active scene rendering entries.
+            /// </summary>
             public UnsafeList<ViewsModuleData.EntityData> renderingOnSceneEnts;
+            /// <summary>
+            /// Whether use unity hierarchy behavior or state is selected.
+            /// </summary>
             public bbool useUnityHierarchy;
 
+            /// <summary>
+            /// Processes job update transforms using the supplied job inputs.
+            /// </summary>
             public void Execute(int index, TransformAccess transform) {
 
                 var entityData = this.renderingOnSceneEnts[index];
@@ -284,19 +359,40 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Stores interpolation temp data for <c>Jobs</c>.
+        /// </summary>
         public struct InterpolationTempData {
 
+            /// <summary>
+            /// Position in the coordinate space used by the containing API.
+            /// </summary>
             public UnityEngine.Vector3 position;
+            /// <summary>
+            /// Orientation in the coordinate space used by the containing API.
+            /// </summary>
             public UnityEngine.Quaternion rotation;
+            /// <summary>
+            /// Local scale used by <c>Jobs.InterpolationTempData</c>.
+            /// </summary>
             public UnityEngine.Vector3 localScale;
+            /// <summary>
+            /// Indicates is local.
+            /// </summary>
             public bbool isLocal;
 
+            /// <summary>
+            /// Sets local position and rotation.
+            /// </summary>
             public void SetLocalPositionAndRotation(UnityEngine.Vector3 pos, UnityEngine.Quaternion rot) {
                 this.isLocal = true;
                 this.position = pos;
                 this.rotation = rot;
             }
 
+            /// <summary>
+            /// Sets position and rotation.
+            /// </summary>
             public void SetPositionAndRotation(UnityEngine.Vector3 pos, UnityEngine.Quaternion rot) {
                 this.isLocal = false;
                 this.position = pos;
@@ -305,15 +401,36 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Executes prepare interpolation factor work through the job scheduler.
+        /// </summary>
         [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
         public partial struct PrepareInterpolationFactorJob : IJob {
 
+            /// <summary>
+            /// Data consumed or produced by the containing operation.
+            /// </summary>
             public safe_ptr<ViewsModuleData> data;
+            /// <summary>
+            /// Begin frame state used by <c>Jobs.PrepareInterpolationFactorJob</c>.
+            /// </summary>
             public safe_ptr<State> beginFrameState;
+            /// <summary>
+            /// Current tick used by <c>Jobs.PrepareInterpolationFactorJob</c>.
+            /// </summary>
             public ulong currentTick;
+            /// <summary>
+            /// Tick time in the time units used by the containing API.
+            /// </summary>
             public float tickTime;
+            /// <summary>
+            /// Current time since start used by <c>Jobs.PrepareInterpolationFactorJob</c>.
+            /// </summary>
             public double currentTimeSinceStart;
 
+            /// <summary>
+            /// Processes prepare interpolation factor using the supplied job inputs.
+            /// </summary>
             public void Execute() {
                 var prevTick = this.beginFrameState.ptr->tick;
                 if (prevTick == this.currentTick) {
@@ -326,15 +443,33 @@ namespace ME.BECS.Views {
             }
         }
 
+        /// <summary>
+        /// Executes job update transforms interpolation prepare work through the job scheduler.
+        /// </summary>
         [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
         public partial struct JobUpdateTransformsInterpolationPrepare : IJobParallelFor {
 
+            /// <summary>
+            /// Entity handles with active scene rendering entries.
+            /// </summary>
             [ReadOnly]
             public UnsafeList<ViewsModuleData.EntityData> renderingOnSceneEnts;
+            /// <summary>
+            /// Begin frame state used by <c>Jobs.JobUpdateTransformsInterpolationPrepare</c>.
+            /// </summary>
             public safe_ptr<State> beginFrameState;
+            /// <summary>
+            /// Data consumed or produced by the containing operation.
+            /// </summary>
             public safe_ptr<ViewsModuleData> data;
+            /// <summary>
+            /// Destination or stored results of the associated operation.
+            /// </summary>
             public NativeArray<InterpolationTempData> results;
 
+            /// <summary>
+            /// Processes job update transforms interpolation prepare using the supplied job inputs.
+            /// </summary>
             public void Execute(int index) {
                 
                 ref var transform = ref UnsafeUtility.ArrayElementAsRef<InterpolationTempData>(this.results.GetUnsafePtr(), index);
@@ -400,15 +535,33 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Executes job update transforms interpolation no hierarchy prepare work through the job scheduler.
+        /// </summary>
         [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
         public partial struct JobUpdateTransformsInterpolationNoHierarchyPrepare : IJobParallelFor {
 
+            /// <summary>
+            /// Entity handles with active scene rendering entries.
+            /// </summary>
             [ReadOnly]
             public UnsafeList<ViewsModuleData.EntityData> renderingOnSceneEnts;
+            /// <summary>
+            /// Begin frame state used by <c>Jobs.JobUpdateTransformsInterpolationNoHierarchyPrepare</c>.
+            /// </summary>
             public safe_ptr<State> beginFrameState;
+            /// <summary>
+            /// Data consumed or produced by the containing operation.
+            /// </summary>
             public safe_ptr<ViewsModuleData> data;
+            /// <summary>
+            /// Destination or stored results of the associated operation.
+            /// </summary>
             public NativeArray<InterpolationTempData> results;
 
+            /// <summary>
+            /// Processes job update transforms interpolation no hierarchy prepare using the supplied job inputs.
+            /// </summary>
             public void Execute(int index) {
                 
                 ref var transform = ref UnsafeUtility.ArrayElementAsRef<InterpolationTempData>(this.results.GetUnsafePtr(), index);
@@ -446,15 +599,30 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Executes job update transforms network interpolation work through the job scheduler.
+        /// </summary>
         [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
         public partial struct JobUpdateTransformsNetworkInterpolation : IJobParallelForTransform {
 
+            /// <summary>
+            /// Dt expressed in milliseconds.
+            /// </summary>
             public float dtMs;
+            /// <summary>
+            /// Destination or stored results of the associated operation.
+            /// </summary>
             [ReadOnly]
             public NativeArray<InterpolationTempData> results;
+            /// <summary>
+            /// Entity handles with active scene rendering entries.
+            /// </summary>
             [ReadOnly]
             public UnsafeList<ViewsModuleData.EntityData> renderingOnSceneEnts;
 
+            /// <summary>
+            /// Processes job update transforms network interpolation using the supplied job inputs.
+            /// </summary>
             public void Execute(int index, TransformAccess transform) {
 
                 ref var trData = ref UnsafeUtility.ArrayElementAsRef<InterpolationTempData>(this.results.GetUnsafeReadOnlyPtr(), index);
@@ -484,12 +652,21 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Executes job update transforms interpolation work through the job scheduler.
+        /// </summary>
         [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
         public partial struct JobUpdateTransformsInterpolation : IJobParallelForTransform {
 
+            /// <summary>
+            /// Destination or stored results of the associated operation.
+            /// </summary>
             [ReadOnly]
             public NativeArray<InterpolationTempData> results;
 
+            /// <summary>
+            /// Processes job update transforms interpolation using the supplied job inputs.
+            /// </summary>
             public void Execute(int index, TransformAccess transform) {
                 
                 ref var trData = ref UnsafeUtility.ArrayElementAsRef<InterpolationTempData>(this.results.GetUnsafeReadOnlyPtr(), index);
@@ -505,78 +682,151 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Executes job assign views work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct JobAssignViews : IJobForComponents<AssignViewComponent> {
 
+            /// <summary>
+            /// World containing the presentation-side entities.
+            /// </summary>
             public World viewsWorld;
+            /// <summary>
+            /// Shared view-module state accessed by this operation.
+            /// </summary>
             public safe_ptr<ViewsModuleData> viewsModuleData;
+            /// <summary>
+            /// Registered providers used by <c>Jobs.JobAssignViews</c>.
+            /// </summary>
             public UnsafeList<UnsafeViewsModule.ProviderInfo> registeredProviders;
+            /// <summary>
+            /// Pending entries to assign during the next processing phase.
+            /// </summary>
             public UnsafeParallelHashMap<uint, uint>.ParallelWriter toAssign;
-            
+
+            /// <summary>
+            /// Processes job assign views using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AssignViewComponent component) {
-
                 if (component.isUsed == true) return;
-                // Resolve once. If the source was never spawned, the destination's normal
-                // view request will spawn it; it must not steal a later source instance.
                 component.isUsed = true;
-
-                var assignToEntId = ent.id;
-                var sourceEntId = component.sourceEnt.id;
-                if (this.viewsModuleData.ptr->renderingOnSceneBits.IsSet((int)assignToEntId) == true) return;
-                if (this.viewsModuleData.ptr->renderingOnSceneBits.IsSet((int)sourceEntId) == true) {
-
-                    ref var allocator = ref this.viewsWorld.state.ptr->allocator;
-                    var sourceIndex = this.viewsModuleData.ptr->renderingOnSceneEntToRenderIndex.ReadValue(in allocator, sourceEntId);
-                    if (this.viewsModuleData.ptr->renderingOnSceneEnts[(int)sourceIndex].element != component.sourceEnt ||
-                        this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in allocator, sourceEntId] != component.source.prefabId) return;
-
-                    {
-                        // Assign data
-                        var updateIdx = this.viewsModuleData.ptr->renderingOnSceneEntToRenderIndex.ReadValue(in allocator, sourceEntId);
-                        this.viewsModuleData.ptr->renderingOnSceneEntToRenderIndex.GetValue(ref allocator, assignToEntId) = updateIdx;
-                        this.viewsModuleData.ptr->renderingOnSceneRenderIndexToEnt.GetValue(ref allocator, updateIdx) = assignToEntId;
-                        this.viewsModuleData.ptr->renderingOnSceneBits.Set((int)assignToEntId, true);
-                        this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in allocator, assignToEntId] = this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in allocator, sourceEntId];
-                        ref var entData = ref this.viewsModuleData.ptr->renderingOnSceneEnts.Ptr[updateIdx];
-                        entData.element = ent;
-                        entData.initialVersion = ent.Version - 1;
-                        entData.version = ent.Version - 1;
-                        entData.versionParallel = ent.Version - 1;
-                    }
-
-                    // The rendered instance belongs to the destination now. A new view request
-                    // on the source must be spawned independently on the next add pass.
-                    this.viewsModuleData.ptr->renderingOnSceneEntToRenderIndex.Remove(in allocator, sourceEntId);
-                    this.viewsModuleData.ptr->renderingOnSceneBits.Set((int)sourceEntId, false);
-                    this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in allocator, sourceEntId] = 0u;
-                    if (this.viewsModuleData.ptr->renderingOnSceneApplyState.Remove(in allocator, sourceEntId) == true) {
-                        this.viewsModuleData.ptr->renderingOnSceneApplyState.Add(ref allocator, assignToEntId);
-                    }
-                    if (this.viewsModuleData.ptr->renderingOnSceneApplyStateParallel.Remove(in allocator, sourceEntId) == true) {
-                        this.viewsModuleData.ptr->renderingOnSceneApplyStateParallel.Add(ref allocator, assignToEntId);
-                    }
-                    if (this.viewsModuleData.ptr->renderingOnSceneUpdate.Remove(in allocator, sourceEntId) == true) {
-                        this.viewsModuleData.ptr->renderingOnSceneUpdate.Add(ref allocator, assignToEntId);
-                    }
-                    if (this.viewsModuleData.ptr->renderingOnSceneUpdateParallel.Remove(in allocator, sourceEntId) == true) {
-                        this.viewsModuleData.ptr->renderingOnSceneUpdateParallel.Add(ref allocator, assignToEntId);
-                    }
-
-                    this.toAssign.TryAdd(sourceEntId, assignToEntId);
-
-                }
-
+                if (ent.TryRead(out ViewComponent requested) == false || requested.source.Equals(component.source) == false ||
+                    requested.source.providerId != this.viewsModuleData.ptr->providerId) return;
+                var sourceId = component.sourceEnt.id;
+                if (this.viewsModuleData.ptr->renderingOnSceneBits.IsSet((int)sourceId) == false) return;
+                ref var allocator = ref this.viewsWorld.state.ptr->allocator;
+                var index = this.viewsModuleData.ptr->renderingOnSceneEntToRenderIndex.ReadValue(in allocator, sourceId);
+                if (this.viewsModuleData.ptr->renderingOnSceneEnts[(int)index].element != component.sourceEnt ||
+                    this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in allocator, sourceId] != component.source.prefabId) return;
+                // Collect only: a destination can still own an outgoing view in this batch.
+                this.toAssign.TryAdd(sourceId, ent.id);
             }
-
         }
 
+        /// <summary>
+        /// Executes job apply view assignments work through the job scheduler.
+        /// </summary>
+        [BURST]
+        public partial struct JobApplyViewAssignments : IJob {
+            /// <summary>
+            /// Data consumed or produced by the containing operation.
+            /// </summary>
+            public safe_ptr<ViewsModuleData> data;
+
+            private struct Assignment {
+                public uint source;
+                public uint destination;
+                public uint index;
+                public uint prefabId;
+                public byte membership;
+            }
+
+            /// <summary>
+            /// Processes job apply view assignments using the supplied job inputs.
+            /// </summary>
+            public void Execute() {
+                if (this.data.ptr->toAssign.Count() == 0) return;
+                ref var allocator = ref this.data.ptr->viewsWorld.state.ptr->allocator;
+                var assignments = new UnsafeList<Assignment>(this.data.ptr->toAssign.Count(), Constants.ALLOCATOR_TEMP);
+                foreach (var pair in this.data.ptr->toAssign) {
+                    assignments.Add(new Assignment() {
+                        source = pair.Key,
+                        destination = pair.Value,
+                        index = this.data.ptr->renderingOnSceneEntToRenderIndex.ReadValue(in allocator, pair.Key),
+                        prefabId = this.data.ptr->renderingOnSceneEntToPrefabId[in allocator, pair.Key],
+                    });
+                }
+                // Reject a chain whose occupied destination is not moving out. Repeat so
+                // rejection propagates backwards; fully connected cycles remain valid.
+                var changed = true;
+                while (changed == true) {
+                    changed = false;
+                    for (int i = 0; i < assignments.Length; ++i) {
+                        var item = assignments[i];
+                        if (this.data.ptr->toAssign.ContainsKey(item.source) == false) continue;
+                        if (this.data.ptr->renderingOnSceneBits.IsSet((int)item.destination) == true &&
+                            this.data.ptr->toAssign.ContainsKey(item.destination) == false) {
+                            this.data.ptr->toAssign.Remove(item.source);
+                            changed = true;
+                        }
+                    }
+                }
+                // Remove every old owner before installing any destination.
+                for (int i = 0; i < assignments.Length; ++i) {
+                    ref var item = ref assignments.Ptr[i];
+                    if (this.data.ptr->toAssign.ContainsKey(item.source) == false) continue;
+                    this.data.ptr->renderingOnSceneEntToRenderIndex.Remove(in allocator, item.source);
+                    this.data.ptr->renderingOnSceneBits.Set((int)item.source, false);
+                    this.data.ptr->renderingOnSceneEntToPrefabId[in allocator, item.source] = 0u;
+                    if (this.data.ptr->renderingOnSceneApplyState.Remove(in allocator, item.source) == true) item.membership |= 1;
+                    if (this.data.ptr->renderingOnSceneApplyStateParallel.Remove(in allocator, item.source) == true) item.membership |= 2;
+                    if (this.data.ptr->renderingOnSceneUpdate.Remove(in allocator, item.source) == true) item.membership |= 4;
+                    if (this.data.ptr->renderingOnSceneUpdateParallel.Remove(in allocator, item.source) == true) item.membership |= 8;
+                }
+                foreach (var item in assignments) {
+                    if (this.data.ptr->toAssign.ContainsKey(item.source) == false) continue;
+                    var ent = new Ent(item.destination, this.data.ptr->connectedWorld);
+                    this.data.ptr->renderingOnSceneEntToRenderIndex.GetValue(ref allocator, item.destination) = item.index;
+                    this.data.ptr->renderingOnSceneRenderIndexToEnt.GetValue(ref allocator, item.index) = item.destination;
+                    this.data.ptr->renderingOnSceneBits.Set((int)item.destination, true);
+                    this.data.ptr->renderingOnSceneEntToPrefabId[in allocator, item.destination] = item.prefabId;
+                    ref var entData = ref this.data.ptr->renderingOnSceneEnts.Ptr[item.index];
+                    entData.element = ent;
+                    entData.initialVersion = ent.Version - 1;
+                    entData.version = ent.Version - 1;
+                    entData.versionParallel = ent.Version - 1;
+                    if ((item.membership & 1) != 0) this.data.ptr->renderingOnSceneApplyState.Add(ref allocator, item.destination);
+                    if ((item.membership & 2) != 0) this.data.ptr->renderingOnSceneApplyStateParallel.Add(ref allocator, item.destination);
+                    if ((item.membership & 4) != 0) this.data.ptr->renderingOnSceneUpdate.Add(ref allocator, item.destination);
+                    if ((item.membership & 8) != 0) this.data.ptr->renderingOnSceneUpdateParallel.Add(ref allocator, item.destination);
+                }
+                assignments.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Executes job remove from scene work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct JobRemoveFromScene : IJobForComponents<ViewComponent> {
 
+            /// <summary>
+            /// Shared view-module state accessed by this operation.
+            /// </summary>
             public safe_ptr<ViewsModuleData> viewsModuleData;
+            /// <summary>
+            /// Pending entries to remove during the next processing phase.
+            /// </summary>
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toRemove;
+            /// <summary>
+            /// Registered providers used by <c>Jobs.JobRemoveFromScene</c>.
+            /// </summary>
             public UnsafeList<UnsafeViewsModule.ProviderInfo> registeredProviders;
 
+            /// <summary>
+            /// Processes job remove from scene using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref ViewComponent component) {
 
                 var entId = ent.id;
@@ -603,45 +853,78 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Executes job remove entities from scene work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct JobRemoveEntitiesFromScene : IJobParallelFor {
 
+            /// <summary>
+            /// World used by the containing operation.
+            /// </summary>
             public World world;
+            /// <summary>
+            /// Shared view-module state accessed by this operation.
+            /// </summary>
             public safe_ptr<ViewsModuleData> viewsModuleData;
+            /// <summary>
+            /// Pending entries to remove during the next processing phase.
+            /// </summary>
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toRemove;
+            /// <summary>
+            /// Pending entries to change during the next processing phase.
+            /// </summary>
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toChange;
 
+            /// <summary>
+            /// Processes job remove entities from scene using the supplied job inputs.
+            /// </summary>
             public void Execute(int index) {
                 ref var entData = ref this.viewsModuleData.ptr->renderingOnSceneEnts.Ptr[index];
                 // Check if entity has been destroyed
                 // But we have one case:
                 //   if entity's generation changed
                 //   we need to check
-                if (entData.element.IsAlive() == false || entData.element.IsActive() == false || entData.element.Has<ViewComponent>() == false) {
-                    if ((int)entData.element.id >= this.viewsModuleData.ptr->dirty.Length || this.viewsModuleData.ptr->dirty[(int)entData.element.id] == 0) {
-                        if (this.toRemove.TryAdd(entData.element.id, false) == true) {
-                            
-                        }
-                    } else {
-                        // update entity
-                        entData.element = new Ent(entData.element.id, this.world);
-                        this.toChange.TryAdd(entData.element.id, false);
-                    }
+                if (entData.element.IsAlive() == false || entData.element.IsActive() == false ||
+                    entData.element.Has<ViewComponent>() == false ||
+                    entData.element.Read<ViewComponent>().source.providerId != this.viewsModuleData.ptr->providerId) {
+                    // Replacement is handled by the normal remove/add path. Do not also
+                    // rebind the replacement instance through toChange before its first enable.
+                    this.toRemove.TryAdd(entData.element.id, false);
                 }
             }
 
         }
 
+        /// <summary>
+        /// Executes job add to scene work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct JobAddToScene : IJobForComponents<IsViewRequested> {
 
+            /// <summary>
+            /// State accessed by the containing operation.
+            /// </summary>
             public safe_ptr<State> state;
+            /// <summary>
+            /// Shared view-module state accessed by this operation.
+            /// </summary>
             public safe_ptr<ViewsModuleData> viewsModuleData;
+            /// <summary>
+            /// Pending entries to add during the next processing phase.
+            /// </summary>
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toAdd;
+            /// <summary>
+            /// Pending entries to remove during the next processing phase.
+            /// </summary>
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toRemove;
 
+            /// <summary>
+            /// Processes job add to scene using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref IsViewRequested component) {
 
+                if (ent.Read<ViewComponent>().source.providerId != this.viewsModuleData.ptr->providerId) return;
                 var entId = ent.id;
                 if (this.viewsModuleData.ptr->renderingOnSceneBits.IsSet((int)entId) == false) {
                     
@@ -679,12 +962,24 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Executes complete work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct CompleteJob : IJob {
 
+            /// <summary>
+            /// Shared view-module state accessed by this operation.
+            /// </summary>
             public safe_ptr<ViewsModuleData> viewsModuleData;
+            /// <summary>
+            /// Selected execution or presentation mode.
+            /// </summary>
             public WorldMode mode;
 
+            /// <summary>
+            /// Processes complete using the supplied job inputs.
+            /// </summary>
             public void Execute() {
 
                 // Clean up
@@ -703,14 +998,32 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Executes prepare work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct PrepareJob : IJob {
 
+            /// <summary>
+            /// World associated with this connection.
+            /// </summary>
             public World connectedWorld;
+            /// <summary>
+            /// State accessed by the containing operation.
+            /// </summary>
             public safe_ptr<State> state;
+            /// <summary>
+            /// Shared view-module state accessed by this operation.
+            /// </summary>
             public safe_ptr<ViewsModuleData> viewsModuleData;
+            /// <summary>
+            /// Identifier of the world whose state this value addresses.
+            /// </summary>
             public ushort worldId;
 
+            /// <summary>
+            /// Processes prepare using the supplied job inputs.
+            /// </summary>
             public void Execute() {
 
                 // Set visual mode
@@ -741,23 +1054,44 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Executes prepare culling work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct PrepareCullingJob : IJob {
 
+            /// <summary>
+            /// Shared view-module state accessed by this operation.
+            /// </summary>
             public safe_ptr<ViewsModuleData> viewsModuleData;
 
+            /// <summary>
+            /// Processes prepare culling using the supplied job inputs.
+            /// </summary>
             public void Execute() {
                 var camera = this.viewsModuleData.ptr->camera.GetAspect<CameraAspect>();
                 this.viewsModuleData.ptr->cullingSnapshot = CameraUtils.CreateCullingSnapshot(in camera);
             }
         }
 
+        /// <summary>
+        /// Executes update culling work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct UpdateCullingJob : IJobParallelForDefer {
 
+            /// <summary>
+            /// State accessed by the containing operation.
+            /// </summary>
             public safe_ptr<State> state;
+            /// <summary>
+            /// Shared view-module state accessed by this operation.
+            /// </summary>
             public safe_ptr<ViewsModuleData> viewsModuleData;
 
+            /// <summary>
+            /// Processes update culling using the supplied job inputs.
+            /// </summary>
             public void Execute(int index) {
 
                 ref var allocator = ref this.state.ptr->allocator;

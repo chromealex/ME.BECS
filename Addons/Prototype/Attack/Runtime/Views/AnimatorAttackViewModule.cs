@@ -3,9 +3,18 @@ namespace ME.BECS.Attack {
     using Views;
     using ME.BECS.Units;
     
+    /// <summary>
+    /// Updates view presentation for animator attack view module.
+    /// </summary>
     public class AnimatorAttackViewModule : IViewApplyState, IViewIgnoreTracker {
 
+        /// <summary>
+        /// Animator used to present entity state.
+        /// </summary>
         public UnityEngine.Animator animator;
+        /// <summary>
+        /// Sensor index used to locate the associated entry.
+        /// </summary>
         public uint sensorIndex;
         
         private static readonly int attackHash = UnityEngine.Animator.StringToHash("Attack");
@@ -13,6 +22,9 @@ namespace ME.BECS.Attack {
         private static readonly int hasTargetHash = UnityEngine.Animator.StringToHash("HasTarget");
         private static readonly int canAttackOnMoveHash = UnityEngine.Animator.StringToHash("CanAttackOnMove");
 
+        /// <summary>
+        /// Applies the current logic state to the presentation instance.
+        /// </summary>
         public void ApplyState(in ViewData viewData) {
 
             EntRO ent = viewData;

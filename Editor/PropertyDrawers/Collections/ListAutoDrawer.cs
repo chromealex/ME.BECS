@@ -6,27 +6,48 @@ using UnityEditor.UIElements;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Draws list auto values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(IUnmanagedList), true)]
     public class ListAutoDrawer : PropertyDrawer {
 
         private TempObject tempObject;
 
+        /// <summary>
+        /// Retains a temporary Unity object for the scope managed by this wrapper.
+        /// </summary>
         public class TempObject : ScriptableObject {
 
+            /// <summary>
+            /// Provides element storage backed by native memory; value copies share the underlying allocation.
+            /// </summary>
             [System.Serializable]
             public struct Element {
 
+                /// <summary>
+                /// Object represented by this entry.
+                /// </summary>
                 [SerializeReference]
                 public object obj;
 
             }
             
+            /// <summary>
+            /// Backing array used by this value.
+            /// </summary>
             public Element[] arr;
 
         }
 
+        /// <summary>
+        /// Defines temp list object state and operations for <c>ListAutoDrawer</c>.
+        /// </summary>
         public class TempListObject : ScriptableObject {
 
+            /// <summary>
+            /// Backing array used by this value.
+            /// </summary>
             public ConfigList arr;
 
         }
@@ -40,6 +61,9 @@ namespace ME.BECS.Editor {
             return so;
         }
         
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             var list = (IUnmanagedList)PropertyEditorUtils.GetTargetObjectOfProperty(property);
@@ -50,6 +74,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Builds the editor window's UI Toolkit hierarchy.
+        /// </summary>
         public void CreateGUI(VisualElement root, IUnmanagedList list, SerializedProperty property) {
 
             if (property.serializedObject.targetObject is EntityConfig config) {

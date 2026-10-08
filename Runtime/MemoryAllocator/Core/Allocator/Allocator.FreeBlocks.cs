@@ -10,6 +10,9 @@ namespace ME.BECS {
     using Unity.Mathematics;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
+    /// <summary>
+    /// Indexes allocator blocks available for reuse.
+    /// </summary>
     [IgnoreProfiler]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -18,8 +21,14 @@ namespace ME.BECS {
     #endif
     public unsafe struct FreeBlocks {
         
+        /// <summary>
+        /// Pots constant used by <c>FreeBlocks</c>.
+        /// </summary>
         public const uint POTS = 16u;
 
+        /// <summary>
+        /// Stores a block record used by <c>FreeBlocks</c>.
+        /// </summary>
         [IgnoreProfiler]
         #if !BECS_IL2CPP_OPTIONS_DISABLE
         [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -28,14 +37,23 @@ namespace ME.BECS {
         #endif
         public struct Block {
 
+            /// <summary>
+            /// Free allocator blocks available for reuse.
+            /// </summary>
             public UnsafeList<MemPtr> freeBlocks;
 
+            /// <summary>
+            /// Adds the supplied entry to block.
+            /// </summary>
             [INLINE(256)][IgnoreProfiler]
             public void Add(MemoryAllocator.BlockHeader* header, in MemPtr memPtr) {
                 header->freeIndex = (uint)this.freeBlocks.Length;
                 this.freeBlocks.Add(memPtr);
             }
 
+            /// <summary>
+            /// Removes the specified entry from block.
+            /// </summary>
             [INLINE(256)][IgnoreProfiler]
             public void Remove(in MemoryAllocator allocator, MemoryAllocator.BlockHeader* header) {
                 var last = this.freeBlocks[this.freeBlocks.Length - 1];
@@ -44,6 +62,9 @@ namespace ME.BECS {
                 this.freeBlocks.RemoveAtSwapBack((int)header->freeIndex);
             }
 
+            /// <summary>
+            /// Removes and returns the next entry according to this container's ordering.
+            /// </summary>
             [INLINE(256)][IgnoreProfiler]
             public MemPtr Pop(in MemoryAllocator allocator, uint size, bool iterateAll = false) {
                 if (this.freeBlocks.Length == 0) return MemPtr.Invalid;
@@ -67,6 +88,9 @@ namespace ME.BECS {
                 }
             }
 
+            /// <summary>
+            /// Releases the resources owned by this block instance.
+            /// </summary>
             [INLINE(256)][IgnoreProfiler]
             public void Dispose() {
                 this.freeBlocks.Dispose();
@@ -74,13 +98,25 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Free allocator blocks available for reuse.
+        /// </summary>
         public UnsafeList<Block> freeBlocks;
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.freeBlocks.IsCreated;
 
+        /// <summary>
+        /// Allocator used to access or manage the associated native storage.
+        /// </summary>
         public Allocator Allocator {
             set => this.freeBlocks.Allocator = value;
         }
 
+        /// <summary>
+        /// Initializes free blocks state from the supplied context.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public void Initialize(int capacity, Allocator allocator) {
             this.freeBlocks = new UnsafeList<Block>((int)FreeBlocks.POTS, allocator);
@@ -91,6 +127,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Releases the resources owned by this free blocks instance.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public void Dispose() {
             for (int i = 0; i < this.freeBlocks.Length; ++i) {
@@ -99,6 +138,9 @@ namespace ME.BECS {
             this.freeBlocks.Dispose();
         }
 
+        /// <summary>
+        /// Copies the supplied source state into this free blocks instance.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public void CopyFrom(in FreeBlocks other) {
             
@@ -112,6 +154,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Writes free blocks to the supplied serialized representation.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public void Serialize(ref StreamBufferWriter writer) {
             writer.Write(this.freeBlocks.Length);
@@ -123,6 +168,9 @@ namespace ME.BECS {
             }
         }
         
+        /// <summary>
+        /// Restores free blocks from the supplied serialized representation.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public void Deserialize(ref StreamBufferReader reader, Allocator allocator) {
             var freeBlocksLength = 0;
@@ -169,18 +217,27 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Adds the supplied entry to free blocks.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public void Add(in MemoryAllocator allocator, MemoryAllocator.BlockHeader* header, uint zoneId) {
             ref var block = ref this.GetBlockExact(header->size);
             block.Add(header, allocator.GetSafePtr((byte*)header, zoneId));
         }
 
+        /// <summary>
+        /// Adds the supplied entry to free blocks.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public void Add(in MemoryAllocator allocator, MemoryAllocator.BlockHeader* header, MemPtr memPtr) {
             ref var block = ref this.GetBlockExact(header->size);
             block.Add(header, memPtr);
         }
 
+        /// <summary>
+        /// Removes and returns the next entry according to this container's ordering.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public MemPtr Pop(in MemoryAllocator allocator, uint size) {
             var index = 0u;
@@ -200,18 +257,27 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Removes the specified entry from free blocks.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public void Remove(in MemoryAllocator allocator, MemoryAllocator.BlockHeader* header) {
             ref var block = ref this.GetBlockExact(header->size);
             block.Remove(in allocator, header);
         }
 
+        /// <summary>
+        /// Resolves the requested address to a native pointer.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public readonly MemPtr GetPtr(in MemoryAllocator.BlockHeader header) {
             ref var block = ref this.GetBlockExact(header.size);
             return block.freeBlocks[(int)header.freeIndex];
         }
 
+        /// <summary>
+        /// Returns size.
+        /// </summary>
         public readonly uint GetSize(in MemoryAllocator allocator) {
             var freeSize = 0u;
             foreach (var block in this.freeBlocks) {

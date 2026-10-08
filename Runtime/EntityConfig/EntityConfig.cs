@@ -2,26 +2,53 @@ using UnityEngine;
 
 namespace ME.BECS {
     
+    /// <summary>
+    /// Supplies entity config ID metadata to annotated declarations.
+    /// </summary>
     public class EntityConfigIdAttribute : PropertyAttribute {}
     
+    /// <summary>
+    /// Defines reusable component data and initialization settings for entities.
+    /// </summary>
     [CreateAssetMenu(menuName = "ME.BECS/Entity Config")]
     public class EntityConfig : ScriptableObject {
 
+        /// <summary>
+        /// Stores the descriptors used by registered collection operations.
+        /// </summary>
         [System.Serializable]
         public struct CollectionsData {
 
+            /// <summary>
+            /// Defines collection state and operations for <c>EntityConfig.CollectionsData</c>.
+            /// </summary>
             [System.Serializable]
             public struct Collection {
 
+                /// <summary>
+                /// Identifier used to address this entry within its containing registry.
+                /// </summary>
                 public uint id;
+                /// <summary>
+                /// Backing array used by this value.
+                /// </summary>
                 [UnityEngine.SerializeReference]
                 public System.Collections.Generic.List<object> array;
 
             }
 
+            /// <summary>
+            /// Next id used to locate the associated entry.
+            /// </summary>
             public uint nextId;
+            /// <summary>
+            /// Entries stored by this container.
+            /// </summary>
             public System.Collections.Generic.List<Collection> items;
 
+            /// <summary>
+            /// Clears state and releases resources managed by this operation.
+            /// </summary>
             public void CleanUp(EntityConfig config) {
 
                 if (this.items == null) return;
@@ -80,20 +107,50 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Base config used by <c>EntityConfig</c>.
+        /// </summary>
         public EntityConfig baseConfig;
+        /// <summary>
+        /// Data consumed or produced by the containing operation.
+        /// </summary>
         public ComponentsStorage<IConfigComponent> data = new() { components = System.Array.Empty<IConfigComponent>() };
+        /// <summary>
+        /// Shared data used by <c>EntityConfig</c>.
+        /// </summary>
         public ComponentsStorage<IConfigComponentShared> sharedData = new() { components = System.Array.Empty<IConfigComponentShared>() };
+        /// <summary>
+        /// Static data used by <c>EntityConfig</c>.
+        /// </summary>
         public ComponentsStorage<IConfigComponentStatic> staticData = new() { components = System.Array.Empty<IConfigComponentStatic>() };
+        /// <summary>
+        /// Data initialize used by <c>EntityConfig</c>.
+        /// </summary>
         public ComponentsStorageLink dataInitialize = new() { items = System.Array.Empty<ComponentsStorageLink.Item>() };
+        /// <summary>
+        /// Aspect descriptors used by this operation.
+        /// </summary>
         public ComponentsStorage<IAspect> aspects = new() { components = System.Array.Empty<IAspect>() };
+        /// <summary>
+        /// Collections data used by <c>EntityConfig</c>.
+        /// </summary>
         public CollectionsData collectionsData;
+        /// <summary>
+        /// Whether maskable behavior or state is selected.
+        /// </summary>
         public bool maskable;
         
+        /// <summary>
+        /// Checks the supplied state against the constraints required by this API.
+        /// </summary>
         public void Validate() {
             this.OnValidate();
             this.collectionsData.CleanUp(this);
         }
 
+        /// <summary>
+        /// Refreshes or validates state after values change in the Unity Inspector.
+        /// </summary>
         public void OnValidate() {
             var list = new System.Collections.Generic.List<ComponentsStorageLink.Item>();
             for (uint i = 0u; i < this.data.components.Length; ++i) {
@@ -128,21 +185,33 @@ namespace ME.BECS {
             };
         }
 
+        /// <summary>
+        /// Creates unsafe config.
+        /// </summary>
         public UnsafeEntityConfig CreateUnsafeConfig(uint id = 0u, Ent ent = default) {
             return new UnsafeEntityConfig(this, id, ent);
         }
         
+        /// <summary>
+        /// Synchronizes the associated state with the supplied source.
+        /// </summary>
         public void Sync() {
 
             EntityConfigRegistry.Sync(this);
             
         }
 
+        /// <summary>
+        /// Resolves the configuration reference to its native configuration data.
+        /// </summary>
         public UnsafeEntityConfig AsUnsafeConfig() {
             EntityConfigRegistry.Register(this, out var config);
             return config;
         }
 
+        /// <summary>
+        /// Applies the supplied data or pending changes to the target state.
+        /// </summary>
         public void Apply(in Ent ent, Config.JoinOptions options = Config.JoinOptions.FullJoin) {
             
             E.IS_ALIVE(in ent);
@@ -153,6 +222,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Returns collection.
+        /// </summary>
         public uint GetCollection(uint id, out CollectionsData.Collection data, out int index) {
             if (id == 0u) id = ++this.collectionsData.nextId;
             if (this.collectionsData.items == null) this.collectionsData.items = new System.Collections.Generic.List<CollectionsData.Collection>();

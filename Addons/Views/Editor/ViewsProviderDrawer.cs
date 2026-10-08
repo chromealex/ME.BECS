@@ -4,9 +4,15 @@ namespace ME.BECS.Editor {
     
     using UnityEngine.UIElements;
 
+    /// <summary>
+    /// Draws views provider attribute values in the Unity Inspector.
+    /// </summary>
     [UnityEditor.CustomPropertyDrawer(typeof(ViewsProviderAttribute))]
     public class ViewsProviderAttributeDrawer : UnityEditor.PropertyDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(UnityEditor.SerializedProperty property) {
 
             var modules = ViewsModule.providerInfos.Select(x => x.editorName.ToString()).ToArray();

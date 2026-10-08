@@ -6,11 +6,23 @@ namespace ME.BECS.Editor {
     using UnityEditor;
     using UnityEngine.UIElements;
 
+    /// <summary>
+    /// Draws fp float property values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(sfloat))]
     public class FpFloatPropertyDrawer : PropertyDrawer {
 
+        /// <summary>
+        /// Custom name used by <c>FpFloatPropertyDrawer</c>.
+        /// </summary>
         public string customName;
+        /// <summary>
+        /// Callback invoked for value set.
+        /// </summary>
         public System.Func<sfloat, sfloat> onValueSet;
+        /// <summary>
+        /// Callback invoked for value changed.
+        /// </summary>
         public System.Func<sfloat, sfloat> onValueChanged;
         
         private static StyleSheet styleSheet;
@@ -21,6 +33,9 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             LoadStyle();

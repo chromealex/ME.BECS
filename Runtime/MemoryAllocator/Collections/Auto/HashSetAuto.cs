@@ -7,6 +7,9 @@ namespace ME.BECS {
     #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides hash set auto storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [IgnoreProfiler]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -15,6 +18,9 @@ namespace ME.BECS {
     #endif
     public unsafe struct HashSetAuto<T> : IIsCreated where T : unmanaged, System.IEquatable<T> {
 
+        /// <summary>
+        /// Traverses the entries exposed by <c>HashSetAuto</c>.
+        /// </summary>
         public struct Enumerator {
 
             private uint lastIndex;
@@ -30,6 +36,9 @@ namespace ME.BECS {
                 this.current = default;
             }
 
+            /// <summary>
+            /// Advances the enumerator and reports whether a current element is available.
+            /// </summary>
             [INLINE(256)]
             public bool MoveNext() {
                 while (this.index < this.lastIndex) {
@@ -48,16 +57,25 @@ namespace ME.BECS {
                 return false;
             }
 
+            /// <summary>
+            /// Element at the enumerator's current position.
+            /// </summary>
             public T Current => this.current;
 
         }
 
+        /// <summary>
+        /// Stores a slot record used by <c>HashSetAuto</c>.
+        /// </summary>
         public struct Slot {
             internal int hashCode;      // Lower 31 bits of hash code, -1 if unused
             internal int next;          // Index of next entry, -1 if last
             internal T value;
         }
         
+        /// <summary>
+        /// Lower31 bit mask used to select the applicable bits or entries.
+        /// </summary>
         public const int LOWER31_BIT_MASK = 0x7FFFFFFF;
         
         internal MemArrayAuto<uint> buckets;
@@ -68,18 +86,30 @@ namespace ME.BECS {
         internal uint version;
         internal uint hash;
 
+        /// <summary>
+        /// Entity whose components or lifetime are associated with this value.
+        /// </summary>
         public readonly Ent ent => this.buckets.ent;
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated {
             [INLINE(256)]
             get => this.buckets.IsCreated;
         }
 
+        /// <summary>
+        /// Number of entries currently tracked by this value.
+        /// </summary>
         public uint Count {
             [INLINE(256)]
             get => this.count;
         }
 
+        /// <summary>
+        /// Initializes <c>HashSetAuto</c> with storage for the requested number of elements.
+        /// </summary>
         [INLINE(256)]
         public HashSetAuto(in Ent ent, uint capacity) {
 
@@ -88,6 +118,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes <c>HashSetAuto</c> from the supplied ent, other.
+        /// </summary>
         [INLINE(256)]
         public HashSetAuto(in Ent ent, in HashSetAuto<T> other) {
 
@@ -99,6 +132,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes <c>HashSetAuto</c> from the supplied other.
+        /// </summary>
         [INLINE(256)]
         public HashSetAuto(in HashSetAuto<T> other) {
 
@@ -110,6 +146,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         [INLINE(256)]
         public bool Equals(in HashSetAuto<T> other) {
 
@@ -138,6 +177,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Stores the supplied value in hash set auto.
+        /// </summary>
         [INLINE(256)]
         public void Set(in HashSetAuto<T> other) {
             
@@ -147,12 +189,18 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Updates cached native access for the requested Burst execution mode.
+        /// </summary>
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             this.buckets.BurstMode(in allocator, state);
             this.slots.BurstMode(in allocator, state);
         }
         
+        /// <summary>
+        /// Releases the resources owned by this hash set auto instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
             
@@ -162,6 +210,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Returns the allocator-relative address of the underlying storage.
+        /// </summary>
         [INLINE(256)]
         public readonly MemPtr GetMemPtr() {
             
@@ -170,6 +221,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Disposes the current storage and copies the other collection handle; the two values then refer to the same allocation.
+        /// </summary>
         [INLINE(256)]
         public void ReplaceWith(in HashSetAuto<T> other) {
 
@@ -182,6 +236,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns an enumerator over the current collection contents.
+        /// </summary>
         [INLINE(256)]
         public readonly Enumerator GetEnumerator() {
             
@@ -229,6 +286,9 @@ namespace ME.BECS {
             return false;
         }
         
+        /// <summary>
+        /// Tests whether the specified value is present.
+        /// </summary>
         [INLINE(256)]
         public readonly bool Contains(T item, safe_ptr<Slot> slotsPtr, safe_ptr<int> bucketsPtr) {
             uint hashCode = GetHashCode(item) & HashSetAuto<T>.LOWER31_BIT_MASK;
@@ -241,6 +301,9 @@ namespace ME.BECS {
             return false;
         }
 
+        /// <summary>
+        /// Tests whether the specified value is present.
+        /// </summary>
         [INLINE(256)]
         public readonly bool Contains(T item, uint hashCode, safe_ptr<Slot> slotsPtr, safe_ptr<int> bucketsPtr) {
             for (int i = bucketsPtr[hashCode % this.buckets.Length] - 1; i >= 0; i = (slotsPtr + i).ptr->next) {
@@ -252,6 +315,9 @@ namespace ME.BECS {
             return false;
         }
 
+        /// <summary>
+        /// Removes except.
+        /// </summary>
         [INLINE(256)]
         public void RemoveExcept(in HashSetAuto<T> other) {
             var slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached();
@@ -267,6 +333,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Removes the specified entry from hash set auto.
+        /// </summary>
         [INLINE(256)]
         public void Remove(in HashSetAuto<T> other) {
             var slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached();
@@ -282,6 +351,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Adds the supplied entry to hash set auto.
+        /// </summary>
         [INLINE(256)]
         public void Add(in HashSetAuto<T> other) {
             var slotsPtr = (safe_ptr<Slot>)other.slots.GetUnsafePtrCached();
@@ -462,6 +534,9 @@ namespace ME.BECS {
             return true;
         }
         
+        /// <summary>
+        /// Adds the supplied entry to hash set auto.
+        /// </summary>
         [INLINE(256)]
         public bool Add(T value, ref safe_ptr<int> bucketsPtr, ref safe_ptr<Slot> slotsPtr) {
             
@@ -508,11 +583,17 @@ namespace ME.BECS {
             return true;
         }
 
+        /// <summary>
+        /// Returns hash.
+        /// </summary>
         [INLINE(256)]
         public readonly uint GetHash() {
             return this.hash;
         }
 
+        /// <summary>
+        /// Copies the supplied source state into this hash set auto instance.
+        /// </summary>
         [INLINE(256)]
         public void CopyFrom(in HashSetAuto<T> other) {
 
@@ -526,11 +607,17 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests whether the supplied values compare equal.
+        /// </summary>
         [INLINE(256)]
         public static bool Equal(T v1, T v2) {
             return v1.Equals(v2);
         }
 
+        /// <summary>
+        /// Returns a hash code consistent with this type's equality comparison.
+        /// </summary>
         [INLINE(256)]
         public static uint GetHashCode(T item) {
             return (uint)item.GetHashCode();

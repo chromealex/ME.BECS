@@ -4,9 +4,15 @@ using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor {
     
+    /// <summary>
+    /// Draws object reference runtime values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(RuntimeObjectReference<>))]
     public class ObjectReferenceRuntimeDrawer : PropertyDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             var id = property.FindPropertyRelative(nameof(RuntimeObjectReference<UnityEngine.Object>.id));

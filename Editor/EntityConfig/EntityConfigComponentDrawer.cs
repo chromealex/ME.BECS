@@ -5,9 +5,15 @@ using ME.BECS.Editor;
 
 namespace ME.BECS.Editor {
     
+    /// <summary>
+    /// Draws entity config ID values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(EntityConfigIdAttribute))]
     public class EntityConfigIdDrawer : UnityEditor.PropertyDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
             
             var rootVisualElement = new VisualElement();

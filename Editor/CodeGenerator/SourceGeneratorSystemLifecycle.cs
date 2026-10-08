@@ -5,9 +5,15 @@ namespace ME.BECS.Editor {
     using System.Reflection;
 
     // No lifecycle code is invoked. Missing/invalid catalogs retain the reflection path during migration.
+    /// <summary>
+    /// Provides system lifecycle for BECS source-generator publication.
+    /// </summary>
     public static class SourceGeneratorSystemLifecycle {
         private static readonly Dictionary<Assembly, Dictionary<string, (int present, int burst, int discarded)>> catalogs = new();
 
+        /// <summary>
+        /// Attempts to get and reports whether the operation succeeded.
+        /// </summary>
         public static bool TryGet(Type system, string phase, out bool present, out bool burst, out bool discarded) {
             present = burst = discarded = false;
             var bit = phase == "OnAwake" ? 1 : phase == "OnStart" ? 2 : phase == "OnUpdate" ? 4 :

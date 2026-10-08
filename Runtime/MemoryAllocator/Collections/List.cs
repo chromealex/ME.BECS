@@ -11,6 +11,9 @@ namespace ME.BECS {
     using static Cuts;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides list storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(ListProxy<>))]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
@@ -20,8 +23,14 @@ namespace ME.BECS {
     #endif
     public unsafe struct List<T> : IIsCreated where T : unmanaged {
 
+        /// <summary>
+        /// Storage size or fixed element count used by this representation.
+        /// </summary>
         public const int SIZE = MemArray<T>.SIZE + sizeof(uint);
 
+        /// <summary>
+        /// Traverses the entries exposed by <c>List</c>.
+        /// </summary>
         public struct Enumerator {
             
             private readonly List<T> list;
@@ -32,34 +41,55 @@ namespace ME.BECS {
                 this.index = 0u;
             }
 
+            /// <summary>
+            /// Advances the enumerator and reports whether a current element is available.
+            /// </summary>
             public bool MoveNext() {
                 return this.index++ < this.list.Count;
             }
 
+            /// <summary>
+            /// Returns current.
+            /// </summary>
             public ref T GetCurrent(in MemoryAllocator allocator) => ref this.list[in allocator, this.index - 1u];
 
         }
 
         private MemArray<T> arr;
+        /// <summary>
+        /// Number of entries currently tracked by this value.
+        /// </summary>
         public uint Count;
 
+        /// <summary>
+        /// Writes collection metadata to the stream without serializing the backing allocator blocks.
+        /// </summary>
         [INLINE(256)]
         public void SerializeHeaders(ref StreamBufferWriter writer) {
             writer.Write(this.arr);
             writer.Write(this.Count);
         }
 
+        /// <summary>
+        /// Restores collection metadata from the stream; backing allocator storage is restored separately.
+        /// </summary>
         [INLINE(256)]
         public void DeserializeHeaders(ref StreamBufferReader reader) {
             reader.Read(ref this.arr);
             reader.Read(ref this.Count);
         }
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public readonly bool IsCreated {
             [INLINE(256)]
             get => this.arr.IsCreated;
         }
 
+        /// <summary>
+        /// Number of elements that fit in the currently reserved storage.
+        /// </summary>
         public uint Capacity {
             [INLINE(256)]
             get {
@@ -68,6 +98,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Initializes <c>List</c> with storage for the requested number of elements.
+        /// </summary>
         [INLINE(256)]
         public List(ref MemoryAllocator allocator, uint capacity) {
 
@@ -77,11 +110,17 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Updates cached native access for the requested Burst execution mode.
+        /// </summary>
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             this.arr.BurstMode(in allocator, state);
         }
 
+        /// <summary>
+        /// Disposes the current storage and copies the other collection handle; the two values then refer to the same allocation.
+        /// </summary>
         [INLINE(256)]
         public void ReplaceWith(ref MemoryAllocator allocator, in List<T> other) {
             
@@ -94,6 +133,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Copies the supplied source state into this list instance.
+        /// </summary>
         [INLINE(256)]
         public void CopyFrom(ref MemoryAllocator allocator, in List<T> other) {
 
@@ -110,6 +152,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns the allocator-relative address of the underlying storage.
+        /// </summary>
         [INLINE(256)]
         public readonly MemPtr GetMemPtr() {
             
@@ -118,6 +163,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Returns a borrowed pointer to collection storage; mutation that reallocates storage or disposal invalidates it.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
 
@@ -126,6 +174,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this list instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose(ref MemoryAllocator allocator) {
 
@@ -135,6 +186,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Schedules release of the owned storage after the supplied dependency and returns the disposal handle.
+        /// </summary>
         [INLINE(256)]
         public Unity.Jobs.JobHandle Dispose(ushort worldId, Unity.Jobs.JobHandle inputDeps) {
 
@@ -151,6 +205,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns an enumerator over the current collection contents.
+        /// </summary>
         [INLINE(256)]
         public readonly Enumerator GetEnumerator() {
 
@@ -159,6 +216,9 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Removes stored entries while retaining the backing allocation for reuse.
+        /// </summary>
         [INLINE(256)]
         public void Clear() {
 
@@ -167,6 +227,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public ref T this[safe_ptr<State> state, uint index] {
             [INLINE(256)]
             get {
@@ -175,6 +238,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public ref T this[in MemoryAllocator allocator, uint index] {
             [INLINE(256)]
             get {
@@ -191,6 +257,9 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Adds the supplied entry to list.
+        /// </summary>
         [INLINE(256)]
         public uint Add(ref MemoryAllocator allocator, T obj) {
 
@@ -203,6 +272,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests whether the specified value is present.
+        /// </summary>
         [INLINE(256)]
         public readonly bool Contains<U>(in MemoryAllocator allocator, U obj) where U : unmanaged, System.IEquatable<T> {
             
@@ -221,6 +293,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes the specified entry from list.
+        /// </summary>
         [INLINE(256)]
         public bool Remove<U>(ref MemoryAllocator allocator, U obj) where U : unmanaged, System.IEquatable<T> {
 
@@ -240,6 +315,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes fast.
+        /// </summary>
         [INLINE(256)]
         public bool RemoveFast<U>(in MemoryAllocator allocator, U obj) where U : unmanaged, System.IEquatable<T> {
 
@@ -259,6 +337,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes at.
+        /// </summary>
         [INLINE(256)]
         public unsafe bool RemoveAt(ref MemoryAllocator allocator, uint index) {
             
@@ -285,6 +366,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes the indexed element by moving a tail element into its place; element order is not preserved.
+        /// </summary>
         [INLINE(256)]
         public bool RemoveAtFast(in MemoryAllocator allocator, uint index) {
             
@@ -300,6 +384,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Creates storage or grows capacity to accommodate the requested length without changing the element count; smaller requests do not shrink storage.
+        /// </summary>
         [INLINE(256)]
         public bool Resize(ref MemoryAllocator allocator, uint newLength) {
 
@@ -320,6 +407,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Adds range.
+        /// </summary>
         [INLINE(256)]
         public void AddRange(ref MemoryAllocator allocator, in List<T> collection) {
             
@@ -327,6 +417,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Adds range.
+        /// </summary>
         [INLINE(256)]
         public void AddRange(ref MemoryAllocator allocator, in List<T> collection, uint fromIdx, uint toIdx) {
 
@@ -356,6 +449,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Adds range.
+        /// </summary>
         [INLINE(256)]
         public void AddRange(ref MemoryAllocator allocator, MemArray<T> collection) {
 
@@ -382,6 +478,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Adds range.
+        /// </summary>
         [INLINE(256)]
         public void AddRange(ref MemoryAllocator allocator, Unity.Collections.NativeArray<T> collection) {
 
@@ -397,6 +496,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Adds range.
+        /// </summary>
         [INLINE(256)]
         public void AddRange(ref MemoryAllocator allocator, in UnsafeList<T> collection) {
 
@@ -412,6 +514,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Copies to.
+        /// </summary>
         [INLINE(256)]
         public readonly void CopyTo(ref MemoryAllocator allocator, MemArray<T> arr, uint srcOffset, uint index, uint count) {
             
@@ -423,6 +528,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Copies to.
+        /// </summary>
         [INLINE(256)]
         public readonly void CopyTo(ref MemoryAllocator allocator, in MemPtr arrPtr, uint srcOffset, uint index, uint count) {
             
@@ -433,6 +541,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Copies the supplied source state into this list instance.
+        /// </summary>
         [INLINE(256)]
         public readonly void CopyFrom(ref MemoryAllocator allocator, MemArray<T> arr, uint index) {
 
@@ -444,11 +555,17 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Orders the stored entries using the supplied comparison.
+        /// </summary>
         [INLINE(256)]
         public void Sort<U>(safe_ptr<State> state) where U : unmanaged, System.IComparable<U> {
             Unity.Collections.NativeSortExtension.Sort((U*)this.GetUnsafePtr(in state.ptr->allocator).ptr, (int)this.Count);
         }
 
+        /// <summary>
+        /// Returns the amount of reserved storage in bytes.
+        /// </summary>
         public uint GetReservedSizeInBytes() {
             
             return this.arr.GetReservedSizeInBytes() + TSize<List<uint>>.size;

@@ -18,6 +18,9 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     #endif
 
+    /// <summary>
+    /// Stores sector geometry used by spatial calculations.
+    /// </summary>
     public readonly struct MathSector {
 
         private readonly float3 position;
@@ -25,6 +28,9 @@ namespace ME.BECS {
         private readonly tfloat sector;
         private readonly bool checkSector;
         
+        /// <summary>
+        /// Initializes <c>MathSector</c> from the supplied position, rotation, sector.
+        /// </summary>
         [INLINE(256)]
         public MathSector(in float3 position, in quaternion rotation, tfloat sector) {
 
@@ -51,6 +57,9 @@ namespace ME.BECS {
             return quaternion.LookRotationSafe(forward, new float3(0, 1, 0));
         }
 
+        /// <summary>
+        /// Tests whether the context is valid.
+        /// </summary>
         [INLINE(256)]
         public bool IsValid(in float3 objPosition) {
             if (this.checkSector == false) return true;
@@ -60,6 +69,9 @@ namespace ME.BECS {
             return angle < this.sector * 0.5f;
         }
 
+        /// <summary>
+        /// Tests whether the context is valid.
+        /// </summary>
         [INLINE(256)]
         public bool IsValid(in float2 objPosition) {
             if (this.checkSector == false) return true;

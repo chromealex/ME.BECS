@@ -5,13 +5,25 @@ namespace ME.BECS.Jobs {
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections.LowLevel.Unsafe;
 
+    /// <summary>
+    /// Defines the operations required by job single.
+    /// </summary>
     [JobProducerType(typeof(IJobSingleExtensions.JobProcess<>))]
     public interface IJobSingle {
+        /// <summary>
+        /// Processes i job single using the supplied job inputs.
+        /// </summary>
         void Execute();
     }
 
+    /// <summary>
+    /// Provides extension operations for i job single.
+    /// </summary>
     public static unsafe class IJobSingleExtensions {
         
+        /// <summary>
+        /// Registers job reflection data before scheduling.
+        /// </summary>
         public static void EarlyJobInit<T>() where T : struct, IJobSingle => IJobSingleExtensions.JobProcess<T>.Initialize();
 
         private static System.IntPtr GetReflectionData<T>() where T : struct, IJobSingle {
@@ -20,6 +32,9 @@ namespace ME.BECS.Jobs {
             return reflectionData;
         }
 
+        /// <summary>
+        /// Schedules single with inject.
+        /// </summary>
         public static JobHandle ScheduleSingleWithInject<T>(this T jobData, ushort worldId, JobHandle inputDeps = default) where T : struct, IJobSingle {
             
             JobInject<T>.Patch(ref jobData, worldId);
@@ -29,6 +44,9 @@ namespace ME.BECS.Jobs {
             
         }
 
+        /// <summary>
+        /// Schedules single with inject by ref.
+        /// </summary>
         public static JobHandle ScheduleSingleWithInjectByRef<T>(this ref T jobData, ushort worldId, JobHandle inputDeps = default) where T : struct, IJobSingle {
             
             JobInject<T>.Patch(ref jobData, worldId);
@@ -38,6 +56,9 @@ namespace ME.BECS.Jobs {
             
         }
 
+        /// <summary>
+        /// Schedules single.
+        /// </summary>
         public static JobHandle ScheduleSingle<T>(this T jobData, JobHandle inputDeps = default) where T : struct, IJobSingle {
             
             var parameters = new JobsUtility.JobScheduleParameters(_addressPtr(ref jobData), GetReflectionData<T>(), inputDeps, ScheduleMode.Single);
@@ -45,6 +66,9 @@ namespace ME.BECS.Jobs {
             
         }
 
+        /// <summary>
+        /// Schedules single by ref.
+        /// </summary>
         public static JobHandle ScheduleSingleByRef<T>(ref this T jobData, JobHandle inputDeps = default) where T : struct, IJobSingle {
             
             var parameters = new JobsUtility.JobScheduleParameters(_addressPtr(ref jobData), GetReflectionData<T>(), inputDeps, ScheduleMode.Single);

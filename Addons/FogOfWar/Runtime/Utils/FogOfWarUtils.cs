@@ -24,13 +24,22 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Transforms;
     using static Cuts;
     
+    /// <summary>
+    /// Stores sector geometry used to reveal fog-of-war cells.
+    /// </summary>
     public readonly ref struct FowMathSector {
 
         private readonly float2 position;
         private readonly float2 lookDirection;
         private readonly tfloat sector;
+        /// <summary>
+        /// Whether check sector behavior or state is selected.
+        /// </summary>
         public readonly bool checkSector;
         
+        /// <summary>
+        /// Initializes <c>FowMathSector</c> from the supplied position, rotation, sector.
+        /// </summary>
         [INLINE(256)]
         public FowMathSector(in float3 position, in quaternion rotation, tfloat sector) {
             this.checkSector = sector > 0 && sector < 360;
@@ -45,6 +54,9 @@ namespace ME.BECS.FogOfWar {
             this.lookDirection = math.normalize(math.mul(rotation, math.forward())).xz;
         }
 
+        /// <summary>
+        /// Tests whether the context is valid.
+        /// </summary>
         [INLINE(256)]
         public bool IsValid(in FogOfWarStaticComponent props, uint x, uint y) {
             if (this.checkSector == false) return true;
@@ -56,10 +68,19 @@ namespace ME.BECS.FogOfWar {
         
     }
 
+    /// <summary>
+    /// Provides the fog-map data required by visibility queries.
+    /// </summary>
     public class FogOfWarData {
         
+        /// <summary>
+        /// Fill255 used by <c>FogOfWarData</c>.
+        /// </summary>
         public static readonly Unity.Burst.SharedStatic<Internal.Array<byte>> fill255 = Unity.Burst.SharedStatic<Internal.Array<byte>>.GetOrCreate<FogOfWarData>();
 
+        /// <summary>
+        /// Initializes fog of war data state from the supplied context.
+        /// </summary>
         [INLINE(256)]
         public static void Initialize(uint sizeX) {
             FogOfWarData.fill255.Data.Resize(sizeX);
@@ -70,10 +91,19 @@ namespace ME.BECS.FogOfWar {
 
     }
 
+    /// <summary>
+    /// Provides helper operations for fog of war.
+    /// </summary>
     public static unsafe class FogOfWarUtils {
 
+        /// <summary>
+        /// Bytes per node constant used by <c>FogOfWarUtils</c>.
+        /// </summary>
         public const int BYTES_PER_NODE = 1;
         
+        /// <summary>
+        /// Writes the supplied value to fog of war utils.
+        /// </summary>
         [INLINE(256)]
         public static void Write(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect unitTr, in UnitAspect unit) {
 
@@ -87,6 +117,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Writes range.
+        /// </summary>
         [INLINE(256)]
         public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in float3 position, tfloat range, tfloat rangeMin) {
 
@@ -97,6 +130,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Writes range.
+        /// </summary>
         [INLINE(256)]
         public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in float3 position, tfloat height, tfloat range, tfloat rangeMin) {
 
@@ -108,6 +144,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Writes range.
+        /// </summary>
         [INLINE(256)]
         public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, tfloat height, tfloat range, tfloat rangeMin) {
 
@@ -116,6 +155,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Writes range.
+        /// </summary>
         [INLINE(256)]
         public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in float3 position, tfloat height, uint fowRange, uint fowRangeMin, in FowMathSector sector = default) {
 
@@ -125,6 +167,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Writes range.
+        /// </summary>
         [INLINE(256)]
         public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, tfloat height, uint range, uint rangeMin, in FowMathSector sector = default) {
 
@@ -133,6 +178,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Writes range.
+        /// </summary>
         [INLINE(256)]
         public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in float3 position, tfloat height, uint fowRange, uint fowRangeMin, byte part, in FowMathSector sector = default) {
 
@@ -145,6 +193,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Writes range.
+        /// </summary>
         [INLINE(256)]
         public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, tfloat height, uint range, uint rangeMin, byte part, in FowMathSector sector = default) {
 
@@ -153,6 +204,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Writes rect.
+        /// </summary>
         [INLINE(256)]
         public static void WriteRect(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, tfloat height, tfloat sizeX, tfloat sizeY) {
 
@@ -165,6 +219,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Writes rect.
+        /// </summary>
         [INLINE(256)]
         public static void WriteRect(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, tfloat height, uint fowRangeX, uint fowRangeY) {
 
@@ -175,6 +232,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Writes rect.
+        /// </summary>
         [INLINE(256)]
         public static void WriteRect(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, tfloat height, uint fowRangeX, uint fowRangeY, byte part) {
 
@@ -185,41 +245,65 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is visible.
+        /// </summary>
         [INLINE(256)]
         public static bool IsVisible(in FogOfWarStaticComponent props, in FogOfWarComponent fow, uint x, uint y) {
             return IsSet(in fow.nodes, in props, x, y, offset: 0);
         }
 
+        /// <summary>
+        /// Tests whether the context is visible.
+        /// </summary>
         [INLINE(256)]
         public static bool IsVisible(in FogOfWarStaticComponent props, in FogOfWarComponent fow, uint x, uint y, float2 size) {
             return IsSet(in fow.nodes, in props, x, y, size, offset: 0);
         }
 
+        /// <summary>
+        /// Tests whether the context is visible.
+        /// </summary>
         [INLINE(256)]
         public static bool IsVisible(in FogOfWarStaticComponent props, in FogOfWarComponent fow, uint x, uint y, tfloat radius) {
             return IsSet(in fow.nodes, in props, x, y, radius, offset: 0);
         }
 
+        /// <summary>
+        /// Tests whether the context is explored.
+        /// </summary>
         [INLINE(256)]
         public static bool IsExplored(in FogOfWarStaticComponent props, in FogOfWarComponent fow, uint x, uint y) {
             return IsSet(in fow.explored, in props, x, y, offset: 0);
         }
 
+        /// <summary>
+        /// Tests whether the context is explored.
+        /// </summary>
         [INLINE(256)]
         public static bool IsExplored(in FogOfWarStaticComponent props, in FogOfWarComponent fow, uint x, uint y, tfloat radius) {
             return IsSet(in fow.explored, in props, x, y, radius, offset: 0);
         }
 
+        /// <summary>
+        /// Tests whether the context is explored.
+        /// </summary>
         [INLINE(256)]
         public static bool IsExplored(in FogOfWarStaticComponent props, in FogOfWarComponent fow, uint x, uint y, float2 size) {
             return IsSet(in fow.explored, in props, x, y, size, offset: 0);
         }
 
+        /// <summary>
+        /// Tests whether the context is set.
+        /// </summary>
         [INLINE(256)]
         public static bool IsSet(in MemArrayAuto<byte> arr, in FogOfWarStaticComponent props, uint x, uint y, byte offset) {
             return arr[(y * props.size.x + x) * BYTES_PER_NODE + offset] > 0;
         }
 
+        /// <summary>
+        /// Tests whether the context is set.
+        /// </summary>
         [INLINE(256)]
         public static bool IsSet(in MemArrayAuto<byte> arr, in FogOfWarStaticComponent props, uint x, uint y, float2 size, byte offset) {
             if (IsSet(in arr, in props, x, y, offset) == true) return true;
@@ -250,6 +334,9 @@ namespace ME.BECS.FogOfWar {
             return false;
         }
 
+        /// <summary>
+        /// Tests whether the context is set.
+        /// </summary>
         [INLINE(256)]
         public static bool IsSet(in MemArrayAuto<byte> arr, in FogOfWarStaticComponent props, uint x, uint y, tfloat radius, byte offset) {
             if (IsSet(in arr, in props, x, y, offset) == true) return true;
@@ -279,11 +366,17 @@ namespace ME.BECS.FogOfWar {
             return false;
         }
 
+        /// <summary>
+        /// Returns height.
+        /// </summary>
         [INLINE(256)]
         public static tfloat GetHeight(in FogOfWarStaticComponent props, uint x, uint y) {
             return props.heights[um::math.mad(y, props.size.x, x)];
         }
 
+        /// <summary>
+        /// Returns pixel position.
+        /// </summary>
         [INLINE(256)]
         public static (uint pixelX, uint pixelY) GetPixelPosition(in FogOfWarStaticComponent props, int x, int y, int textureWidth, int textureHeight) {
             
@@ -299,6 +392,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Converts fog-map coordinates to world position.
+        /// </summary>
         [INLINE(256)]
         public static float3 FogMapToWorldPosition(in FogOfWarStaticComponent props, in uint2 position) {
 
@@ -309,6 +405,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Converts a world position to fog map position.
+        /// </summary>
         [INLINE(256)]
         public static uint2 WorldToFogMapPosition(in FogOfWarStaticComponent props, in float3 position) {
 
@@ -326,6 +425,9 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Converts a world position to fog map value.
+        /// </summary>
         [INLINE(256)]
         public static int WorldToFogMapValue(in FogOfWarStaticComponent props, in tfloat value) {
             
@@ -334,6 +436,9 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Converts a world position to fog map u value.
+        /// </summary>
         [INLINE(256)]
         public static uint WorldToFogMapUValue(in FogOfWarStaticComponent props, in tfloat value) {
             
@@ -344,6 +449,9 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Sets visible rect.
+        /// </summary>
         [INLINE(256)]
         public static void SetVisibleRect(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int sizeX, int sizeY, tfloat height) {
 
@@ -391,6 +499,9 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Sets visible rect partial.
+        /// </summary>
         [INLINE(256)]
         public static void SetVisibleRectPartial(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int sizeX, int sizeY, tfloat height, byte part) {
 
@@ -462,6 +573,9 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Sets visible range.
+        /// </summary>
         [INLINE(256)]
         public static void SetVisibleRange(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int minRadius, int radius, tfloat height, in FowMathSector sector) {
 
@@ -585,6 +699,9 @@ namespace ME.BECS.FogOfWar {
             
         }
         
+        /// <summary>
+        /// Sets visible range partial.
+        /// </summary>
         [INLINE(256)]
         public static void SetVisibleRangePartial(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int minRadius, int radius, tfloat height, in FowMathSector sector, byte part) {
             
@@ -775,16 +892,25 @@ namespace ME.BECS.FogOfWar {
             return true;
         }
 
+        /// <summary>
+        /// Releases the texture resources retained by this instance.
+        /// </summary>
         [INLINE(256)]
         public static void CleanUpTexture(Unity.Collections.NativeArray<byte> data) {
             CleanUpTexture((UnityEngine.Color32*)data.GetUnsafePtr(), (uint)data.Length);
         }
 
+        /// <summary>
+        /// Releases the texture resources retained by this instance.
+        /// </summary>
         [INLINE(256)]
         public static void CleanUpTexture(UnityEngine.Color32* data, uint length) {
             _memclear((safe_ptr)data, TSize<byte>.sizeInt * length);
         }
 
+        /// <summary>
+        /// Creates observer.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in float3 position, tfloat range, tfloat? height = null, tfloat? lifetime = null, in JobInfo jobInfo = default) {
             var ent = Ent.New<FowObserverEntityType>(in jobInfo, editorName: "FOW Observer");
@@ -820,6 +946,9 @@ namespace ME.BECS.FogOfWar {
             }*/
         }
 
+        /// <summary>
+        /// Creates observer.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in float3 position, tfloat range, tfloat? height, Sector sector, tfloat? lifetime = null, in JobInfo jobInfo = default) {
             var ent = Ent.New<FowObserverEntityType>(in jobInfo, editorName: "FOW Observer");
@@ -860,6 +989,9 @@ namespace ME.BECS.FogOfWar {
             }*/
         }
 
+        /// <summary>
+        /// Creates observer.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in float3 position, tfloat sizeX, tfloat sizeY, tfloat? height, tfloat? lifetime = null, in JobInfo jobInfo = default) {
             var ent = Ent.New<FowObserverEntityType>(in jobInfo, editorName: "FOW Observer");
@@ -896,6 +1028,9 @@ namespace ME.BECS.FogOfWar {
             }*/
         }
 
+        /// <summary>
+        /// Creates observer.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in Rect rect, tfloat? height, tfloat? lifetime = null, in JobInfo jobInfo = default) {
             var ent = Ent.New<FowObserverEntityType>(in jobInfo, editorName: "FOW Observer");
@@ -937,6 +1072,9 @@ namespace ME.BECS.FogOfWar {
             }*/
         }
 
+        /// <summary>
+        /// Creates observer.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in RectUInt rect, tfloat? height, tfloat? lifetime = null, in JobInfo jobInfo = default) {
             var ent = Ent.New<FowObserverEntityType>(in jobInfo, editorName: "FOW Observer");
@@ -975,6 +1113,9 @@ namespace ME.BECS.FogOfWar {
             }*/
         }
 
+        /// <summary>
+        /// Clears quad tree.
+        /// </summary>
         [INLINE(256)]
         public static void ClearQuadTree(in Ent ent) {
             
@@ -995,6 +1136,9 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Returns position to attack.
+        /// </summary>
         [INLINE(256)]
         public static AttackUtils.ReactionType GetPositionToAttack(in UnitCommandGroupAspect group, in Ent target, tfloat nodeSize, out float3 position, in ME.BECS.Pathfinding.BuildGraphSystem buildGraphSystem, SystemLink<ME.BECS.FogOfWar.CreateSystem> fowSystem) {
 
@@ -1021,11 +1165,17 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Returns position to attack.
+        /// </summary>
         [INLINE(256)]
         public static AttackUtils.ReactionType GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position, ME.BECS.Pathfinding.BuildGraphSystem buildGraphSystem) {
             return GetPositionToAttack(in unit, in target, nodeSize, out position, in buildGraphSystem, default);
         }
 
+        /// <summary>
+        /// Returns position to attack.
+        /// </summary>
         [INLINE(256)]
         public static AttackUtils.ReactionType GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position, in ME.BECS.Pathfinding.BuildGraphSystem buildGraphSystem, in SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem) {
 

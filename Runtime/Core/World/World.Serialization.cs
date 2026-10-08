@@ -8,8 +8,14 @@ namespace ME.BECS {
     #endif
     using BURST = Unity.Burst.BurstCompileAttribute;
 
+    /// <summary>
+    /// Owns an ECS simulation state, entity storage and scheduled system work.
+    /// </summary>
     public unsafe partial struct World {
         
+        /// <summary>
+        /// Allocates and registers a world; system lifecycle callbacks are invoked separately through the world lifecycle API.
+        /// </summary>
         [INLINE(256)]
         public static World Create(byte[] bytes, bool useSerializedWorldId = false) {
             var statePtr = State.Create(bytes);
@@ -23,13 +29,22 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Provides helper operations for world serialization.
+    /// </summary>
     public static unsafe class WorldSerializationExt {
 
+        /// <summary>
+        /// Updates after deserialization.
+        /// </summary>
         [INLINE(256)]
         public static void UpdateAfterDeserialization(this World world) {
             WorldStaticCallbacks.RaiseCallback(ref world);
         }
         
+        /// <summary>
+        /// Writes world serialization ext to the supplied serialized representation.
+        /// </summary>
         [INLINE(256)]
         public static byte[] Serialize(this in World world) {
 
@@ -45,6 +60,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Writes world serialization ext to the supplied serialized representation.
+        /// </summary>
         [INLINE(256)]
         public static void Serialize(this in State state, ref StreamBufferWriter buffer) {
 
@@ -58,6 +76,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Restores world serialization ext from the supplied serialized representation.
+        /// </summary>
         [INLINE(256)]
         public static State Deserialize(this ref State state, byte[] bytes) {
 
@@ -66,6 +87,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Restores world serialization ext from the supplied serialized representation.
+        /// </summary>
         [INLINE(256)]
         public static State Deserialize(this ref State state, ref StreamBufferReader buffer) {
 
@@ -82,13 +106,31 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Defines patch state and operations.
+    /// </summary>
     public unsafe struct Patch {
 
+        /// <summary>
+        /// New length for the associated storage.
+        /// </summary>
         public uint newLength;
+        /// <summary>
+        /// Delta count for the associated storage.
+        /// </summary>
         public uint deltaCount;
+        /// <summary>
+        /// Tail length for the associated storage.
+        /// </summary>
         public uint tailLength;
+        /// <summary>
+        /// Data consumed or produced by the containing operation.
+        /// </summary>
         public StreamBufferWriter data;
 
+        /// <summary>
+        /// Initializes <c>Patch</c> from the supplied bytes.
+        /// </summary>
         public Patch(byte[] bytes) {
             this.newLength = (uint)bytes.Length;
             this.deltaCount = 0u;
@@ -99,10 +141,16 @@ namespace ME.BECS {
             }
         }
         
+        /// <summary>
+        /// Writes patch to the supplied serialized representation.
+        /// </summary>
         public byte[] Serialize() {
             return this.data.ToArray();
         }
 
+        /// <summary>
+        /// Applies the supplied data or pending changes to the target state.
+        /// </summary>
         public static void Apply(in Patch patch, safe_ptr<State> state) {
 
             var stateWriter = new StreamBufferWriter(patch.newLength);
@@ -114,6 +162,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Applies the supplied data or pending changes to the target state.
+        /// </summary>
         public static void Apply(in Patch patch, ref StreamBufferWriter stateWriter) {
 
             var data = new StreamBufferReader(patch.data.ToArray());
@@ -149,6 +200,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         [INLINE(256)]
         public static bool Equals(ref Unity.Burst.Intrinsics.v256 a, ref Unity.Burst.Intrinsics.v256 b) {
             if (a.Byte0 != b.Byte0 ||
@@ -185,11 +239,17 @@ namespace ME.BECS {
             return true;
         }
 
+        /// <summary>
+        /// Returns diff.
+        /// </summary>
         [BURST]
         public static void GetDiff(StreamBufferReader source, StreamBufferReader dest, ref Patch patch) {
             patch = GetDiff(source, dest);
         }
 
+        /// <summary>
+        /// Returns diff.
+        /// </summary>
         public static Patch GetDiff(StreamBufferReader source, StreamBufferReader dest) {
 
             var packSize = (uint)sizeof(Unity.Burst.Intrinsics.v256);
@@ -263,10 +323,16 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this patch instance.
+        /// </summary>
         public void Dispose() {
             this.data.Dispose();
         }
         
+        /// <summary>
+        /// Formats this value for display or diagnostics.
+        /// </summary>
         public override string ToString() {
 
             var data = new StreamBufferReader(this.data.ToArray());
@@ -317,15 +383,27 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Reads typed values from a native stream buffer.
+    /// </summary>
     public unsafe partial struct StreamBufferReader {
 
         private readonly safe_ptr<byte> arr;
         private readonly uint arrSize;
         private uint position;
         
+        /// <summary>
+        /// Number of elements exposed by this value.
+        /// </summary>
         public uint Length => this.arrSize;
+        /// <summary>
+        /// Gets position; this implementation returns <c>this.position</c>.
+        /// </summary>
         public uint Position => this.position;
 
+        /// <summary>
+        /// Initializes <c>StreamBufferReader</c> from the supplied writer.
+        /// </summary>
         [INLINE(256)]
         public StreamBufferReader(StreamBufferWriter writer) {
             
@@ -337,6 +415,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Initializes <c>StreamBufferReader</c> from the supplied bytes.
+        /// </summary>
         [INLINE(256)]
         public StreamBufferReader(byte[] bytes) {
 
@@ -353,6 +434,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes <c>StreamBufferReader</c> from the supplied bytes, size.
+        /// </summary>
         [INLINE(256)]
         public StreamBufferReader(safe_ptr<byte> bytes, uint size) {
             this = default;
@@ -361,20 +445,32 @@ namespace ME.BECS {
             this.position = 0u;
         }
 
+        /// <summary>
+        /// Releases the resources owned by this stream buffer reader instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
             if (this.arr.ptr != null) _free(this.arr);
         }
 
+        /// <summary>
+        /// Reads blittable.
+        /// </summary>
         [INLINE(256)]
         public void ReadBlittable<T>(ref T value, uint size) where T : unmanaged {
             var ptr = this.GetPointerAndMove(size);
             value = *(T*)ptr.ptr;
         }
 
+        /// <summary>
+        /// Returns pointer.
+        /// </summary>
         [INLINE(256)]
         public safe_ptr<byte> GetPointer() => this.arr + this.position;
 
+        /// <summary>
+        /// Returns pointer and move.
+        /// </summary>
         [INLINE(256)]
         public safe_ptr<byte> GetPointerAndMove(uint size) {
             if (this.position + size > this.arrSize) throw new System.Exception();
@@ -383,12 +479,18 @@ namespace ME.BECS {
             return this.arr + pos;
         }
 
+        /// <summary>
+        /// Reads the requested value from stream buffer reader.
+        /// </summary>
         [INLINE(256)]
         public void Read(ref byte* value, uint length) {
             var ptr = this.GetPointerAndMove(length);
             _memcpy(ptr, (safe_ptr)value, length);
         }
 
+        /// <summary>
+        /// Reads the requested value from stream buffer reader.
+        /// </summary>
         [INLINE(256)]
         public void Read<T>(ref T* value, uint length) where T : unmanaged {
             var size = TSize<T>.size * length;
@@ -396,6 +498,9 @@ namespace ME.BECS {
             _memcpy(ptr, (safe_ptr)(byte*)value, size);
         }
 
+        /// <summary>
+        /// Reads the requested value from stream buffer reader.
+        /// </summary>
         [INLINE(256)]
         public void Read<T>(ref T value) where T : unmanaged {
             this.ReadBlittable(ref value, TSize<T>.size);
@@ -403,15 +508,27 @@ namespace ME.BECS {
         
     }
 
+    /// <summary>
+    /// Writes typed values to a native stream buffer.
+    /// </summary>
     public unsafe partial struct StreamBufferWriter {
 
         private safe_ptr<byte> arr;
         private uint arrSize;
         private uint position;
 
+        /// <summary>
+        /// Number of elements exposed by this value.
+        /// </summary>
         public uint Length => this.arrSize;
+        /// <summary>
+        /// Gets position; this implementation returns <c>this.position</c>.
+        /// </summary>
         public uint Position => this.position;
 
+        /// <summary>
+        /// Initializes <c>StreamBufferWriter</c> from the supplied capacity.
+        /// </summary>
         [INLINE(256)]
         public StreamBufferWriter(uint capacity) {
 
@@ -425,17 +542,26 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this stream buffer writer instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
             if (this.arr.ptr != null) _free(this.arr);
             this = default;
         }
         
+        /// <summary>
+        /// Restores the tracked state to its initial values.
+        /// </summary>
         [INLINE(256)]
         public void Reset() {
             this.position = 0u;
         }
 
+        /// <summary>
+        /// Converts the value to array.
+        /// </summary>
         [INLINE(256)]
         public readonly byte[] ToArray() {
             
@@ -449,6 +575,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Sets capacity.
+        /// </summary>
         [INLINE(256)]
         public void SetCapacity(uint size) {
             if (size >= this.arrSize) {
@@ -456,9 +585,15 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Returns pointer.
+        /// </summary>
         [INLINE(256)]
         public safe_ptr<byte> GetPointer() => this.arr + this.position;
 
+        /// <summary>
+        /// Returns pointer and move.
+        /// </summary>
         [INLINE(256)]
         public safe_ptr<byte> GetPointerAndMove(uint size) {
             var pos = this.position;
@@ -467,18 +602,27 @@ namespace ME.BECS {
             return this.arr + pos;
         }
 
+        /// <summary>
+        /// Writes blittable.
+        /// </summary>
         [INLINE(256)]
         public void WriteBlittable<T>(T value, uint size) where T : unmanaged {
             var ptr = this.GetPointerAndMove(size);
             *(T*)ptr.ptr = value;
         }
 
+        /// <summary>
+        /// Writes the supplied value to stream buffer writer.
+        /// </summary>
         [INLINE(256)]
         public void Write(byte* arrBytes, uint length) {
             var ptr = this.GetPointerAndMove(length);
             _memcpy((safe_ptr)arrBytes, ptr, length);
         }
 
+        /// <summary>
+        /// Writes the supplied value to stream buffer writer.
+        /// </summary>
         [INLINE(256)]
         public void Write<T>(T* arrBytes, uint length) where T : unmanaged {
             var size = TSize<T>.size * length;
@@ -486,11 +630,17 @@ namespace ME.BECS {
             _memcpy((safe_ptr)(byte*)arrBytes, ptr, size);
         }
 
+        /// <summary>
+        /// Writes the supplied value to stream buffer writer.
+        /// </summary>
         [INLINE(256)]
         public void Write<T>(T value) where T : unmanaged {
             this.WriteBlittable(value, TSize<T>.size);
         }
 
+        /// <summary>
+        /// Moves the current state or cursor to the specified destination.
+        /// </summary>
         [INLINE(256)]
         public void MoveTo(uint position) {
             this.position = position;

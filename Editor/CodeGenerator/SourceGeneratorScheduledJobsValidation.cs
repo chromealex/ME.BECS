@@ -6,7 +6,13 @@ namespace ME.BECS.Editor {
     using System.Reflection;
     using System.Text;
 
+    /// <summary>
+    /// Provides scheduled jobs validation for BECS source-generator publication.
+    /// </summary>
     public static class SourceGeneratorScheduledJobsValidation {
+        /// <summary>
+        /// Returns lifecycle method.
+        /// </summary>
         public static MethodInfo GetLifecycleMethod(Type system, string name) {
             var contract = name == nameof(IAwake.OnAwake) ? typeof(IAwake) :
                 name == nameof(IStart.OnStart) ? typeof(IStart) :
@@ -17,6 +23,9 @@ namespace ME.BECS.Editor {
             return GetLifecycleMethods(system, contract).SingleOrDefault();
         }
 
+        /// <summary>
+        /// Tests whether the context is lifecycle burst allowed.
+        /// </summary>
         public static bool IsLifecycleBurstAllowed(Type system, string name) {
             if (SourceGeneratorSystemLifecycle.TryGet(system, name, out var present, out _, out var discarded))
                 return present && !discarded;
@@ -24,6 +33,9 @@ namespace ME.BECS.Editor {
             return method != null && !Attribute.IsDefined(method, typeof(WithoutBurstAttribute));
         }
 
+        /// <summary>
+        /// Returns lifecycle methods.
+        /// </summary>
         public static List<MethodInfo> GetLifecycleMethods(Type system, Type lifecycle = null) {
             var methods = new List<MethodInfo>();
             var seen = new HashSet<MethodInfo>();
@@ -41,6 +53,9 @@ namespace ME.BECS.Editor {
         // Transitional IL inventory, shared with Features.Editor. This is a union
         // of statically visible call targets, not a proof for arbitrary virtual or
         // delegate dispatch. Keep source coverage until those gaps are addressed.
+        /// <summary>
+        /// Collects matching entries into the supplied results.
+        /// </summary>
         public static void Collect(MethodInfo root, HashSet<Type> types) {
             if (root == null || root.GetMethodBody() == null) return;
             var found = ILAnalysisSession.Get((typeof(SourceGeneratorScheduledJobsValidation), root), () =>

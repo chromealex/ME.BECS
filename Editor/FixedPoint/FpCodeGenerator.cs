@@ -14,28 +14,76 @@ namespace ME.BECS.Editor {
     
     using System.Globalization;
 
+    /// <summary>
+    /// Exports fp registration data for generated code.
+    /// </summary>
     public static class FpCodeGenerator {
 
+        /// <summary>
+        /// Stores a item record used by <c>FpCodeGenerator</c>.
+        /// </summary>
         public struct Item {
 
+            /// <summary>
+            /// Display or lookup name of this entry.
+            /// </summary>
             public string name;
+            /// <summary>
+            /// Type descriptor used by the associated operation.
+            /// </summary>
             public string type;
+            /// <summary>
+            /// Type long used by <c>FpCodeGenerator.Item</c>.
+            /// </summary>
             public string type_long;
+            /// <summary>
+            /// Comment used by <c>FpCodeGenerator.Item</c>.
+            /// </summary>
             public string comment;
+            /// <summary>
+            /// Minimum .
+            /// </summary>
             public string min;
+            /// <summary>
+            /// Maximum .
+            /// </summary>
             public string max;
+            /// <summary>
+            /// Precision used by <c>FpCodeGenerator.Item</c>.
+            /// </summary>
             public string precision;
+            /// <summary>
+            /// Precision sqrt used by <c>FpCodeGenerator.Item</c>.
+            /// </summary>
             public string precision_sqrt;
+            /// <summary>
+            /// One name used by <c>FpCodeGenerator.Item</c>.
+            /// </summary>
             public string one_name;
 
+            /// <summary>
+            /// Drawer variants used by <c>FpCodeGenerator.Item</c>.
+            /// </summary>
             public string drawer_variants;
+            /// <summary>
+            /// Editor field used by <c>FpCodeGenerator.Item</c>.
+            /// </summary>
             public string editor_field;
 
+            /// <summary>
+            /// Custom methods constant used by <c>FpCodeGenerator.Item</c>.
+            /// </summary>
             public string CUSTOM_METHODS;
+            /// <summary>
+            /// Custom math methods constant used by <c>FpCodeGenerator.Item</c>.
+            /// </summary>
             public string CUSTOM_MATH_METHODS;
 
         }
         
+        /// <summary>
+        /// Generates output from the supplied source data.
+        /// </summary>
         public static void Generate() {
 
             var items = new Item[] {

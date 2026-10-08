@@ -3,6 +3,9 @@ namespace ME.BECS.Editor {
     using UnityEditor;
     using UnityEngine;
 
+    /// <summary>
+    /// Draws property drawer with dispose values in the Unity Inspector.
+    /// </summary>
     public abstract class PropertyDrawerWithDispose : PropertyDrawer {
 
         private bool init = true;
@@ -39,8 +42,14 @@ namespace ME.BECS.Editor {
         /// </summary>
         public abstract void OnDestroy();
 
+        /// <summary>
+        /// Creates property.
+        /// </summary>
         public abstract UnityEngine.UIElements.VisualElement CreateProperty(SerializedProperty property);
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
             if (this.init) {
                 this.Enable(property);
@@ -48,6 +57,9 @@ namespace ME.BECS.Editor {
             return this.CreateProperty(property);
         }
 
+        /// <summary>
+        /// Enables the associated component or processing state.
+        /// </summary>
         public void Enable(SerializedProperty property) {
             this.init = false;
             EditorApplication.playModeStateChanged += this.PlayModeStateChanged;
@@ -55,6 +67,9 @@ namespace ME.BECS.Editor {
             this.OnEnable(property);
         }
 
+        /// <summary>
+        /// Disables the associated component or processing state.
+        /// </summary>
         public void Disable() {
             this.OnDisable();
             EditorApplication.playModeStateChanged -= this.PlayModeStateChanged;
@@ -62,6 +77,9 @@ namespace ME.BECS.Editor {
             this.init = true;
         }
 
+        /// <summary>
+        /// Destroys the referenced instance and applies its registered destruction handling.
+        /// </summary>
         public void Destroy() {
             this.OnDestroy();
             EditorApplication.playModeStateChanged -= this.PlayModeStateChanged;

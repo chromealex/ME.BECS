@@ -13,17 +13,32 @@ namespace ME.BECS.Pathfinding {
     using Unity.Collections;
     using static Cuts;
 
+    /// <summary>
+    /// Coordinates build path during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [UnityEngine.Tooltip("Schedule building a path.")]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public partial struct BuildPathSystem : IUpdate {
 
+        /// <summary>
+        /// Executes update path work through the job scheduler.
+        /// </summary>
         [BURST]
         public unsafe partial struct UpdatePathJob : IJobForComponents<TargetComponent> {
 
+            /// <summary>
+            /// World used by the containing operation.
+            /// </summary>
             public World world;
+            /// <summary>
+            /// Filter restricting the entries considered by this operation.
+            /// </summary>
             public Filter filter;
             
+            /// <summary>
+            /// Processes update path using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TargetComponent targetData) {
                 
                 if (targetData.target.IsAlive() == false) return;
@@ -54,8 +69,14 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Filter restricting the entries considered by this operation.
+        /// </summary>
         public Filter filter;
         
+        /// <summary>
+        /// Updates build path system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var dependsOn = context.Query().With<TargetComponent>().AsParallel().Schedule<UpdatePathJob, TargetComponent>(new UpdatePathJob() {

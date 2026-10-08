@@ -1,6 +1,9 @@
 namespace ME.BECS {
     // Startup-only managed data. Ordinals come from the complete selected plan,
     // never assembly load order, dictionary iteration or worker scheduling.
+    /// <summary>
+    /// Combines callback fragments into validated bootstrap registration tables.
+    /// </summary>
     public sealed class BootstrapCallbackRegistry<T> where T : System.Delegate {
         private sealed class Fragment {
             internal readonly int[] ordinals;
@@ -24,8 +27,14 @@ namespace ME.BECS {
         private bool conflict;
         private int filled;
 
+        /// <summary>
+        /// Number of entries currently tracked by this value.
+        /// </summary>
         public int Count { get { this.RequireComplete(); return this.slots.Length; } }
 
+        /// <summary>
+        /// Installs the supplied callback fragment under its identity and owner.
+        /// </summary>
         public void Install(string identity, string owner, int count, int[] ordinals, T[] callbacks) {
             if (string.IsNullOrEmpty(identity)) throw new System.ArgumentException("A callback plan must identify its ordered selection.", nameof(identity));
             if (string.IsNullOrEmpty(owner)) throw new System.ArgumentException("A callback fragment must identify its owner.", nameof(owner));
@@ -64,12 +73,18 @@ namespace ME.BECS {
             throw new System.InvalidOperationException("Conflicting ME.BECS callback registration fragments (" + detail + "). Recompile the complete selection before starting worlds/tests.");
         }
 
+        /// <summary>
+        /// Requires complete.
+        /// </summary>
         public void RequireComplete() {
             if (this.conflict) throw new System.InvalidOperationException("ME.BECS callback registration plan has conflicting fragments.");
             if (this.slots == null || this.filled != this.slots.Length)
                 throw new System.InvalidOperationException("ME.BECS callback registration plan is incomplete. Wait for all selected owner fragments to compile before starting worlds/tests.");
         }
 
+        /// <summary>
+        /// Returns the requested entry from bootstrap callback registry.
+        /// </summary>
         public T Get(int ordinal) {
             this.RequireComplete();
             if ((uint)ordinal >= (uint)this.slots.Length) throw new System.ArgumentOutOfRangeException(nameof(ordinal));

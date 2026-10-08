@@ -6,13 +6,25 @@ namespace ME.BECS.Jobs {
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Burst;
 
+    /// <summary>
+    /// Defines the operations required by job command buffer.
+    /// </summary>
     [JobProducerType(typeof(ICommandBufferJobExtensions.JobProcess<>))]
     public interface IJobCommandBuffer {
+        /// <summary>
+        /// Processes i job command buffer using the supplied job inputs.
+        /// </summary>
         void Execute(in CommandBufferJob commandBuffer);
     }
 
+    /// <summary>
+    /// Provides extension operations for i command buffer job.
+    /// </summary>
     public static unsafe class ICommandBufferJobExtensions {
         
+        /// <summary>
+        /// Registers job reflection data before the job is scheduled.
+        /// </summary>
         public static void JobEarlyInit<T>() where T : struct, IJobCommandBuffer => JobProcess<T>.Initialize();
 
         private static System.IntPtr GetReflectionData<T>()
@@ -22,6 +34,9 @@ namespace ME.BECS.Jobs {
             return reflectionData;
         }
         
+        /// <summary>
+        /// Schedules the supplied job after its input dependency and returns a handle to the resulting work.
+        /// </summary>
         public static JobHandle Schedule<T>(this T jobData, in CommandBuffer* buffer, JobHandle inputDeps = default) where T : struct, IJobCommandBuffer {
             
             buffer->sync = true;
@@ -35,6 +50,9 @@ namespace ME.BECS.Jobs {
             
         }
 
+        /// <summary>
+        /// Schedules by ref.
+        /// </summary>
         public static JobHandle ScheduleByRef<T>(ref this T jobData, in CommandBuffer* buffer, JobHandle inputDeps = default) where T : struct, IJobCommandBuffer {
             
             buffer->sync = true;

@@ -18,19 +18,40 @@ namespace ME.BECS.Bullets {
     using ME.BECS.Jobs;
     using ME.BECS.Transforms;
 
+    /// <summary>
+    /// Coordinates fly3 d during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [UnityEngine.Tooltip("Bullet fly system")]
     public partial struct Fly3DSystem : IUpdate {
         
+        /// <summary>
+        /// Whether continuous target check behavior or state is selected.
+        /// </summary>
         public bbool continuousTargetCheck;
         
+        /// <summary>
+        /// Executes fly work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct FlyJob : IJobForAspects<BulletAspect, TransformAspect> {
             
+            /// <summary>
+            /// Whether continuous target check behavior or state is selected.
+            /// </summary>
             public bbool continuousTargetCheck;
+            /// <summary>
+            /// Qt used by <c>Fly3DSystem.FlyJob</c>.
+            /// </summary>
             public OctreeInsertSystem qt;
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             public tfloat dt;
             
+            /// <summary>
+            /// Processes fly using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref BulletAspect aspect, ref TransformAspect tr) {
 
                 if (aspect.readConfig.autoTarget == true) {
@@ -65,6 +86,9 @@ namespace ME.BECS.Bullets {
 
         }
 
+        /// <summary>
+        /// Updates fly3 d system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var qt = context.world.GetSystem<OctreeInsertSystem>();

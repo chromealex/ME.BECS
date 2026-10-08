@@ -6,8 +6,14 @@ namespace ME.BECS {
     using Unity.Profiling;
     using System.Diagnostics;
 
+    /// <summary>
+    /// Defines profiler counters definition state and operations.
+    /// </summary>
     public class ProfilerCountersDefinition {
 
+        /// <summary>
+        /// Tracks a numeric quantity in the associated execution context.
+        /// </summary>
         public readonly unsafe struct Counter<T> where T : unmanaged {
 
             [Unity.Collections.LowLevel.Unsafe.NativeDisableUnsafePtrRestrictionAttribute]
@@ -16,6 +22,9 @@ namespace ME.BECS {
             [System.NonSerializedAttribute]
             private readonly byte type;
             
+            /// <summary>
+            /// Initializes <c>Counter</c> from the supplied name, category, unit.
+            /// </summary>
             public Counter(string name, ProfilerCategory category, ProfilerMarkerDataUnit unit) {
 
                 this.type = GetProfilerMarkerDataType();
@@ -24,6 +33,9 @@ namespace ME.BECS {
                 
             }
 
+            /// <summary>
+            /// Returns profiler marker data type.
+            /// </summary>
             public static byte GetProfilerMarkerDataType() {
                 switch (System.Type.GetTypeCode(typeof(T))) {
                     case System.TypeCode.Int32:
@@ -52,6 +64,9 @@ namespace ME.BECS {
                 }
             }
                         
+            /// <summary>
+            /// Reads or evaluates a sample at the requested position.
+            /// </summary>
             public void Sample(T value) {
                 
                 var data = new Unity.Profiling.LowLevel.Unsafe.ProfilerMarkerData {
@@ -68,16 +83,40 @@ namespace ME.BECS {
         private const string caption = "<b><color=#888>ME.BECS</color></b>";
         private const string categoryAllocatorCaption = "<b><color=#888>ME.BECS</color></b>: Allocator";
 
+        /// <summary>
+        /// Entities count for the associated storage.
+        /// </summary>
         public static readonly Unity.Burst.SharedStatic<Counter<uint>> entitiesCount = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99000);
+        /// <summary>
+        /// Components size used by <c>ProfilerCountersDefinition</c>.
+        /// </summary>
         public static readonly Unity.Burst.SharedStatic<Counter<uint>> componentsSize = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99001);
+        /// <summary>
+        /// Entities size used by <c>ProfilerCountersDefinition</c>.
+        /// </summary>
         public static readonly Unity.Burst.SharedStatic<Counter<uint>> entitiesSize = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99004);
         
+        /// <summary>
+        /// Memory allocator reserved used by <c>ProfilerCountersDefinition</c>.
+        /// </summary>
         public static readonly Unity.Burst.SharedStatic<Counter<int>> memoryAllocatorReserved = Unity.Burst.SharedStatic<Counter<int>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<int>>.align, 99006);
+        /// <summary>
+        /// Memory allocator used used by <c>ProfilerCountersDefinition</c>.
+        /// </summary>
         public static readonly Unity.Burst.SharedStatic<Counter<int>> memoryAllocatorUsed = Unity.Burst.SharedStatic<Counter<int>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<int>>.align, 99007);
+        /// <summary>
+        /// Memory allocator free used by <c>ProfilerCountersDefinition</c>.
+        /// </summary>
         public static readonly Unity.Burst.SharedStatic<Counter<int>> memoryAllocatorFree = Unity.Burst.SharedStatic<Counter<int>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<int>>.align, 99008);
         
+        /// <summary>
+        /// Whether initialized behavior or state is selected.
+        /// </summary>
         public static readonly Unity.Burst.SharedStatic<bool> initialized = Unity.Burst.SharedStatic<bool>.GetOrCreate<ProfilerCountersDefinition>(TAlign<Counter<bool>>.align);
 
+        /// <summary>
+        /// Initializes profiler counters definition state from the supplied context.
+        /// </summary>
         [Conditional("ENABLE_PROFILER")]
         public static void Initialize() {
 
@@ -98,20 +137,32 @@ namespace ME.BECS {
         
     }
 
+    /// <summary>
+    /// Defines profiler counters state and operations.
+    /// </summary>
     [Unity.Burst.BurstCompile]
     public static unsafe class ProfilerCounters {
 
+        /// <summary>
+        /// Initializes profiler counters state from the supplied context.
+        /// </summary>
         public static void Initialize() {
             
             ProfilerCountersDefinition.Initialize();
             
         }
 
+        /// <summary>
+        /// Provides the <c>SampleWorldBeginFrame</c> callback; this implementation performs no work.
+        /// </summary>
         [Conditional("ENABLE_PROFILER")]
         public static void SampleWorldBeginFrame(in World world) {
             
         }
 
+        /// <summary>
+        /// Samples world end frame.
+        /// </summary>
         [Conditional("ENABLE_PROFILER")]
         [Unity.Burst.BurstCompile]
         public static void SampleWorldEndFrame(in World world) {

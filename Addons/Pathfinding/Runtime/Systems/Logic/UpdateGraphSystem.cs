@@ -20,18 +20,36 @@ namespace ME.BECS.Pathfinding {
     using ME.BECS.Transforms;
     using static Cuts;
 
+    /// <summary>
+    /// Coordinates update graph during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [UnityEngine.Tooltip("Schedule update a pathfinding graph.")]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public partial struct UpdateGraphSystem : IUpdate {
 
+        /// <summary>
+        /// Executes reset path work through the job scheduler.
+        /// </summary>
         [BURST]
         public unsafe partial struct ResetPathJob : IJobForComponents<TargetPathComponent> {
 
+            /// <summary>
+            /// Graph used by the associated operation.
+            /// </summary>
             public Ent graph;
+            /// <summary>
+            /// Dirty chunks used by <c>UpdateGraphSystem.ResetPathJob</c>.
+            /// </summary>
             public Unity.Collections.NativeArray<ulong> dirtyChunks;
+            /// <summary>
+            /// World used by the containing operation.
+            /// </summary>
             public World world;
 
+            /// <summary>
+            /// Processes reset path using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TargetPathComponent path) {
 
                 if (path.path.graph != this.graph) return;
@@ -49,11 +67,20 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Executes update graph mask work through the job scheduler.
+        /// </summary>
         [BURST]
         public unsafe partial struct UpdateGraphMaskJob : IJobForComponents<GraphMaskComponent, GraphMaskRuntimeComponent> {
 
+            /// <summary>
+            /// Graph system used by <c>UpdateGraphSystem.UpdateGraphMaskJob</c>.
+            /// </summary>
             public BuildGraphSystem graphSystem;
             
+            /// <summary>
+            /// Processes update graph mask using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref GraphMaskComponent obstacle, ref GraphMaskRuntimeComponent obstacleRuntime) {
 
                 ent.Remove<IsGraphMaskDirtyComponent>();
@@ -143,6 +170,9 @@ namespace ME.BECS.Pathfinding {
 
         }
         
+        /// <summary>
+        /// Updates update graph system using the current inputs and execution context.
+        /// </summary>
         public unsafe void OnUpdate(ref SystemContext context) {
 
             var graphSystem = context.world.GetSystem<BuildGraphSystem>();

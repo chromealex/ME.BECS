@@ -4,12 +4,18 @@ namespace ME.BECS.Editor {
 
     using scg = System.Collections.Generic;
 
+    /// <summary>
+    /// Defines journal editor window state and operations.
+    /// </summary>
     public unsafe partial class JournalEditorWindow {
 
         private StyleSheet styleSheet;
         private VisualElement scrollRoot;
         private Item[] threads;
         private VisualElement tooltip;
+        /// <summary>
+        /// World used by the containing operation.
+        /// </summary>
         public World world;
 
         private void LoadStyle() {
@@ -47,6 +53,9 @@ namespace ME.BECS.Editor {
             
         }
 
+        /// <summary>
+        /// Stores a item record used by <c>JournalEditorWindow</c>.
+        /// </summary>
         public struct Item {
 
             private struct Element {
@@ -57,9 +66,15 @@ namespace ME.BECS.Editor {
                 
             }
 
+            /// <summary>
+            /// Root entry of the represented hierarchy.
+            /// </summary>
             public VisualElement root;
             private Element[] elements;
 
+            /// <summary>
+            /// Creates <c>Item</c> using the supplied creation arguments.
+            /// </summary>
             public static Item Create(VisualElement root) {
                 var ve = new VisualElement();
                 ve.AddToClassList("thread-element");
@@ -69,6 +84,9 @@ namespace ME.BECS.Editor {
                 };
             }
 
+            /// <summary>
+            /// Refreshes the displayed journal entry using the current search and tooltip state.
+            /// </summary>
             public void Redraw(safe_ptr<Journal> journal, SearchData search, in JournalData.ThreadItem item, VisualElement tooltip) {
                 
                 if (this.elements == null || this.elements.Length < item.items.Count) System.Array.Resize(ref this.elements, (int)item.items.Count);
@@ -192,9 +210,18 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Stores search data for <c>JournalEditorWindow</c>.
+        /// </summary>
         public struct SearchData {
 
+            /// <summary>
+            /// Text displayed or processed by this entry.
+            /// </summary>
             public string text;
+            /// <summary>
+            /// Actions used by <c>JournalEditorWindow.SearchData</c>.
+            /// </summary>
             public JournalAction actions;
 
         }
@@ -266,6 +293,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Draws entity journal.
+        /// </summary>
         public static VisualElement DrawEntityJournal(VisualElement root, ref VisualElementData[] children, in Ent ent) {
 
             var journal = JournalsStorage.Get(ent.worldId);
@@ -363,11 +393,23 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Stores visual element data for <c>JournalEditorWindow</c>.
+        /// </summary>
         public struct VisualElementData {
 
+            /// <summary>
+            /// Tick used by <c>JournalEditorWindow.VisualElementData</c>.
+            /// </summary>
             public ulong tick;
+            /// <summary>
+            /// Root entry of the represented hierarchy.
+            /// </summary>
             public VisualElement root;
 
+            /// <summary>
+            /// Destroys the referenced instance and applies its registered destruction handling.
+            /// </summary>
             public void Destroy() {
                 if (this.root != null) this.root.RemoveFromHierarchy();
                 this = default;
@@ -375,6 +417,9 @@ namespace ME.BECS.Editor {
 
         }
 
+        /// <summary>
+        /// Updates entity journal.
+        /// </summary>
         public static void UpdateEntityJournal(VisualElement journalHistory, ref VisualElementData[] children, in Ent ent) {
 
             var journal = JournalsStorage.Get(ent.worldId);

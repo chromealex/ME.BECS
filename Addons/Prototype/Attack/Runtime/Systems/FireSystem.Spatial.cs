@@ -13,13 +13,25 @@ namespace ME.BECS.Attack {
     using ME.BECS.Jobs;
     using ME.BECS.Bullets;
 
+    /// <summary>
+    /// Coordinates fire during the ECS system lifecycle.
+    /// </summary>
     public partial struct FireSystem : IUpdate {
 
+        /// <summary>
+        /// Executes spatial fire target work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct SpatialFireTargetJob : IJobForAspects<AttackAspect, TransformAspect, SpatialQueryAspect> {
 
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             public tfloat dt;
             
+            /// <summary>
+            /// Processes spatial fire target using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref TransformAspect tr, ref SpatialQueryAspect query) {
 
                 if (aspect.target.IsAlive() == true) {
@@ -69,11 +81,20 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Executes spatial fire targets work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct SpatialFireTargetsJob : IJobForAspects<AttackAspect, TransformAspect, SpatialQueryAspect> {
 
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             public tfloat dt;
             
+            /// <summary>
+            /// Processes spatial fire targets using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref TransformAspect tr, ref SpatialQueryAspect query) {
 
                 if (aspect.targets.IsCreated == true) {
@@ -129,6 +150,9 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Updates spatial.
+        /// </summary>
         public Unity.Jobs.JobHandle UpdateSpatial(ref SystemContext context, Unity.Jobs.JobHandle jobHandle) {
 
             // Spatial and quadtree firing are mutually exclusive by configuration.

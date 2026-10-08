@@ -4,13 +4,22 @@ namespace ME.BECS.Blueprints.Nodes {
     using scg = System.Collections.Generic;
     using ME.BECS.Extensions.GraphProcessor;
 
+    /// <summary>
+    /// Defines get from component data used by entity processing.
+    /// </summary>
     [System.Serializable]
     [Extensions.GraphProcessor.NodeMenuItem("Get from Component")]
     public class GetFromComponent : Graph.Node {
 
+        /// <summary>
+        /// Result produced by the associated operation.
+        /// </summary>
         [gp::Output(name = "Result", allowMultiple = true)]
         public string result;
 
+        /// <summary>
+        /// Entity processed or represented by this value.
+        /// </summary>
         [gp::Input(name = "Entity", allowMultiple = false, optional = true, fieldType = typeof(Ent))]
         public string entity = "ent";
 
@@ -20,8 +29,14 @@ namespace ME.BECS.Blueprints.Nodes {
             return string.Empty;
         }
 
+        /// <summary>
+        /// Component data accessed by this instance.
+        /// </summary>
         public ComponentField component;
 
+        /// <summary>
+        /// Describes the output ports exposed by this graph node.
+        /// </summary>
         [CustomPortOutput("result", typeof(Config))]
         public void CustomOutputConfig(scg::List<SerializableEdge> edges, NodePort outputPort) {
 
@@ -33,6 +48,9 @@ namespace ME.BECS.Blueprints.Nodes {
             
         }
 
+        /// <summary>
+        /// Processes get from component using the supplied job inputs.
+        /// </summary>
         public override void Execute(Writer writer) {
 
             if (this.component.IsValid() == false) {

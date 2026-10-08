@@ -5,8 +5,14 @@ namespace ME.BECS {
     using HIDE_CALLSTACK = UnityEngine.HideInCallstackAttribute;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides conditional runtime assertions and diagnostic exceptions for ECS invariants.
+    /// </summary>
     public static partial class E {
 
+        /// <summary>
+        /// Checks the is valid aspect type ID invariant when the corresponding safety checks are enabled.
+        /// </summary>
         [Conditional(COND.EXCEPTIONS_COLLECTIONS)]
         [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_VALID_ASPECT_TYPE_ID(uint typeId) {
@@ -14,6 +20,9 @@ namespace ME.BECS {
             InvalidTypeIdException.Throw();
         }
 
+        /// <summary>
+        /// Checks the is valid for aspect invariant when the corresponding safety checks are enabled.
+        /// </summary>
         [Conditional(COND.EXCEPTIONS_ASPECTS)]
         [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_VALID_FOR_ASPECT<T>(in Ent ent) where T : unmanaged, IAspect {

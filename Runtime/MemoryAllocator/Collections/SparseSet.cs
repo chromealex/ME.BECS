@@ -9,6 +9,9 @@ namespace ME.BECS {
     using static Cuts;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides sparse set storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [IgnoreProfiler]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -17,13 +20,31 @@ namespace ME.BECS {
     #endif
     public struct SparseSet : IIsCreated {
 
+        /// <summary>
+        /// Dense used by <c>SparseSet</c>.
+        /// </summary>
         public MemArray<uint> dense;
+        /// <summary>
+        /// Sparse used by <c>SparseSet</c>.
+        /// </summary>
         public MemArray<uint> sparse;
+        /// <summary>
+        /// Dense size used by <c>SparseSet</c>.
+        /// </summary>
         public uint denseSize;
+        /// <summary>
+        /// Index of the synchronization lock used for this entry.
+        /// </summary>
         public LockSpinner lockIndex;
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated { get; private set; }
 
+        /// <summary>
+        /// Initializes <c>SparseSet</c> from the supplied allocator, size.
+        /// </summary>
         [INLINE(256)]
         public SparseSet(ref MemoryAllocator allocator, uint size) {
 
@@ -76,11 +97,14 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Stores the supplied value in sparse set.
+        /// </summary>
         [INLINE(256)]
         public uint Set(ref MemoryAllocator allocator, uint value, out bool isNew) {
             isNew = false;
-            this.ValidateStruct(allocator);
             JobUtils.Lock(ref this.lockIndex);
+            this.ValidateStruct(allocator);
             this.Validate(ref allocator, value + 1u);
             var denseIdx = this.sparse[in allocator, value];
             if (denseIdx > 0u) {
@@ -93,18 +117,21 @@ namespace ME.BECS {
             this.Validate(ref allocator, this.denseSize + 1u);
             this.sparse[in allocator, value] = this.denseSize + 1u;
             this.dense[in allocator, this.denseSize] = value;
-            ++this.denseSize;
-            JobUtils.Unlock(ref this.lockIndex);
+            var index = this.denseSize++;
             this.ValidateStruct(allocator);
-            return this.denseSize - 1u;
+            JobUtils.Unlock(ref this.lockIndex);
+            return index;
         }
 
+        /// <summary>
+        /// Removes the specified entry from sparse set.
+        /// </summary>
         [INLINE(256)]
         public bool Remove(in MemoryAllocator allocator, uint value, out uint fromIndex, out uint toIndex) {
             fromIndex = 0u;
             toIndex = 0u;
-            this.ValidateStruct(allocator);
             JobUtils.Lock(ref this.lockIndex);
+            this.ValidateStruct(allocator);
             if (value >= this.sparse.Length) {
                 JobUtils.Unlock(ref this.lockIndex);
                 return false;
@@ -133,6 +160,9 @@ namespace ME.BECS {
             return false;
         }
 
+        /// <summary>
+        /// Tests whether the requested entry is present.
+        /// </summary>
         [INLINE(256)]
         public readonly bool Has(in MemoryAllocator allocator, uint value, out uint index) {
             index = 0u;
@@ -142,6 +172,9 @@ namespace ME.BECS {
             return idx > 0u;
         }
 
+        /// <summary>
+        /// Reads the requested value from sparse set.
+        /// </summary>
         [INLINE(256)]
         public readonly bool Read(in MemoryAllocator allocator, uint value, out uint index) {
             index = 0u;

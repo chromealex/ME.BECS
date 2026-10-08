@@ -4,8 +4,14 @@ using UnityEditor;
 
 namespace ME.BECS.Editor.Extensions.SubclassSelector {
 
+    /// <summary>
+    /// Provides managed reference utility operations for the associated BECS data.
+    /// </summary>
     public static class ManagedReferenceUtility {
 
+        /// <summary>
+        /// Sets managed reference.
+        /// </summary>
         public static object SetManagedReference(this SerializedProperty property, Type type, object value = null) {
             var obj = type != null ? Activator.CreateInstance(type) : null;
             if (value != null) obj = value;
@@ -13,6 +19,9 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
             return obj;
         }
 
+        /// <summary>
+        /// Creates component.
+        /// </summary>
         public static object CreateComponent(this SerializedProperty property, Type type) {
             var instance = CreateInstance(type);
             if (instance == null && type != null) instance = Activator.CreateInstance(type);
@@ -20,6 +29,9 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
             return instance;
         }
 
+        /// <summary>
+        /// Creates with first generic component.
+        /// </summary>
         public static object CreateWithFirstGenericComponent(this SerializedProperty property, Type type) {
             var instance = CreateInstance(type);
             if (instance == null && type != null) {
@@ -31,6 +43,9 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
             return instance;
         }
 
+        /// <summary>
+        /// Creates instance.
+        /// </summary>
         public static object CreateInstance(Type type) {
             if (type == null) return null;
             object instance = null;

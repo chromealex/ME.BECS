@@ -1,6 +1,9 @@
 ﻿using UnityEngine;
 
 namespace ME.BECS.Network {
+    /// <summary>
+    /// Stores and indexes ping entries.
+    /// </summary>
     public class PingStorage {
 
         private uint[] storage;
@@ -10,10 +13,22 @@ namespace ME.BECS.Network {
         private int capacity;
         private int medianSize;
 
+        /// <summary>
+        /// Median used by <c>PingStorage</c>.
+        /// </summary>
         public uint median { get; private set; }
+        /// <summary>
+        /// Minimum .
+        /// </summary>
         public uint min { get; private set; }
+        /// <summary>
+        /// Maximum .
+        /// </summary>
         public uint max { get; private set; }
 
+        /// <summary>
+        /// Initializes <c>PingStorage</c> from the supplied capacity, median size.
+        /// </summary>
         public PingStorage(int capacity = 64, int medianSize = 50) {
 
             this.storage = new uint[capacity];
@@ -26,6 +41,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Adds value.
+        /// </summary>
         public void AddValue(uint val) {
 
             this.storage[this.rover] = val;

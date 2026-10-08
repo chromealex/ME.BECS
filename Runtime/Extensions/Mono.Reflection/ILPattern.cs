@@ -34,16 +34,28 @@ using System.Reflection.Emit;
 
 namespace ME.BECS.Mono.Reflection {
 
+    /// <summary>
+    /// Defines IL pattern state and operations.
+    /// </summary>
     public abstract class ILPattern {
 
+        /// <summary>
+        /// Configures a value or dependency that may be absent.
+        /// </summary>
         public static ILPattern Optional(OpCode opcode) {
             return Optional(OpCode(opcode));
         }
 
+        /// <summary>
+        /// Configures a value or dependency that may be absent.
+        /// </summary>
         public static ILPattern Optional(params OpCode[] opcodes) {
             return Optional(Sequence(opcodes.Select(opcode => OpCode(opcode)).ToArray()));
         }
 
+        /// <summary>
+        /// Configures a value or dependency that may be absent.
+        /// </summary>
         public static ILPattern Optional(ILPattern pattern) {
             return new OptionalPattern(pattern);
         }
@@ -62,6 +74,9 @@ namespace ME.BECS.Mono.Reflection {
 
         }
 
+        /// <summary>
+        /// Builds or matches an ordered sequence of operations.
+        /// </summary>
         public static ILPattern Sequence(params ILPattern[] patterns) {
             return new SequencePattern(patterns);
         }
@@ -86,6 +101,9 @@ namespace ME.BECS.Mono.Reflection {
 
         }
 
+        /// <summary>
+        /// Matches the requested intermediate-language operation code.
+        /// </summary>
         public static ILPattern OpCode(OpCode opcode) {
             return new OpCodePattern(opcode);
         }
@@ -110,6 +128,9 @@ namespace ME.BECS.Mono.Reflection {
 
         }
 
+        /// <summary>
+        /// Combines alternatives that may satisfy the matching rule.
+        /// </summary>
         public static ILPattern Either(ILPattern a, ILPattern b) {
             return new EitherPattern(a, b);
         }
@@ -132,8 +153,14 @@ namespace ME.BECS.Mono.Reflection {
 
         }
 
+        /// <summary>
+        /// Tests the supplied value against the configured matching rule.
+        /// </summary>
         public abstract void Match(MatchContext context);
 
+        /// <summary>
+        /// Returns last matching instruction.
+        /// </summary>
         protected static Instruction GetLastMatchingInstruction(MatchContext context) {
             if (context.instruction == null) {
                 return null;
@@ -142,6 +169,9 @@ namespace ME.BECS.Mono.Reflection {
             return context.instruction.Previous;
         }
 
+        /// <summary>
+        /// Attempts to match and reports whether the operation succeeded.
+        /// </summary>
         public bool TryMatch(MatchContext context) {
             var instruction = context.instruction;
             this.Match(context);
@@ -154,6 +184,9 @@ namespace ME.BECS.Mono.Reflection {
             return false;
         }
 
+        /// <summary>
+        /// Tests the supplied value against the configured matching rule.
+        /// </summary>
         public static MatchContext Match(MethodBase method, ILPattern pattern) {
             if (method == null) {
                 throw new ArgumentNullException("method");
@@ -175,6 +208,9 @@ namespace ME.BECS.Mono.Reflection {
 
     }
 
+    /// <summary>
+    /// Defines match context state and operations.
+    /// </summary>
     public sealed class MatchContext {
 
         internal Instruction instruction;
@@ -182,6 +218,9 @@ namespace ME.BECS.Mono.Reflection {
 
         private Dictionary<object, object> data = new();
 
+        /// <summary>
+        /// Indicates is match.
+        /// </summary>
         public bool IsMatch {
             get => this.success;
             set => this.success = true;
@@ -191,10 +230,16 @@ namespace ME.BECS.Mono.Reflection {
             this.Reset(instruction);
         }
 
+        /// <summary>
+        /// Attempts to get data and reports whether the operation succeeded.
+        /// </summary>
         public bool TryGetData(object key, out object value) {
             return this.data.TryGetValue(key, out value);
         }
 
+        /// <summary>
+        /// Adds data.
+        /// </summary>
         public void AddData(object key, object value) {
             this.data.Add(key, value);
         }

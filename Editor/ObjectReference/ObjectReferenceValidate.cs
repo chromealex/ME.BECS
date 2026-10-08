@@ -4,12 +4,18 @@ namespace ME.BECS.Editor {
     using UnityEditor.AddressableAssets;
     using UnityEditor.AddressableAssets.Settings;
 
+    /// <summary>
+    /// Defines object reference validate state and operations.
+    /// </summary>
     public static class ObjectReferenceValidate {
 
         static ObjectReferenceValidate() {
             EditorApplication.delayCall += () => Validate();
         }
 
+        /// <summary>
+        /// Checks the supplied state against the constraints required by this API.
+        /// </summary>
         [InitializeOnLoadMethod]
         [MenuItem("ME.BECS/Resources/Validate", priority = 100)]
         public static void Validate() {
@@ -26,6 +32,9 @@ namespace ME.BECS.Editor {
             Validate(0, items.Length);
         }
 
+        /// <summary>
+        /// Validates removed.
+        /// </summary>
         [MenuItem("ME.BECS/Resources/Validate (Removed)", priority = 101)]
         public static void ValidateRemoved() {
             
@@ -35,6 +44,9 @@ namespace ME.BECS.Editor {
             
         }
         
+        /// <summary>
+        /// Checks the supplied state against the constraints required by this API.
+        /// </summary>
         public static void Validate(int offset, int count) {
             if (ObjectReferenceRegistry.data == null) {
                 ObjectReferenceRegistry.LoadForced();

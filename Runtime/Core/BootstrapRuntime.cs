@@ -3,6 +3,9 @@ namespace ME.BECS {
     // The framework owns initialization order. Generated code supplies only the
     // selected, ordered registrations; this API does not depend on their assembly.
     // Called on the main thread before creating simulation worlds, not from jobs.
+    /// <summary>
+    /// Installs and executes the compiled registration plans required by ECS runtime types.
+    /// </summary>
     public static class BootstrapRuntime {
 
         private static readonly BootstrapPlanRegistry plans = new BootstrapPlanRegistry();
@@ -28,25 +31,40 @@ namespace ME.BECS {
 
         // Compiler-owned publishers supply typed delegates; runtime code never
         // searches assemblies, constructs generic types or invokes reflection.
+        /// <summary>
+        /// Installs plan.
+        /// </summary>
         public static void InstallPlan(string owner, System.Action initializeTypes, System.Action registerMethods, bool editor) =>
             plans.Install(owner, initializeTypes, registerMethods, editor);
 
         // Optional addons supply their preflight without a core-to-addon reference.
         // Publication is side-effect free; validation runs before any shared reset.
+        /// <summary>
+        /// Installs plan with preflight.
+        /// </summary>
         public static void InstallPlanWithPreflight(string owner, System.Action initializeTypes, System.Action registerMethods,
                                                     System.Action validateInputs, bool editor) =>
             plans.InstallWithPreflight(owner, initializeTypes, registerMethods, validateInputs, editor);
 
         // Selected feeder order and repeated job-slot mapping are immutable data.
         // No generated class owns executable initialization/registration plans.
+        /// <summary>
+        /// Installs phase plan.
+        /// </summary>
         public static void InstallPhasePlan(string owner, System.Action<bool>[] initialize, System.Action<bool>[] register,
                                             System.Action<bool>[] preflight, int[] jobSetupOrdinals, bool editor, bool jobDebug) =>
             plans.InstallPhases(owner, initialize, register, preflight, jobSetupOrdinals, editor, jobDebug);
 
+        /// <summary>
+        /// Provides the <c>NoopPhase</c> callback; this implementation performs no work.
+        /// </summary>
         public static void NoopPhase(bool editor) { }
 
         // Callable migration adapters can request a phase, but cannot replace its
         // selected order or inject another generated initialization body.
+        /// <summary>
+        /// Initializes installed types.
+        /// </summary>
         public static void InitializeInstalledTypes(bool editor) {
             RequireInstalledPlan(editor);
             plans.Get(editor).initializeTypes();
@@ -55,6 +73,9 @@ namespace ME.BECS {
         internal static void ValidateJobSequence(BootstrapPhases phases, bool editor) =>
             phases.ValidateJobs((editor ? editorJobSetup : runtimeJobSetup).Count, (editor ? editorJobInit : runtimeJobInit).Count);
 
+        /// <summary>
+        /// Initializes installed jobs.
+        /// </summary>
         public static void InitializeInstalledJobs(bool editor) {
             var phases = plans.Get(editor).phases ?? throw new System.InvalidOperationException("ME.BECS job phase plan is unavailable.");
             ValidateJobSequence(phases, editor);
@@ -64,17 +85,29 @@ namespace ME.BECS {
             phases.InitializeJobs(editor ? editorJobSetup : runtimeJobSetup, editor ? editorJobInit : runtimeJobInit);
         }
 
+        /// <summary>
+        /// Registers installed config callbacks.
+        /// </summary>
         public static void RegisterInstalledConfigCallbacks(bool editor) {
             RegisterInstalledConfigMasks(editor);
             RegisterInstalledConfigCollections(editor);
         }
 
+        /// <summary>
+        /// Installs type fragment.
+        /// </summary>
         public static void InstallTypeFragment(string identity, string owner, int count, int[] ordinals, System.Action[] callbacks, bool editor) =>
             (editor ? editorTypes : runtimeTypes).Install(identity, owner, count, ordinals, callbacks);
 
+        /// <summary>
+        /// Installs system fragment.
+        /// </summary>
         public static void InstallSystemFragment(string identity, string owner, int count, int[] ordinals, System.Action[] callbacks, bool editor) =>
             (editor ? editorSystems : runtimeSystems).Install(identity, owner, count, ordinals, callbacks);
 
+        /// <summary>
+        /// Installs entity fragment.
+        /// </summary>
         public static void InstallEntityFragment(string identity, string owner, int count, int[] ordinals, System.Action[] callbacks, bool editor) {
             if ((uint)count > ushort.MaxValue + 1u) throw new System.ArgumentOutOfRangeException(nameof(count));
             (editor ? editorEntities : runtimeEntities).Install(identity, owner, count, ordinals, callbacks);
@@ -82,93 +115,174 @@ namespace ME.BECS {
 
         // Selection publication has no callbacks. It also represents an explicitly
         // empty selection and detects stale owner fragments before assigning IDs.
+        /// <summary>
+        /// Checks for the expected system plan.
+        /// </summary>
         public static void ExpectSystemPlan(string identity, int count, bool editor) =>
             InstallSystemFragment(identity, "$selection", count, System.Array.Empty<int>(), System.Array.Empty<System.Action>(), editor);
 
+        /// <summary>
+        /// Checks for the expected type plan.
+        /// </summary>
         public static void ExpectTypePlan(string identity, int count, bool editor) =>
             InstallTypeFragment(identity, "$selection", count, System.Array.Empty<int>(), System.Array.Empty<System.Action>(), editor);
 
+        /// <summary>
+        /// Checks for the expected entity plan.
+        /// </summary>
         public static void ExpectEntityPlan(string identity, int count, bool editor) =>
             InstallEntityFragment(identity, "$selection", count, System.Array.Empty<int>(), System.Array.Empty<System.Action>(), editor);
 
+        /// <summary>
+        /// Installs job init fragment.
+        /// </summary>
         public static void InstallJobInitFragment(string identity, string owner, int count, int[] ordinals, System.Action[] callbacks, bool editor) =>
             (editor ? editorJobInit : runtimeJobInit).Install(identity, owner, count, ordinals, callbacks);
 
+        /// <summary>
+        /// Checks for the expected job init plan.
+        /// </summary>
         public static void ExpectJobInitPlan(string identity, int count, bool editor) =>
             InstallJobInitFragment(identity, "$selection", count, System.Array.Empty<int>(), System.Array.Empty<System.Action>(), editor);
 
         // Interleaved with each slot's entity/weight/layout setup, not batched by
         // owner or deduplicated by job. Stat-only slots publish explicit no-ops.
+        /// <summary>
+        /// Invokes job early init.
+        /// </summary>
         public static void InvokeJobEarlyInit(int ordinal, bool editor) =>
             (editor ? editorJobInit : runtimeJobInit).ExecuteRange(ordinal, 1);
 
+        /// <summary>
+        /// Installs job setup fragment.
+        /// </summary>
         public static void InstallJobSetupFragment(string identity, string owner, int count, int[] ordinals, System.Action[] callbacks, bool editor) =>
             (editor ? editorJobSetup : runtimeJobSetup).Install(identity, owner, count, ordinals, callbacks);
 
+        /// <summary>
+        /// Checks for the expected job setup plan.
+        /// </summary>
         public static void ExpectJobSetupPlan(string identity, int count, bool editor) =>
             InstallJobSetupFragment(identity, "$selection", count, System.Array.Empty<int>(), System.Array.Empty<System.Action>(), editor);
 
         // Invoked once per original slot, not once per unique job: repeated
         // entity reservation / weight / native size initialization is intentional.
+        /// <summary>
+        /// Invokes job setup.
+        /// </summary>
         public static void InvokeJobSetup(int ordinal, bool editor) =>
             (editor ? editorJobSetup : runtimeJobSetup).ExecuteRange(ordinal, 1);
 
+        /// <summary>
+        /// Installs job debug fragment.
+        /// </summary>
         public static void InstallJobDebugFragment(string identity, string owner, int count, int[] ordinals, System.Action[] callbacks, bool editor) =>
             (editor ? editorJobDebug : runtimeJobDebug).Install(identity, owner, count, ordinals, callbacks);
 
+        /// <summary>
+        /// Checks for the expected job debug plan.
+        /// </summary>
         public static void ExpectJobDebugPlan(string identity, int count, bool editor) =>
             InstallJobDebugFragment(identity, "$selection", count, System.Array.Empty<int>(), System.Array.Empty<System.Action>(), editor);
 
+        /// <summary>
+        /// Initializes job debug.
+        /// </summary>
         public static void InitializeJobDebug(bool editor) =>
             (editor ? editorJobDebug : runtimeJobDebug).Execute();
 
+        /// <summary>
+        /// Installs graph fragment.
+        /// </summary>
         public static void InstallGraphFragment(string identity, string owner, int count, int[] ordinals, System.Action[] callbacks) =>
             runtimeGraphs.Install(identity, owner, count, ordinals, callbacks);
 
+        /// <summary>
+        /// Checks for the expected graph plan.
+        /// </summary>
         public static void ExpectGraphPlan(string identity, int count) =>
             InstallGraphFragment(identity, "$selection", count, System.Array.Empty<int>(), System.Array.Empty<System.Action>());
 
         // Executed by the original runtime first-pass hook. Owner publication
         // neither allocates system storage nor registers a graph/job callback.
+        /// <summary>
+        /// Registers installed graphs.
+        /// </summary>
         public static void RegisterInstalledGraphs() => runtimeGraphs.Execute();
 
+        /// <summary>
+        /// Installs aspect fragment.
+        /// </summary>
         public static void InstallAspectFragment(string identity, string owner, int count, int[] ordinals, System.Action[] initialize,
                                                  WorldStaticCallbacks.CallbackDelegate<World>[] construct, bool editor) =>
             (editor ? editorAspects : runtimeAspects).Install(identity, owner, count, ordinals, initialize, construct);
 
+        /// <summary>
+        /// Checks for the expected aspect plan.
+        /// </summary>
         public static void ExpectAspectPlan(string identity, int count, bool editor) =>
             InstallAspectFragment(identity, "$selection", count, System.Array.Empty<int>(), System.Array.Empty<System.Action>(),
                 System.Array.Empty<WorldStaticCallbacks.CallbackDelegate<World>>(), editor);
 
+        /// <summary>
+        /// Registers installed aspects.
+        /// </summary>
         public static void RegisterInstalledAspects(bool editor) => (editor ? editorAspects : runtimeAspects).Initialize();
 
+        /// <summary>
+        /// Installs destroy fragment.
+        /// </summary>
         public static void InstallDestroyFragment(string identity, string owner, int count, int[] ordinals, System.Action[] callbacks, bool editor) =>
             (editor ? editorDestroy : runtimeDestroy).Install(identity, owner, count, ordinals, callbacks);
 
+        /// <summary>
+        /// Checks for the expected destroy plan.
+        /// </summary>
         public static void ExpectDestroyPlan(string identity, int count, bool editor) =>
             InstallDestroyFragment(identity, "$selection", count, System.Array.Empty<int>(), System.Array.Empty<System.Action>(), editor);
 
         // Executed at the original destroy feeder position, after IDs and resets.
         // Publishing fragments neither compiles Burst pointers nor changes registries.
+        /// <summary>
+        /// Registers installed destroy callbacks.
+        /// </summary>
         public static void RegisterInstalledDestroyCallbacks(bool editor) => (editor ? editorDestroy : runtimeDestroy).Execute();
 
+        /// <summary>
+        /// Installs config fragment.
+        /// </summary>
         public static void InstallConfigFragment(string identity, string owner, int count, int[] ordinals, System.Action[] callbacks, bool editor) =>
             (editor ? editorConfigs : runtimeConfigs).Install(identity, owner, count, ordinals, callbacks);
 
+        /// <summary>
+        /// Checks for the expected config plan.
+        /// </summary>
         public static void ExpectConfigPlan(string identity, int counts, int masks, int collections, bool editor) =>
             (editor ? editorConfigs : runtimeConfigs).Expect(identity, counts, masks, collections);
 
+        /// <summary>
+        /// Registers installed config counts.
+        /// </summary>
         public static void RegisterInstalledConfigCounts(bool editor) {
             var configs = editor ? editorConfigs : runtimeConfigs;
             configs.RequireComplete();
             StaticTypes.collectionsCount.Resize(StaticTypes.counter + 1u);
             configs.ExecuteCounts();
         }
+        /// <summary>
+        /// Registers installed config masks.
+        /// </summary>
         public static void RegisterInstalledConfigMasks(bool editor) => (editor ? editorConfigs : runtimeConfigs).ExecuteMasks();
+        /// <summary>
+        /// Registers installed config collections.
+        /// </summary>
         public static void RegisterInstalledConfigCollections(bool editor) => (editor ? editorConfigs : runtimeConfigs).ExecuteCollections();
 
         // Register one ordered dispatcher at the original feeder position, after
         // the callback reset. Owner publication must not install world callbacks.
+        /// <summary>
+        /// Registers installed aspect construction.
+        /// </summary>
         public static void RegisterInstalledAspectConstruction(bool editor) {
             var aspects = editor ? editorAspects : runtimeAspects;
             aspects.RequireComplete();
@@ -177,6 +291,9 @@ namespace ME.BECS {
 
         // Kept at the original entity feeder position, after core type registration.
         // Publication itself never initializes groups or changes their IDs.
+        /// <summary>
+        /// Registers installed entities.
+        /// </summary>
         public static void RegisterInstalledEntities(bool editor) {
             var entities = editor ? editorEntities : runtimeEntities;
             var count = entities.Count; // Validate the full plan before clearing anything.
@@ -185,6 +302,9 @@ namespace ME.BECS {
             EntityTypes.groupsCount = (uint)count;
         }
 
+        /// <summary>
+        /// Registers installed types.
+        /// </summary>
         public static void RegisterInstalledTypes(bool editor) {
             var systems = editor ? editorSystems : runtimeSystems;
             var types = editor ? editorTypes : runtimeTypes;
@@ -194,6 +314,9 @@ namespace ME.BECS {
             types.Execute();
         }
 
+        /// <summary>
+        /// Requires installed plan.
+        /// </summary>
         public static void RequireInstalledPlan(bool editor) {
             var plan = plans.Get(editor);
             (editor ? editorSystems : runtimeSystems).RequireComplete();
@@ -209,6 +332,9 @@ namespace ME.BECS {
             plan.validateInputs?.Invoke();
         }
 
+        /// <summary>
+        /// Loads installed.
+        /// </summary>
         public static void LoadInstalled(bool editor) {
             RequireInstalledPlan(editor);
             var plan = plans.Get(editor);
@@ -220,6 +346,9 @@ namespace ME.BECS {
         [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void LoadRuntime() => LoadInstalled(editor: false);
 
+        /// <summary>
+        /// Initializes types.
+        /// </summary>
         public static void InitializeTypes(System.Action registerTypes) {
             if (registerTypes == null) throw new System.ArgumentNullException(nameof(registerTypes));
 
@@ -231,6 +360,9 @@ namespace ME.BECS {
             LocksCache.Initialize(LocksCache.ENT_GROUPS, EntityTypes.groupsCount + 1u);
         }
 
+        /// <summary>
+        /// Loads the registered data required by this operation.
+        /// </summary>
         public static void Load(System.Action initializeTypes, System.Action registerMethods, bool editor) {
             // Reject an incomplete plan before resetting any shared runtime state.
             if (initializeTypes == null) throw new System.ArgumentNullException(nameof(initializeTypes));

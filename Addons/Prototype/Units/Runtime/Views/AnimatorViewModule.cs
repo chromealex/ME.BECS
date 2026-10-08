@@ -14,13 +14,22 @@ namespace ME.BECS.Units {
 
     using Views;
     
+    /// <summary>
+    /// Updates view presentation for animator module.
+    /// </summary>
     public class AnimatorModule : IViewApplyState {
 
+        /// <summary>
+        /// Animator used to present entity state.
+        /// </summary>
         public UnityEngine.Animator animator;
         
         private static readonly int speedHash = UnityEngine.Animator.StringToHash("Speed");
         private tfloat prevSpeed;
 
+        /// <summary>
+        /// Applies the current logic state to the presentation instance.
+        /// </summary>
         public void ApplyState(in ViewData viewData) {
 
             EntRO ent = viewData;

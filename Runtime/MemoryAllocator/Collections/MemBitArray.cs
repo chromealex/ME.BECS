@@ -471,6 +471,9 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Provides mem bit array storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(UnsafeBitArrayDebugView))]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
@@ -522,6 +525,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Grows bit storage when the requested length exceeds the current length; smaller requests do not shrink storage.
+        /// </summary>
         [INLINE(256)]
         public void Resize(ref MemoryAllocator allocator, uint numBits) {
 
@@ -754,6 +760,9 @@ namespace ME.BECS {
             return 0ul != (ptr[idx] & mask);
         }
         
+        /// <summary>
+        /// Tests whether the context is set.
+        /// </summary>
         [INLINE(256)]
         public bool IsSet(in MemoryAllocator allocator, uint pos) {
             var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(in this.ptr);
@@ -1038,6 +1047,9 @@ namespace ME.BECS {
             return count;
         }
 
+        /// <summary>
+        /// Removes except.
+        /// </summary>
         [INLINE(256)]
         public void RemoveExcept(in MemoryAllocator allocator, MemBitArray bits) {
 

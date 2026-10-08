@@ -7,6 +7,9 @@ namespace ME.BECS {
     #endif
     using um = Unity.Mathematics;
 
+    /// <summary>
+    /// Provides arithmetic helpers for fixed-point values.
+    /// </summary>
     public static partial class fpmath {
         
         /// <summary>Returns the absolute value of a {{name}} value.</summary>
@@ -34,6 +37,9 @@ namespace ME.BECS {
         [INLINE(256)]
         public static {{name}} lerp({{name}} start, {{name}} end, ucvalue t) { return start + t * (end - start); }
         
+        /// <summary>
+        /// Computes the square root through floating-point conversion; zero input throws an exception.
+        /// </summary>
         [INLINE(256)]
         public static {{name}} sqrt({{name}} value) {
             if (value.value == 0u) {

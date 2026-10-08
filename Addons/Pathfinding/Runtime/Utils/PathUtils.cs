@@ -16,11 +16,23 @@ namespace ME.BECS.Pathfinding {
     using ME.BECS.Transforms;
     using ME.BECS.Units;
     
+    /// <summary>
+    /// Provides helper operations for path.
+    /// </summary>
     public static class PathUtils {
 
+        /// <summary>
+        /// Default volume radius constant used by <c>PathUtils</c>.
+        /// </summary>
         public static readonly tfloat DEFAULT_VOLUME_RADIUS = 2f;
+        /// <summary>
+        /// Radius factor constant used by <c>PathUtils</c>.
+        /// </summary>
         public static readonly tfloat RADIUS_FACTOR = math.PI;
 
+        /// <summary>
+        /// Adds chain target.
+        /// </summary>
         [INLINE(256)]
         public static void AddChainTarget(UnitCommandGroupAspect rootCommandGroup, in UnitCommandGroupAspect unitCommandGroup) {
 
@@ -33,11 +45,17 @@ namespace ME.BECS.Pathfinding {
             
         }
 
+        /// <summary>
+        /// Updates target.
+        /// </summary>
         [INLINE(256)]
         public static void UpdateTarget(in BuildGraphSystem buildGraphSystem, in UnitCommandGroupAspect unitCommandGroup, in float3 position, in JobInfo jobInfo = default) {
             UpdateTarget(in buildGraphSystem, in unitCommandGroup, Path.Target.Create(position), in jobInfo);
         }
 
+        /// <summary>
+        /// Updates target.
+        /// </summary>
         [INLINE(256)]
         public static unsafe void UpdateTarget(in BuildGraphSystem buildGraphSystem, in UnitCommandGroupAspect unitCommandGroup, in Path.Target pathTarget, in JobInfo jobInfo = default) {
 
@@ -162,6 +180,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Destroys targets.
+        /// </summary>
         [INLINE(256)]
         public static void DestroyTargets(in UnitCommandGroupAspect unitCommandGroup) {
             for (uint i = 0u; i < unitCommandGroup.targets.Length; ++i) {
@@ -180,6 +201,9 @@ namespace ME.BECS.Pathfinding {
             }
         }
         
+        /// <summary>
+        /// Creates target info.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateTargetInfo(in Path.Target target, in JobInfo jobInfo) {
             var ent = Ent.New<PathfindingTargetInfoEntityType>(in jobInfo);
@@ -190,6 +214,9 @@ namespace ME.BECS.Pathfinding {
             return ent;
         }
 
+        /// <summary>
+        /// Sets arrived.
+        /// </summary>
         [INLINE(256)]
         public static void SetArrived(in UnitAspect unit) {
 
@@ -202,6 +229,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Tests whether the context has arrived.
+        /// </summary>
         [INLINE(256)]
         public static bool HasArrived(in TransformAspect tr, in UnitAspect unit) {
 
@@ -213,6 +243,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Returns group radius sqr.
+        /// </summary>
         [INLINE(256)]
         public static tfloat GetGroupRadiusSqr(in UnitCommandGroupAspect commandGroup) {
 
@@ -220,6 +253,9 @@ namespace ME.BECS.Pathfinding {
 
         }
         
+        /// <summary>
+        /// Returns target radius sqr.
+        /// </summary>
         [INLINE(256)]
         public static tfloat GetTargetRadiusSqr(in TargetComponent target) {
 
@@ -227,6 +263,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Removes unit from group.
+        /// </summary>
         [INLINE(256)]
         public static void RemoveUnitFromGroup(in UnitAspect unit) {
 

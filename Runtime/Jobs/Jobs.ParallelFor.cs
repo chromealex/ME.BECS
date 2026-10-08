@@ -5,13 +5,25 @@ namespace ME.BECS.Jobs {
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections.LowLevel.Unsafe;
 
+    /// <summary>
+    /// Defines the operations required by job parallel for command buffer.
+    /// </summary>
     [JobProducerType(typeof(ICommandBufferJobParallelForExtensions.JobProcess<>))]
     public interface IJobParallelForCommandBuffer {
+        /// <summary>
+        /// Processes i job parallel for command buffer using the supplied job inputs.
+        /// </summary>
         void Execute(in CommandBufferJobParallel commandBuffer);
     }
 
+    /// <summary>
+    /// Provides extension operations for i command buffer job parallel for.
+    /// </summary>
     public static unsafe class ICommandBufferJobParallelForExtensions {
         
+        /// <summary>
+        /// Registers job reflection data before scheduling.
+        /// </summary>
         public static void EarlyJobInit<T>() where T : struct, IJobParallelForCommandBuffer => ICommandBufferJobParallelForExtensions.JobProcess<T>.Initialize();
 
         private static System.IntPtr GetReflectionData<T>() where T : struct, IJobParallelForCommandBuffer {
@@ -20,6 +32,9 @@ namespace ME.BECS.Jobs {
             return reflectionData;
         }
 
+        /// <summary>
+        /// Schedules the supplied job after its input dependency and returns a handle to the resulting work.
+        /// </summary>
         public static JobHandle Schedule<T>(this T jobData, in CommandBuffer* buffer, uint innerLoopBatchCount, JobHandle inputDeps = default) where T : struct, IJobParallelForCommandBuffer {
 
             if (innerLoopBatchCount == 0u) innerLoopBatchCount = 64u;
@@ -35,6 +50,9 @@ namespace ME.BECS.Jobs {
             
         }
 
+        /// <summary>
+        /// Schedules by ref.
+        /// </summary>
         public static JobHandle ScheduleByRef<T>(ref this T jobData, in CommandBuffer* buffer, uint innerLoopBatchCount, JobHandle inputDeps = default) where T : struct, IJobParallelForCommandBuffer {
 
             if (innerLoopBatchCount == 0u) innerLoopBatchCount = 64u;

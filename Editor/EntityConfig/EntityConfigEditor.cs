@@ -6,6 +6,9 @@ using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Provides Unity Editor controls for entity config editor.
+    /// </summary>
     [CustomEditor(typeof(EntityConfig))]
     [CanEditMultipleObjects]
     public partial class EntityConfigEditor : UnityEditor.Editor {
@@ -17,8 +20,14 @@ namespace ME.BECS.Editor {
             this.compactStyleSheet = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/EntityConfigCompact.uss");
         }
 
+        /// <summary>
+        /// Uses default margins.
+        /// </summary>
         public override bool UseDefaultMargins() => false;
 
+        /// <summary>
+        /// Builds the UI Toolkit inspector for the inspected object.
+        /// </summary>
         public override VisualElement CreateInspectorGUI() {
             
             this.LoadStyle();
@@ -594,11 +603,26 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Stores a item record used by <c>EntityConfigEditor</c>.
+        /// </summary>
         public struct Item {
 
+            /// <summary>
+            /// Container used by <c>EntityConfigEditor.Item</c>.
+            /// </summary>
             public VisualElement container;
+            /// <summary>
+            /// Draw fields container used by <c>EntityConfigEditor.Item</c>.
+            /// </summary>
             public VisualElement drawFieldsContainer;
+            /// <summary>
+            /// Update buttons used by <c>EntityConfigEditor.Item</c>.
+            /// </summary>
             public System.Action<System.Collections.Generic.List<VisualElement>, int> updateButtons;
+            /// <summary>
+            /// Redraw fields used by <c>EntityConfigEditor.Item</c>.
+            /// </summary>
             public System.Action redrawFields;
 
         }
@@ -606,6 +630,9 @@ namespace ME.BECS.Editor {
         private bool needSync = false;
         private bool dragging;
 
+        /// <summary>
+        /// Updates entity config editor using the current inputs and execution context.
+        /// </summary>
         public void Update() {
 
             if (this.needSync == true) {

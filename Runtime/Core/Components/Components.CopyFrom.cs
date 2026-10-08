@@ -7,8 +7,14 @@ namespace ME.BECS {
     #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
+    /// <summary>
+    /// Defines components data used by entity processing.
+    /// </summary>
     public unsafe partial struct Components {
 
+        /// <summary>
+        /// Copies the supplied source state into this components instance.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static void CopyFrom(safe_ptr<State> sourceState, in Ent ent, safe_ptr<State> targetState, in Ent targetEnt) {
 
@@ -23,6 +29,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Copies the supplied source state into this components instance.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static void CopyFrom<TIgnore0>(safe_ptr<State> sourceState, in Ent ent, safe_ptr<State> targetState, in Ent targetEnt) where TIgnore0 : unmanaged, IComponent {
 
@@ -39,6 +48,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Copies the supplied source state into this components instance.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static void CopyFrom<TIgnore0, TIgnore1>(safe_ptr<State> sourceState, in Ent ent, safe_ptr<State> targetState, in Ent targetEnt) where TIgnore0 : unmanaged, IComponent where TIgnore1 : unmanaged, IComponent {
 

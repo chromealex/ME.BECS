@@ -10,8 +10,14 @@ namespace ME.BECS.Network {
     using BURST_DISCARD = Unity.Burst.BurstDiscardAttribute;
     using HIDE_CALLSTACK = UnityEngine.HideInCallstackAttribute;
 
+    /// <summary>
+    /// Maintains network packages in deterministic tick and ordering sequence.
+    /// </summary>
     public unsafe struct SortedNetworkPackageList : IIsCreated {
 
+        /// <summary>
+        /// Traverses the entries exposed by <c>SortedNetworkPackageList</c>.
+        /// </summary>
         public struct Enumerator {
 
             private readonly SortedNetworkPackageList list;
@@ -22,10 +28,16 @@ namespace ME.BECS.Network {
                 this.index = 0u;
             }
 
+            /// <summary>
+            /// Advances the enumerator and reports whether a current element is available.
+            /// </summary>
             public bool MoveNext() {
                 return this.index++ < this.list.Count;
             }
 
+            /// <summary>
+            /// Returns current.
+            /// </summary>
             public ref NetworkPackage GetCurrent(in MemoryAllocator allocator) {
                 return ref this.list[in allocator, this.index - 1u];
             }
@@ -33,13 +45,22 @@ namespace ME.BECS.Network {
         }
 
         internal MemArray<NetworkPackage> arr;
+        /// <summary>
+        /// Number of entries currently tracked by this value.
+        /// </summary>
         public uint Count;
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public readonly bool IsCreated {
             [INLINE(256)]
             get => this.arr.IsCreated;
         }
 
+        /// <summary>
+        /// Number of elements that fit in the currently reserved storage.
+        /// </summary>
         public uint Capacity {
             [INLINE(256)]
             get {
@@ -48,6 +69,9 @@ namespace ME.BECS.Network {
             }
         }
 
+        /// <summary>
+        /// Initializes <c>SortedNetworkPackageList</c> from the supplied allocator, capacity.
+        /// </summary>
         [INLINE(256)]
         public SortedNetworkPackageList(ref MemoryAllocator allocator, uint capacity) {
 
@@ -61,11 +85,17 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Updates cached native access for the requested Burst execution mode.
+        /// </summary>
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             this.arr.BurstMode(in allocator, state);
         }
 
+        /// <summary>
+        /// Returns the allocator-relative address of the underlying storage.
+        /// </summary>
         [INLINE(256)]
         public readonly MemPtr GetMemPtr() {
 
@@ -74,6 +104,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Returns a raw pointer to the underlying storage.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
 
@@ -82,6 +115,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this sorted network package list instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose(ref MemoryAllocator allocator) {
 
@@ -91,6 +127,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Schedules release of the owned storage after the supplied dependency and returns the disposal handle.
+        /// </summary>
         [INLINE(256)]
         public Unity.Jobs.JobHandle Dispose(ushort worldId, Unity.Jobs.JobHandle inputDeps) {
 
@@ -107,6 +146,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Returns an enumerator over the current collection contents.
+        /// </summary>
         [INLINE(256)]
         public readonly Enumerator GetEnumerator() {
 
@@ -115,6 +157,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Clears the current sorted network package list contents.
+        /// </summary>
         [INLINE(256)]
         public void Clear() {
 
@@ -123,6 +168,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public ref NetworkPackage this[in MemoryAllocator allocator, uint index] {
             [INLINE(256)]
             get {
@@ -140,6 +188,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Adds the supplied entry to sorted network package list.
+        /// </summary>
         [INLINE(256)]
         public bool Add(ref MemoryAllocator allocator, NetworkPackage value) {
 
@@ -169,6 +220,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Removes the specified entry from sorted network package list.
+        /// </summary>
         [INLINE(256)]
         public bool Remove<U>(ref MemoryAllocator allocator, U obj) where U : unmanaged, System.IEquatable<NetworkPackage> {
 
@@ -188,6 +242,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Removes at.
+        /// </summary>
         [INLINE(256)]
         public unsafe bool RemoveAt(ref MemoryAllocator allocator, uint index) {
 
@@ -215,6 +272,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Removes the indexed element by moving a tail element into its place; element order is not preserved.
+        /// </summary>
         [INLINE(256)]
         public bool RemoveAtFast(in MemoryAllocator allocator, uint index) {
 
@@ -231,6 +291,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Changes the storage size to the requested element count.
+        /// </summary>
         [INLINE(256)]
         public bool Resize(ref MemoryAllocator allocator, uint newLength, ClearOptions options = ClearOptions.ClearMemory) {
 
@@ -254,6 +317,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Copies to.
+        /// </summary>
         [INLINE(256)]
         public readonly void CopyTo(ref MemoryAllocator allocator, MemArray<NetworkPackage> arr, uint srcOffset, uint index, uint count) {
 
@@ -270,6 +336,9 @@ namespace ME.BECS.Network {
             return low + ((hi - low) >> 1);
         }
 
+        /// <summary>
+        /// Searches sorted elements and returns the position encoded by the search implementation.
+        /// </summary>
         public static int BinarySearch(in MemoryAllocator allocator, in MemArray<NetworkPackage> array, int index, int length, NetworkPackage value) {
 
             var lo = index;

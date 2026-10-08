@@ -10,11 +10,20 @@ namespace ME.BECS.Blueprints.Editor {
     
     using ME.BECS.Extensions.GraphProcessor;
     
+    /// <summary>
+    /// Defines a node view entry in the associated graph.
+    /// </summary>
     [ME.BECS.Extensions.GraphProcessor.NodeCustomEditor(typeof(BlueprintNode))]
     public class NodeView : BaseNodeView {
 
+        /// <summary>
+        /// Gets expanded; this implementation returns <c>true</c>.
+        /// </summary>
         public override bool expanded => true;
 
+        /// <summary>
+        /// Initializes node view state from the supplied context.
+        /// </summary>
         public override void Initialize(BaseGraphView owner, BaseNode node) {
             
             base.Initialize(owner, node);
@@ -25,9 +34,15 @@ namespace ME.BECS.Blueprints.Editor {
 
     }
 
+    /// <summary>
+    /// Presents operation node view state through the associated view.
+    /// </summary>
     [ME.BECS.Extensions.GraphProcessor.NodeCustomEditor(typeof(ME.BECS.Blueprints.Nodes.Operation))]
     public class OperationNodeView : NodeView {
 
+        /// <summary>
+        /// Draws default inspector.
+        /// </summary>
         protected override void DrawDefaultInspector(bool fromInspector = false) {
 
             if (fromInspector == false) {
@@ -53,9 +68,15 @@ namespace ME.BECS.Blueprints.Editor {
 
     }
 
+    /// <summary>
+    /// Presents logical if node view state through the associated view.
+    /// </summary>
     [ME.BECS.Extensions.GraphProcessor.NodeCustomEditor(typeof(ME.BECS.Blueprints.Nodes.If))]
     public class LogicalIfNodeView : NodeView {
 
+        /// <summary>
+        /// Handles the created callback.
+        /// </summary>
         public override void OnCreated() {
             
             base.OnCreated();
@@ -69,6 +90,9 @@ namespace ME.BECS.Blueprints.Editor {
 
         }
 
+        /// <summary>
+        /// Draws default inspector.
+        /// </summary>
         protected override void DrawDefaultInspector(bool fromInspector = false) {
 
             if (fromInspector == false) {
@@ -94,14 +118,26 @@ namespace ME.BECS.Blueprints.Editor {
 
     }
 
+    /// <summary>
+    /// Defines the graph structure used for blueprint graph view.
+    /// </summary>
     public class BlueprintGraphView : BaseGraphView {
         
+        /// <summary>
+        /// Initializes <c>BlueprintGraphView</c> from the supplied window.
+        /// </summary>
         public BlueprintGraphView(UnityEditor.EditorWindow window) : base(window) { }
         
     }
 
+    /// <summary>
+    /// Defines the graph structure used for graph editor.
+    /// </summary>
     public class GraphEditor : BaseGraphWindow {
 
+        /// <summary>
+        /// Opens or focuses the associated editor window.
+        /// </summary>
         public static void ShowWindow(Graph graph) {
 
             var win = GraphEditor.CreateInstance<GraphEditor>();
@@ -115,6 +151,9 @@ namespace ME.BECS.Blueprints.Editor {
 
         }
         
+        /// <summary>
+        /// Handles the open asset callback.
+        /// </summary>
         [UnityEditor.Callbacks.OnOpenAsset]
         public static bool OnOpenAsset(int instanceID, int line) {
             var graph = UnityEditor.EditorUtility.InstanceIDToObject(instanceID) as ME.BECS.Blueprints.Graph;
@@ -125,6 +164,9 @@ namespace ME.BECS.Blueprints.Editor {
             return false;
         }
 
+        /// <summary>
+        /// Handles the enable callback.
+        /// </summary>
         protected override void OnEnable() {
             
             base.OnEnable();
@@ -134,6 +176,9 @@ namespace ME.BECS.Blueprints.Editor {
 
         }
 
+        /// <summary>
+        /// Releases graph editor state at the end of its owning lifecycle.
+        /// </summary>
         protected override void OnDestroy() {
             
             UnityEditor.Selection.selectionChanged -= this.OnSelectionChanged;
@@ -197,6 +242,9 @@ namespace ME.BECS.Blueprints.Editor {
 
         private static StyleSheet styleSheetBase;
         private static StyleSheet styleSheetTooltip;
+        /// <summary>
+        /// Node style sheet used by <c>GraphEditor</c>.
+        /// </summary>
         public static StyleSheet nodeStyleSheet;
         
         private void LoadStyle() {
@@ -211,6 +259,9 @@ namespace ME.BECS.Blueprints.Editor {
             }
         }
 
+        /// <summary>
+        /// Updates graph editor using the current inputs and execution context.
+        /// </summary>
         protected override void Update() {
             
             base.Update();
@@ -260,6 +311,9 @@ namespace ME.BECS.Blueprints.Editor {
 
         }
 
+        /// <summary>
+        /// Initializes window.
+        /// </summary>
         protected override void InitializeWindow(BaseGraph graph) {
 
             var view = new BlueprintGraphView(this);

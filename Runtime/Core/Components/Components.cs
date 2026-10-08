@@ -10,6 +10,9 @@ namespace ME.BECS {
     using System.Runtime.InteropServices;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Defines components data used by entity processing.
+    /// </summary>
     [IgnoreProfiler]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -18,6 +21,9 @@ namespace ME.BECS {
     #endif
     public unsafe partial struct Components {
 
+        /// <summary>
+        /// Creates <c>Components</c> using the supplied creation arguments.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static Components Create(safe_ptr<State> state, in StateProperties stateProperties) {
 
@@ -39,6 +45,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Updates cached native access for the requested Burst execution mode.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             this.items.BurstMode(in allocator, state);
@@ -48,6 +57,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Returns component storage configured for writable access.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public RefRW<T> GetRW<T>(safe_ptr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
             E.IS_NOT_STATIC(StaticTypes<T>.typeId);
@@ -58,6 +70,9 @@ namespace ME.BECS {
             };
         }
 
+        /// <summary>
+        /// Returns component storage configured for read-only access.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public RefRO<T> GetRO<T>(safe_ptr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
             E.IS_NOT_STATIC(StaticTypes<T>.typeId);
@@ -67,12 +82,18 @@ namespace ME.BECS {
             };
         }
 
+        /// <summary>
+        /// Returns component storage with write-access safety tracking.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public RefRWSafe<T> GetRWSafe<T>(safe_ptr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
             E.IS_NOT_STATIC(StaticTypes<T>.typeId);
             return new RefRWSafe<T>(state, worldId);
         }
 
+        /// <summary>
+        /// Returns component storage with read-only safety tracking.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public RefROSafe<T> GetROSafe<T>(safe_ptr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
             E.IS_NOT_STATIC(StaticTypes<T>.typeId);

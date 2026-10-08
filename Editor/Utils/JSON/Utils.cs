@@ -4,33 +4,75 @@ namespace ME.BECS.Editor.JSON {
 
     using System.Text;
 
+    /// <summary>
+    /// Defines the operations required by serializer.
+    /// </summary>
     public interface ISerializer {
 
+        /// <summary>
+        /// Priority used when ordering or selecting this entry.
+        /// </summary>
         int Priority { get; }
+        /// <summary>
+        /// Tests whether the context is valid.
+        /// </summary>
         bool IsValid(System.Type type);
+        /// <summary>
+        /// Writes i serializer to the supplied serialized representation.
+        /// </summary>
         void Serialize(StringBuilder builder, object obj, UnityEditor.SerializedProperty property);
+        /// <summary>
+        /// Restores i serializer from the supplied serialized representation.
+        /// </summary>
         void Deserialize(object obj, UnityEditor.SerializedProperty property);
+        /// <summary>
+        /// Parses the supplied text into the represented value.
+        /// </summary>
         object FromString(System.Type fieldType, string value);
 
     }
 
+    /// <summary>
+    /// Defines serializer base state and operations.
+    /// </summary>
     public abstract class SerializerBase<T> : ISerializer {
 
+        /// <summary>
+        /// Priority used when ordering or selecting this entry.
+        /// </summary>
         public virtual int Priority => 0;
+        /// <summary>
+        /// Tests whether the context is valid.
+        /// </summary>
         public virtual bool IsValid(System.Type type) => typeof(T).IsAssignableFrom(type);
+        /// <summary>
+        /// Writes serializer base to the supplied serialized representation.
+        /// </summary>
         public abstract void Serialize(StringBuilder builder, object obj, UnityEditor.SerializedProperty property);
 
+        /// <summary>
+        /// Restores serializer base from the supplied serialized representation.
+        /// </summary>
         public virtual void Deserialize(object obj, UnityEditor.SerializedProperty property) {
             property.managedReferenceValue = obj;
         }
         
+        /// <summary>
+        /// Parses the supplied text into the represented value.
+        /// </summary>
         public abstract object FromString(System.Type fieldType, string value);
 
     }
     
+    /// <summary>
+    /// Provides helper operations for JSON.
+    /// </summary>
     public abstract class JsonUtils {
 
         private static readonly System.Collections.Generic.List<ISerializer> allSerializers = new System.Collections.Generic.List<ISerializer>();
+        /// <summary>
+        /// Returns serializer.
+        /// </summary>
         public static ISerializer GetSerializer(System.Type type) {
             if (allSerializers.Count == 0) {
                 allSerializers.Clear();
@@ -66,6 +108,9 @@ namespace ME.BECS.Editor.JSON {
             return null;
         }
 
+        /// <summary>
+        /// Applies JSON component data to the supplied serialized property.
+        /// </summary>
         public static void JSONToComponent(string data, UnityEditor.SerializedProperty targetProperty) {
             var copy = targetProperty.Copy();
             var obj = JsonParser.ParseValue(data);
@@ -116,6 +161,9 @@ namespace ME.BECS.Editor.JSON {
             }
         }
 
+        /// <summary>
+        /// Formats the serialized component property as CSV data.
+        /// </summary>
         public static string ComponentToCSV(UnityEditor.SerializedProperty srcProperty) {
 
             static System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, string>> GetFields(UnityEditor.SerializedProperty property) {
@@ -199,6 +247,9 @@ namespace ME.BECS.Editor.JSON {
             return builder.ToString();
         }
 
+        /// <summary>
+        /// Formats the serialized component property as JSON data.
+        /// </summary>
         public static string ComponentToJSON(UnityEditor.SerializedProperty srcProperty) {
             return EditorUtils.ReFormatCode(ComponentToJSON_INTERNAL(srcProperty));
         }
@@ -274,6 +325,9 @@ namespace ME.BECS.Editor.JSON {
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Tests whether the context is valid JSON.
+        /// </summary>
         public static bool IsValidJson(string data) {
             try {
                 var obj = JsonParser.ParseValue(data);

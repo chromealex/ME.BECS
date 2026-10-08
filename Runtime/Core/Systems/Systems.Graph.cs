@@ -10,20 +10,35 @@ namespace ME.BECS {
     #endif
     using Unity.Collections.LowLevel.Unsafe;
 
+    /// <summary>
+    /// Supplies required dependencies metadata to annotated declarations.
+    /// </summary>
     public class RequiredDependenciesAttribute : System.Attribute {
 
+        /// <summary>
+        /// Types used by <c>RequiredDependenciesAttribute</c>.
+        /// </summary>
         public System.Type[] types;
 
+        /// <summary>
+        /// Initializes <c>RequiredDependenciesAttribute</c> from the supplied types.
+        /// </summary>
         public RequiredDependenciesAttribute(params System.Type[] types) {
             this.types = types;
         }
 
     }
 
+    /// <summary>
+    /// Identifies a system node within a system group.
+    /// </summary>
     public readonly struct SystemHandle {
 
         internal readonly uint id;
 
+        /// <summary>
+        /// Tests whether the context is valid.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsValid() => this.id > 0u;
 
@@ -32,11 +47,17 @@ namespace ME.BECS {
             this.id = id;
         }
 
+        /// <summary>
+        /// Creates <c>SystemHandle</c> using the supplied creation arguments.
+        /// </summary>
         [INLINE(256)]
         public static SystemHandle Create(uint id) {
             return new SystemHandle(id);
         }
 
+        /// <summary>
+        /// Formats this value for display or diagnostics.
+        /// </summary>
         [INLINE(256)]
         public override string ToString() {
             return $"ID: {this.id}";
@@ -44,6 +65,9 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Groups systems and their dependencies for world lifecycle scheduling.
+    /// </summary>
     public unsafe struct SystemGroup {
 
         internal struct GroupData {
@@ -61,7 +85,13 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Lifecycle phase in which the update runs.
+        /// </summary>
         public ushort updateType;
+        /// <summary>
+        /// Graph id used to locate the associated entry.
+        /// </summary>
         public int graphId;
         private safe_ptr<GroupData> data;
         internal ref safe_ptr<Node> rootNode => ref this.data.ptr->rootNode;
@@ -70,6 +100,9 @@ namespace ME.BECS {
         internal ref uint count => ref this.data.ptr->count;
         private Queue runtimeQueue;
 
+        /// <summary>
+        /// Creates <c>SystemGroup</c> using the supplied creation arguments.
+        /// </summary>
         [INLINE(256)]
         public static SystemGroup Create(ushort updateType = 0) {
             var group = new SystemGroup() {
@@ -110,6 +143,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Combines the supplied inputs into a single result.
+        /// </summary>
         [INLINE(256)]
         public SystemHandle Combine(SystemHandle handle1, SystemHandle handle2) {
 
@@ -121,6 +157,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Combines the supplied inputs into a single result.
+        /// </summary>
         [INLINE(256)]
         public SystemHandle Combine(SystemHandle handle1, SystemHandle handle2, SystemHandle handle3) {
 
@@ -133,6 +172,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Combines the supplied inputs into a single result.
+        /// </summary>
         [INLINE(256)]
         public SystemHandle Combine(System.Collections.Generic.List<SystemHandle> handles) {
 
@@ -154,6 +196,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Draws diagnostic geometry for the supplied data.
+        /// </summary>
         [INLINE(256)]
         public JobHandle DrawGizmos(ref World world, JobHandle dependsOn = default) {
 
@@ -161,6 +206,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Runs initialization for the associated lifecycle.
+        /// </summary>
         [INLINE(256)]
         public JobHandle Awake(ref World world, ushort subId = 0, JobHandle dependsOn = default) {
 
@@ -168,6 +216,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Starts system group processing for the supplied context.
+        /// </summary>
         [INLINE(256)]
         public JobHandle Start(ref World world, ushort subId = 0, JobHandle dependsOn = default) {
 
@@ -175,6 +226,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Updates system group using the current inputs and execution context.
+        /// </summary>
         [INLINE(256)]
         public JobHandle Update(ref World world, uint deltaTimeMs, ushort subId = 0, JobHandle dependsOn = default) {
 
@@ -182,6 +236,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Destroys the referenced instance and applies its registered destruction handling.
+        /// </summary>
         [INLINE(256)]
         public JobHandle Destroy(ref World world, ushort subId = 0, JobHandle dependsOn = default) {
             
@@ -293,6 +350,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this system group instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
 

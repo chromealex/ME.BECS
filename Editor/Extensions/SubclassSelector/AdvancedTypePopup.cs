@@ -7,10 +7,19 @@ using UnityEditor.IMGUI.Controls;
 
 namespace ME.BECS.Editor.Extensions.SubclassSelector {
 
+    /// <summary>
+    /// Stores advanced type popup item for the associated editor API.
+    /// </summary>
     public class AdvancedTypePopupItem : AdvancedDropdownItem {
 
+        /// <summary>
+        /// Type descriptor used by the associated operation.
+        /// </summary>
         public Type Type { get; }
 
+        /// <summary>
+        /// Initializes <c>AdvancedTypePopupItem</c> from the supplied type, name.
+        /// </summary>
         public AdvancedTypePopupItem(Type type, string name) : base(name) {
             this.Type = type;
         }
@@ -24,6 +33,9 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
 
         private const int kMaxNamespaceNestCount = 16;
 
+        /// <summary>
+        /// Adds to.
+        /// </summary>
         public static void AddTo(bool showNullElement, AdvancedDropdownItem root, IEnumerable<Type> types) {
             var itemCount = 0;
 
@@ -117,8 +129,14 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
         private Type[] m_Types;
         private bool showNullElement;
 
+        /// <summary>
+        /// Raised when item selected is reported by this API.
+        /// </summary>
         public event Action<AdvancedTypePopupItem> OnItemSelected;
         
+        /// <summary>
+        /// Initializes <c>AdvancedTypePopup</c> from the supplied types, max line count, state, show null element, min size.
+        /// </summary>
         public AdvancedTypePopup(IEnumerable<Type> types, int maxLineCount, AdvancedDropdownState state, bool showNullElement, Vector2 minSize) : base(state) {
             this.SetTypes(types);
             this.minimumSize = minSize;
@@ -126,16 +144,25 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
             this.showNullElement = showNullElement;
         }
 
+        /// <summary>
+        /// Sets types.
+        /// </summary>
         public void SetTypes(IEnumerable<Type> types) {
             this.m_Types = types.ToArray();
         }
 
+        /// <summary>
+        /// Builds root.
+        /// </summary>
         protected override AdvancedDropdownItem BuildRoot() {
             var root = new AdvancedDropdownItem("Select Type");
             AdvancedTypePopup.AddTo(this.showNullElement, root, this.m_Types);
             return root;
         }
 
+        /// <summary>
+        /// Applies the selected type from the editor dropdown.
+        /// </summary>
         protected override void ItemSelected(AdvancedDropdownItem item) {
             base.ItemSelected(item);
             if (item is AdvancedTypePopupItem typePopupItem) {

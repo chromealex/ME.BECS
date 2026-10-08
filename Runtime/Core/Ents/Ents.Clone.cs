@@ -8,14 +8,23 @@ namespace ME.BECS {
     #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides helper operations for ent clone.
+    /// </summary>
     public static class EntCloneExt {
 
+        /// <summary>
+        /// Creates a copy of the supplied state using the requested allocation context.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         [NotThreadSafe]
         public static Ent Clone(this in Ent source) {
             return source.Clone(source.worldId);
         }
 
+        /// <summary>
+        /// Creates a copy of the supplied state using the requested allocation context.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         [NotThreadSafe]
         public static Ent Clone(this in Ent source, ushort worldId) {
@@ -28,6 +37,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Copies the supplied source state into this ent clone ext instance.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         [NotThreadSafe]
         public static void CopyFrom(this in Ent target, in Ent source) {
@@ -36,6 +48,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Copies the supplied source state into this ent clone ext instance.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         [NotThreadSafe]
         public static void CopyFrom<TIgnore0>(this in Ent target, in Ent source) where TIgnore0 : unmanaged, IComponent {
@@ -44,6 +59,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Copies the supplied source state into this ent clone ext instance.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         [NotThreadSafe]
         public static void CopyFrom<TIgnore0, TIgnore1>(this in Ent target, in Ent source) where TIgnore0 : unmanaged, IComponent where TIgnore1 : unmanaged, IComponent {

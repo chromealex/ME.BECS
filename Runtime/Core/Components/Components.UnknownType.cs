@@ -8,8 +8,14 @@ namespace ME.BECS {
     #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
+    /// <summary>
+    /// Defines components data used by entity processing.
+    /// </summary>
     public unsafe partial struct Components {
 
+        /// <summary>
+        /// Returns the amount of reserved storage in bytes.
+        /// </summary>
         public static uint GetReservedSizeInBytes(safe_ptr<State> state) {
 
             if (state.ptr->components.items.IsCreated == false) return 0u;
@@ -26,6 +32,9 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Handles the entity add callback.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static void OnEntityAdd(safe_ptr<State> state, ushort worldId, uint entityId) {
 
@@ -48,6 +57,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Sets unknown type.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool SetUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, void* data) {
 
@@ -61,6 +73,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Sets unknown type.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool SetUnknownType<T>(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, in T data) where T : unmanaged, IComponent {
 
@@ -70,6 +85,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Sets state.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool SetState(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, bool value) {
 
@@ -83,6 +101,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Reads state.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool ReadState(safe_ptr<State> state, uint typeId, in Ent ent) {
 
@@ -94,6 +115,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns or throw unknown type.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static byte* GetOrThrowUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
 
@@ -105,6 +129,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns or throw unknown type.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static byte* GetOrThrowUnknownType(safe_ptr<State> state, safe_ptr<MemAllocatorPtr> storage, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
 
@@ -116,6 +143,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns or throw unknown type.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static byte* GetOrThrowUnknownType(safe_ptr<State> state, in MemAllocatorPtr storage, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
 
@@ -127,6 +157,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns unknown type.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static byte* GetUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
 
@@ -138,6 +171,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns unknown type.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static byte* GetUnknownType(safe_ptr<State> state, safe_ptr<MemAllocatorPtr> storage, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
 
@@ -149,6 +185,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns unknown type.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static byte* GetUnknownType(safe_ptr<State> state, in MemAllocatorPtr storage, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
 
@@ -160,6 +199,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes unknown type.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool RemoveUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent) {
 
@@ -176,6 +218,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Reads unknown type.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static byte* ReadUnknownType(safe_ptr<State> state, uint typeId, uint entId, ushort gen, out bool exists) {
 
@@ -187,6 +232,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Reads unknown type.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static byte* ReadUnknownType(safe_ptr<State> state, safe_ptr<MemAllocatorPtr> storage, uint typeId, uint entId, ushort gen, out bool exists) {
 
@@ -198,6 +246,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Reads unknown type.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static byte* ReadUnknownType(safe_ptr<State> state, MemAllocatorPtr storage, uint typeId, uint entId, ushort gen, out bool exists) {
 
@@ -209,6 +260,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests whether the context has unknown type.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool HasUnknownType(safe_ptr<State> state, uint typeId, uint entId, ushort gen, bool checkEnabled) {
 
@@ -220,6 +274,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Returns unsafe sparse set ptr.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static ref MemAllocatorPtr GetUnsafeSparseSetPtr(safe_ptr<State> state, uint typeId) {
 

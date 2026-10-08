@@ -15,16 +15,40 @@ namespace ME.BECS {
     using ME.BECS.Views;
     using UnityEngine;
 
+    /// <summary>
+    /// Defines scene entity state and operations.
+    /// </summary>
     public class SceneEntity : MonoBehaviour {
 
+        /// <summary>
+        /// Whether use prefab behavior or state is selected.
+        /// </summary>
         public bool usePrefab;
+        /// <summary>
+        /// World name used by <c>SceneEntity</c>.
+        /// </summary>
         public string worldName;
+        /// <summary>
+        /// Prefab used to instantiate the associated presentation object.
+        /// </summary>
         public View prefab;
+        /// <summary>
+        /// Entity view used by <c>SceneEntity</c>.
+        /// </summary>
         public EntityView entityView;
+        /// <summary>
+        /// Configuration supplying values for this instance.
+        /// </summary>
         public Config config;
+        /// <summary>
+        /// Provider id used to locate the associated entry.
+        /// </summary>
         [ViewsProvider]
         public uint providerId;
 
+        /// <summary>
+        /// Starts scene entity processing for the supplied context.
+        /// </summary>
         public void Start() {
             if (string.IsNullOrEmpty(this.worldName) == true) {
                 Logger.Views.Error("World Name is empty!");
@@ -76,6 +100,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Provides the <c>OnCreate</c> callback; this implementation performs no work.
+        /// </summary>
         protected virtual void OnCreate(in Ent ent) { }
 
     }

@@ -28,13 +28,31 @@ namespace ME.BECS.Network {
     using static Cuts;
     using Jobs;
 
+    /// <summary>
+    /// Carries a simulation hash used to compare peer state.
+    /// </summary>
     public unsafe struct SyncHashPackage : System.IComparable<SyncHashPackage>, System.IEquatable<SyncHashPackage> {
 
+        /// <summary>
+        /// Package type used by <c>SyncHashPackage</c>.
+        /// </summary>
         public byte packageType;
+        /// <summary>
+        /// Tick used by <c>SyncHashPackage</c>.
+        /// </summary>
         public ulong tick;
+        /// <summary>
+        /// Player id used to locate the associated entry.
+        /// </summary>
         public uint playerId;
+        /// <summary>
+        /// Indicates hash.
+        /// </summary>
         public int hash;
         
+        /// <summary>
+        /// Creates <c>SyncHashPackage</c> using the supplied creation arguments.
+        /// </summary>
         public static SyncHashPackage Create(ref StreamBufferReader reader) {
 
             var result = new SyncHashPackage();
@@ -46,6 +64,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Writes sync hash package to the supplied serialized representation.
+        /// </summary>
         public void Serialize(ref StreamBufferWriter writeBufferWriter) {
 
             writeBufferWriter.Write(PackageTypeConst.Sync);
@@ -55,6 +76,9 @@ namespace ME.BECS.Network {
             
         }
         
+        /// <summary>
+        /// Compares this value with the supplied value for sorting.
+        /// </summary>
         public int CompareTo(SyncHashPackage other) {
             var tickComparison = this.tick.CompareTo(other.tick);
             if (tickComparison != 0) {
@@ -68,26 +92,44 @@ namespace ME.BECS.Network {
 
             return this.hash.CompareTo(other.hash);
         }
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         public bool Equals(SyncHashPackage other) {
             return this.tick == other.tick && this.playerId == other.playerId && this.hash == other.hash;
         }
 
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         public override bool Equals(object obj) {
             return obj is SyncHashPackage other && this.Equals(other);
         }
         
+        /// <summary>
+        /// Formats this value for display or diagnostics.
+        /// </summary>
         public override string ToString() {
             return $"[ SYNC PACKAGE ] Tick: {this.tick}, playerId: {this.playerId}, hash: {this.hash}";
         }
         
+        /// <summary>
+        /// Returns a hash code consistent with this type's equality comparison.
+        /// </summary>
         public override int GetHashCode() {
             return System.HashCode.Combine(this.tick, this.playerId, this.hash);
         }
         
     }
     
+    /// <summary>
+    /// Carries a network event with the identity and timing needed for deterministic execution.
+    /// </summary>
     public unsafe struct NetworkPackage : System.IComparable<NetworkPackage>, System.IEquatable<NetworkPackage> {
 
+        /// <summary>
+        /// Package type used by <c>NetworkPackage</c>.
+        /// </summary>
         public byte packageType;
         /// <summary>
         /// Tick
@@ -110,25 +152,40 @@ namespace ME.BECS.Network {
         /// </summary>
         public byte localOrder;
         
+        /// <summary>
+        /// Data consumed or produced by the containing operation.
+        /// </summary>
         [NativeDisableUnsafePtrRestriction]
         public byte* data;
 
+        /// <summary>
+        /// Formats this value for display or diagnostics.
+        /// </summary>
         public override string ToString() {
             return $"[ PACKAGE ] Tick: {this.tick}, playerId: {this.playerId}, methodId: {this.methodId}, dataSize: {this.dataSize}, localOrder: {this.localOrder}";
         }
 
+        /// <summary>
+        /// Converts the value to string short.
+        /// </summary>
         public string ToStringShort() => $"playerId: {this.playerId}, methodId: {this.methodId}";
 
         internal void Dispose() {
             _free((safe_ptr)this.data);
         }
 
+        /// <summary>
+        /// Returns key.
+        /// </summary>
         public ulong GetKey() {
             var a = ((ulong)this.playerId << 32);
             var b = ((ulong)this.localOrder & 0xffffffffL);
             return a | b;
         }
 
+        /// <summary>
+        /// Creates <c>NetworkPackage</c> using the supplied creation arguments.
+        /// </summary>
         public static NetworkPackage Create(ref StreamBufferReader reader) {
 
             var result = new NetworkPackage();
@@ -144,6 +201,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Writes network package to the supplied serialized representation.
+        /// </summary>
         public void Serialize(ref StreamBufferWriter writeBufferWriter) {
 
             writeBufferWriter.Write(PackageTypeConst.Data);
@@ -156,6 +216,9 @@ namespace ME.BECS.Network {
             
         }
 
+        /// <summary>
+        /// Compares this value with the supplied value for sorting.
+        /// </summary>
         public int CompareTo(NetworkPackage other) {
             var tickComparison = this.tick.CompareTo(other.tick);
             if (tickComparison != 0) {
@@ -170,39 +233,72 @@ namespace ME.BECS.Network {
             return this.localOrder.CompareTo(other.localOrder);
         }
 
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         public bool Equals(NetworkPackage other) {
             return this.tick == other.tick && this.playerId == other.playerId && this.methodId == other.methodId && this.dataSize == other.dataSize && this.localOrder == other.localOrder;
         }
 
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         public override bool Equals(object obj) {
             return obj is NetworkPackage other && this.Equals(other);
         }
 
+        /// <summary>
+        /// Returns a hash code consistent with this type's equality comparison.
+        /// </summary>
         public override int GetHashCode() {
             return System.HashCode.Combine(this.tick, this.playerId, this.methodId, this.dataSize, this.localOrder);
         }
 
     }
 
+    /// <summary>
+    /// Defines the operations required by package data.
+    /// </summary>
     public interface IPackageData {
 
+        /// <summary>
+        /// Writes i package data to the supplied serialized representation.
+        /// </summary>
         void Serialize(ref StreamBufferWriter writer);
+        /// <summary>
+        /// Restores i package data from the supplied serialized representation.
+        /// </summary>
         void Deserialize(ref StreamBufferReader reader);
 
     }
 
+    /// <summary>
+    /// Stores input data for the associated network API.
+    /// </summary>
     public readonly unsafe ref struct InputData {
 
         private readonly NetworkPackage package;
+        /// <summary>
+        /// World used by the containing operation.
+        /// </summary>
         public readonly World world;
 
+        /// <summary>
+        /// Gets player ID; this implementation returns <c>this.package.playerId</c>.
+        /// </summary>
         public uint PlayerId => this.package.playerId;
         
+        /// <summary>
+        /// Initializes <c>InputData</c> from the supplied package, world.
+        /// </summary>
         public InputData(NetworkPackage package, in World world) {
             this.package = package;
             this.world = world;
         }
         
+        /// <summary>
+        /// Returns data.
+        /// </summary>
         public T GetData<T>() where T : unmanaged, IPackageData {
 
             //E.SIZE_EQUALS(TSize<T>.size, this.package.dataSize);
@@ -216,21 +312,42 @@ namespace ME.BECS.Network {
 
     }
 
+    /// <summary>
+    /// Defines the callback signature for network method delegate.
+    /// </summary>
     public delegate void NetworkMethodDelegate(in InputData data, ref SystemContext context);
 
+    /// <summary>
+    /// Supplies network method metadata to annotated declarations.
+    /// </summary>
     [System.AttributeUsageAttribute(System.AttributeTargets.Method)]
     public class NetworkMethodAttribute : AOT.MonoPInvokeCallbackAttribute {
 
+        /// <summary>
+        /// Initializes <c>NetworkMethodAttribute</c> from the supplied defaults.
+        /// </summary>
         public NetworkMethodAttribute() : base(typeof(NetworkMethodDelegate)) {}
 
     }
     
+    /// <summary>
+    /// Executes copy state prepare work through the job scheduler.
+    /// </summary>
     [BURST]
     public unsafe partial struct CopyStatePrepareJob : IJobSingle {
         
+        /// <summary>
+        /// Data consumed or produced by the containing operation.
+        /// </summary>
         public safe_ptr<UnsafeNetworkModule.Data> data;
+        /// <summary>
+        /// Temp data used by <c>CopyStatePrepareJob</c>.
+        /// </summary>
         public Unity.Collections.NativeReference<System.IntPtr> tempData;
         
+        /// <summary>
+        /// Processes copy state prepare using the supplied job inputs.
+        /// </summary>
         public void Execute() {
             
             var srcState = this.data.ptr->connectedWorld.state;
@@ -247,13 +364,25 @@ namespace ME.BECS.Network {
         
     }
 
+    /// <summary>
+    /// Executes copy state complete work through the job scheduler.
+    /// </summary>
     [BURST]
     public unsafe partial struct CopyStateCompleteJob : IJobParallelFor {
         
+        /// <summary>
+        /// Data consumed or produced by the containing operation.
+        /// </summary>
         public safe_ptr<UnsafeNetworkModule.Data> data;
+        /// <summary>
+        /// Temp data used by <c>CopyStateCompleteJob</c>.
+        /// </summary>
         [Unity.Collections.ReadOnly]
         public Unity.Collections.NativeReference<System.IntPtr> tempData;
         
+        /// <summary>
+        /// Processes copy state complete using the supplied job inputs.
+        /// </summary>
         public void Execute(int index) {
             
             var srcState = this.data.ptr->connectedWorld.state;
@@ -263,14 +392,32 @@ namespace ME.BECS.Network {
         
     }
 
+    /// <summary>
+    /// Manages native network state, event history and rollback for a world.
+    /// </summary>
     public unsafe struct UnsafeNetworkModule {
 
+        /// <summary>
+        /// Stores and indexes methods entries.
+        /// </summary>
         public struct MethodsStorage {
 
+            /// <summary>
+            /// Defines method state and operations for <c>UnsafeNetworkModule.MethodsStorage</c>.
+            /// </summary>
             public struct Method {
 
+                /// <summary>
+                /// Target handle used by <c>UnsafeNetworkModule.MethodsStorage.Method</c>.
+                /// </summary>
                 public GCHandle targetHandle;
+                /// <summary>
+                /// Method handle used by <c>UnsafeNetworkModule.MethodsStorage.Method</c>.
+                /// </summary>
                 public GCHandle methodHandle;
+                /// <summary>
+                /// Native pointer or typed storage accessor for method.
+                /// </summary>
                 public void* methodPtr;
 
             }
@@ -280,8 +427,14 @@ namespace ME.BECS.Network {
             private EquatableDictionaryAuto<System.IntPtr, ushort> methodPtrs;
             private ushort index;
             private readonly safe_ptr<State> state;
+            /// <summary>
+            /// Configuration values used by this operation.
+            /// </summary>
             public NetworkModuleProperties.MethodsStorageProperties properties;
 
+            /// <summary>
+            /// Initializes <c>MethodsStorage</c> from the supplied network world, connected world, properties.
+            /// </summary>
             public MethodsStorage(in World networkWorld, in World connectedWorld, NetworkModuleProperties.MethodsStorageProperties properties) {
 
                 this.state = networkWorld.state;
@@ -293,6 +446,9 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Returns method ID.
+            /// </summary>
             public ushort GetMethodId(NetworkMethodDelegate method) {
                 
                 var ptr = Marshal.GetFunctionPointerForDelegate(method);
@@ -304,6 +460,9 @@ namespace ME.BECS.Network {
                 
             }
             
+            /// <summary>
+            /// Adds the supplied entry to methods storage.
+            /// </summary>
             public ushort Add(NetworkMethodDelegate method) {
 
                 var ptr = Marshal.GetFunctionPointerForDelegate(method);
@@ -330,6 +489,9 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Returns method info.
+            /// </summary>
             public Method GetMethodInfo(uint methodId) {
                 
                 var idx = methodId - 1u;
@@ -339,6 +501,9 @@ namespace ME.BECS.Network {
                 
             }
 
+            /// <summary>
+            /// Invokes the registered callback with the supplied arguments.
+            /// </summary>
             public JobHandle Call(in NetworkPackage package, uint deltaTimeMs, in World world, JobHandle dependsOn) {
                 
                 var idx = package.methodId - 1u;
@@ -354,6 +519,9 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Releases the resources owned by this methods storage instance.
+            /// </summary>
             public void Dispose() {
 
                 for (uint i = 0u; i < this.methods.Length; ++i) {
@@ -372,9 +540,15 @@ namespace ME.BECS.Network {
 
         }
         
+        /// <summary>
+        /// Stores and indexes events entries.
+        /// </summary>
         public struct EventsStorage {
 
-            public const ulong EMPTY_TICK = 0UL;
+            /// <summary>
+            /// Empty tick constant used by <c>UnsafeNetworkModule.EventsStorage</c>.
+            /// </summary>
+            public const ulong EMPTY_TICK = ulong.MaxValue;
             
             // tick => [sorted events list by playerId + localOrder]
             private ULongDictionaryAuto<SortedNetworkPackageList> eventsByTick;
@@ -383,8 +557,14 @@ namespace ME.BECS.Network {
             // playerId => localOrder
             private UIntDictionaryAuto<byte> localPlayersOrders;
 
+            /// <summary>
+            /// Configuration values used by this operation.
+            /// </summary>
             public readonly NetworkModuleProperties.EventsStorageProperties properties;
 
+            /// <summary>
+            /// Initializes <c>EventsStorage</c> from the supplied network world, connected world, properties.
+            /// </summary>
             public EventsStorage(in World networkWorld, in World connectedWorld, NetworkModuleProperties.EventsStorageProperties properties) {
 
                 if (properties.capacity == 0u) properties.capacity = 1u;
@@ -399,12 +579,18 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Returns local order.
+            /// </summary>
             public byte GetLocalOrder(uint playerId) {
 
                 return ++this.localPlayersOrders.GetValue(playerId);
 
             }
 
+            /// <summary>
+            /// Releases the resources owned by this events storage instance.
+            /// </summary>
             public void Dispose() {
 
                 var e = this.eventsByTick.GetEnumerator(this.state);
@@ -421,6 +607,9 @@ namespace ME.BECS.Network {
                 
             }
 
+            /// <summary>
+            /// Adds the supplied entry to events storage.
+            /// </summary>
             public bool Add(NetworkPackage package, ulong currentTick) {
 
                 ref var list = ref this.eventsByTick.GetValue(package.tick);
@@ -441,12 +630,18 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Returns events.
+            /// </summary>
             public ULongDictionaryAuto<SortedNetworkPackageList> GetEvents() {
 
                 return this.eventsByTick;
 
             }
 
+            /// <summary>
+            /// Returns events.
+            /// </summary>
             public SortedNetworkPackageList GetEvents(ulong tick) {
 
                 this.eventsByTick.TryGetValue(tick, out var list);
@@ -454,6 +649,9 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Returns oldest tick and reset.
+            /// </summary>
             public ulong GetOldestTickAndReset() {
 
                 var oldestTick = this.oldestTick;
@@ -462,12 +660,18 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Returns oldest tick.
+            /// </summary>
             public ulong GetOldestTick() {
 
                 return this.oldestTick;
 
             }
 
+            /// <summary>
+            /// Advances simulation through the requested tick interval.
+            /// </summary>
             public JobHandle Tick(ulong tick, uint deltaTimeMs, in World world, safe_ptr<Data> data, JobHandle dependsOn) {
                 
                 var events = this.GetEvents(tick);
@@ -488,14 +692,25 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Removes event.
+            /// </summary>
             public void RemoveEvent(NetworkPackage package) {
                 if (this.eventsByTick.TryGetValue(package.tick, out var list) == true) {
-                    if (list.Remove(ref this.state.ptr->allocator, package) == true) {
+                    for (uint i = 0u; i < list.Count; ++i) {
+                        var stored = list[in this.state.ptr->allocator, i];
+                        if (package.Equals(stored) == false) continue;
+                        list.RemoveAt(ref this.state.ptr->allocator, i);
                         this.eventsByTick[package.tick] = list;
+                        stored.Dispose();
+                        break;
                     }
                 }
             }
 
+            /// <summary>
+            /// Clears the current events storage contents.
+            /// </summary>
             public void Clear() {
                 foreach (var entry in this.eventsByTick) {
                     for (uint i = 0u; i < entry.value.Count; ++i) {
@@ -507,15 +722,30 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Stores and indexes states entries.
+        /// </summary>
         public struct StatesStorage {
 
+            /// <summary>
+            /// Stores a entry record used by <c>UnsafeNetworkModule.StatesStorage</c>.
+            /// </summary>
             public struct Entry {
 
+                /// <summary>
+                /// State accessed by the containing operation.
+                /// </summary>
                 public safe_ptr<State> state;
+                /// <summary>
+                /// Tick used by <c>UnsafeNetworkModule.StatesStorage.Entry</c>.
+                /// </summary>
                 public ulong tick;
 
             }
 
+            /// <summary>
+            /// Configuration values used by this operation.
+            /// </summary>
             public readonly NetworkModuleProperties.StatesStorageProperties properties;
             private readonly MemArrayAuto<Entry> entries;
             private safe_ptr<State> resetState;
@@ -523,6 +753,9 @@ namespace ME.BECS.Network {
             private readonly safe_ptr<State> networkState;
             private readonly safe_ptr<State> connectedWorldState;
 
+            /// <summary>
+            /// Initializes <c>StatesStorage</c> from the supplied network world, connected world, properties.
+            /// </summary>
             public StatesStorage(in World networkWorld, in World connectedWorld, NetworkModuleProperties.StatesStorageProperties properties) {
 
                 this.connectedWorldState = connectedWorld.state;
@@ -535,8 +768,14 @@ namespace ME.BECS.Network {
 
             }
             
+            /// <summary>
+            /// Returns entries.
+            /// </summary>
             public readonly MemArrayAuto<Entry> GetEntries() => this.entries;
 
+            /// <summary>
+            /// Returns min max ticks.
+            /// </summary>
             public readonly void GetMinMaxTicks(out ulong minTick, out ulong maxTick) {
                 minTick = ulong.MaxValue;
                 maxTick = 0UL;
@@ -584,10 +823,16 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Returns reset state.
+            /// </summary>
             public readonly safe_ptr<State> GetResetState() {
                 return this.resetState;
             }
 
+            /// <summary>
+            /// Advances simulation through the requested tick interval.
+            /// </summary>
             public readonly JobHandle Tick(ulong tick, in World world, safe_ptr<Data> data, JobHandle dependsOn) {
 
                 if (tick % this.properties.copyPerTick == 0u) {
@@ -623,6 +868,9 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Releases the resources owned by this states storage instance.
+            /// </summary>
             public void Dispose() {
 
                 for (uint i = 0u; i < this.entries.Length; ++i) {
@@ -644,6 +892,9 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Invalidates states from tick.
+            /// </summary>
             public void InvalidateStatesFromTick(ulong tick) {
 
                 var minTick = ulong.MaxValue;
@@ -667,6 +918,9 @@ namespace ME.BECS.Network {
                 
             }
 
+            /// <summary>
+            /// Returns state for rollback.
+            /// </summary>
             public readonly safe_ptr<State> GetStateForRollback(ulong tickToRollback) {
 
                 safe_ptr<State> nearestState = default;
@@ -697,6 +951,9 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Saves reset state.
+            /// </summary>
             public void SaveResetState() {
                 if (this.resetState.ptr == null) {
                     this.resetState = State.Clone(this.connectedWorldState);
@@ -705,12 +962,18 @@ namespace ME.BECS.Network {
                 }
             }
 
+            /// <summary>
+            /// Releases the stored reset snapshot.
+            /// </summary>
             public void DropResetState() {
 
                 this.Clear();
 
             }
 
+            /// <summary>
+            /// Clears the current states storage contents.
+            /// </summary>
             public void Clear() {
 
                 for (uint i = 0u; i < this.entries.Length; ++i) {
@@ -734,13 +997,28 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Stores and indexes hash table entries.
+        /// </summary>
         public struct HashTableStorage {
 
+            /// <summary>
+            /// Stores a entry record used by <c>UnsafeNetworkModule.HashTableStorage</c>.
+            /// </summary>
             public struct Entry {
 
+                /// <summary>
+                /// Indicates hashes.
+                /// </summary>
                 public MemArray<int> hashes;
+                /// <summary>
+                /// Indicates has hash flags.
+                /// </summary>
                 public MemArray<bool> hasHashFlags;
 
+                /// <summary>
+                /// Releases the resources owned by this entry instance.
+                /// </summary>
                 public void Dispose(safe_ptr<State> state) {
                     this.hashes.Dispose(ref state.ptr->allocator);
                     this.hasHashFlags.Dispose(ref state.ptr->allocator);
@@ -748,19 +1026,30 @@ namespace ME.BECS.Network {
 
             }
             
+            /// <summary>
+            /// Indicates hash table storage properties.
+            /// </summary>
             public readonly NetworkModuleProperties.HashTableStorageProperties hashTableStorageProperties;
+            /// <summary>
+            /// States storage properties used by <c>UnsafeNetworkModule.HashTableStorage</c>.
+            /// </summary>
             public readonly NetworkModuleProperties.StatesStorageProperties statesStorageProperties;
 
             private MemArray<Entry> entries;
             private ulong lastStoredTick;
+            private bool hasStoredTick;
             private uint rover;
             private safe_ptr<State> state;
 
+            /// <summary>
+            /// Initializes <c>HashTableStorage</c> from the supplied network world, hash table storage properties, states storage properties.
+            /// </summary>
             public HashTableStorage(in World networkWorld, in NetworkModuleProperties.HashTableStorageProperties hashTableStorageProperties, in NetworkModuleProperties.StatesStorageProperties statesStorageProperties) {
 
                 this.hashTableStorageProperties = hashTableStorageProperties;
                 this.statesStorageProperties = statesStorageProperties;
                 this.lastStoredTick = 0u;
+                this.hasStoredTick = false;
                 this.rover = 0u;
                 this.state = networkWorld.state;
                 this.entries = new MemArray<Entry>(ref this.state.ptr->allocator, this.hashTableStorageProperties.capacity);
@@ -814,13 +1103,14 @@ namespace ME.BECS.Network {
                 var hash = syncHashPackage.hash;
                 innerHashIndex = this.rover;
 
-                if (this.lastStoredTick == 0u) {
+                if (this.hasStoredTick == false) {
+                    this.hasStoredTick = true;
                     this.lastStoredTick = tickToStore;
                     this.rover = 0u;
                 }
 
                 // Special case - tick to store out of table in the past
-                if (tickToStore < this.lastStoredTick && (this.lastStoredTick - tickToStore) / this.statesStorageProperties.copyPerTick > this.entries.Length) {
+                if (tickToStore < this.lastStoredTick && (this.lastStoredTick - tickToStore) / this.statesStorageProperties.copyPerTick >= this.entries.Length) {
                     // Ignore
                     return true;
                 }
@@ -857,6 +1147,9 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Prepares desync data.
+            /// </summary>
             public void PrepareDesyncData(uint hashTableIndex, out bool[] hasHashFlags, out int[] hashes) {
 
                 var entry = this.entries[this.state, hashTableIndex];
@@ -873,6 +1166,9 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Releases the resources owned by this hash table storage instance.
+            /// </summary>
             public void Dispose() {
                 
                 for (var i = 0; i < this.entries.Length; ++i) {
@@ -884,31 +1180,91 @@ namespace ME.BECS.Network {
             
         }
 
+        /// <summary>
+        /// Stores a data record used by <c>UnsafeNetworkModule</c>.
+        /// </summary>
         public struct Data {
 
+            /// <summary>
+            /// Current timestamp used by <c>UnsafeNetworkModule.Data</c>.
+            /// </summary>
             public double currentTimestamp;
+            /// <summary>
+            /// Previous timestamp used by <c>UnsafeNetworkModule.Data</c>.
+            /// </summary>
             public double previousTimestamp;
+            /// <summary>
+            /// Local player id used to locate the associated entry.
+            /// </summary>
             public uint localPlayerId;
 
+            /// <summary>
+            /// Write buffer used by <c>UnsafeNetworkModule.Data</c>.
+            /// </summary>
             public StreamBufferWriter writeBuffer;
+            /// <summary>
+            /// Tick time in the time units used by the containing API.
+            /// </summary>
             public uint tickTime;
+            /// <summary>
+            /// Input lag used by <c>UnsafeNetworkModule.Data</c>.
+            /// </summary>
             public uint inputLag;
 
+            /// <summary>
+            /// Network world used by <c>UnsafeNetworkModule.Data</c>.
+            /// </summary>
             public World networkWorld;
+            /// <summary>
+            /// World associated with this connection.
+            /// </summary>
             public World connectedWorld;
+            /// <summary>
+            /// Events storage used by <c>UnsafeNetworkModule.Data</c>.
+            /// </summary>
             public EventsStorage eventsStorage;
+            /// <summary>
+            /// States storage used by <c>UnsafeNetworkModule.Data</c>.
+            /// </summary>
             public StatesStorage statesStorage;
+            /// <summary>
+            /// Methods storage used by <c>UnsafeNetworkModule.Data</c>.
+            /// </summary>
             public MethodsStorage methodsStorage;
+            /// <summary>
+            /// Indicates hash table storage.
+            /// </summary>
             public HashTableStorage hashTableStorage;
+            /// <summary>
+            /// Native pointer or typed storage accessor for self.
+            /// </summary>
             public safe_ptr<Data> selfPtr;
+            /// <summary>
+            /// Rollback target tick used by <c>UnsafeNetworkModule.Data</c>.
+            /// </summary>
             public ulong rollbackTargetTick;
 
+            /// <summary>
+            /// Start frame state used by <c>UnsafeNetworkModule.Data</c>.
+            /// </summary>
             public safe_ptr<State> startFrameState;
 
+            /// <summary>
+            /// Removed state hash used by <c>UnsafeNetworkModule.Data</c>.
+            /// </summary>
             public int removedStateHash;
+            /// <summary>
+            /// Removed state tick used by <c>UnsafeNetworkModule.Data</c>.
+            /// </summary>
             public ulong removedStateTick;
+            /// <summary>
+            /// Whether old state was removed behavior or state is selected.
+            /// </summary>
             public bool oldStateWasRemoved;
             
+            /// <summary>
+            /// Initializes <c>Data</c> from the supplied connected world, properties.
+            /// </summary>
             [INLINE(256)]
             public Data(in World connectedWorld, NetworkModuleProperties properties) {
 
@@ -938,11 +1294,17 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Returns target tick.
+            /// </summary>
             [INLINE(256)]
             public ulong GetTargetTick() {
                 return (ulong)Unity.Mathematics.math.ceil(this.currentTimestamp / this.tickTime);
             }
 
+            /// <summary>
+            /// Sets server start time.
+            /// </summary>
             [INLINE(256)]
             public void SetServerStartTime(double startTime, in World world) {
                 this.previousTimestamp = startTime;
@@ -951,6 +1313,9 @@ namespace ME.BECS.Network {
                 Logger.Network.LogInfo($"SetServerStartTime: {startTime} => tick: {this.GetTargetTick()}", true);
             }
 
+            /// <summary>
+            /// Sets server time.
+            /// </summary>
             [INLINE(256)]
             public void SetServerTime(double timeFromStart) {
                 this.previousTimestamp = this.currentTimestamp;
@@ -958,16 +1323,25 @@ namespace ME.BECS.Network {
                 Logger.Network.LogInfo($"SetServerTime: {timeFromStart} => tick: {this.GetTargetTick()}", true);
             }
 
+            /// <summary>
+            /// Saves reset state.
+            /// </summary>
             [INLINE(256)]
             public void SaveResetState() {
                 this.statesStorage.SaveResetState();
             }
 
+            /// <summary>
+            /// Releases the stored reset snapshot.
+            /// </summary>
             [INLINE(256)]
             public void DropResetState() {
                 this.statesStorage.DropResetState();
             }
 
+            /// <summary>
+            /// Tests whether the context is rollback required.
+            /// </summary>
             [INLINE(256)]
             public bool IsRollbackRequired(ulong currentTick) {
 
@@ -982,6 +1356,9 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Rolls state back to to.
+            /// </summary>
             [INLINE(256)]
             public bool RollbackTo(ulong tickToRollback, ref ulong currentTick, ulong targetTick) {
                 
@@ -1015,6 +1392,9 @@ namespace ME.BECS.Network {
 
             }
             
+            /// <summary>
+            /// Restores a saved state and schedules resimulation toward the target tick.
+            /// </summary>
             [INLINE(256)]
             public JobHandle Rollback(ref ulong currentTick, ulong targetTick, JobHandle dependsOn) {
 
@@ -1036,16 +1416,25 @@ namespace ME.BECS.Network {
                 
             }
 
+            /// <summary>
+            /// Tests whether the context is in rollback.
+            /// </summary>
             [INLINE(256)]
             public bool IsInRollback() {
                 return this.IsInRollback(this.connectedWorld.state.ptr->tick);
             }
 
+            /// <summary>
+            /// Tests whether the context is in rollback.
+            /// </summary>
             [INLINE(256)]
             public bool IsInRollback(ulong tick) {
                 return tick < this.rollbackTargetTick;
             }
 
+            /// <summary>
+            /// Advances simulation through the requested tick interval.
+            /// </summary>
             [INLINE(256)]
             public JobHandle Tick(ulong tick, uint deltaTimeMs, in World world, JobHandle dependsOn) {
 
@@ -1056,6 +1445,9 @@ namespace ME.BECS.Network {
 
             }
 
+            /// <summary>
+            /// Releases the resources owned by this data instance.
+            /// </summary>
             [INLINE(256)]
             public void Dispose() {
                 this.writeBuffer.Dispose();
@@ -1070,12 +1462,18 @@ namespace ME.BECS.Network {
             
         }
         
+        /// <summary>
+        /// Configuration values used by this operation.
+        /// </summary>
         public readonly NetworkModuleProperties properties;
         internal readonly safe_ptr<Data> data;
 
         private readonly System.Diagnostics.Stopwatch frameStopwatch;
         internal INetworkTransport networkTransport;
 
+        /// <summary>
+        /// Initializes <c>UnsafeNetworkModule</c> from the supplied connected world, properties.
+        /// </summary>
         public UnsafeNetworkModule(in World connectedWorld, NetworkModuleProperties properties) {
             this = default;
             this.properties = properties;
@@ -1089,18 +1487,33 @@ namespace ME.BECS.Network {
             ME.BECS.Network.Markers.WorldNetworkMarkers.Set(connectedWorld, in this);
         }
         
+        /// <summary>
+        /// Returns transport.
+        /// </summary>
         public INetworkTransport GetTransport() => this.networkTransport;
 
+        /// <summary>
+        /// Sets transport.
+        /// </summary>
         [INLINE(256)]
         public void SetTransport(INetworkTransport transport) {
             this.networkTransport = transport;
             this.networkTransport.OnAwake();
         }
 
+        /// <summary>
+        /// Returns events.
+        /// </summary>
         public ULongDictionaryAuto<SortedNetworkPackageList> GetEvents() => this.data.ptr->eventsStorage.GetEvents();
 
+        /// <summary>
+        /// Returns unsafe data.
+        /// </summary>
         public safe_ptr<Data> GetUnsafeData() => this.data;
         
+        /// <summary>
+        /// Releases the resources owned by this unsafe network module instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
             if (this.networkTransport != null) this.networkTransport.Dispose();
@@ -1109,11 +1522,17 @@ namespace ME.BECS.Network {
             this = default;
         }
 
+        /// <summary>
+        /// Tests whether the context is in rollback.
+        /// </summary>
         [INLINE(256)]
         public bool IsInRollback() {
             return this.data.ptr->IsInRollback();
         }
 
+        /// <summary>
+        /// Returns min max ticks.
+        /// </summary>
         [INLINE(256)]
         public void GetMinMaxTicks(out ulong minTick, out ulong maxTick) {
             this.data.ptr->statesStorage.GetMinMaxTicks(out minTick, out maxTick);
@@ -1129,39 +1548,63 @@ namespace ME.BECS.Network {
             return this.data.ptr->GetTargetTick();
         }
 
+        /// <summary>
+        /// Sets local player ID.
+        /// </summary>
         [INLINE(256)]
         public void SetLocalPlayerId(uint playerId) {
             this.data.ptr->localPlayerId = playerId;
         }
 
+        /// <summary>
+        /// Sets server start time.
+        /// </summary>
         [INLINE(256)]
         public void SetServerStartTime(double startTime, in World world) {
             this.data.ptr->SetServerStartTime(startTime, in world);
         }
 
+        /// <summary>
+        /// Sets server time.
+        /// </summary>
         [INLINE(256)]
         public void SetServerTime(double timeFromStart) {
             this.data.ptr->SetServerTime(timeFromStart);
         }
 
+        /// <summary>
+        /// Saves reset state.
+        /// </summary>
         [INLINE(256)]
         public void SaveResetState() {
             this.data.ptr->SaveResetState();
         }
 
+        /// <summary>
+        /// Releases the stored reset snapshot.
+        /// </summary>
         [INLINE(256)]
         public void DropResetState() {
             this.data.ptr->DropResetState();
         }
 
+        /// <summary>
+        /// Returns reset state.
+        /// </summary>
         [INLINE(256)]
         public safe_ptr<State> GetResetState() {
             return this.data.ptr->statesStorage.GetResetState();
         }
 
+        /// <summary>
+        /// Returns current time.
+        /// </summary>
         [INLINE(256)]
         public double GetCurrentTime() => this.data.ptr->currentTimestamp;
 
+        /// <summary>
+        /// Rewinds tracked state to the specified tick or position.
+        /// </summary>
         public bool RewindTo(ulong targetTick) {
 
             if (targetTick > this.data.ptr->connectedWorld.state.ptr->tick) {
@@ -1178,36 +1621,57 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Registers method.
+        /// </summary>
         [INLINE(256)]
         public uint RegisterMethod(NetworkMethodDelegate method) {
             return this.data.ptr->methodsStorage.Add(method);
         }
 
+        /// <summary>
+        /// Adds event.
+        /// </summary>
         [INLINE(256)]
         public void AddEvent<T>(NetworkMethodDelegate method, in T data) where T : unmanaged, IPackageData {
             AddEvent(this.networkTransport, this.data, this.data.ptr->localPlayerId, this.data.ptr->methodsStorage.GetMethodId(method), in data, 0UL);
         }
 
+        /// <summary>
+        /// Adds event.
+        /// </summary>
         [INLINE(256)]
         public void AddEvent<T>(uint playerId, NetworkMethodDelegate method, in T data) where T : unmanaged, IPackageData {
             AddEvent(this.networkTransport, this.data, playerId, this.data.ptr->methodsStorage.GetMethodId(method), in data, 0UL);
         }
 
+        /// <summary>
+        /// Adds event.
+        /// </summary>
         [INLINE(256)]
         public void AddEvent<T>(uint playerId, NetworkMethodDelegate method, in T data, ulong negativeDeltaTicks) where T : unmanaged, IPackageData {
             AddEvent(this.networkTransport, this.data, playerId, this.data.ptr->methodsStorage.GetMethodId(method), in data, negativeDeltaTicks);
         }
 
+        /// <summary>
+        /// Adds event.
+        /// </summary>
         [INLINE(256)]
         public void AddEvent<T>(uint playerId, ushort methodId, in T data) where T : unmanaged, IPackageData {
             AddEvent(this.networkTransport, this.data, playerId, methodId, in data, 0UL);
         }
 
+        /// <summary>
+        /// Adds event.
+        /// </summary>
         [INLINE(256)]
         public static void AddEvent<T>(INetworkTransport networkTransport, safe_ptr<Data> moduleData, uint playerId, NetworkMethodDelegate method, in T data, ulong negativeDeltaTicks) where T : unmanaged, IPackageData {
             AddEvent(networkTransport, moduleData, playerId, moduleData.ptr->methodsStorage.GetMethodId(method), in data, negativeDeltaTicks);
         }
 
+        /// <summary>
+        /// Adds event.
+        /// </summary>
         [INLINE(256)]
         public static void AddEvent<T>(INetworkTransport networkTransport, safe_ptr<Data> moduleData, uint playerId, ushort methodId, in T data, ulong negativeDeltaTicks) where T : unmanaged, IPackageData {
 
@@ -1249,23 +1713,30 @@ namespace ME.BECS.Network {
                 eventsBehaviour = (EventsBehaviourState)networkTransport.EventsBehaviour;
             }
 
-            if ((eventsBehaviour & EventsBehaviourState.RunLocal) != 0) {
-                // Store locally
-                moduleData.ptr->eventsStorage.Add(package, moduleData.ptr->GetTargetTick());
-            }
+            var consumedByStorage = false;
+            try {
+                if ((eventsBehaviour & EventsBehaviourState.RunLocal) != 0) {
+                    // Add owns the payload on success and disposes rejected duplicates.
+                    var added = moduleData.ptr->eventsStorage.Add(package, moduleData.ptr->GetTargetTick());
+                    consumedByStorage = true;
+                    if (added == false) return;
+                }
 
-            if ((eventsBehaviour & EventsBehaviourState.SendToNetwork) != 0) {
-                // Send to network
-                if (networkTransport != null) {
+                if ((eventsBehaviour & EventsBehaviourState.SendToNetwork) != 0 && networkTransport != null) {
                     moduleData.ptr->writeBuffer.Reset();
                     package.Serialize(ref moduleData.ptr->writeBuffer);
                     var bytes = moduleData.ptr->writeBuffer.ToArray();
                     networkTransport.Send(bytes);
                 }
+            } finally {
+                if (consumedByStorage == false) package.Dispose();
             }
 
         }
 
+        /// <summary>
+        /// Prepares state before the main update phase.
+        /// </summary>
         public void PreUpdate(JobHandle dependsOn, uint dtMs) {
 
             if (this.networkTransport is INetworkTransportPreUpdate networkTransportPreUpdate) {
@@ -1274,6 +1745,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Updates unsafe network module using the current inputs and execution context.
+        /// </summary>
         [INLINE(256)]
         public JobHandle Update(NetworkWorldInitializer initializer, JobHandle dependsOn, ref World world) {
 
@@ -1403,6 +1877,9 @@ namespace ME.BECS.Network {
             }
         }
 
+        /// <summary>
+        /// Counts events in range.
+        /// </summary>
         public uint CountEventsInRange(ulong tickFrom = ulong.MinValue, ulong tickTo = ulong.MaxValue) {
 
             var events = this.GetEvents();
@@ -1417,6 +1894,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Serializes all events.
+        /// </summary>
         public byte[] SerializeAllEvents(ulong tickFrom = ulong.MinValue, ulong tickTo = ulong.MaxValue) {
 
             var cnt = this.CountEventsInRange(tickFrom, tickTo);
@@ -1430,6 +1910,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Serializes all events.
+        /// </summary>
         public void SerializeAllEvents(ref StreamBufferWriter stream, ulong tickFrom = ulong.MinValue, ulong tickTo = ulong.MaxValue) {
 
             var cnt = this.CountEventsInRange(tickFrom, tickTo);
@@ -1448,6 +1931,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Deserializes all events.
+        /// </summary>
         public bool DeserializeAllEvents(ref StreamBufferReader reader, bool updateServerTime = true, bool cleanOld = false) {
 
             uint count = 0u;
@@ -1480,6 +1966,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Deserializes all events.
+        /// </summary>
         public bool DeserializeAllEvents(byte[] bytes, bool updateServerTime = true, bool cleanOld = false) {
             var reader = new StreamBufferReader(bytes);
             return this.DeserializeAllEvents(ref reader, updateServerTime, cleanOld);

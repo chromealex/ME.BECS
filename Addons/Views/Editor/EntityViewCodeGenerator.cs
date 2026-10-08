@@ -10,8 +10,17 @@ using scg = System.Collections.Generic;
 namespace ME.BECS.Editor.Aspects {
 
     // Asset/type discovery and compiled IL supply snapshots; Roslyn emits the tracker.
+    /// <summary>
+    /// Exports entity view registration data for generated code.
+    /// </summary>
     public class EntityViewCodeGenerator : CustomCodeGenerator {
+        /// <summary>
+        /// Source initialization kind used by <c>EntityViewCodeGenerator</c>.
+        /// </summary>
         public override string SourceInitializationKind => this.GetType() == typeof(EntityViewCodeGenerator) ? "views" : base.SourceInitializationKind;
+        /// <summary>
+        /// Whether cache compiled inputs behavior or state is selected.
+        /// </summary>
         public override bool CacheCompiledInputs => this.GetType() == typeof(EntityViewCodeGenerator);
         private Plan collected;
 
@@ -110,14 +119,23 @@ namespace ME.BECS.Editor.Aspects {
             public readonly scg::List<Entry> entries = new scg::List<Entry>();
         }
 
+        /// <summary>
+        /// Adds the assembly references required by this feature's generated code.
+        /// </summary>
         public override void AddSourceGeneratorReferences(scg::List<Type> references) {
             var plan = this.Collect();
             references.AddRange(plan.entries.Select(entry => entry.type));
             references.AddRange(plan.tracked);
         }
 
+        /// <summary>
+        /// Returns retired source files.
+        /// </summary>
         public override scg::IEnumerable<string> GetRetiredSourceFiles() => new[] { "EntityView" };
 
+        /// <summary>
+        /// Adds this feature's registration inputs to the source-generator export.
+        /// </summary>
         public override void AppendSourceGeneratorInputs(StringBuilder manifest) {
             var plan = this.Collect();
             void Append(string kind, int ordinal, string payload) => manifest.Append(kind).Append('\t')

@@ -14,19 +14,37 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     #endif
 
+    /// <summary>
+    /// Defines a sector-shaped spatial region.
+    /// </summary>
     [System.Serializable]
     public struct Sector {
 
+        /// <summary>
+        /// Default settings or value supplied by this type.
+        /// </summary>
         public static Sector Default => new Sector() {
             rangeSqr = (tfloat)(1f),
             sector = (tfloat)(360f),
         };
 
+        /// <summary>
+        /// Squared range used for distance comparisons without a square root.
+        /// </summary>
         public tfloat rangeSqr;
+        /// <summary>
+        /// Minimum range sqr.
+        /// </summary>
         public tfloat minRangeSqr;
+        /// <summary>
+        /// Sector bounds used by the spatial query.
+        /// </summary>
         [UnityEngine.RangeAttribute(0f, 360f)]
         public tfloat sector;
 
+        /// <summary>
+        /// Interpolates between the supplied endpoints using the given interpolation factor.
+        /// </summary>
         [INLINE(256)]
         public static Sector Lerp(in Sector a, in Sector b, tfloat t) {
             var result = new Sector {
@@ -37,6 +55,9 @@ namespace ME.BECS {
             return result;
         }
 
+        /// <summary>
+        /// Tests whether the context is valid.
+        /// </summary>
         [INLINE(256)]
         public readonly bool IsValid() {
             return this.sector > 0 && this.sector < 360;

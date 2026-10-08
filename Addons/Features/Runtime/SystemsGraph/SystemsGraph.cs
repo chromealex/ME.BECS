@@ -4,24 +4,54 @@ using UnityEngine;
 
 namespace ME.BECS.FeaturesGraph {
 
+    /// <summary>
+    /// Defines the graph structure used for systems graph.
+    /// </summary>
     [CreateAssetMenu(menuName = "ME.BECS/Features Graph")]
     public class SystemsGraph : Extensions.GraphProcessor.BaseGraph {
 
+        /// <summary>
+        /// Runtime root system group used by <c>SystemsGraph</c>.
+        /// </summary>
         public SystemGroup runtimeRootSystemGroup;
 
+        /// <summary>
+        /// Defines the graph structure used for graph.
+        /// </summary>
         public class Graph {
 
+            /// <summary>
+            /// Defines a node entry in the associated graph.
+            /// </summary>
             public class Node {
 
+                /// <summary>
+                /// Node processed or represented by this entry.
+                /// </summary>
                 public ME.BECS.Extensions.GraphProcessor.BaseNode node;
+                /// <summary>
+                /// Input used by <c>SystemsGraph.Graph.Node</c>.
+                /// </summary>
                 public System.Collections.Generic.HashSet<Node> input = new System.Collections.Generic.HashSet<Node>();
+                /// <summary>
+                /// Output used by <c>SystemsGraph.Graph.Node</c>.
+                /// </summary>
                 public System.Collections.Generic.HashSet<Node> output = new System.Collections.Generic.HashSet<Node>();
 
             }
 
+            /// <summary>
+            /// Start node used by <c>SystemsGraph.Graph</c>.
+            /// </summary>
             public Node startNode;
+            /// <summary>
+            /// Nodes composing the associated graph.
+            /// </summary>
             public System.Collections.Generic.Dictionary<ME.BECS.Extensions.GraphProcessor.BaseNode, Node> nodes = new System.Collections.Generic.Dictionary<ME.BECS.Extensions.GraphProcessor.BaseNode, Node>();
             
+            /// <summary>
+            /// Initializes <c>Graph</c> from the supplied start node, filter.
+            /// </summary>
             public Graph(ME.BECS.Extensions.GraphProcessor.BaseNode startNode, System.Func<ME.BECS.Extensions.GraphProcessor.BaseNode, bool> filter) {
                 
                 this.startNode = new Node() { node = startNode };
@@ -116,6 +146,9 @@ namespace ME.BECS.FeaturesGraph {
 
         }
         
+        /// <summary>
+        /// Updates sync state forced.
+        /// </summary>
         [ContextMenu("Update Sync State")]
         public void UpdateSyncStateForced() {
 
@@ -246,6 +279,9 @@ namespace ME.BECS.FeaturesGraph {
 
         }
 
+        /// <summary>
+        /// Updates sync state.
+        /// </summary>
         public override void UpdateSyncState() {
             
             if (this.builtInGraph == true) return;
@@ -254,6 +290,9 @@ namespace ME.BECS.FeaturesGraph {
 
         }
 
+        /// <summary>
+        /// Initializes validation.
+        /// </summary>
         public override void InitializeValidation() {
 
             base.InitializeValidation();
@@ -280,6 +319,9 @@ namespace ME.BECS.FeaturesGraph {
 
         }
 
+        /// <summary>
+        /// Invokes awake.
+        /// </summary>
         public SystemGroup DoAwake(ref World world, ushort updateType) {
             
             var rootSystemGroup = SystemGroup.Create(updateType);
@@ -298,6 +340,9 @@ namespace ME.BECS.FeaturesGraph {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is valid start node or other.
+        /// </summary>
         public bool IsValidStartNodeOrOther(ME.BECS.Extensions.GraphProcessor.BaseNode pStartNode, int index) {
             if (pStartNode is not ME.BECS.FeaturesGraph.Nodes.StartNode) return true;
             var k = 0;
@@ -314,6 +359,9 @@ namespace ME.BECS.FeaturesGraph {
             return false;
         }
         
+        /// <summary>
+        /// Returns start node.
+        /// </summary>
         public ME.BECS.Extensions.GraphProcessor.BaseNode GetStartNode(int index) {
             var k = 0;
             for (var i = 0; i < this.nodes.Count; ++i) {
@@ -327,6 +375,9 @@ namespace ME.BECS.FeaturesGraph {
             return null;
         }
 
+        /// <summary>
+        /// Returns end node.
+        /// </summary>
         public ME.BECS.Extensions.GraphProcessor.BaseNode GetEndNode() {
             foreach (var node in this.nodes) {
                 if (node is ME.BECS.FeaturesGraph.Nodes.ExitNode n) {

@@ -2,6 +2,9 @@
 
     using UnityEngine.UIElements;
 
+    /// <summary>
+    /// Draws layer property values in the Unity Inspector.
+    /// </summary>
     [UnityEditor.CustomPropertyDrawer(typeof(ME.BECS.Units.Layer))]
     public class LayerPropertyDrawer : UnityEditor.PropertyDrawer {
 
@@ -9,6 +12,9 @@
 
         private static System.Collections.Generic.List<string> choises;
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(UnityEditor.SerializedProperty property) {
 
             if (choises == null) {

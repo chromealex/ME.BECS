@@ -25,29 +25,59 @@ namespace ME.BECS.Views {
     using System.Runtime.InteropServices;
     using UnityEngine.Pool;
 
+    /// <summary>
+    /// Identifies the Unity hierarchy root associated with a view instance.
+    /// </summary>
     public struct ViewRoot {
 
+        /// <summary>
+        /// Tr used by <c>ViewRoot</c>.
+        /// </summary>
         public UnityEngine.Transform tr;
+        /// <summary>
+        /// Number of entries currently tracked by this value.
+        /// </summary>
         public int Count;
+        /// <summary>
+        /// Index of this entry within its containing storage.
+        /// </summary>
         public int index;
 
     }
     
+    /// <summary>
+    /// Stores per-entity state for entity view provider tag.
+    /// </summary>
     [ComponentGroup(typeof(ViewsComponentGroup))]
     public struct EntityViewProviderTag : IComponent {}
 
+    /// <summary>
+    /// Defines prefab key state and operations.
+    /// </summary>
     [StructLayout(LayoutKind.Explicit, Size = 8)]
     public ref struct PrefabKey {
 
+        /// <summary>
+        /// Registered prefab identifier used to resolve a view source.
+        /// </summary>
         [FieldOffset(0)]
         public uint prefabId;
+        /// <summary>
+        /// Identifier used to distinguish this entry from other entries.
+        /// </summary>
         [FieldOffset(4)]
         public uint uniqueId;
+        /// <summary>
+        /// Key used to identify an entry in the associated lookup.
+        /// </summary>
         [FieldOffset(0)]
         public ulong key;
 
     }
     
+    /// <summary>
+    /// Updates view presentation for entity view provider.
+    /// </summary>
     [BURST]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -66,12 +96,27 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Stores module item for <c>EntityViewProvider</c>.
+        /// </summary>
         public struct ModuleItem<T> where T : IViewModule {
 
+            /// <summary>
+            /// Module used by <c>EntityViewProvider.ModuleItem</c>.
+            /// </summary>
             public readonly T module;
+            /// <summary>
+            /// Change tracker used to decide whether processing is required.
+            /// </summary>
             public GroupChangedTracker tracker;
+            /// <summary>
+            /// Display or lookup name of this entry.
+            /// </summary>
             public string name => ViewsTracker.Tracker.names[this.module.GetType()];
 
+            /// <summary>
+            /// Initializes <c>ModuleItem</c> from the supplied module, tracker.
+            /// </summary>
             public ModuleItem(T module, GroupChangedTracker tracker) {
                 this.module = module;
                 this.tracker = tracker;
@@ -79,21 +124,43 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Defines module method state and operations for <c>EntityViewProvider</c>.
+        /// </summary>
         public struct ModuleMethod<T> where T : IViewModule {
 
+            /// <summary>
+            /// Defines the callback signature for delegate.
+            /// </summary>
             public delegate void Delegate(T module, in ViewData viewData);
+            /// <summary>
+            /// Defines the callback signature for delegate state.
+            /// </summary>
             public delegate void DelegateState<in TState>(T module, in ViewData viewData, TState state) where TState : struct;
             
             private scg::Dictionary<EntityView, scg::List<ModuleItem<T>>> methods;
 
+            /// <summary>
+            /// Initializes module method state from the supplied context.
+            /// </summary>
             public void Initialize() {
                 this.methods = DictionaryPool<EntityView, System.Collections.Generic.List<ModuleItem<T>>>.Get();
             }
 
+            /// <summary>
+            /// Releases the resources owned by this module method instance.
+            /// </summary>
             public void Dispose() {
+                foreach (var list in this.methods.Values) {
+                    foreach (var item in list) item.tracker.Dispose();
+                    ListPool<ModuleItem<T>>.Release(list);
+                }
                 DictionaryPool<EntityView, System.Collections.Generic.List<ModuleItem<T>>>.Release(this.methods);
             }
 
+            /// <summary>
+            /// Registers the supplied instance or type for subsequent lookup.
+            /// </summary>
             [INLINE(256)]
             public void Register(EntityView objInstance, int[] indexes) {
                 foreach (var index in indexes) {
@@ -102,6 +169,9 @@ namespace ME.BECS.Views {
                 }
             }
             
+            /// <summary>
+            /// Registers method.
+            /// </summary>
             [INLINE(256)]
             public void RegisterMethod(EntityView objInstance, T module) {
                 if (this.methods.TryGetValue(objInstance, out var list) == false) {
@@ -111,6 +181,9 @@ namespace ME.BECS.Views {
                 list.Add(new ModuleItem<T>(module, ViewsTracker.CreateTracker(module)));
             }
 
+            /// <summary>
+            /// Marks cached state as requiring recomputation.
+            /// </summary>
             public void Invalidate(EntityView instance, in EntRO ent) {
                 if (this.methods.TryGetValue(instance, out var list) == true) {
                     foreach (var item in list) {
@@ -119,6 +192,9 @@ namespace ME.BECS.Views {
                 }
             }
 
+            /// <summary>
+            /// Unregisters methods.
+            /// </summary>
             [INLINE(256)]
             public void UnregisterMethods(EntityView objInstance) {
                 if (this.methods.TryGetValue(objInstance, out var list) == true) {
@@ -128,6 +204,9 @@ namespace ME.BECS.Views {
                 }
             }
 
+            /// <summary>
+            /// Invokes the callback without the normal change-filter gate.
+            /// </summary>
             [INLINE(256)]
             public void InvokeForced(EntityView objInstance, in ViewData viewData, Delegate onModule) {
                 if (this.methods.TryGetValue(objInstance, out var list) == true) {
@@ -140,6 +219,9 @@ namespace ME.BECS.Views {
                 }
             }
 
+            /// <summary>
+            /// Invokes the registered callback with the supplied context.
+            /// </summary>
             [INLINE(256)]
             public void Invoke(EntityView objInstance, in ViewData viewData, Delegate onModule) {
                 if (this.methods.TryGetValue(objInstance, out var list) == true) {
@@ -155,6 +237,9 @@ namespace ME.BECS.Views {
                 }
             }
 
+            /// <summary>
+            /// Invokes the registered callback with the supplied context.
+            /// </summary>
             [INLINE(256)]
             public void Invoke<TState>(EntityView objInstance, in ViewData viewData, TState state, DelegateState<TState> onModule) where TState : struct {
                 if (this.methods.TryGetValue(objInstance, out var list) == true) {
@@ -170,6 +255,9 @@ namespace ME.BECS.Views {
                 }
             }
 
+            /// <summary>
+            /// Invokes the callback without the normal change-filter gate.
+            /// </summary>
             [INLINE(256)]
             public void InvokeForced<TState>(EntityView objInstance, in ViewData viewData, TState state, DelegateState<TState> onModule) where TState : struct {
                 if (this.methods.TryGetValue(objInstance, out var list) == true) {
@@ -197,7 +285,7 @@ namespace ME.BECS.Views {
         private scg::HashSet<EntityView> tempViews;
         private scg::Dictionary<EntityView, SceneInstanceInfo> pendingEnableViews;
         private scg::List<ViewRoot> roots;
-        private scg::List<HeapReference> heaps;
+        private scg::List<GCHandle> heaps;
         private TransformAccessArray renderingOnSceneTransforms;
         private int batchPerRoot;
         
@@ -205,11 +293,17 @@ namespace ME.BECS.Views {
         private UnityEngine.Transform disabledRoot;
         private scg::HashSet<Ent> parentAwait;
 
+        /// <summary>
+        /// Creates a query over entities in the associated world.
+        /// </summary>
         [INLINE(256)]
         public void Query(ref QueryBuilder builder) {
             builder.With<EntityViewProviderTag>();
         }
 
+        /// <summary>
+        /// Returns local data by entity.
+        /// </summary>
         [INLINE(256)]
         public static Ent GetLocalDataByEntity(safe_ptr<ViewsModuleData> data, in Ent entity) {
             if (data.ptr->renderingOnSceneEntToRenderIndex.TryGetValue(data.ptr->viewsWorld.state.ptr->allocator, entity.id, out var index) == true &&
@@ -220,6 +314,9 @@ namespace ME.BECS.Views {
             return default;
         }
 
+        /// <summary>
+        /// Returns view by entity.
+        /// </summary>
         [INLINE(256)]
         public IView GetViewByEntity(safe_ptr<ViewsModuleData> data, in Ent entity) {
             if (data.ptr->renderingOnSceneEntToRenderIndex.TryGetValue(data.ptr->viewsWorld.state.ptr->allocator, entity.id, out var index) == true &&
@@ -230,6 +327,9 @@ namespace ME.BECS.Views {
             return null;
         }
 
+        /// <summary>
+        /// Initializes entity view provider state from the supplied context.
+        /// </summary>
         [INLINE(256)]
         public void Initialize(uint providerId, World viewsWorld, ViewsModuleProperties properties) {
 
@@ -244,7 +344,7 @@ namespace ME.BECS.Views {
 
             this.batchPerRoot = BATCH_PER_ROOT;
             
-            this.heaps = ListPool<HeapReference>.Get();
+            this.heaps = ListPool<GCHandle>.Get();
             this.prefabIdToPool = DictionaryPool<ulong, scg::Stack<Item>>.Get();
             this.tempViews = HashSetPool<EntityView>.Get();
             this.pendingEnableViews = DictionaryPool<EntityView, SceneInstanceInfo>.Get();
@@ -262,6 +362,9 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Commits the accumulated work to its destination.
+        /// </summary>
         [INLINE(256)]
         public JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn, float dt) {
 
@@ -327,6 +430,19 @@ namespace ME.BECS.Views {
                     }
                 }
                 marker.End();
+            }
+
+            if (data.ptr->properties.useUnityHierarchy == true && this.parentAwait.Count > 0) {
+                var resolved = ListPool<Ent>.Get();
+                foreach (var ent in this.parentAwait) {
+                    if (ent.IsAlive() == false || this.GetViewByEntity(data, in ent) is not EntityView instance) {
+                        resolved.Add(ent);
+                    } else if (ent.Has<ParentComponent>() == false || this.ValidateParent(data, in ent, instance) == true) {
+                        resolved.Add(ent);
+                    }
+                }
+                foreach (var ent in resolved) this.parentAwait.Remove(ent);
+                ListPool<Ent>.Release(resolved);
             }
 
             {
@@ -469,6 +585,9 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Creates or reuses a presentation instance for the requested entity.
+        /// </summary>
         [INLINE(256)]
         public JobHandle Spawn(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
             
@@ -483,6 +602,9 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Removes an active presentation instance and returns it to its provider.
+        /// </summary>
         [INLINE(256)]
         public JobHandle Despawn(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
             
@@ -496,6 +618,9 @@ namespace ME.BECS.Views {
             
         }
         
+        /// <summary>
+        /// Creates or reuses a presentation instance for the requested entity.
+        /// </summary>
         [INLINE(256)]
         public SceneInstanceInfo Spawn(safe_ptr<ViewsModuleData> data, safe_ptr<SourceRegistry.Info> prefabInfo, in Ent ent, in Ent localData, out bool isNew, bool prewarm) {
 
@@ -512,6 +637,7 @@ namespace ME.BECS.Views {
                         this.tempViews.Remove(instance.obj);
                     } else {
                         var root = this.AssignToRoot(worldId);
+                        instance.obj.rootInfo = root;
                         if (instance.obj.transform.parent != root.tr) instance.obj.transform.SetParent(root.tr);
                         instance.obj.gameObject.SetActive(true);
                     }
@@ -533,7 +659,9 @@ namespace ME.BECS.Views {
                         instance.rootInfo = root;
                         objInstance = instance;
                     }
-                    objPtr = System.Runtime.InteropServices.GCHandle.ToIntPtr(new HeapReference<EntityView>(objInstance).handle);
+                    var instanceHandle = new HeapReference<EntityView>(objInstance).handle;
+                    this.heaps.Add(instanceHandle);
+                    objPtr = GCHandle.ToIntPtr(instanceHandle);
 
                 }
 
@@ -574,7 +702,7 @@ namespace ME.BECS.Views {
             if (prefabInfo.ptr->HasUpdateModules == true) this.updateModules.Register(objInstance, objInstance.updateModules);
             if (prefabInfo.ptr->HasUpdateParallelModules == true) this.updateParallelModules.Register(objInstance, objInstance.updateParallelModules);
             if (prefabInfo.ptr->HasInitializeModules == true) this.initializeModules.Register(objInstance, objInstance.initializeModules);
-            if (prefabInfo.ptr->HasDeInitializeModules == true) this.deinitializeModules.Register(objInstance, objInstance.deInitializeModules);
+            if (isNew == true && prefabInfo.ptr->HasDeInitializeModules == true) this.deinitializeModules.Register(objInstance, objInstance.deInitializeModules);
             if (prefabInfo.ptr->HasEnableFromPoolModules == true) this.enableModules.Register(objInstance, objInstance.enableFromPoolModules);
             if (prefabInfo.ptr->HasDisableToPoolModules == true) this.disableModules.Register(objInstance, objInstance.disableToPoolModules);
             
@@ -639,6 +767,9 @@ namespace ME.BECS.Views {
             }
         }
 
+        /// <summary>
+        /// Removes an active presentation instance and returns it to its provider.
+        /// </summary>
         [INLINE(256)]
         public void Despawn(SceneInstanceInfo instanceInfo, bool prewarm) {
             
@@ -663,7 +794,6 @@ namespace ME.BECS.Views {
             this.updateModules.UnregisterMethods(instance);
             this.updateParallelModules.UnregisterMethods(instance);
             this.initializeModules.UnregisterMethods(instance);
-            this.deinitializeModules.UnregisterMethods(instance);
             this.enableModules.UnregisterMethods(instance);
             this.disableModules.UnregisterMethods(instance);
 
@@ -693,6 +823,9 @@ namespace ME.BECS.Views {
             
         }
 
+        /// <summary>
+        /// Applies logic state during the parallel phase of view processing.
+        /// </summary>
         [INLINE(256)]
         public void ApplyStateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData) {
 
@@ -722,6 +855,9 @@ namespace ME.BECS.Views {
             
         }
 
+        /// <summary>
+        /// Applies the current logic state to the presentation instance.
+        /// </summary>
         [INLINE(256)]
         public void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData) {
 
@@ -751,6 +887,9 @@ namespace ME.BECS.Views {
             
         }
 
+        /// <summary>
+        /// Updates entity view provider using the current inputs and execution context.
+        /// </summary>
         [INLINE(256)]
         public void OnUpdate(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData, float dt) {
             
@@ -775,14 +914,13 @@ namespace ME.BECS.Views {
             mainMarker.End();
             #endif
             
-            if (data.ptr->properties.useUnityHierarchy == true && this.parentAwait.Contains(ent) == true) {
-                if (this.ValidateParent(data, in ent, instanceObj) == true) {
-                    this.parentAwait.Remove(ent);
-                }
-            }
+
 
         }
 
+        /// <summary>
+        /// Updates presentation during the parallel phase of view processing.
+        /// </summary>
         [INLINE(256)]
         public void OnUpdateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData, float dt) {
             
@@ -801,19 +939,24 @@ namespace ME.BECS.Views {
                 updateMain.End();
                 #endif
             }
-            if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateParallelModules.InvokeForced(instanceObj, in viewData, dt, static (IViewUpdateParallel module, in ViewData viewData, float dt) => module.OnUpdateParallel(in viewData, dt));
+            if (instanceInfo.prefabInfo.ptr->HasUpdateParallelModules == true) this.updateParallelModules.InvokeForced(instanceObj, in viewData, dt, static (IViewUpdateParallel module, in ViewData viewData, float dt) => module.OnUpdateParallel(in viewData, dt));
             #if ENABLE_PROFILER
             mainMarker.End();
             #endif
             
         }
 
+        /// <summary>
+        /// Releases the resources owned by this entity view provider instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose(safe_ptr<State> state, safe_ptr<ViewsModuleData> data) {
             
             for (uint i = 0u; i < data.ptr->renderingOnScene.Count; ++i) {
                 var instance = data.ptr->renderingOnScene[in state.ptr->allocator, i];
                 var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instance.obj).Target;
+                if (instance.prefabInfo.ptr->typeInfo.HasDisableToPool == true) instanceObj.DoDisableToPool();
+                if (instance.prefabInfo.ptr->HasDisableToPoolModules == true) this.disableModules.InvokeForced(instanceObj, default, static (IViewDisableToPool module, in ViewData _) => module.OnDisableToPool());
                 instanceObj.groupChangedTracker.Dispose();
                 instanceObj.groupChangedTrackerParallel.Dispose();
                 if (instance.prefabInfo.ptr->typeInfo.HasDeInitialize == true) instanceObj.DoDeInitialize();
@@ -837,27 +980,19 @@ namespace ME.BECS.Views {
             }
 
             foreach (var heap in this.heaps) {
-                heap.Dispose();
+                heap.Free();
             }
 
-            //if (this.disabledRoot != null) UnityEngine.GameObject.DestroyImmediate(this.disabledRoot.gameObject);
+            if (this.disabledRoot != null) UnityEngine.GameObject.DestroyImmediate(this.disabledRoot.gameObject);
             foreach (var root in this.roots) {
                 if (root.tr != null) UnityEngine.GameObject.DestroyImmediate(root.tr.gameObject);
             }
             this.prefabIdToPool.Clear();
 
-            {
-                var e = data.ptr->prefabIdToInfo.GetEnumerator(state);
-                while (e.MoveNext() == true) {
-                    var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(e.Current.value.info.ptr->prefabPtr);
-                    handle.Free();
-                }
-            }
-
             if (this.renderingOnSceneTransforms.isCreated == true) this.renderingOnSceneTransforms.Dispose();
             
             if (this.parentAwait != null) HashSetPool<Ent>.Release(this.parentAwait);
-            ListPool<HeapReference>.Release(this.heaps);
+            ListPool<GCHandle>.Release(this.heaps);
             DictionaryPool<ulong, scg::Stack<Item>>.Release(this.prefabIdToPool);
             HashSetPool<EntityView>.Release(this.tempViews);
             DictionaryPool<EntityView, SceneInstanceInfo>.Release(this.pendingEnableViews);
@@ -874,6 +1009,9 @@ namespace ME.BECS.Views {
 
         }
         
+        /// <summary>
+        /// Loads the registered data required by this operation.
+        /// </summary>
         public void Load(safe_ptr<ViewsModuleData> viewsModuleData, ObjectReferenceRegistryData data) {
 
             viewsModuleData.ptr->prefabId = math.max(viewsModuleData.ptr->prefabId, data.GetSourceId());
@@ -886,6 +1024,9 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Registers the supplied instance or type for subsequent lookup.
+        /// </summary>
         public ViewSource Register(safe_ptr<ViewsModuleData> viewsModuleData, EntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false) {
             
             ViewSource viewSource;
@@ -944,6 +1085,9 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Registers the supplied instance or type for subsequent lookup.
+        /// </summary>
         public void Register(safe_ptr<ViewsModuleData> viewsModuleData, ObjectItem prefab, uint prefabId) {
 
             // Register on-demand

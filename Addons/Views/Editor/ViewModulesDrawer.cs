@@ -7,9 +7,15 @@ namespace ME.BECS.Views.Editor {
 
     using BECS.Views;
 
+    /// <summary>
+    /// Draws view modules values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(ViewModules))]
     public class ViewModulesDrawer : PropertyDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             var items = property.FindPropertyRelative(nameof(ViewModules.items));
@@ -23,9 +29,15 @@ namespace ME.BECS.Views.Editor {
 
     }
 
+    /// <summary>
+    /// Draws view modules module values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(ViewModules.Module))]
     public class ViewModulesModuleDrawer : PropertyDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             var module = property.FindPropertyRelative(nameof(ViewModules.Module.module));

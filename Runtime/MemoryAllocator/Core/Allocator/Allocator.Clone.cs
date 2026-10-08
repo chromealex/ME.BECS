@@ -8,8 +8,14 @@ namespace ME.BECS {
     using static Cuts;
     using Unity.Collections.LowLevel.Unsafe;
 
+    /// <summary>
+    /// Allocates relocatable native blocks addressed by zone and offset.
+    /// </summary>
     public unsafe partial struct MemoryAllocator {
         
+        /// <summary>
+        /// Copies the supplied source state into this memory allocator instance.
+        /// </summary>
         [INLINE(256)]
         public void CopyFrom(in MemoryAllocator other) {
             var allocator = this.allocatorLabel;
@@ -36,6 +42,9 @@ namespace ME.BECS {
             ++this.version;
         }
 
+        /// <summary>
+        /// Copies from prepare.
+        /// </summary>
         [INLINE(256)]
         public void CopyFromPrepare(in MemoryAllocator other) {
             var allocator = this.allocatorLabel;
@@ -60,6 +69,9 @@ namespace ME.BECS {
             ++this.version;
         }
 
+        /// <summary>
+        /// Copies from complete.
+        /// </summary>
         [INLINE(256)]
         public void CopyFromComplete(in MemoryAllocator other, int index) {
             var zone = other.zones[index];

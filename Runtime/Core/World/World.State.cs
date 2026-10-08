@@ -14,6 +14,9 @@ namespace ME.BECS {
     using Jobs;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Stores the native simulation state used by a world and its snapshots.
+    /// </summary>
     [Unity.Collections.GenerateTestsForBurstCompatibility]
     [BURST]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
@@ -24,6 +27,9 @@ namespace ME.BECS {
     [StructLayout(LayoutKind.Sequential, Pack = 8)]
     public unsafe partial struct State {
 
+        /// <summary>
+        /// World state used by <c>State</c>.
+        /// </summary>
         public WorldState WorldState {
             get {
                 if ((this.state & (1 << 0)) != 0) return WorldState.Initialized;
@@ -38,6 +44,9 @@ namespace ME.BECS {
                 if (value != default) this.state = (byte)(this.state | (1 << ((int)value - 1)));
             }
         }
+        /// <summary>
+        /// Selected execution or presentation mode.
+        /// </summary>
         public WorldMode Mode {
             get {
                 if ((this.state & (1 << 5)) != 0) return WorldMode.Visual;
@@ -50,10 +59,19 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.tick != 0UL;
 
+        /// <summary>
+        /// Indicates hash.
+        /// </summary>
         public int Hash => Utils.Hash(this.entities.Hash, this.components.Hash, this.random.Hash, this.tick);
 
+        /// <summary>
+        /// Creates <c>safe_ptr&lt;State&gt;</c> using the supplied creation arguments.
+        /// </summary>
         [INLINE(256)]
         public static safe_ptr<State> Create(byte[] bytes) {
             State st = default;
@@ -62,6 +80,9 @@ namespace ME.BECS {
             return _make(state);
         }
 
+        /// <summary>
+        /// Creates default.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static safe_ptr<State> CreateDefault(AllocatorProperties allocatorProperties) {
             var state = new State() {
@@ -70,6 +91,9 @@ namespace ME.BECS {
             return _makeDefault(in state);
         }
 
+        /// <summary>
+        /// Creates a copy of the supplied state using the requested allocation context.
+        /// </summary>
         [INLINE(256)]
         public static safe_ptr<State> Clone(safe_ptr<State> srcState) {
             var state = _make(new State());
@@ -77,6 +101,9 @@ namespace ME.BECS {
             return state;
         }
 
+        /// <summary>
+        /// Prepares storage and dependencies for copying state.
+        /// </summary>
         [INLINE(256)]
         public static safe_ptr<State> ClonePrepare(safe_ptr<State> srcState) {
             var state = _make(new State());
@@ -84,11 +111,17 @@ namespace ME.BECS {
             return state;
         }
 
+        /// <summary>
+        /// Completes the state-copy operation and its outstanding dependencies.
+        /// </summary>
         [INLINE(256)]
         public static void CloneComplete(safe_ptr<State> srcState, safe_ptr<State> dstState, int index) {
             dstState.ptr->CopyFromComplete(in *srcState.ptr, index);
         }
 
+        /// <summary>
+        /// Initializes state state from the supplied context.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public State Initialize(safe_ptr<State> statePtr, in StateProperties stateProperties) {
             
@@ -147,6 +180,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Sets world state.
+        /// </summary>
         [INLINE(256)]
         public static Unity.Jobs.JobHandle SetWorldState(in World world, WorldState worldState, ushort updateType, uint deltaTimeMs, Unity.Jobs.JobHandle dependsOn) {
             dependsOn = new SetWorldStateJob() {
@@ -158,6 +194,9 @@ namespace ME.BECS {
             return dependsOn;
         }
 
+        /// <summary>
+        /// Advances to the next simulation tick.
+        /// </summary>
         [INLINE(256)]
         public static Unity.Jobs.JobHandle NextTick(safe_ptr<State> state, Unity.Jobs.JobHandle dependsOn) {
             dependsOn = new NextTickJob() {
@@ -166,6 +205,9 @@ namespace ME.BECS {
             return dependsOn;
         }
 
+        /// <summary>
+        /// Updates cached native access for the requested Burst execution mode.
+        /// </summary>
         [INLINE(256)]
         public static Unity.Jobs.JobHandle BurstMode(safe_ptr<State> state, bool mode, Unity.Jobs.JobHandle dependsOn) {
             #if USE_CACHE_PTR
@@ -177,6 +219,9 @@ namespace ME.BECS {
             return dependsOn;
         }
 
+        /// <summary>
+        /// Copies the supplied source state into this state instance.
+        /// </summary>
         [INLINE(256)]
         public void CopyFrom(in State other) {
 
@@ -196,6 +241,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Copies from prepare.
+        /// </summary>
         [INLINE(256)]
         public void CopyFromPrepare(in State other) {
 
@@ -215,6 +263,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Copies from complete.
+        /// </summary>
         [INLINE(256)]
         public void CopyFromComplete(in State other, int index) {
 
@@ -222,6 +273,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this state instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
 

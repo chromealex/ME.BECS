@@ -22,8 +22,14 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Transforms;
     using static Cuts;
 
+    /// <summary>
+    /// Provides partial-update operations for fog-of-war maps.
+    /// </summary>
     public class FogOfWarUtilsPartial {
 
+        /// <summary>
+        /// Sets visible range partial0.
+        /// </summary>
         [INLINE(256)]
         public static void SetVisibleRangePartial0(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int minRadius, int radius, tfloat height, in FowMathSector sector) {
             
@@ -117,6 +123,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Sets visible range partial1.
+        /// </summary>
         [INLINE(256)]
         public static void SetVisibleRangePartial1(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int minRadius, int radius, tfloat height, in FowMathSector sector) {
             
@@ -210,6 +219,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Sets visible range partial2.
+        /// </summary>
         [INLINE(256)]
         public static void SetVisibleRangePartial2(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int minRadius, int radius, tfloat height, in FowMathSector sector) {
             
@@ -303,6 +315,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Sets visible range partial3.
+        /// </summary>
         [INLINE(256)]
         public static void SetVisibleRangePartial3(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int minRadius, int radius, tfloat height, in FowMathSector sector) {
             

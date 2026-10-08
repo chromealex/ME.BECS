@@ -10,22 +10,46 @@ namespace ME.BECS {
     using static Cuts;
     using Unity.Collections;
 
+    /// <summary>
+    /// Stores pool type info for the associated runtime API.
+    /// </summary>
     public struct PoolTypeInfo<T> where T : unmanaged {
 
+        /// <summary>
+        /// Stored value used by this instance.
+        /// </summary>
         public static readonly Unity.Burst.SharedStatic<uint> value = Unity.Burst.SharedStatic<uint>.GetOrCreate<PoolTypeInfo<T>>();
+        /// <summary>
+        /// Type id used to locate the associated entry.
+        /// </summary>
         public static ref uint typeId => ref value.Data;
 
     }
 
+    /// <summary>
+    /// Stores pool type info for the associated runtime API.
+    /// </summary>
     public struct PoolTypeInfo {
 
+        /// <summary>
+        /// Counter storage accessed by Burst-compiled code.
+        /// </summary>
         public static readonly Unity.Burst.SharedStatic<uint> counterBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<PoolTypeInfo>();
+        /// <summary>
+        /// Counter tracking the associated quantity.
+        /// </summary>
         public static ref uint counter => ref counterBurst.Data;
 
     }
 
+    /// <summary>
+    /// Defines pools lock state and operations.
+    /// </summary>
     public struct PoolsLock {
 
+        /// <summary>
+        /// Index of the synchronization lock used for this entry.
+        /// </summary>
         public static readonly Unity.Burst.SharedStatic<LockSpinner> lockIndex = Unity.Burst.SharedStatic<LockSpinner>.GetOrCreate<PoolsLock>();
 
     }

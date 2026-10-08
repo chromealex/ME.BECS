@@ -7,13 +7,22 @@ namespace ME.BECS.Commands {
     using Pathfinding;
     using Units;
 
+    /// <summary>
+    /// Coordinates command move attack during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public partial struct CommandMoveAttackSystem : IUpdate {
 
+        /// <summary>
+        /// Executes clean up work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct CleanUpJob : IJobForAspects<UnitAspect> {
 
+            /// <summary>
+            /// Processes clean up using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit) {
 
                 if (unit.readUnitCommandGroup.IsAlive() == false || unit.readUnitCommandGroup.Has<CommandMoveAttack>() == false) {
@@ -25,11 +34,20 @@ namespace ME.BECS.Commands {
 
         }
 
+        /// <summary>
+        /// Executes command move attack system work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct Job : IJobForAspects<UnitCommandGroupAspect> {
 
+            /// <summary>
+            /// Graph-building system used by this operation.
+            /// </summary>
             public BuildGraphSystem buildGraphSystem;
             
+            /// <summary>
+            /// Processes the job inputs for <c>CommandMoveAttackSystem</c>.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitCommandGroupAspect commandGroup) {
 
                 var move = commandGroup.ent.Read<CommandMoveAttack>();
@@ -50,9 +68,15 @@ namespace ME.BECS.Commands {
 
         }
 
+        /// <summary>
+        /// Executes stop to attack work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct StopToAttackJob : IJobForAspects<UnitCommandGroupAspect> {
 
+            /// <summary>
+            /// Processes stop to attack using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitCommandGroupAspect commandGroup) {
 
                 var isDirty = false;
@@ -108,6 +132,9 @@ namespace ME.BECS.Commands {
 
         }
 
+        /// <summary>
+        /// Updates command move attack system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var buildGraphSystem = context.world.GetSystem<BuildGraphSystem>();

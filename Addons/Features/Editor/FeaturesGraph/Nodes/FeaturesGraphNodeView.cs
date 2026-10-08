@@ -3,11 +3,17 @@ using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor.FeaturesGraph.Nodes {
     
+    /// <summary>
+    /// Defines a features graph node view entry in the associated graph.
+    /// </summary>
     [ME.BECS.Extensions.GraphProcessor.NodeCustomEditor(typeof(ME.BECS.FeaturesGraph.Nodes.FeaturesGraphNode))]
     public class FeaturesGraphNodeView : ME.BECS.Extensions.GraphProcessor.BaseNodeView {
 
         private UnityEngine.UIElements.VisualElement container;
 
+        /// <summary>
+        /// Updates sync.
+        /// </summary>
         protected override void UpdateSync(UnityEngine.UIElements.VisualElement container) {
             
             base.UpdateSync(container);
@@ -61,6 +67,9 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             
         }
 
+        /// <summary>
+        /// Redraws inspector.
+        /// </summary>
         public override void RedrawInspector(bool fromInspector = false) {
             
             this.container.Clear();
@@ -70,6 +79,9 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             
         }
 
+        /// <summary>
+        /// Draws default inspector.
+        /// </summary>
         protected override void DrawDefaultInspector(bool fromInspector = false) {
 
             if (fromInspector == false) {
@@ -135,6 +147,9 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             
         }
 
+        /// <summary>
+        /// Draws the node's editor controls.
+        /// </summary>
         protected virtual void Draw() {
 
             var types = new System.Collections.Generic.HashSet<System.Type>();

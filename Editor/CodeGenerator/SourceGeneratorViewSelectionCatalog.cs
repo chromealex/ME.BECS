@@ -4,7 +4,13 @@ namespace ME.BECS.Editor {
     using System.Reflection;
 
     // Diagnostics read the compiler owner, not a hard-coded aggregate assembly.
+    /// <summary>
+    /// Provides view selection catalog for BECS source-generator publication.
+    /// </summary>
     public static class SourceGeneratorViewSelectionCatalog {
+        /// <summary>
+        /// Returns assembly.
+        /// </summary>
         public static Assembly GetAssembly(bool editor) {
             var profile = editor ? "editor" : "runtime";
             var root = "ME.BECS.SourceGenerated.ViewSelectionProfile_" + (editor ? "Editor" : "Runtime");

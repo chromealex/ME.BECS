@@ -1,5 +1,8 @@
 ﻿namespace ME.BECS.Units.Editor {
 
+    /// <summary>
+    /// Provides helper operations for layer alias.
+    /// </summary>
     public static class LayerAliasUtils {
         
         private static System.Collections.Generic.Dictionary<uint, string> layerAliasMap;
@@ -8,6 +11,9 @@
         private static ILayerAliasProvider customLayerAliasProvider;
         private static System.Text.StringBuilder sb;
 
+        /// <summary>
+        /// Formats a unit layer mask using the configured layer aliases.
+        /// </summary>
         public static string LayerMaskToString(LayerMask mask) {
             sb ??= new System.Text.StringBuilder();
             sb.Clear();
@@ -22,6 +28,9 @@
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Parses configured unit layer aliases into a layer mask.
+        /// </summary>
         public static LayerMask StringToLayerMask(string value) {
             var layers = value.Split(',', System.StringSplitOptions.RemoveEmptyEntries);
             var attackLayerMask = new ME.BECS.Units.LayerMask();
@@ -34,25 +43,40 @@
             return attackLayerMask;
         }
         
+        /// <summary>
+        /// Returns alias of.
+        /// </summary>
         public static string GetAliasOf(Layer layer) {
             return layerAliasMap[layer.value];
         }
 
+        /// <summary>
+        /// Returns alias of.
+        /// </summary>
         public static string GetAliasOf(uint layer) {
             Cache();
             return layerAliasMap[layer];
         }
 
+        /// <summary>
+        /// Returns layer by alias.
+        /// </summary>
         public static Layer GetLayerByAlias(string alias) {
             Cache();
             return new Layer {value = aliasLayerMap[alias]};
         }
 
+        /// <summary>
+        /// Returns aliases.
+        /// </summary>
         public static System.Collections.Generic.List<string> GetAliases() {
             Cache();
             return aliases;
         }
 
+        /// <summary>
+        /// Returns index of.
+        /// </summary>
         public static int GetIndexOf(uint layer) {
             Cache();
             return aliases.IndexOf(GetAliasOf(layer));
@@ -89,16 +113,28 @@
 
     }
 
+    /// <summary>
+    /// Defines the operations required by layer alias provider.
+    /// </summary>
     public interface ILayerAliasProvider {
 
+        /// <summary>
+        /// Returns custom aliases.
+        /// </summary>
         System.Collections.Generic.Dictionary<uint, string> GetCustomAliases();
         
     }
 
+    /// <summary>
+    /// Defines default layer alias provider state and operations.
+    /// </summary>
     public class DefaultLayerAliasProvider : ILayerAliasProvider {
 
         private readonly System.Collections.Generic.Dictionary<uint, string> aliases = new ();
         
+        /// <summary>
+        /// Returns custom aliases.
+        /// </summary>
         public System.Collections.Generic.Dictionary<uint, string> GetCustomAliases() {
             return this.aliases;
         }

@@ -15,22 +15,40 @@ namespace ME.BECS.FogOfWar {
     using Unity.Collections;
     using static Cuts;
 
+    /// <summary>
+    /// Coordinates create texture during the ECS system lifecycle.
+    /// </summary>
     public partial struct CreateTextureSystem : IAwake, IDestroy {
 
+        /// <summary>
+        /// Render view used by <c>CreateTextureSystem</c>.
+        /// </summary>
         public View renderView;
         
         private ClassPtr<UnityEngine.Texture2D> texture;
         private Ent camera;
         private Unity.Collections.NativeArray<byte> textureBuffer;
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.texture.IsValid;
 
+        /// <summary>
+        /// Sets camera.
+        /// </summary>
         public void SetCamera(in ME.BECS.Views.CameraAspect camera) {
             this.camera = camera.ent;
         }
         
+        /// <summary>
+        /// Returns camera.
+        /// </summary>
         public ME.BECS.Views.CameraAspect GetCamera() => this.camera.GetAspect<ME.BECS.Views.CameraAspect>();
         
+        /// <summary>
+        /// Initializes create texture system state from the supplied context.
+        /// </summary>
         [WithoutBurst]
         public void OnAwake(ref SystemContext context) {
 
@@ -62,10 +80,19 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Returns buffer.
+        /// </summary>
         public Unity.Collections.NativeArray<byte> GetBuffer() => this.textureBuffer;
 
+        /// <summary>
+        /// Returns texture.
+        /// </summary>
         public UnityEngine.Texture2D GetTexture() => this.texture.Value;
 
+        /// <summary>
+        /// Releases create texture system state at the end of its owning lifecycle.
+        /// </summary>
         [WithoutBurst]
         public void OnDestroy(ref SystemContext context) {
             CollectionHelper.DisposeNativeArray(this.textureBuffer, Constants.ALLOCATOR_PERSISTENT);

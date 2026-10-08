@@ -10,11 +10,17 @@ namespace ME.BECS.Network.Editor {
     using ME.BECS.Editor;
     
     // Unity discovery only. Signatures and executable registration belong to Roslyn.
+    /// <summary>
+    /// Exports network registration data for generated code.
+    /// </summary>
     public class NetworkCodeGenerator : CustomCodeGenerator {
         private MethodInfo[] selected;
 
         // The concrete built-in feeder is always discovered. Derived extensions
         // reuse its global plan; legacy C# overrides are rejected before export.
+        /// <summary>
+        /// Source registration kind used by <c>NetworkCodeGenerator</c>.
+        /// </summary>
         public override string SourceRegistrationKind => this.GetType() == typeof(NetworkCodeGenerator) ? "network-methods" : base.SourceRegistrationKind;
 
         private MethodInfo[] Collect() => this.selected ??= UnityEditor.TypeCache.GetMethodsWithAttribute<NetworkMethodAttribute>()
@@ -25,11 +31,17 @@ namespace ME.BECS.Network.Editor {
             .OrderBy(method => method.Name, StringComparer.Ordinal)
             .ThenBy(method => method.DeclaringType.AssemblyQualifiedName, StringComparer.Ordinal).ToArray();
 
+        /// <summary>
+        /// Adds the assembly references required by this feature's generated code.
+        /// </summary>
         public override void AddSourceGeneratorReferences(System.Collections.Generic.List<Type> references) {
             references.Add(typeof(UnsafeNetworkModule));
             references.AddRange(this.Collect().Select(method => method.DeclaringType).Distinct());
         }
 
+        /// <summary>
+        /// Adds this feature's registration inputs to the source-generator export.
+        /// </summary>
         public override void AppendSourceGeneratorInputs(StringBuilder manifest) {
             if (this.SourceRegistrationKind != "network-methods") return;
             var methods = this.Collect();

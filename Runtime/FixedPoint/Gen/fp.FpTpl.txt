@@ -7,25 +7,52 @@ namespace ME.BECS {
     #endif
     using Unity.Mathematics;
 
+    /// <summary>
+    /// Stores a fixed-point value using a scaled integer representation.
+    /// </summary>
     [System.Serializable]
     public partial struct {{name}} : System.IEquatable<{{name}}> {
 
+        /// <summary>
+        /// Number of raw integer units representing one whole unit.
+        /// </summary>
         public const {{type}} PRECISION = {{precision}}; // {{comment}}
+        /// <summary>
+        /// Scaled square-root factor derived from the fixed-point precision.
+        /// </summary>
         public const {{type}} PRECISION_SQRT = {{precision_sqrt}};
         
+        /// <summary>
+        /// Largest representable value.
+        /// </summary>
         public static readonly {{name}} maxValue = new {{name}}({{max}});
+        /// <summary>
+        /// Smallest representable value.
+        /// </summary>
         public static readonly {{name}} minValue = new {{name}}({{min}});
+        /// <summary>
+        /// Value representing zero.
+        /// </summary>
         public static readonly {{name}} zero = new {{name}}(0);
+        /// <summary>
+        /// Value representing one whole unit.
+        /// </summary>
         public static readonly {{name}} one{{one_name}} = new {{name}}(PRECISION);
 
         [UnityEngine.SerializeField]
         internal {{type}} value;
 
+        /// <summary>
+        /// Initializes the value from an already scaled raw integer.
+        /// </summary>
         [INLINE(256)]
         public {{name}}({{type}} rawValue) => this.value = rawValue;
 
         {{CUSTOM_METHODS}}
 
+        /// <summary>
+        /// Scales a floating-point value and converts it to the underlying integer representation.
+        /// </summary>
         [INLINE(256)]
         public static {{name}} FromFloat(float value) {
             var ms = new {{name}} {
@@ -34,19 +61,31 @@ namespace ME.BECS {
             return ms;
         }
         
+        /// <summary>
+        /// Converts a whole-unit integer to its scaled fixed-point representation.
+        /// </summary>
         [INLINE(256)]
         public static explicit operator {{name}}({{type}} value) => new {{name}}(value * PRECISION);
         
+        /// <summary>
+        /// Multiplies the supplied values using the fixed-point representation.
+        /// </summary>
         [INLINE(256)]
         public static {{name}} operator *(float value1, {{name}} value2) {
             return new {{name}}(({{type}})(value1 * value2.value));
         }
 
+        /// <summary>
+        /// Multiplies the supplied values using the fixed-point representation.
+        /// </summary>
         [INLINE(256)]
         public static {{name}} operator *({{name}} value1, float value2) {
             return new {{name}}(({{type}})(value1.value * value2));
         }
 
+        /// <summary>
+        /// Adds the values, returning the maximum sentinel if either input is already at that sentinel.
+        /// </summary>
         [INLINE(256)]
         public static {{name}} operator +({{name}} value1, {{name}} value2) {
             if (value1 >= maxValue || value2 >= maxValue) {
@@ -56,6 +95,9 @@ namespace ME.BECS {
             return value1;
         }
         
+        /// <summary>
+        /// Subtracts the second value, returning the minimum value when it exceeds the first.
+        /// </summary>
         [INLINE(256)]
         public static {{name}} operator -({{name}} value1, {{name}} value2) {
             if (value2.value > value1.value) {
@@ -66,11 +108,17 @@ namespace ME.BECS {
             return value1;
         }
 
+        /// <summary>
+        /// Multiplies the supplied values using the fixed-point representation.
+        /// </summary>
         [INLINE(256)]
         public static {{name}} operator *({{name}} value1, {{name}} value2) {
             return new {{name}}(({{type}})(({{type_long}})value1.value * value2.value / PRECISION));
         }
 
+        /// <summary>
+        /// Divides the raw integers and rescales the quotient; integer division discards the remainder.
+        /// </summary>
         [INLINE(256)]
         public static {{name}} operator /({{name}} value1, {{name}} value2) {
             value1.value /= value2.value;
@@ -78,72 +126,114 @@ namespace ME.BECS {
             return value1;
         }
 
+        /// <summary>
+        /// Tests whether the first raw value is less than the second.
+        /// </summary>
         [INLINE(256)]
         public static bool operator <({{name}} value1, {{name}} value2) {
             return value1.value < value2.value;
         }
 
+        /// <summary>
+        /// Tests whether the first raw value is greater than the second.
+        /// </summary>
         [INLINE(256)]
         public static bool operator >({{name}} value1, {{name}} value2) {
             return value1.value > value2.value;
         }
 
+        /// <summary>
+        /// Tests equality of the represented values.
+        /// </summary>
         [INLINE(256)]
         public static bool operator ==({{name}} value1, {{name}} value2) {
             return value1.value == value2.value;
         }
 
+        /// <summary>
+        /// Tests inequality of the represented values.
+        /// </summary>
         [INLINE(256)]
         public static bool operator !=({{name}} value1, {{name}} value2) {
             return value1.value != value2.value;
         }
 
+        /// <summary>
+        /// Tests whether the first raw value is less than or equal to the second.
+        /// </summary>
         [INLINE(256)]
         public static bool operator <=({{name}} value1, {{name}} value2) {
             return value1.value <= value2.value;
         }
 
+        /// <summary>
+        /// Tests whether the first raw value is greater than or equal to the second.
+        /// </summary>
         [INLINE(256)]
         public static bool operator >=({{name}} value1, {{name}} value2) {
             return value1.value >= value2.value;
         }
         
+        /// <summary>
+        /// Compares the underlying raw values for ordering.
+        /// </summary>
         [INLINE(256)]
         public readonly int CompareTo({{name}} other) {
             return this.value.CompareTo(other.value);
         }
 
+        /// <summary>
+        /// Returns the value in whole units as a floating-point number.
+        /// </summary>
         [INLINE(256)]
         public readonly float ToFloat() {
             return this.value / (float)PRECISION;
         }
 
+        /// <summary>
+        /// Returns the integer whole-unit portion, discarding the fractional remainder.
+        /// </summary>
         [INLINE(256)]
         public readonly {{type}} ToValue() {
             return this.value / PRECISION;
         }
 
+        /// <summary>
+        /// Formats the whole-unit floating-point representation using invariant culture.
+        /// </summary>
         [INLINE(256)]
         public override readonly string ToString() {
             return (this.value / (float)PRECISION).ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
 
+        /// <summary>
+        /// Parses a floating-point string using the current culture and converts it to fixed point.
+        /// </summary>
         [INLINE(256)]
         public static {{name}} Parse(string s) {
             var val = float.Parse(s);
             return {{name}}.FromFloat(val);
         }
 
+        /// <summary>
+        /// Tests whether the other value has the same type and raw representation.
+        /// </summary>
         [INLINE(256)]
         public readonly bool Equals({{name}} other) {
             return this.value == other.value;
         }
 
+        /// <summary>
+        /// Tests whether the other value has the same type and raw representation.
+        /// </summary>
         [INLINE(256)]
         public override readonly bool Equals(object obj) {
             return obj is {{name}} other && this.Equals(other);
         }
 
+        /// <summary>
+        /// Returns a hash of the raw integer representation.
+        /// </summary>
         [INLINE(256)]
         public override readonly int GetHashCode() {
             return this.value.GetHashCode();

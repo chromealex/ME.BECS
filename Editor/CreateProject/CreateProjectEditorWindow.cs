@@ -8,22 +8,46 @@ namespace ME.BECS.Editor {
     
     using CreateProject;
 
+    /// <summary>
+    /// Provides lifecycle integration for the create project default feature.
+    /// </summary>
     public abstract class CreateProjectDefaultModule {
 
+        /// <summary>
+        /// Selected execution or presentation mode.
+        /// </summary>
         public abstract ModeSupport mode { get; }
 
+        /// <summary>
+        /// Creates module.
+        /// </summary>
         public abstract string CreateModule(string projectPath, string projectName);
 
     }
 
+    /// <summary>
+    /// Defines the supported mode support values.
+    /// </summary>
     public enum ModeSupport {
+        /// <summary>
+        /// Single player option for <c>ModeSupport</c>.
+        /// </summary>
         SinglePlayer = 1 << 0,
+        /// <summary>
+        /// Multiplayer option for <c>ModeSupport</c>.
+        /// </summary>
         Multiplayer  = 1 << 1,
     }
 
+    /// <summary>
+    /// Provides the Unity Editor window for create project editor.
+    /// </summary>
     public class CreateProjectEditorWindow : EditorWindow {
 
         private StyleSheet styleSheet;
+        /// <summary>
+        /// Path selected or processed by this operation.
+        /// </summary>
         public string path;
         private string projectName;
         private int genreIndex = -1;
@@ -34,6 +58,9 @@ namespace ME.BECS.Editor {
         private TextField projectNameField;
         private ListView optionsList;
 
+        /// <summary>
+        /// Opens or focuses the associated editor window.
+        /// </summary>
         public static void ShowWindow(string pathRoot) {
             var win = WorldEntityEditorWindow.CreateInstance<CreateProjectEditorWindow>();
             win.titleContent = new GUIContent("New Project", EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/icon-quickstart.png"));
@@ -49,6 +76,9 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Builds the editor window's UI Toolkit hierarchy.
+        /// </summary>
         public void CreateGUI() {
 
             this.LoadStyle();

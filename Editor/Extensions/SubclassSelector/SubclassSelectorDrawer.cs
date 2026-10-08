@@ -8,11 +8,17 @@ using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor.Extensions.SubclassSelector {
 
+    /// <summary>
+    /// Presents find graph assets window state through the associated view.
+    /// </summary>
     public class FindGraphAssetsWindow : ScriptableObject, UnityEditor.Experimental.GraphView.ISearchWindowProvider {
 
         private string[] guids;
         private System.Action<Object> callback;
         
+        /// <summary>
+        /// Initializes find graph assets window state from the supplied context.
+        /// </summary>
         public void Initialize(System.Type baseType, System.Type additionalType, System.Action<Object> callback) {
 
             this.callback = callback;
@@ -20,6 +26,9 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
             
         }
         
+        /// <summary>
+        /// Creates search tree.
+        /// </summary>
         public System.Collections.Generic.List<UnityEditor.Experimental.GraphView.SearchTreeEntry> CreateSearchTree(UnityEditor.Experimental.GraphView.SearchWindowContext context) {
             var list = new System.Collections.Generic.List<UnityEditor.Experimental.GraphView.SearchTreeEntry>();
             list.Add(new UnityEditor.Experimental.GraphView.SearchTreeGroupEntry(new GUIContent("Graphs")));
@@ -36,6 +45,9 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
             return list;
         }
 
+        /// <summary>
+        /// Handles the select entry callback.
+        /// </summary>
         public bool OnSelectEntry(UnityEditor.Experimental.GraphView.SearchTreeEntry searchTreeEntry, UnityEditor.Experimental.GraphView.SearchWindowContext context) {
             this.callback.Invoke((Object)searchTreeEntry.userData);
             return true;
@@ -43,22 +55,43 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
 
     }
     
+    /// <summary>
+    /// Draws subclass selector values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute))]
     public class SubclassSelectorDrawer : PropertyDrawer {
 
+        /// <summary>
+        /// On open used by <c>SubclassSelectorDrawer</c>.
+        /// </summary>
         public static System.Action<Object> onOpen;
 
         class U<T> where T : unmanaged { }
+        /// <summary>
+        /// Tests whether the context is unmanaged.
+        /// </summary>
         public static bool IsUnmanaged(System.Type t) {
             try { typeof(U<>).MakeGenericType(t); return true; }
             catch (System.Exception){ return false; }
         }
         
+        /// <summary>
+        /// Caches type popup data for reuse.
+        /// </summary>
         public struct TypePopupCache {
 
+            /// <summary>
+            /// Type popup used by <c>SubclassSelectorDrawer.TypePopupCache</c>.
+            /// </summary>
             public AdvancedTypePopup TypePopup { get; }
+            /// <summary>
+            /// State accessed by the containing operation.
+            /// </summary>
             public AdvancedDropdownState State { get; }
 
+            /// <summary>
+            /// Initializes <c>TypePopupCache</c> from the supplied type popup, state.
+            /// </summary>
             public TypePopupCache(AdvancedTypePopup typePopup, AdvancedDropdownState state) {
                 this.TypePopup = typePopup;
                 this.State = state;
@@ -66,7 +99,13 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
 
         }
 
+        /// <summary>
+        /// K max type popup line count for the associated storage.
+        /// </summary>
         public const int k_MaxTypePopupLineCount = 13;
+        /// <summary>
+        /// K unity object type used by <c>SubclassSelectorDrawer</c>.
+        /// </summary>
         public static readonly System.Type k_UnityObjectType = typeof(UnityEngine.Object);
         private static readonly GUIContent k_NullDisplayName = new(TypeMenuUtility.k_NullDisplayName);
         private static readonly GUIContent k_IsNotManagedReferenceLabel = new("The property type is not manage reference.");
@@ -74,11 +113,20 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
         private readonly Dictionary<string, TypePopupCache> m_TypePopups = new();
         private readonly Dictionary<string, GUIContent> m_TypeNameCaches = new();
 
+        /// <summary>
+        /// M target property used by <c>SubclassSelectorDrawer</c>.
+        /// </summary>
         public SerializedProperty m_TargetProperty;
 
         private FindGraphAssetsWindow findGraphAssetsWindow;
         
+        /// <summary>
+        /// Style sheet base used by <c>SubclassSelectorDrawer</c>.
+        /// </summary>
         public static StyleSheet styleSheetBase;
+        /// <summary>
+        /// Style sheet tooltip used by <c>SubclassSelectorDrawer</c>.
+        /// </summary>
         public static StyleSheet styleSheetTooltip;
 
         private bool showGenericTypes;
@@ -92,6 +140,9 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
             }
         }
         
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             this.LoadStyle();
@@ -200,6 +251,9 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
             
         }
 
+        /// <summary>
+        /// Draws the immediate-mode editor interface for the supplied context.
+        /// </summary>
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) {
             EditorGUI.BeginProperty(position, label, property);
 
@@ -226,6 +280,9 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
             EditorGUI.EndProperty();
         }
         
+        /// <summary>
+        /// Returns type popup.
+        /// </summary>
         public TypePopupCache GetTypePopup(SerializedProperty property) {
             // Cache this string. This property internally call Assembly.GetName, which result in a large allocation.
             var managedReferenceFieldTypename = string.Empty;
@@ -241,6 +298,9 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
 
         }
         
+        /// <summary>
+        /// Returns type popup.
+        /// </summary>
         public TypePopupCache GetTypePopup(string managedReferenceFieldTypename, bool isType = false) {
             // Cache this string. This property internally call Assembly.GetName, which result in a large allocation.
             //var managedReferenceFieldTypename = property.managedReferenceFieldTypename;
@@ -348,6 +408,9 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
             return result;
         }
 
+        /// <summary>
+        /// Returns the vertical space required to draw the serialized property.
+        /// </summary>
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label) {
             return EditorGUI.GetPropertyHeight(property, true);
         }

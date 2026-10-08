@@ -1,6 +1,9 @@
 namespace ME.BECS.Views {
     // A single typed signature for startup-only phases. Components return their
     // tracker index; tracker owners consume the compiler-selected ViewInfo.
+    /// <summary>
+    /// Defines the callback signature for view registration callback.
+    /// </summary>
     public delegate uint ViewRegistrationCallback(ViewsTracker.ViewInfo info);
 
     internal sealed class ViewsBootstrapRegistry {
@@ -66,15 +69,33 @@ namespace ME.BECS.Views {
         }
     }
 
+    /// <summary>
+    /// Installs generated view and provider registrations.
+    /// </summary>
     public static class BootstrapViews {
         private static readonly ViewsBootstrapRegistry runtime = new ViewsBootstrapRegistry();
         private static readonly ViewsBootstrapRegistry editor = new ViewsBootstrapRegistry();
+        /// <summary>
+        /// Installs fragment.
+        /// </summary>
         public static void InstallFragment(string identity, string owner, int count, int[] ordinals, ViewRegistrationCallback[] callbacks, bool editor) =>
             (editor ? BootstrapViews.editor : runtime).Install(identity, owner, count, ordinals, callbacks);
+        /// <summary>
+        /// Checks for the expected plan.
+        /// </summary>
         public static void ExpectPlan(string identity, int components, int types, int capacity, int[][] dependencies, bool editor) =>
             (editor ? BootstrapViews.editor : runtime).Expect(identity, components, types, capacity, dependencies);
+        /// <summary>
+        /// Requires complete.
+        /// </summary>
         public static void RequireComplete(bool editor) => (editor ? BootstrapViews.editor : runtime).RequireComplete();
+        /// <summary>
+        /// Initializes trackers.
+        /// </summary>
         public static void InitializeTrackers(bool editor) => (editor ? BootstrapViews.editor : runtime).InitializeTrackers();
+        /// <summary>
+        /// Registers installed types.
+        /// </summary>
         public static void RegisterInstalledTypes(bool editor) {
             var registry = editor ? BootstrapViews.editor : runtime;
             registry.RequireComplete();

@@ -3,15 +3,30 @@ namespace ME.BECS.Editor {
     using UnityEngine;
     using UnityEngine.UIElements;
 
+    /// <summary>
+    /// Defines background circles state and operations.
+    /// </summary>
     public class BackgroundCircles : VisualElement {
 
         private static readonly CustomStyleProperty<Color> styleColor = new CustomStyleProperty<Color>("--lines-color");
         
+        /// <summary>
+        /// Defines circle state and operations for <c>BackgroundCircles</c>.
+        /// </summary>
         public class Circle : VisualElement {
 
+            /// <summary>
+            /// Root entry of the represented hierarchy.
+            /// </summary>
             public BackgroundCircles root;
+            /// <summary>
+            /// Offset index used to locate the associated entry.
+            /// </summary>
             public int offsetIndex;
             
+            /// <summary>
+            /// Initializes <c>Circle</c> from the supplied defaults.
+            /// </summary>
             public Circle() {
                 this.generateVisualContent += this.OnGenerateVisualContent;
                 this.pickingMode = PickingMode.Ignore;
@@ -36,14 +51,32 @@ namespace ME.BECS.Editor {
             
         }
         
+        /// <summary>
+        /// Center of the represented bounds.
+        /// </summary>
         public Vector2 center;
+        /// <summary>
+        /// Scale used by <c>BackgroundCircles</c>.
+        /// </summary>
         public float scale;
+        /// <summary>
+        /// Line width used by <c>BackgroundCircles</c>.
+        /// </summary>
         public float lineWidth = 1f;
+        /// <summary>
+        /// Color used to render or identify this value.
+        /// </summary>
         public Color color = Color.white;
+        /// <summary>
+        /// Radiuses used by <c>BackgroundCircles</c>.
+        /// </summary>
         public float[] radiuses;
 
         private Circle[] circles;
         
+        /// <summary>
+        /// Initializes <c>BackgroundCircles</c> from the supplied count.
+        /// </summary>
         public BackgroundCircles(int count) {
             this.circles = new Circle[count];
             for (int i = 0; i < count; ++i) {
@@ -83,6 +116,9 @@ namespace ME.BECS.Editor {
             
         }
 
+        /// <summary>
+        /// Sets dirty.
+        /// </summary>
         public void SetDirty() {
             this.MarkDirtyRepaint();
             for (int i = 0; i < this.circles.Length; ++i) {

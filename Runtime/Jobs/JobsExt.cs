@@ -8,19 +8,31 @@ namespace ME.BECS {
     using Unity.Jobs;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides helper operations for jobs.
+    /// </summary>
     [IgnoreProfiler]
     public static class JobsExt {
 
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2) {
             return JobHandle.CombineDependencies(h1, h2);
         }
         
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3) {
             return JobHandle.CombineDependencies(h1, h2, h3);
         }
 
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4) {
             var arr = new Unity.Collections.NativeArray<JobHandle>(4, Unity.Collections.Allocator.Temp);
@@ -31,6 +43,9 @@ namespace ME.BECS {
             return JobHandle.CombineDependencies(arr);
         }
 
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4, JobHandle h5) {
             var arr = new Unity.Collections.NativeArray<JobHandle>(5, Unity.Collections.Allocator.Temp);
@@ -42,6 +57,9 @@ namespace ME.BECS {
             return JobHandle.CombineDependencies(arr);
         }
 
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4, JobHandle h5, JobHandle h6) {
             var arr = new Unity.Collections.NativeArray<JobHandle>(6, Unity.Collections.Allocator.Temp);
@@ -54,6 +72,9 @@ namespace ME.BECS {
             return JobHandle.CombineDependencies(arr);
         }
         
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4, JobHandle h5, JobHandle h6, JobHandle h7) {
             var arr = new Unity.Collections.NativeArray<JobHandle>(7, Unity.Collections.Allocator.Temp);
@@ -67,6 +88,9 @@ namespace ME.BECS {
             return JobHandle.CombineDependencies(arr);
         }
         
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4, JobHandle h5, JobHandle h6, JobHandle h7, JobHandle h8) {
             var arr = new Unity.Collections.NativeArray<JobHandle>(8, Unity.Collections.Allocator.Temp);
@@ -81,6 +105,9 @@ namespace ME.BECS {
             return JobHandle.CombineDependencies(arr);
         }
         
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4, JobHandle h5, JobHandle h6, JobHandle h7, JobHandle h8, JobHandle h9) {
             var arr = new Unity.Collections.NativeArray<JobHandle>(9, Unity.Collections.Allocator.Temp);
@@ -96,6 +123,9 @@ namespace ME.BECS {
             return JobHandle.CombineDependencies(arr);
         }
         
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4, 
                                                     JobHandle h5, JobHandle h6, JobHandle h7, JobHandle h8, 
@@ -114,6 +144,9 @@ namespace ME.BECS {
             return JobHandle.CombineDependencies(arr);
         }
         
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4, 
                                                     JobHandle h5, JobHandle h6, JobHandle h7, JobHandle h8, 
@@ -133,6 +166,9 @@ namespace ME.BECS {
             return JobHandle.CombineDependencies(arr);
         }
         
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4, 
                                                     JobHandle h5, JobHandle h6, JobHandle h7, JobHandle h8, 
@@ -153,6 +189,9 @@ namespace ME.BECS {
             return JobHandle.CombineDependencies(arr);
         }
         
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4, 
                                                     JobHandle h5, JobHandle h6, JobHandle h7, JobHandle h8, 
@@ -175,6 +214,9 @@ namespace ME.BECS {
             return JobHandle.CombineDependencies(arr);
         }
         
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4, 
                                                     JobHandle h5, JobHandle h6, JobHandle h7, JobHandle h8, 
@@ -198,6 +240,9 @@ namespace ME.BECS {
             return JobHandle.CombineDependencies(arr);
         }
         
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4, 
                                                     JobHandle h5, JobHandle h6, JobHandle h7, JobHandle h8, 
@@ -222,6 +267,9 @@ namespace ME.BECS {
             return JobHandle.CombineDependencies(arr);
         }
         
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4, 
                                                     JobHandle h5, JobHandle h6, JobHandle h7, JobHandle h8, 
@@ -247,6 +295,9 @@ namespace ME.BECS {
             return JobHandle.CombineDependencies(arr);
         }
         
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4, 
                                                     JobHandle h5, JobHandle h6, JobHandle h7, JobHandle h8, 
@@ -274,6 +325,9 @@ namespace ME.BECS {
             return JobHandle.CombineDependencies(arr);
         }
         
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4, 
                                                     JobHandle h5, JobHandle h6, JobHandle h7, JobHandle h8, 
@@ -302,6 +356,9 @@ namespace ME.BECS {
             return JobHandle.CombineDependencies(arr);
         }
 
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4, 
                                                     JobHandle h5, JobHandle h6, JobHandle h7, JobHandle h8, 
@@ -331,6 +388,9 @@ namespace ME.BECS {
             return JobHandle.CombineDependencies(arr);
         }
         
+        /// <summary>
+        /// Combines the supplied job dependencies into a handle for the resulting work.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle CombineDependencies(JobHandle h1, JobHandle h2, JobHandle h3, JobHandle h4, 
                                                     JobHandle h5, JobHandle h6, JobHandle h7, JobHandle h8, 

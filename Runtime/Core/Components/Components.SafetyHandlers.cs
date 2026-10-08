@@ -9,12 +9,18 @@ namespace ME.BECS {
     using static Cuts;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Defines components data used by entity processing.
+    /// </summary>
     public partial struct Components {
 
         #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
         internal Internal.Array<AtomicSafetyHandle> handlers;
         internal LockSpinner handlersLock;
         
+        /// <summary>
+        /// Releases safety handlers.
+        /// </summary>
         [INLINE(256)]
         public unsafe void DisposeSafetyHandlers() {
 
@@ -33,6 +39,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Updates safety handlers for copy from.
+        /// </summary>
         [INLINE(256)]
         public void SafetyHandlersCopyFrom(in Components other) {
 
@@ -40,6 +49,9 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Returns safety handler.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public AtomicSafetyHandle GetSafetyHandler<T>() where T : unmanaged, IComponentBase {
 

@@ -4,12 +4,24 @@ namespace ME.BECS {
     using BURST_DISCARD = Unity.Burst.BurstDiscardAttribute;
     using HIDE_CALLSTACK = UnityEngine.HideInCallstackAttribute;
 
+    /// <summary>
+    /// Provides conditional runtime assertions and diagnostic exceptions for ECS invariants.
+    /// </summary>
     public partial class E {
 
+        /// <summary>
+        /// Defines required component exception data used by entity processing.
+        /// </summary>
         public class RequiredComponentException : System.Exception {
 
+            /// <summary>
+            /// Initializes <c>RequiredComponentException</c> from the supplied str.
+            /// </summary>
             public RequiredComponentException(string str) : base(str) { }
 
+            /// <summary>
+            /// Throws the diagnostic exception represented by <c>E.RequiredComponentException</c>.
+            /// </summary>
             [HIDE_CALLSTACK]
             public static void Throw<T>(in Ent ent) where T : unmanaged, IComponentBase {
                 ThrowNotBurst<T>(in ent);
@@ -24,8 +36,14 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Provides conditional runtime assertions and diagnostic exceptions for ECS invariants.
+    /// </summary>
     public static partial class E {
 
+        /// <summary>
+        /// Checks the required invariant when the corresponding safety checks are enabled.
+        /// </summary>
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void REQUIRED<T>(in Ent ent) where T : unmanaged, IComponent {
@@ -35,6 +53,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Checks the throw required invariant when the corresponding safety checks are enabled.
+        /// </summary>
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void THROW_REQUIRED<T>(in Ent ent) where T : unmanaged, IComponentBase {

@@ -8,6 +8,9 @@ using scg = System.Collections.Generic;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Provides the Unity Editor window for world hierarchy filter editor.
+    /// </summary>
     public class WorldHierarchyFilterEditorWindow : EditorWindow {
 
         private StyleSheet styleSheet;
@@ -15,6 +18,9 @@ namespace ME.BECS.Editor {
         private WorldHierarchyEditorWindow src;
         private GradientAnimated logoLine;
 
+        /// <summary>
+        /// Opens or focuses the associated editor window.
+        /// </summary>
         public static void ShowWindow(WorldHierarchyEditorWindow src, Rect rect, Vector2 size) {
             var win = WorldHierarchyFilterEditorWindow.CreateInstance<WorldHierarchyFilterEditorWindow>();
             EditorUIUtils.ApplyWindowIcon(win, "ECS Hierarchy", "ME.BECS.Resources/Icons/icon-hierarchy.png");
@@ -92,6 +98,9 @@ namespace ME.BECS.Editor {
 
     }
     
+    /// <summary>
+    /// Provides the Unity Editor window for world hierarchy editor.
+    /// </summary>
     public unsafe class WorldHierarchyEditorWindow : EditorWindow {
 
 
@@ -139,6 +148,9 @@ namespace ME.BECS.Editor {
         private Label currentEntitiesCount;
         private Label selectedEntitiesCount;
 
+        /// <summary>
+        /// Opens or focuses the associated editor window.
+        /// </summary>
         [MenuItem("ME.BECS/\u2637 Hierarchy...", priority = 10000)]
         public static void ShowWindow() {
             var win = WorldHierarchyEditorWindow.CreateInstance<WorldHierarchyEditorWindow>();
@@ -294,6 +306,9 @@ namespace ME.BECS.Editor {
             if (this.selected.Count > 0) SceneView.RepaintAll();
         }
 
+        /// <summary>
+        /// Draws toolbar.
+        /// </summary>
         public void DrawToolbar() {
             var removed = this.openedWorlds.RemoveAll(world => !this.aliveWorlds.Any(alive => alive.Equals(world)));
             if (removed > 0) this.tabsSignature = null;
@@ -359,7 +374,11 @@ namespace ME.BECS.Editor {
                         var txt = element.Q<Label>(className: "caption");
                         element.userData = item;
                         element.EnableInClassList("h-selected", this.selected.Contains(item));
-                        txt.text = item.IsAlive() ? item.ToString(withWorld: false, withVersion: false).ToString() : "Destroyed entity";
+                        var alive = item.IsAlive();
+                        var inactive = alive == true && item.IsActive() == false;
+                        element.EnableInClassList("h-inactive", inactive);
+                        txt.text = alive == true ? item.ToString(withWorld: false, withVersion: false).ToString() : "Destroyed entity";
+                        element.tooltip = inactive == true ? "Entity is disabled" : string.Empty;
                         var ver = element.Q<Label>(className: "version");
                         ver.text = item.IsAlive() ? item.Version.ToString() : "—";
                     },
@@ -649,15 +668,24 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Provides Unity Editor controls for entity editor.
+        /// </summary>
         [CustomEditor(typeof(Entity))]
         public class EntityEditor : UnityEditor.Editor {
 
+            /// <summary>
+            /// Provides the <c>OnHeaderGUI</c> callback; this implementation performs no work.
+            /// </summary>
             protected override void OnHeaderGUI() {
                 
                 
                 
             }
 
+            /// <summary>
+            /// Builds the UI Toolkit inspector for the inspected object.
+            /// </summary>
             public override VisualElement CreateInspectorGUI() {
                 
                 var root = new VisualElement();
@@ -675,8 +703,14 @@ namespace ME.BECS.Editor {
 
         }
         
+        /// <summary>
+        /// Defines entity state and operations for <c>WorldHierarchyEditorWindow</c>.
+        /// </summary>
         public class Entity : ScriptableObject {
 
+            /// <summary>
+            /// Values used by <c>WorldHierarchyEditorWindow.Entity</c>.
+            /// </summary>
             public Ent[] values;
 
         }

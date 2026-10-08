@@ -8,10 +8,19 @@ namespace ME.BECS.Extensions.SubclassSelector {
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Enum | AttributeTargets.Interface, AllowMultiple = false, Inherited = false)]
     public sealed class AddTypeMenuAttribute : Attribute {
 
+        /// <summary>
+        /// Menu name used by <c>AddTypeMenuAttribute</c>.
+        /// </summary>
         public string MenuName { get; }
 
+        /// <summary>
+        /// Order used by <c>AddTypeMenuAttribute</c>.
+        /// </summary>
         public int Order { get; }
 
+        /// <summary>
+        /// Initializes <c>AddTypeMenuAttribute</c> from the supplied menu name, order.
+        /// </summary>
         public AddTypeMenuAttribute(string menuName, int order = 0) {
             this.MenuName = menuName;
             this.Order = order;

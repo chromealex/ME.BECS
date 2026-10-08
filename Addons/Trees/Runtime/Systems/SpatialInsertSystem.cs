@@ -25,60 +25,132 @@ namespace ME.BECS {
     using NativeTrees;
     using static Cuts;
     
+    /// <summary>
+    /// Stores per-entity state for spatial element.
+    /// </summary>
     [ComponentGroup(typeof(SpatialComponentGroup))]
     [StructLayout(LayoutKind.Explicit)]
     public struct SpatialElement : IComponent {
 
+        /// <summary>
+        /// Radius used by the associated shape or query.
+        /// </summary>
         [FieldOffset(0)]
         public tfloat radius;
+        /// <summary>
+        /// Extent along the X dimension.
+        /// </summary>
         [FieldOffset(0)]
         public tfloat sizeX;
+        /// <summary>
+        /// Tree index used to locate the associated entry.
+        /// </summary>
         [FieldOffset(4)]
         public int treeIndex;
+        /// <summary>
+        /// Whether the spatial calculation ignores the vertical coordinate.
+        /// </summary>
         [FieldOffset(8)]
         public byte ignoreY;
 
     }
 
+    /// <summary>
+    /// Stores per-entity state for spatial element rect.
+    /// </summary>
     [ComponentGroup(typeof(SpatialComponentGroup))]
     public struct SpatialElementRect : IComponent {
 
+        /// <summary>
+        /// Extent along the Y dimension.
+        /// </summary>
         public tfloat sizeY;
         
     }
 
+    /// <summary>
+    /// Stores per-entity state for spatial height.
+    /// </summary>
     [ComponentGroup(typeof(SpatialComponentGroup))]
     public struct SpatialHeightComponent : IComponent {
         
+        /// <summary>
+        /// Vertical extent used by the associated geometry or query.
+        /// </summary>
         public tfloat height;
         
     }
 
+    /// <summary>
+    /// Provides typed access to the entity components used for spatial.
+    /// </summary>
     [EditorComment("Used by SpatialInsertSystem to filter entities by treeIndex")]
     public partial struct SpatialAspect : IAspect {
         
+        /// <summary>
+        /// Entity whose components or lifetime are associated with this value.
+        /// </summary>
         public Ent ent { get; set; }
 
+        /// <summary>
+        /// Native pointer or typed storage accessor for spatial element.
+        /// </summary>
         [QueryWith]
         public AspectDataPtr<SpatialElement> spatialElementPtr;
+        /// <summary>
+        /// Native pointer or typed storage accessor for spatial rect.
+        /// </summary>
         public AspectDataPtr<SpatialElementRect> spatialRectPtr;
+        /// <summary>
+        /// Native pointer or typed storage accessor for spatial height.
+        /// </summary>
         public AspectDataPtr<SpatialHeightComponent> spatialHeightPtr;
 
+        /// <summary>
+        /// Spatial element used by <c>SpatialAspect</c>.
+        /// </summary>
         public readonly ref SpatialElement spatialElement => ref this.spatialElementPtr.Get(this.ent.id, this.ent.gen);
+        /// <summary>
+        /// Read-only access to spatial element.
+        /// </summary>
         public readonly ref readonly SpatialElement readSpatialElement => ref this.spatialElementPtr.Read(this.ent.id, this.ent.gen);
+        /// <summary>
+        /// Tree index used to locate the associated entry.
+        /// </summary>
         public readonly ref int treeIndex => ref this.spatialElement.treeIndex;
+        /// <summary>
+        /// Read-only access to tree index.
+        /// </summary>
         public readonly ref readonly int readTreeIndex => ref this.readSpatialElement.treeIndex;
+        /// <summary>
+        /// Indicates is rect.
+        /// </summary>
         public readonly bool isRect => this.ent.Has<SpatialElementRect>();
+        /// <summary>
+        /// Indicates has height.
+        /// </summary>
         public readonly bool hasHeight => this.ent.Has<SpatialHeightComponent>();
+        /// <summary>
+        /// Rect size used by <c>SpatialAspect</c>.
+        /// </summary>
         public readonly float2 rectSize => new float2(this.readSpatialElement.sizeX, this.spatialRectPtr.Read(this.ent.id, this.ent.gen).sizeY);
+        /// <summary>
+        /// Vertical extent used by the associated geometry or query.
+        /// </summary>
         public readonly tfloat height => this.spatialHeightPtr.Read(this.ent.id, this.ent.gen).height;
 
+        /// <summary>
+        /// Sets height.
+        /// </summary>
         public readonly void SetHeight(tfloat height) {
             this.ent.Set(new SpatialHeightComponent() {
                 height = height,
             });
         }
         
+        /// <summary>
+        /// Sets as rect with size.
+        /// </summary>
         public readonly void SetAsRectWithSize(tfloat sizeX, tfloat sizeY) {
             ref var rect = ref this.spatialRectPtr.Get(this.ent.id, this.ent.gen);
             rect.sizeY = sizeY;
@@ -87,31 +159,58 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Coordinates spatial insert during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     public unsafe partial struct SpatialInsertSystem : IAwake, IUpdate, IDestroy, IDrawGizmos {
         
+        /// <summary>
+        /// Default settings or value supplied by this type.
+        /// </summary>
         public static SpatialInsertSystem Default => new SpatialInsertSystem() {
             capacity = 1000,
             cellSize = 2,
         };
 
+        /// <summary>
+        /// Number of elements that fit in the currently reserved storage.
+        /// </summary>
         public int capacity;
+        /// <summary>
+        /// Cell size used by <c>SpatialInsertSystem</c>.
+        /// </summary>
         public int cellSize;
         
         private UnsafeList<safe_ptr> trees;
         private UnsafeList<safe_ptr> staticTrees;
         private ME.BECS.NativeCollections.NativeParallelList<SpatialQueryCandidate<Ent>> queryScratch;
+        /// <summary>
+        /// Trees count for the associated storage.
+        /// </summary>
         public readonly uint treesCount => (uint)this.trees.Length;
         private ushort worldId;
         private ushort stateVersion;
         private ulong stateTick;
 
+        /// <summary>
+        /// Executes collect rect work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct CollectRectJob : IJobForAspects<SpatialAspect, TransformAspect> {
             
+            /// <summary>
+            /// Spatial trees used by the query or update.
+            /// </summary>
             public UnsafeList<safe_ptr> trees;
+            /// <summary>
+            /// Indicates is static.
+            /// </summary>
             public bool isStatic;
 
+            /// <summary>
+            /// Processes collect rect using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref SpatialAspect spatialAspect, ref TransformAspect tr) {
                 
                 var tree = (safe_ptr<NativeTrees.SpatialHashing>)this.trees[spatialAspect.readTreeIndex];
@@ -130,12 +229,24 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Executes collect work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct CollectJob : IJobForAspects<SpatialAspect, TransformAspect> {
             
+            /// <summary>
+            /// Spatial trees used by the query or update.
+            /// </summary>
             public UnsafeList<safe_ptr> trees;
+            /// <summary>
+            /// Indicates is static.
+            /// </summary>
             public bool isStatic;
 
+            /// <summary>
+            /// Processes collect using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref SpatialAspect spatialAspect, ref TransformAspect tr) {
                 
                 var tree = (safe_ptr<NativeTrees.SpatialHashing>)this.trees[spatialAspect.readTreeIndex];
@@ -154,13 +265,28 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Executes apply work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct ApplyJob : Unity.Jobs.IJobParallelFor {
 
+            /// <summary>
+            /// Spatial trees used by the query or update.
+            /// </summary>
             public UnsafeList<safe_ptr> trees;
+            /// <summary>
+            /// Static trees used by <c>SpatialInsertSystem.ApplyJob</c>.
+            /// </summary>
             public UnsafeList<safe_ptr> staticTrees;
+            /// <summary>
+            /// Whether force static rebuild behavior or state is selected.
+            /// </summary>
             public bool forceStaticRebuild;
             
+            /// <summary>
+            /// Processes apply using the supplied job inputs.
+            /// </summary>
             public void Execute(int index) {
 
                 var tree = (safe_ptr<NativeTrees.SpatialHashing>)this.trees[index];
@@ -172,12 +298,24 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Executes clear work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct ClearJob : Unity.Jobs.IJobParallelFor {
 
+            /// <summary>
+            /// Spatial trees used by the query or update.
+            /// </summary>
             public UnsafeList<safe_ptr> trees;
+            /// <summary>
+            /// Static trees used by <c>SpatialInsertSystem.ClearJob</c>.
+            /// </summary>
             public UnsafeList<safe_ptr> staticTrees;
 
+            /// <summary>
+            /// Processes clear using the supplied job inputs.
+            /// </summary>
             public void Execute(int index) {
 
                 var item = (safe_ptr<NativeTrees.SpatialHashing>)this.trees[index];
@@ -189,6 +327,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Returns tree.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr<NativeTrees.SpatialHashing> GetTree(int treeIndex) {
 
@@ -196,6 +337,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Adds tree.
+        /// </summary>
         [INLINE(256)]
         public int AddTree() {
 
@@ -203,6 +347,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns static tree.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr<NativeTrees.SpatialHashing> GetStaticTree(int treeIndex) {
 
@@ -210,6 +357,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Adds tree.
+        /// </summary>
         [INLINE(256)]
         public int AddTree(int cellSize) {
 
@@ -217,6 +367,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Adds tree.
+        /// </summary>
         [INLINE(256)]
         public int AddTree(int capacity, int cellSize) {
 
@@ -227,6 +380,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes spatial insert system state from the supplied context.
+        /// </summary>
         public void OnAwake(ref SystemContext context) {
 
             this.worldId = context.world.id;
@@ -239,6 +395,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Updates spatial insert system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var currentStateVersion = context.world.state.ptr->allocator.version;
@@ -282,6 +441,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases spatial insert system state at the end of its owning lifecycle.
+        /// </summary>
         public void OnDestroy(ref SystemContext context) {
 
             for (int i = 0; i < this.trees.Length; ++i) {
@@ -299,6 +461,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Populates all requested entries in the destination.
+        /// </summary>
         [INLINE(256)]
         public readonly void FillAll(ref SpatialQueryAspect query, in TransformAspect tr) {
             
@@ -325,6 +490,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Populates results with entries nearest to the requested location.
+        /// </summary>
         [INLINE(256)]
         public readonly void FillNearest<T>(ref SpatialQueryAspect query, in TransformAspect tr, in T subFilter = default) where T : struct, ISpatialSubFilter<Ent> {
             
@@ -350,12 +518,18 @@ namespace ME.BECS {
             }
         }
         
+        /// <summary>
+        /// Returns nearest first.
+        /// </summary>
         [INLINE(256)]
         public readonly Ent GetNearestFirst(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default,
                                             tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreSorting = false) {
             return this.GetNearestFirst(mask, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreSorting, new AlwaysTrueSpatialSubFilter());
         }
 
+        /// <summary>
+        /// Returns nearest first.
+        /// </summary>
         [INLINE(256)]
         public readonly Ent GetNearestFirst<T>(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default, tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreSorting = default, in T subFilter = default) where T : struct, ISpatialSubFilter<Ent> {
 
@@ -397,6 +571,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Queries geometry intersected by the supplied ray and reports the matching hit.
+        /// </summary>
         [INLINE(256)]
         public bool Raycast(Ray2D ray, int mask, tfloat distance, out SpatialRaycastHit raycastHit, bool ignoreSorting = false) {
             
@@ -425,11 +602,17 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns nearest.
+        /// </summary>
         [INLINE(256)]
         public readonly void GetNearest(int mask, ushort nearestCount, ref QueryResults results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, bool ignoreSorting) {
             this.GetNearest(mask, nearestCount, ref results, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreSorting, new AlwaysTrueSpatialSubFilter());
         }
 
+        /// <summary>
+        /// Returns nearest.
+        /// </summary>
         [INLINE(256)]
         public readonly void GetNearest<T>(int mask, ushort nearestCount, ref QueryResults results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreSorting, in T subFilter = default) where T : struct, ISpatialSubFilter<Ent> {
             var distanceProvider = new AABB2DSpatialDistanceSquaredProvider<Ent>();
@@ -556,6 +739,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Draws diagnostic geometry for the associated state.
+        /// </summary>
         [WithoutBurst]
         public void OnDrawGizmos(ref SystemContext context) {
             UnityEngine.Gizmos.color = UnityEngine.Color.green;

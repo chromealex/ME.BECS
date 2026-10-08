@@ -15,9 +15,15 @@ namespace ME.BECS.RemoteDebug {
     using scg = System.Collections.Generic;
 
     // ECS is only accessed by LateUpdate; the listener passes requests through a bounded queue.
+    /// <summary>
+    /// Defines remote debug server state and operations.
+    /// </summary>
     [DefaultExecutionOrder(32000)]
     public sealed unsafe class RemoteDebugServer : MonoBehaviour {
 
+        /// <summary>
+        /// Port used by <c>RemoteDebugServer</c>.
+        /// </summary>
         public const int Port = 8787;
         private HttpListener listener;
         private readonly RemoteWorldControl worldControl = new();
@@ -27,7 +33,13 @@ namespace ME.BECS.RemoteDebug {
         private GUIStyle connectionLabelStyle;
         private Vector2 connectionScroll;
         private readonly scg.List<string> connectionUrls = new();
+        /// <summary>
+        /// Access token used by <c>RemoteDebugServer</c>.
+        /// </summary>
         public string AccessToken { get; private set; }
+        /// <summary>
+        /// Last error used by <c>RemoteDebugServer</c>.
+        /// </summary>
         public string LastError { get; private set; }
         private static RemoteDebugServer instance;
 

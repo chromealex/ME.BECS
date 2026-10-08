@@ -21,29 +21,59 @@ namespace ME.BECS.Units {
     using ME.BECS.Jobs;
     using ME.BECS.Transforms;
 
+    /// <summary>
+    /// Coordinates rvo during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [UnityEngine.Tooltip("RVO behaviour for units.")]
     public partial struct RVOSystem : IUpdate, IDrawGizmos {
 
+        /// <summary>
+        /// Default settings or value supplied by this type.
+        /// </summary>
         public static RVOSystem Default => new RVOSystem() {
             minSpeedFactor = 0.3f,
             timeHorizon = 1.5f,
             avoidanceWeight = 1.5f,
         };
 
+        /// <summary>
+        /// Time horizon used by <c>RVOSystem</c>.
+        /// </summary>
         public tfloat timeHorizon;
+        /// <summary>
+        /// Avoidance weight controlling the associated calculation.
+        /// </summary>
         public tfloat avoidanceWeight;
+        /// <summary>
+        /// Minimum speed factor.
+        /// </summary>
         public tfloat minSpeedFactor;
 
+        /// <summary>
+        /// Whether draw gizmos behavior or state is selected.
+        /// </summary>
         public bbool drawGizmos;
 
+        /// <summary>
+        /// Executes rvo system work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct Job : IJobForAspects<TransformAspect, UnitAspect, QuadTreeQueryAspect> {
 
+            /// <summary>
+            /// System instance used by the associated operation.
+            /// </summary>
             public InjectSystem<RVOSystem> system;
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             [InjectDeltaTime]
             public tfloat dt;
             
+            /// <summary>
+            /// Processes the job inputs for <c>RVOSystem</c>.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit, ref QuadTreeQueryAspect query) {
 
                 this.system.Value.Resolve(in tr, in unit, query.readResults.results, this.dt);
@@ -52,13 +82,25 @@ namespace ME.BECS.Units {
             
         }
 
+        /// <summary>
+        /// Executes spatial work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct SpatialJob : IJobForAspects<TransformAspect, UnitAspect, SpatialQueryAspect> {
 
+            /// <summary>
+            /// System instance used by the associated operation.
+            /// </summary>
             public InjectSystem<RVOSystem> system;
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             [InjectDeltaTime]
             public tfloat dt;
             
+            /// <summary>
+            /// Processes spatial using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit, ref SpatialQueryAspect query) {
 
                 this.system.Value.Resolve(in tr, in unit, query.readResults.results, this.dt);
@@ -67,12 +109,21 @@ namespace ME.BECS.Units {
             
         }
 
+        /// <summary>
+        /// Executes apply collision work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct ApplyCollisionJob : IJobForAspects<TransformAspect, UnitAspect> {
 
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             [InjectDeltaTime]
             public tfloat dt;
             
+            /// <summary>
+            /// Processes apply collision using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit) {
 
                 tr.position += unit.readComponentRuntimeRvo.collisionDirection + unit.readComponentRuntime.desiredDirection * this.dt;
@@ -189,6 +240,9 @@ namespace ME.BECS.Units {
             
         }
         
+        /// <summary>
+        /// Updates rvo system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var dependsOnQt = context.Query().AsParallel().Without<IsUnitStaticComponent>().Without<UnitHoldComponent>().Schedule<Job, TransformAspect, UnitAspect, QuadTreeQueryAspect>();
@@ -199,6 +253,9 @@ namespace ME.BECS.Units {
             
         }
 
+        /// <summary>
+        /// Draws diagnostic geometry for the associated state.
+        /// </summary>
         public void OnDrawGizmos(ref SystemContext context) {
 
             if (this.drawGizmos == false) return;

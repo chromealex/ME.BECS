@@ -6,14 +6,29 @@ using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor.FeaturesGraph {
 
+    /// <summary>
+    /// Defines the graph structure used for features graph editor window.
+    /// </summary>
     public class FeaturesGraphEditorWindow : BaseGraphWindow {
 
+        /// <summary>
+        /// Stores breadcrumb item for <c>FeaturesGraphEditorWindow</c>.
+        /// </summary>
         [System.Serializable]
         public class BreadcrumbItem : System.IEquatable<BreadcrumbItem> {
 
+            /// <summary>
+            /// Label used by <c>FeaturesGraphEditorWindow.BreadcrumbItem</c>.
+            /// </summary>
             public string label;
+            /// <summary>
+            /// Graph used by the associated operation.
+            /// </summary>
             public BaseGraph graph;
 
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             public bool Equals(BreadcrumbItem other) {
                 if (other is null) {
                     return false;
@@ -26,6 +41,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
                 return this.label == other.label && Equals(this.graph, other.graph);
             }
 
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             public override bool Equals(object obj) {
                 if (obj is null) {
                     return false;
@@ -42,12 +60,18 @@ namespace ME.BECS.Editor.FeaturesGraph {
                 return this.Equals((BreadcrumbItem)obj);
             }
 
+            /// <summary>
+            /// Returns a hash code consistent with this type's equality comparison.
+            /// </summary>
             public override int GetHashCode() {
                 return System.HashCode.Combine(this.label, this.graph);
             }
 
         }
         
+        /// <summary>
+        /// Breadcrumbs used by <c>FeaturesGraphEditorWindow</c>.
+        /// </summary>
         public System.Collections.Generic.List<BreadcrumbItem> breadcrumbs = new System.Collections.Generic.List<BreadcrumbItem>();
         private BaseGraph fingerprintGraph;
         private string graphFingerprint;
@@ -68,6 +92,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
             return previousGraph != this.graph || previous == null || previous != this.graphFingerprint;
         }
 
+        /// <summary>
+        /// Creates root element.
+        /// </summary>
         protected override VisualElement CreateRootElement() {
             
             EditorUIUtils.ApplyDefaultStyles(this.rootVisualElement);
@@ -129,6 +156,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
             
         }
 
+        /// <summary>
+        /// Sets compile dirty.
+        /// </summary>
         public void SetCompileDirty(bool value) {
             this.isCompileDirty = value;
             this.UpdateCompileButton();
@@ -164,6 +194,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
             
         }
 
+        /// <summary>
+        /// Opens or focuses the associated editor window.
+        /// </summary>
         public static void ShowWindow(BaseGraph graph = null) {
 
             var win = FeaturesGraphEditorWindow.GetWindow<FeaturesGraphEditorWindow>();
@@ -177,6 +210,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
         }
 
+        /// <summary>
+        /// Handles the open asset callback.
+        /// </summary>
         [UnityEditor.Callbacks.OnOpenAsset]
         public static bool OnOpenAsset(int instanceID, int line) {
             var project = UnityEditor.EditorUtility.InstanceIDToObject(instanceID) as ME.BECS.FeaturesGraph.SystemsGraph;
@@ -187,6 +223,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
             return false;
         }
 
+        /// <summary>
+        /// Handles the enable callback.
+        /// </summary>
         protected override void OnEnable() {
             
             base.OnEnable();
@@ -202,6 +241,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
             
         }
 
+        /// <summary>
+        /// Releases features graph editor window state at the end of its owning lifecycle.
+        /// </summary>
         protected override void OnDestroy() {
             
             ME.BECS.Editor.Extensions.SubclassSelector.SubclassSelectorDrawer.onOpen -= this.OnOpen;
@@ -292,6 +334,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
             }
         }
 
+        /// <summary>
+        /// Updates features graph editor window using the current inputs and execution context.
+        /// </summary>
         protected override void Update() {
             
             base.Update();
@@ -350,6 +395,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
             if (this.graphView is FeaturesGraphView view) view.UpdateEnableState();
         }
 
+        /// <summary>
+        /// Initializes graph view.
+        /// </summary>
         protected override void InitializeGraphView(BaseGraphView viewBase) {
             base.InitializeGraphView(viewBase);
             if (viewBase is FeaturesGraphView view) view.UpdateEnableState();
@@ -368,6 +416,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
         private GradientAnimated gradientAnimated;
         
+        /// <summary>
+        /// Initializes window.
+        /// </summary>
         protected override void InitializeWindow(BaseGraph graph) {
             
             var view = new FeaturesGraphView(this);

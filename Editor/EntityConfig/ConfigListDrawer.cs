@@ -4,8 +4,14 @@ namespace ME.BECS.Editor {
     using UnityEngine.UIElements;
     using UnityEditor.UIElements;
     
+    /// <summary>
+    /// Defines config list drawer state and operations.
+    /// </summary>
     public struct ConfigListDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public static VisualElement CreatePropertyGUI(SerializedProperty property, SerializedProperty configProperty, EntityConfig config, System.Action<uint> onIdChanged) {
 
             var root = new VisualElement();

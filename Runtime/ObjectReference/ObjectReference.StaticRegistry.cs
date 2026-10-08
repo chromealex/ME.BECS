@@ -2,8 +2,14 @@ using CollectionExtensions = System.Collections.Generic.CollectionExtensions;
 
 namespace ME.BECS {
 
+    /// <summary>
+    /// Resolves registered Unity objects and tracks runtime object registrations.
+    /// </summary>
     public static class ObjectReferenceRegistry {
 
+        /// <summary>
+        /// Data consumed or produced by the containing operation.
+        /// </summary>
         public static ObjectReferenceRegistryData data;
 
         internal static readonly System.Collections.Generic.List<ItemInfo> additionalRuntimeObjects = new System.Collections.Generic.List<ItemInfo>();
@@ -26,6 +32,9 @@ namespace ME.BECS {
         }
         #endif
         
+        /// <summary>
+        /// Initializes object reference registry state from the supplied context.
+        /// </summary>
         [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
         public static void Initialize() {
             
@@ -33,6 +42,9 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Loads the registered data required by this operation.
+        /// </summary>
         public static void Load() {
 
             if (ObjectReferenceRegistry.data != null) return;
@@ -40,6 +52,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Loads forced.
+        /// </summary>
         #if UNITY_EDITOR
         [UnityEditor.InitializeOnLoadMethod]
         #endif
@@ -70,12 +85,18 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases assets retained by the loading operation.
+        /// </summary>
         public static void CleanUpLoadedAssets() {
             
             ObjectReferenceRegistry.data.CleanUpLoadedAssets();
             
         }
 
+        /// <summary>
+        /// Adds runtime object.
+        /// </summary>
         public static uint AddRuntimeObject(UnityEngine.Object obj) {
 
             var nextId = ObjectReferenceRegistry.data.sourceId;
@@ -102,10 +123,16 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Clears runtime objects.
+        /// </summary>
         public static void ClearRuntimeObjects() {
             additionalRuntimeObjects.Clear();
         }
 
+        /// <summary>
+        /// Loads async.
+        /// </summary>
         public static UnityEngine.Awaitable<T> LoadAsync<T>(uint sourceId) where T : UnityEngine.Object {
             
             if (ObjectReferenceRegistry.data == null) return null;
@@ -114,6 +141,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns object by source ID.
+        /// </summary>
         public static T GetObjectBySourceId<T>(uint sourceId) where T : UnityEngine.Object {
 
             if (ObjectReferenceRegistry.data == null) return null;
@@ -129,6 +159,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns object by source ID.
+        /// </summary>
         public static ObjectItem GetObjectBySourceId(uint sourceId) {
 
             if (ObjectReferenceRegistry.data == null) return default;
@@ -144,6 +177,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns ID.
+        /// </summary>
         public static uint GetId(UnityEngine.Object obj) {
 
             if (obj == null) return 0u;

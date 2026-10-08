@@ -2,16 +2,28 @@ using System.Linq;
 
 namespace ME.BECS.Views {
 
+    /// <summary>
+    /// Stores view object item data for the associated views API.
+    /// </summary>
     [System.Serializable]
     public struct ViewObjectItemData : IObjectItemData {
 
+        /// <summary>
+        /// Metadata describing the associated entry.
+        /// </summary>
         public SourceRegistry.Info info;
 
+        /// <summary>
+        /// Tests whether the context is valid.
+        /// </summary>
         public bool IsValid(UnityEngine.Object obj) {
             if (obj is UnityEngine.GameObject go && go.GetComponent<EntityView>() != null) return true;
             return obj is EntityView;
         }
 
+        /// <summary>
+        /// Checks the supplied state against the constraints required by this API.
+        /// </summary>
         public void Validate(UnityEngine.Object obj) {
 
             if (obj is UnityEngine.GameObject go) {

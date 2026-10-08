@@ -7,14 +7,23 @@ namespace ME.BECS.Bullets {
     using ME.BECS.Effects;
     using ME.BECS.Units;
 
+    /// <summary>
+    /// Coordinates destroy during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [UnityEngine.Tooltip("Bullets hit target")]
     [RequiredDependencies(typeof(QuadTreeQuerySystem))]
     public partial struct DestroySystem : IUpdate {
 
+        /// <summary>
+        /// Executes destroy work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct DestroyJob : IJobForAspects<BulletAspect, QuadTreeQueryAspect, TransformAspect> {
 
+            /// <summary>
+            /// Processes destroy using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref BulletAspect bullet, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
 
                 if (bullet.readConfig.hitRangeSqr > 0f) {
@@ -55,9 +64,15 @@ namespace ME.BECS.Bullets {
 
         }
 
+        /// <summary>
+        /// Executes destroy3 d work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct Destroy3DJob : IJobForAspects<BulletAspect, OctreeQueryAspect, TransformAspect> {
 
+            /// <summary>
+            /// Processes destroy3 d using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref BulletAspect bullet, ref OctreeQueryAspect query, ref TransformAspect tr) {
 
                 if (bullet.readConfig.hitRangeSqr > 0f) {
@@ -98,9 +113,15 @@ namespace ME.BECS.Bullets {
 
         }
 
+        /// <summary>
+        /// Executes destroy spatial work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct DestroySpatialJob : IJobForAspects<BulletAspect, SpatialQueryAspect, TransformAspect> {
 
+            /// <summary>
+            /// Processes destroy spatial using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref BulletAspect bullet, ref SpatialQueryAspect query, ref TransformAspect tr) {
 
                 if (bullet.readConfig.hitRangeSqr > 0f) {
@@ -141,6 +162,9 @@ namespace ME.BECS.Bullets {
 
         }
 
+        /// <summary>
+        /// Updates destroy system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var dependsOn = context.Query().AsUnsafe().With<TargetReachedComponent>().Schedule<DestroyJob, BulletAspect, QuadTreeQueryAspect, TransformAspect>();

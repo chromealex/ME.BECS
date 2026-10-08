@@ -8,6 +8,9 @@ namespace ME.BECS {
     #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Registers collection operations used by configuration and serialization.
+    /// </summary>
     [IgnoreProfiler]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -104,6 +107,9 @@ namespace ME.BECS {
         private ReadWriteSpinner readWriteSpinner;
         private MemArray<LockSpinner> readWriteSpinnerPerEntity;
 
+        /// <summary>
+        /// Writes collection metadata to the stream without serializing the backing allocator blocks.
+        /// </summary>
         [INLINE(256)]
         public void SerializeHeaders(ref StreamBufferWriter writer) {
             writer.Write(this.list);
@@ -111,6 +117,9 @@ namespace ME.BECS {
             writer.Write(this.readWriteSpinnerPerEntity);
         }
 
+        /// <summary>
+        /// Restores collection metadata from the stream; backing allocator storage is restored separately.
+        /// </summary>
         [INLINE(256)]
         public void DeserializeHeaders(ref StreamBufferReader reader) {
             reader.Read(ref this.list);
@@ -118,6 +127,9 @@ namespace ME.BECS {
             reader.Read(ref this.readWriteSpinnerPerEntity);
         }
 
+        /// <summary>
+        /// Creates <c>CollectionsRegistry</c> using the supplied creation arguments.
+        /// </summary>
         [INLINE(256)]
         public static CollectionsRegistry Create(safe_ptr<State> state, uint capacity) {
 
@@ -131,6 +143,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Handles the entity add callback.
+        /// </summary>
         [INLINE(256)]
         public static void OnEntityAdd(safe_ptr<State> state, uint entId) {
             
@@ -147,6 +162,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Destroys the referenced instance and applies its registered destruction handling.
+        /// </summary>
         [INLINE(256)]
         public static void Destroy(safe_ptr<State> state, in Ent ent) {
 
@@ -164,6 +182,9 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Adds the supplied entry to collections registry.
+        /// </summary>
         [INLINE(256)]
         public static void Add(safe_ptr<State> state, in Ent ent, in MemPtr ptr) {
             
@@ -179,6 +200,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Removes the specified entry from collections registry.
+        /// </summary>
         [INLINE(256)]
         public static void Remove(safe_ptr<State> state, in Ent ent, in MemPtr ptr) {
             
@@ -194,6 +218,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Returns the amount of reserved storage in bytes.
+        /// </summary>
         public static uint GetReservedSizeInBytes(safe_ptr<State> state) {
 
             var size = TSize<CollectionsRegistry>.size;

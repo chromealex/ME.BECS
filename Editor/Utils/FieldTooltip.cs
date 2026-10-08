@@ -7,6 +7,9 @@ using UnityEditor;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Defines field tooltip state and operations.
+    /// </summary>
     [InitializeOnLoad]
     public static class FieldTooltip {
         private static readonly Dictionary<MemberInfo, string> summaries = new();
@@ -19,6 +22,9 @@ namespace ME.BECS.Editor {
             EditorApplication.projectChanged += () => { summaries.Clear(); sources.Clear(); };
         }
 
+        /// <summary>
+        /// Returns the requested entry from field tooltip.
+        /// </summary>
         public static string Get(FieldInfo field, string serializedTooltip = null) {
             if (field == null) return serializedTooltip;
             var becs = (ME.BECS.TooltipAttribute)Attribute.GetCustomAttribute(field, typeof(ME.BECS.TooltipAttribute));
@@ -33,6 +39,9 @@ namespace ME.BECS.Editor {
             return result;
         }
 
+        /// <summary>
+        /// Returns the requested entry from field tooltip.
+        /// </summary>
         public static string Get(Type type) {
             if (type == null) return null;
             var becs = (ME.BECS.TooltipAttribute)Attribute.GetCustomAttribute(type, typeof(ME.BECS.TooltipAttribute));

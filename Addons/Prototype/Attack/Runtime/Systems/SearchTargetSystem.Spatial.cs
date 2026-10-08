@@ -13,13 +13,25 @@ namespace ME.BECS.Attack {
     using ME.BECS.Transforms;
     using ME.BECS.Units;
 
+    /// <summary>
+    /// Coordinates search target during the ECS system lifecycle.
+    /// </summary>
     public partial struct SearchTargetSystem : IUpdate {
 
+        /// <summary>
+        /// Executes spatial search target work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct SpatialSearchTargetJob : IJobForAspects<AttackAspect, SpatialQueryAspect, TransformAspect> {
 
+            /// <summary>
+            /// World used by the containing operation.
+            /// </summary>
             public World world;
             
+            /// <summary>
+            /// Processes spatial search target using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref SpatialQueryAspect query, ref TransformAspect tr) {
 
                 Ent requiredTarget = default;
@@ -53,11 +65,20 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Executes spatial search targets work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct SpatialSearchTargetsJob : IJobFor3Aspects1Components<AttackAspect, SpatialQueryAspect, TransformAspect, AttackTargetsCountComponent> {
 
+            /// <summary>
+            /// World used by the containing operation.
+            /// </summary>
             public World world;
             
+            /// <summary>
+            /// Processes spatial search targets using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref SpatialQueryAspect query, ref TransformAspect tr, ref AttackTargetsCountComponent targetsCountComponent) {
 
                 var hasTarget = true;
@@ -93,6 +114,9 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Updates spatial.
+        /// </summary>
         public Unity.Jobs.JobHandle UpdateSpatial(ref SystemContext context) {
 
             var searchTarget = context.Query().AsParallel().AsUnsafe().Without<AttackTargetsCountComponent>().Schedule<SpatialSearchTargetJob, AttackAspect, SpatialQueryAspect, TransformAspect>(new SpatialSearchTargetJob() {

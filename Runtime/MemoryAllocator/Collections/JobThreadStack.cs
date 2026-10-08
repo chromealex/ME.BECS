@@ -8,6 +8,9 @@ namespace ME.BECS {
     using static Cuts;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides job thread stack storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [IgnoreProfiler]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -22,10 +25,19 @@ namespace ME.BECS {
         private List<uint> toRemove;
         //private BitArray bits;
         private uint size;
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.array.IsCreated;
 
+        /// <summary>
+        /// Number of entries currently tracked by this value.
+        /// </summary>
         public readonly uint Count => this.size;
 
+        /// <summary>
+        /// Writes collection metadata to the stream without serializing the backing allocator blocks.
+        /// </summary>
         [INLINE(256)]
         public void SerializeHeaders(ref StreamBufferWriter writer) {
             writer.Write(this.array);
@@ -33,6 +45,9 @@ namespace ME.BECS {
             writer.Write(this.size);
         }
 
+        /// <summary>
+        /// Restores collection metadata from the stream; backing allocator storage is restored separately.
+        /// </summary>
         [INLINE(256)]
         public void DeserializeHeaders(ref StreamBufferReader reader) {
             reader.Read(ref this.array);
@@ -40,6 +55,9 @@ namespace ME.BECS {
             reader.Read(ref this.size);
         }
 
+        /// <summary>
+        /// Initializes <c>JobThreadStack</c> with storage for the requested number of elements.
+        /// </summary>
         [INLINE(256)]
         public JobThreadStack(ref MemoryAllocator allocator, uint capacity) {
             this = default;
@@ -48,6 +66,9 @@ namespace ME.BECS {
             //this.bits = new BitArray(ref allocator, capacity);
         }
 
+        /// <summary>
+        /// Applies the supplied data or pending changes to the target state.
+        /// </summary>
         [INLINE(256)]
         public void Apply(in MemoryAllocator allocator) {
             E.THREAD_CHECK("Apply");
@@ -62,16 +83,25 @@ namespace ME.BECS {
             //this.bits.Clear(in allocator);
         }
 
+        /// <summary>
+        /// Returns a borrowed pointer to collection storage; mutation that reallocates storage or disposal invalidates it.
+        /// </summary>
         [INLINE(256)]
         public safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
             return this.array.GetUnsafePtr(in allocator);
         }
 
+        /// <summary>
+        /// Updates cached native access for the requested Burst execution mode.
+        /// </summary>
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             this.array.BurstMode(in allocator, state);
         }
 
+        /// <summary>
+        /// Releases the resources owned by this job thread stack instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose(ref MemoryAllocator allocator) {
             
@@ -80,6 +110,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Removes and returns the next entry according to this container's ordering.
+        /// </summary>
         [INLINE(256)]
         public T Pop(ref MemoryAllocator allocator, in JobInfo jobInfo) {
             E.IS_EMPTY(this.size);
@@ -110,6 +143,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Adds an entry according to this container's ordering.
+        /// </summary>
         [INLINE(256)]
         public void Push(ref MemoryAllocator allocator, T item) {
             if (this.size == this.array.Length) {
@@ -120,6 +156,9 @@ namespace ME.BECS {
             this.array[in allocator, this.size++] = item;
         }
 
+        /// <summary>
+        /// Appends the supplied range to the container.
+        /// </summary>
         [INLINE(256)]
         public void PushRange(ref MemoryAllocator allocator, List<T> list) {
             var freeItems = this.array.Length - this.size;
@@ -137,12 +176,18 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Pushes an entry without performing the usual validation checks.
+        /// </summary>
         [INLINE(256)]
         public void PushNoChecks(T item, T* ptr) {
             *ptr = item;
             ++this.size;
         }
 
+        /// <summary>
+        /// Returns the amount of reserved storage in bytes.
+        /// </summary>
         public uint GetReservedSizeInBytes() {
             return this.array.GetReservedSizeInBytes();
         }

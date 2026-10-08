@@ -4,19 +4,34 @@ namespace ME.BECS.FeaturesGraph.Nodes {
     using g = System.Collections.Generic;
     using Extensions.GraphProcessor;
 
+    /// <summary>
+    /// Defines a graph node entry in the associated graph.
+    /// </summary>
     [System.Serializable]
     [Extensions.GraphProcessor.NodeMenuItem("Graph")]
     public class GraphNode : FeaturesGraphNode {
 
+        /// <summary>
+        /// Input nodes used by <c>GraphNode</c>.
+        /// </summary>
         [Input(name = "In Nodes", allowMultiple = true)]
         public g::List<SystemHandle> inputNodes;
 
+        /// <summary>
+        /// Output nodes used by <c>GraphNode</c>.
+        /// </summary>
         [Output(name = "Out Nodes", allowMultiple = true)]
         public g::List<SystemHandle> outputNodes;
 
+        /// <summary>
+        /// Graph value used by <c>GraphNode</c>.
+        /// </summary>
         [ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute(unmanagedTypes: false, runtimeAssembliesOnly: true, showSelector: true)]
         public FeaturesGraph.SystemsGraph graphValue;
 
+        /// <summary>
+        /// Display or lookup name of this entry.
+        /// </summary>
         public override string name {
             get {
                 if (this.graphValue != null) {
@@ -27,9 +42,18 @@ namespace ME.BECS.FeaturesGraph.Nodes {
             }
         }
 
+        /// <summary>
+        /// Style used by <c>GraphNode</c>.
+        /// </summary>
         public override string style => "graph-node";
+        /// <summary>
+        /// Color used to render or identify this value.
+        /// </summary>
         public override UnityEngine.Color color => new UnityEngine.Color32(80, 0, 166, 255);
 
+        /// <summary>
+        /// Returns type from property field.
+        /// </summary>
         public static System.Type GetTypeFromPropertyField(string typeName) {
             if (typeName == string.Empty) return null;
             var splitIndex = typeName.IndexOf(' ');
@@ -37,6 +61,9 @@ namespace ME.BECS.FeaturesGraph.Nodes {
             return assembly.GetType(typeName.Substring(splitIndex + 1));
         }
 
+        /// <summary>
+        /// Processes the supplied inputs using this implementation.
+        /// </summary>
         protected override void Process() {
 
             //UnityEngine.Debug.Log("Graph Node: " + this.name);
@@ -73,6 +100,9 @@ namespace ME.BECS.FeaturesGraph.Nodes {
             
         }
         
+        /// <summary>
+        /// Returns inputs.
+        /// </summary>
         [CustomPortInput(nameof(GraphNode.inputNodes), typeof(SystemHandle), allowCast = true)]
         public void GetInputs(g::List<SerializableEdge> edges) {
             var list = new System.Collections.Generic.List<SystemHandle>(edges.Count);

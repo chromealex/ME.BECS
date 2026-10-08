@@ -8,8 +8,14 @@ namespace ME.BECS {
     using static Cuts;
     using Unity.Collections.LowLevel.Unsafe;
 
+    /// <summary>
+    /// Allocates relocatable native blocks addressed by zone and offset.
+    /// </summary>
     public unsafe partial struct MemoryAllocator {
 
+        /// <summary>
+        /// Writes memory allocator to the supplied serialized representation.
+        /// </summary>
         [INLINE(256)]
         public void Serialize(ref StreamBufferWriter writer) {
             writer.Write(this.zonesCapacity);
@@ -31,6 +37,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Restores memory allocator from the supplied serialized representation.
+        /// </summary>
         [INLINE(256)]
         public void Deserialize(ref StreamBufferReader reader) {
             reader.Read(ref this.zonesCapacity);

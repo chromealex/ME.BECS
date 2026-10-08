@@ -5,9 +5,15 @@ namespace ME.BECS.Editor {
     
     using UnityEngine.UIElements;
 
+    /// <summary>
+    /// Draws component group chooser values in the Unity Inspector.
+    /// </summary>
     [UnityEditor.CustomPropertyDrawer(typeof(ComponentGroupChooser))]
     public class ComponentGroupChooserDrawer : UnityEditor.PropertyDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override VisualElement CreatePropertyGUI(UnityEditor.SerializedProperty property) {
 
             var root = new VisualElement();

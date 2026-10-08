@@ -7,9 +7,18 @@ namespace ME.BECS.Editor {
 
     using scg = System.Collections.Generic;
 
+    /// <summary>
+    /// Defines world allocator editor window state and operations.
+    /// </summary>
     public unsafe class WorldAllocatorEditorWindow {
 
+        /// <summary>
+        /// Style sheet used by <c>WorldAllocatorEditorWindow</c>.
+        /// </summary>
         public StyleSheet styleSheet;
+        /// <summary>
+        /// World used by the containing operation.
+        /// </summary>
         public World world;
 
         // Graph Studio uses themed buttons opening GenericMenu, rather than native DropdownField chrome.
@@ -85,6 +94,9 @@ namespace ME.BECS.Editor {
         private bool paused;
         private uint bandSize = 4u * 1024u * 1024u;
 
+        /// <summary>
+        /// Builds the editor window's UI Toolkit hierarchy.
+        /// </summary>
         public void CreateGUI(VisualElement root) {
             root.Clear();
             EditorUIUtils.ApplyDefaultStyles(root);
@@ -229,6 +241,9 @@ namespace ME.BECS.Editor {
             return size + " B";
         }
 
+        /// <summary>
+        /// Updates world allocator editor window using the current inputs and execution context.
+        /// </summary>
         public void Update() {
             if (this.counters == null || this.paused || EditorApplication.timeSinceStartup < this.nextSample) return;
             this.nextSample = EditorApplication.timeSinceStartup + .25d;

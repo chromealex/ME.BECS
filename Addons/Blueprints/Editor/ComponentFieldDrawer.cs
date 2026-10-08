@@ -6,10 +6,16 @@ namespace ME.BECS.Blueprints.Editor {
     using UnityEngine.UIElements;
     using UnityEditor.UIElements;
     
+    /// <summary>
+    /// Draws component field values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(ComponentField))]
     [CustomPropertyDrawer(typeof(StaticComponentField))]
     public class ComponentFieldDrawer : PropertyDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             var container = new VisualElement();

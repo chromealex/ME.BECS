@@ -6,6 +6,9 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Jobs;
     using ME.BECS.Transforms;
 
+    /// <summary>
+    /// Coordinates shadow copy update during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [RequiredDependencies(typeof(ShadowCopySystem))]
     public partial struct ShadowCopyUpdateSystem : IUpdate {
@@ -66,11 +69,20 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Executes update points work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct UpdatePointsJob : IJobForComponents<FogOfWarShadowCopyComponent> {
 
+            /// <summary>
+            /// Fog-of-war state used by this operation.
+            /// </summary>
             public CreateSystem fow;
             
+            /// <summary>
+            /// Processes update points using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarShadowCopyComponent shadowCopy) {
 
                 var isPointVisible = this.fow.IsVisible(in shadowCopy.forTeam, ent.GetAspect<TransformAspect>().GetWorldMatrixPosition());
@@ -80,11 +92,20 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        /// <summary>
+        /// Executes update rect work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct UpdateRectJob : IJobForComponents<FogOfWarShadowCopyComponent, FogOfWarShadowCopyPointsComponent> {
 
+            /// <summary>
+            /// Fog-of-war state used by this operation.
+            /// </summary>
             public CreateSystem fow;
             
+            /// <summary>
+            /// Processes update rect using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarShadowCopyComponent shadowCopy, ref FogOfWarShadowCopyPointsComponent points) {
 
                 var isVisible = this.fow.IsVisibleAny(in shadowCopy.forTeam, in points.points);
@@ -94,6 +115,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Updates shadow copy update system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var logicWorld = context.world.parent;

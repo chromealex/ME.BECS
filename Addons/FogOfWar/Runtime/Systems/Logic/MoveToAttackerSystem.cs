@@ -19,17 +19,32 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Commands;
     using ME.BECS.Transforms;
 
+    /// <summary>
+    /// Coordinates move to attacker during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [UnityEngine.Tooltip("Move unit if it was damaged and is not attacking and without hold")]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public partial struct MoveToAttackerSystem : IUpdate {
 
+        /// <summary>
+        /// Executes move to attacker work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct MoveToAttackerJob : IJobFor2Aspects1Components<UnitAspect, TransformAspect, DamageTookEvent> {
 
+            /// <summary>
+            /// Graph-building system used by this operation.
+            /// </summary>
             public BuildGraphSystem buildGraphSystem;
+            /// <summary>
+            /// Fog of war system used by <c>MoveToAttackerSystem.MoveToAttackerJob</c>.
+            /// </summary>
             public SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem;
 
+            /// <summary>
+            /// Processes move to attacker using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref TransformAspect transform, ref DamageTookEvent component) {
 
                 if (component.source.IsAlive() == false) return;
@@ -65,12 +80,24 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Executes stop on target work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct StopOnTargetJob : IJobFor1Aspects1Components<UnitAspect, UnitAttackCommandComponent> {
 
+            /// <summary>
+            /// Graph-building system used by this operation.
+            /// </summary>
             public BuildGraphSystem buildGraphSystem;
+            /// <summary>
+            /// Fog of war system used by <c>MoveToAttackerSystem.StopOnTargetJob</c>.
+            /// </summary>
             public SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem;
 
+            /// <summary>
+            /// Processes stop on target using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref UnitAttackCommandComponent target) {
 
                 var t = unit.readUnitCommandGroup.GetAspect<UnitCommandGroupAspect>().readTargets[unit.readTypeId];
@@ -95,12 +122,24 @@ namespace ME.BECS.FogOfWar {
 
         }
         
+        /// <summary>
+        /// Executes stop on target on move work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct StopOnTargetOnMoveJob : IJobFor1Aspects1Components<UnitAspect, UnitAttackOnMoveCommandComponent> {
 
+            /// <summary>
+            /// Graph-building system used by this operation.
+            /// </summary>
             public BuildGraphSystem buildGraphSystem;
+            /// <summary>
+            /// Fog of war system used by <c>MoveToAttackerSystem.StopOnTargetOnMoveJob</c>.
+            /// </summary>
             public SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem;
 
+            /// <summary>
+            /// Processes stop on target on move using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref UnitAttackOnMoveCommandComponent target) {
 
                 var t = unit.HasCommandGroup() == true ? unit.readUnitCommandGroup.GetAspect<UnitCommandGroupAspect>().readTargets[unit.readTypeId] : default;
@@ -125,12 +164,24 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Executes update path work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct UpdatePathJob : IJobFor1Aspects1Components<UnitCommandGroupAspect, CommandAttack> {
 
+            /// <summary>
+            /// Graph-building system used by this operation.
+            /// </summary>
             public BuildGraphSystem buildGraphSystem;
+            /// <summary>
+            /// Fow system used by <c>MoveToAttackerSystem.UpdatePathJob</c>.
+            /// </summary>
             public SystemLink<ME.BECS.FogOfWar.CreateSystem> fowSystem;
 
+            /// <summary>
+            /// Processes update path using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitCommandGroupAspect group, ref CommandAttack command) {
 
                 if (command.target.IsAlive() == false) return;
@@ -150,11 +201,20 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Executes comeback after attack work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct ComebackAfterAttackJob : IJobFor2Aspects1Components<TransformAspect, UnitAspect, ComebackAfterAttackComponent> {
 
+            /// <summary>
+            /// Graph-building system used by this operation.
+            /// </summary>
             public BuildGraphSystem buildGraphSystem;
             
+            /// <summary>
+            /// Processes comeback after attack using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit, ref ComebackAfterAttackComponent comeback) {
 
                 if (ent.Has<ReceivedCommandFromUserEvent>() == true) {
@@ -176,6 +236,9 @@ namespace ME.BECS.FogOfWar {
         }
         
 
+        /// <summary>
+        /// Updates move to attacker system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var buildGraphSystem = context.world.GetSystem<BuildGraphSystem>();

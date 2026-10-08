@@ -13,6 +13,9 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Players;
     using Unity.Collections;
 
+    /// <summary>
+    /// Coordinates update texture system GPU during the ECS system lifecycle.
+    /// </summary>
     [RequiredDependencies(typeof(CreateTextureSystem))]
     public unsafe partial struct UpdateTextureSystemGPU : IAwake, IUpdate, IDestroy {
 
@@ -28,8 +31,17 @@ namespace ME.BECS.FogOfWar {
         private static readonly int deltaTimeSp = UnityEngine.Shader.PropertyToID("_DeltaTime");
         private static readonly int fadeSp = UnityEngine.Shader.PropertyToID("_UseFade");
 
+        /// <summary>
+        /// Fade in speed controlling the associated calculation.
+        /// </summary>
         public sfloat fadeInSpeed;
+        /// <summary>
+        /// Fade out speed controlling the associated calculation.
+        /// </summary>
         public sfloat fadeOutSpeed;
+        /// <summary>
+        /// Shader used by <c>UpdateTextureSystemGPU</c>.
+        /// </summary>
         public ObjectReference<UnityEngine.ComputeShader> shader;
         private ClassPtr<UnityEngine.ComputeBuffer> nodesBuffer;
         private ClassPtr<UnityEngine.ComputeBuffer> exploredBuffer;
@@ -40,6 +52,9 @@ namespace ME.BECS.FogOfWar {
         private int intsCount;
 
 
+        /// <summary>
+        /// Initializes update texture system GPU state from the supplied context.
+        /// </summary>
         public void OnAwake(ref SystemContext context) {
 
             context.dependsOn.Complete();
@@ -78,6 +93,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Updates update texture system GPU using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             context.dependsOn.Complete();
@@ -133,6 +151,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Releases update texture system GPU state at the end of its owning lifecycle.
+        /// </summary>
         public void OnDestroy(ref SystemContext context) {
 
             this.nodesBuffer.Value.Release();

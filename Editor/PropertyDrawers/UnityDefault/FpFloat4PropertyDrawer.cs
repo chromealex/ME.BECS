@@ -6,6 +6,9 @@ namespace ME.BECS.Editor {
     using UnityEditor;
     using UnityEngine.UIElements;
 
+    /// <summary>
+    /// Draws fp float4 property values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(float4))]
     public class FpFloat4PropertyDrawer : PropertyDrawer {
 
@@ -17,6 +20,9 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             LoadStyle();

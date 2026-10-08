@@ -6,7 +6,13 @@ namespace ME.BECS.Editor {
     using ME.BECS.Extensions.GraphProcessor;
     using ME.BECS.FeaturesGraph;
 
+    /// <summary>
+    /// Provides graph topology for BECS source-generator publication.
+    /// </summary>
     public static class SourceGeneratorGraphTopology {
+        /// <summary>
+        /// Publishes lifecycle comparison.
+        /// </summary>
         public static void PublishLifecycleComparison(string totals, string details) =>
             SourceGeneratorReport.Publish("GraphLifecycleComparison", totals, details);
 
@@ -63,6 +69,9 @@ namespace ME.BECS.Editor {
                 ". Read-only asset snapshot supplied to compiler lifecycle planning; no sync recalculation, registry or generated output changes.", report.ToString());
         }
 
+        /// <summary>
+        /// Writes source generator graph topology to the supplied serialized representation.
+        /// </summary>
         public static string Serialize(SystemsGraph root) {
             var result = new StringBuilder("ME.BECS.GraphTopology.v3\n");
             var active = new HashSet<SystemsGraph>();
@@ -149,6 +158,9 @@ namespace ME.BECS.Editor {
         // Change detection only, not a replacement for the complete compiler inputs.
         // Include nested graph values, but exclude viewport/node positions and cached
         // sync analysis (the compiler recomputes synchronization from topology).
+        /// <summary>
+        /// Returns project compilation fingerprint.
+        /// </summary>
         public static string GetProjectCompilationFingerprint() {
             var guids = UnityEditor.AssetDatabase.FindAssets("t:SystemsGraph");
             Array.Sort(guids, StringComparer.Ordinal);
@@ -163,6 +175,9 @@ namespace ME.BECS.Editor {
             return ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(content.ToString());
         }
 
+        /// <summary>
+        /// Returns compilation fingerprint.
+        /// </summary>
         public static string GetCompilationFingerprint(SystemsGraph root) {
             var content = new StringBuilder("ME.BECS.GraphCompilationFingerprint.v1\n");
             using (var reader = new System.IO.StringReader(Serialize(root))) {

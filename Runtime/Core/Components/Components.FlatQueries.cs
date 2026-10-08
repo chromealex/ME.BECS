@@ -6,8 +6,14 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     #endif
 
+    /// <summary>
+    /// Defines components data used by entity processing.
+    /// </summary>
     public unsafe partial struct Components {
 
+        /// <summary>
+        /// Clears state associated with the specified entity.
+        /// </summary>
         [INLINE(256)]
         public static void CleanUpEntity(safe_ptr<State> state, in Ent ent) {
 

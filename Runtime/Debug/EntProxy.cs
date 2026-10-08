@@ -1,5 +1,8 @@
 namespace ME.BECS {
     
+    /// <summary>
+    /// Exposes ent data for debugger inspection.
+    /// </summary>
     public class EntProxy {
 
         private static readonly System.Reflection.MethodInfo isTagDirect = typeof(Components).GetMethod(nameof(Components.IsTagDirect), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
@@ -13,18 +16,36 @@ namespace ME.BECS {
         private static readonly System.Reflection.MethodInfo hasStaticDirect = typeof(Components).GetMethod(nameof(Components.HasStaticDirect), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
         private static readonly System.Reflection.MethodInfo readStaticDirect = typeof(Components).GetMethod(nameof(Components.ReadStaticDirect), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
 
+        /// <summary>
+        /// Defines component data used by entity processing.
+        /// </summary>
         [System.Diagnostics.DebuggerDisplayAttribute("{GetString()}")]
         public struct Component {
 
+            /// <summary>
+            /// Data consumed or produced by the containing operation.
+            /// </summary>
             [System.Diagnostics.DebuggerBrowsableAttribute(System.Diagnostics.DebuggerBrowsableState.RootHidden)]
             public object data;
+            /// <summary>
+            /// Entity whose components or lifetime are associated with this value.
+            /// </summary>
             [System.Diagnostics.DebuggerBrowsableAttribute(System.Diagnostics.DebuggerBrowsableState.Never)]
             public Ent ent;
+            /// <summary>
+            /// Indicates is tag.
+            /// </summary>
             [System.Diagnostics.DebuggerBrowsableAttribute(System.Diagnostics.DebuggerBrowsableState.Never)]
             public bool isTag;
+            /// <summary>
+            /// Whether may enable behavior or state is selected.
+            /// </summary>
             [System.Diagnostics.DebuggerBrowsableAttribute(System.Diagnostics.DebuggerBrowsableState.Never)]
             public bool mayEnable;
 
+            /// <summary>
+            /// Initializes <c>Component</c> from the supplied data, ent, may enable, is tag.
+            /// </summary>
             public Component(object data, Ent ent, bool mayEnable, bool isTag) {
                 this.data = data;
                 this.ent = ent;
@@ -32,6 +53,9 @@ namespace ME.BECS {
                 this.isTag = isTag;
             }
 
+            /// <summary>
+            /// Returns string.
+            /// </summary>
             public string GetString() {
                 var tag = string.Empty;
                 if (this.isTag == true) {
@@ -53,14 +77,29 @@ namespace ME.BECS {
 
         private readonly Ent ent;
         
+        /// <summary>
+        /// Initializes <c>EntProxy</c> from the supplied ent.
+        /// </summary>
         public EntProxy(Ent ent) {
             this.ent = ent;
         }
 
+        /// <summary>
+        /// Whether alive behavior or state is selected.
+        /// </summary>
         public bool alive => this.ent.IsAlive();
+        /// <summary>
+        /// Whether active behavior or state is selected.
+        /// </summary>
         public bool active => this.ent.IsAlive() && this.ent.IsActive();
+        /// <summary>
+        /// Formats this value for display or diagnostics.
+        /// </summary>
         public override string ToString() => this.ent.ToString();
         
+        /// <summary>
+        /// Component storage or descriptors used by this operation.
+        /// </summary>
         public Component[] components {
             get {
 
@@ -87,6 +126,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Shared components used by <c>EntProxy</c>.
+        /// </summary>
         public Component[] sharedComponents {
             get {
                 
@@ -112,6 +154,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Static components used by <c>EntProxy</c>.
+        /// </summary>
         public Component[] staticComponents {
             get {
                 

@@ -20,18 +20,30 @@ namespace ME.BECS.Effects {
     using ME.BECS.Transforms;
     using ME.BECS.Players;
 
+    /// <summary>
+    /// Provides helper operations for effect.
+    /// </summary>
     public static class EffectUtils {
 
+        /// <summary>
+        /// Creates effect.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateEffect(in JobInfo jobInfo, in float3 position, in EffectConfig effect) {
             return CreateEffect(in jobInfo, in position, quaternion.identity, in effect);
         }
 
+        /// <summary>
+        /// Creates effect.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateEffect(in JobInfo jobInfo, in float3 position, in EffectConfig effect, in PlayerAspect owner) {
             return CreateEffect(in jobInfo, in position, quaternion.identity, in effect, owner);
         }
 
+        /// <summary>
+        /// Creates effect.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateEffect(in JobInfo jobInfo, in float3 position, in quaternion rotation, in EffectConfig effect, in PlayerAspect owner = default) {
 

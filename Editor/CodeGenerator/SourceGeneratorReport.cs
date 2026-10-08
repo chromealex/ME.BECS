@@ -3,7 +3,13 @@ namespace ME.BECS.Editor {
     using System;
     using System.IO;
 
+    /// <summary>
+    /// Provides report for BECS source-generator publication.
+    /// </summary>
     public static class SourceGeneratorReport {
+        /// <summary>
+        /// Publishes a named source-generator report with its totals and details.
+        /// </summary>
         public static void Publish(string name, string totals, string details) {
             // Unity truncates long Console messages. Store the full report outside Assets;
             // writing diagnostics must not trigger asset import or another compilation.

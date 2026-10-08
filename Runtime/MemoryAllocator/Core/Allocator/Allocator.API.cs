@@ -9,40 +9,64 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Allocates relocatable native blocks addressed by zone and offset.
+    /// </summary>
     [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(AllocatorDebugProxy))]
     public unsafe partial struct MemoryAllocator {
 
+        /// <summary>
+        /// Encodes a pointer within the specified allocator zone as a zone-and-offset address.
+        /// </summary>
         [INLINE(256)]
         public readonly MemPtr GetSafePtr(byte* ptr, uint zoneId) {
             return new MemPtr(zoneId, (uint)(ptr - this.zones[zoneId].ptr->root.ptr));
         }
 
+        /// <summary>
+        /// Resolves a zone-and-offset address to a raw pointer, applying the optional byte offset.
+        /// </summary>
         [INLINE(256)]
         public readonly byte* GetPtr(in MemPtr ptr) {
             return this.zones[ptr.zoneId].ptr->root.ptr + ptr.offset;
         }
 
+        /// <summary>
+        /// Resolves a zone-and-offset address to a raw pointer, applying the optional byte offset.
+        /// </summary>
         [INLINE(256)]
         public readonly byte* GetPtr(in MemPtr ptr, uint offset) {
             return this.zones[ptr.zoneId].ptr->root.ptr + ptr.offset + offset;
         }
 
+        /// <summary>
+        /// Resolves a zone-and-offset address to a raw pointer, applying the optional byte offset.
+        /// </summary>
         [INLINE(256)]
         public readonly byte* GetPtr(in MemPtr ptr, ulong offset) {
             return this.zones[ptr.zoneId].ptr->root.ptr + ptr.offset + offset;
         }
 
+        /// <summary>
+        /// Resolves a zone-and-offset address to a raw pointer, applying the optional byte offset.
+        /// </summary>
         [INLINE(256)]
         public readonly byte* GetPtr(in MemPtr ptr, int offset) {
             return this.zones[ptr.zoneId].ptr->root.ptr + ptr.offset + offset;
         }
 
+        /// <summary>
+        /// Allocates an aligned native block and returns its relocatable zone-and-offset address.
+        /// </summary>
         [INLINE(256)]
         public MemPtr Alloc(uint size) {
             return this.Alloc(size, out _);
         }
 
+        /// <summary>
+        /// Allocates an aligned native block and returns its relocatable zone-and-offset address.
+        /// </summary>
         [INLINE(256)]
         public MemPtr Alloc(uint size, out safe_ptr ptr) {
             size = Align(size);
@@ -67,6 +91,9 @@ namespace ME.BECS {
             return memPtr;
         }
 
+        /// <summary>
+        /// Returns a block to this allocator; returns false for an invalid address or a block already marked free.
+        /// </summary>
         [INLINE(256)]
         public bool Free(in MemPtr ptr) {
             if (ptr.IsValid() == false) return false;
@@ -121,16 +148,23 @@ namespace ME.BECS {
             return true;
         }
 
+        /// <summary>
+        /// Grows an allocation when necessary, preserving its bytes; the returned address may differ from the input.
+        /// </summary>
         [INLINE(256)]
         public MemPtr ReAlloc(MemPtr ptr, uint size) {
             return this.ReAlloc(ptr, size, out _);
         }
 
+        /// <summary>
+        /// Grows an allocation when necessary, preserving its bytes; the returned address may differ from the input.
+        /// </summary>
         [INLINE(256)]
         public MemPtr ReAlloc(MemPtr memPtr, uint size, out safe_ptr ptr) {
             if (memPtr.IsValid() == false) {
                 return this.Alloc(size, out ptr);
             }
+            size = Align(size);
             CheckPtr(in this, memPtr);
             var header = (BlockHeader*)(this.GetPtr(memPtr) - sizeof(BlockHeader));
             this.lockSpinner.Lock();
@@ -196,6 +230,9 @@ namespace ME.BECS {
             return newMemPtr;
         }
 
+        /// <summary>
+        /// Copies a native byte range while allowing source and destination to overlap.
+        /// </summary>
         [INLINE(256)]
         public readonly void MemMove(MemPtr dstPtr, MemPtr srcPtr, uint size) {
             CheckPtr(in this, dstPtr);
@@ -203,6 +240,9 @@ namespace ME.BECS {
             _memmove((safe_ptr)this.GetPtr(srcPtr), (safe_ptr)this.GetPtr(dstPtr), size);
         }
 
+        /// <summary>
+        /// Copies a native byte range while allowing source and destination to overlap.
+        /// </summary>
         [INLINE(256)]
         public readonly void MemMove(MemPtr dstPtr, uint dstIndex, MemPtr srcPtr, uint srcIndex, uint size) {
             CheckPtr(in this, dstPtr);
@@ -210,6 +250,9 @@ namespace ME.BECS {
             _memmove((safe_ptr)this.GetPtr(srcPtr, srcIndex), (safe_ptr)this.GetPtr(dstPtr, dstIndex), size);
         }
 
+        /// <summary>
+        /// Copies a native byte range while allowing source and destination to overlap.
+        /// </summary>
         [INLINE(256)]
         public readonly void MemMove(MemPtr dstPtr, int dstIndex, MemPtr srcPtr, int srcIndex, int size) {
             CheckPtr(in this, dstPtr);
@@ -217,6 +260,9 @@ namespace ME.BECS {
             _memmove((safe_ptr)this.GetPtr(srcPtr, srcIndex), (safe_ptr)this.GetPtr(dstPtr, dstIndex), size);
         }
 
+        /// <summary>
+        /// Copies bytes between native memory ranges that must not overlap.
+        /// </summary>
         [INLINE(256)]
         public readonly void MemCopy(MemPtr dstPtr, MemPtr srcPtr, uint size) {
             CheckPtr(in this, dstPtr);
@@ -224,6 +270,9 @@ namespace ME.BECS {
             _memcpy((safe_ptr)this.GetPtr(srcPtr), (safe_ptr)this.GetPtr(dstPtr), size);
         }
 
+        /// <summary>
+        /// Copies bytes between native memory ranges that must not overlap.
+        /// </summary>
         [INLINE(256)]
         public readonly void MemCopy(MemPtr dstPtr, uint dstIndex, MemPtr srcPtr, uint srcIndex, uint size) {
             CheckPtr(in this, dstPtr);
@@ -231,36 +280,54 @@ namespace ME.BECS {
             _memcpy((safe_ptr)this.GetPtr(srcPtr, srcIndex), (safe_ptr)this.GetPtr(dstPtr, dstIndex), size);
         }
 
+        /// <summary>
+        /// Fills the specified native memory range with zero bytes.
+        /// </summary>
         [INLINE(256)]
         public readonly void MemClear(MemPtr ptr, uint size) {
             CheckPtr(in this, ptr);
             _memclear((safe_ptr)this.GetPtr(ptr), size);
         }
 
+        /// <summary>
+        /// Fills the specified native memory range with zero bytes.
+        /// </summary>
         [INLINE(256)]
         public readonly void MemClear(MemPtr ptr, uint offset, uint size) {
             CheckPtr(in this, ptr);
             _memclear((safe_ptr)this.GetPtr(ptr, offset), size);
         }
 
+        /// <summary>
+        /// Fills the specified native memory range with zero bytes.
+        /// </summary>
         [INLINE(256)]
         public readonly void MemClear(MemPtr ptr, uint offset, int size) {
             CheckPtr(in this, ptr);
             _memclear((safe_ptr)this.GetPtr(ptr, offset), size);
         }
 
+        /// <summary>
+        /// Fills the specified native memory range with zero bytes.
+        /// </summary>
         [INLINE(256)]
         public readonly void MemClear(MemPtr ptr, uint offset, long size) {
             CheckPtr(in this, ptr);
             _memclear((safe_ptr)this.GetPtr(ptr, offset), size);
         }
 
+        /// <summary>
+        /// Fills the specified native memory range with zero bytes.
+        /// </summary>
         [INLINE(256)]
         public readonly void MemClear(MemPtr ptr, ulong offset, uint size) {
             CheckPtr(in this, ptr);
             _memclear((safe_ptr)this.GetPtr(ptr, offset), size);
         }
 
+        /// <summary>
+        /// Releases the resources owned by this memory allocator instance.
+        /// </summary>
         [INLINE(256)][NotThreadSafe]
         public void Dispose() {
             if (this.freeBlocks.IsCreated == true) this.freeBlocks.Dispose();

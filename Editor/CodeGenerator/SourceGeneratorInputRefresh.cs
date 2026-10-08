@@ -2,6 +2,9 @@ namespace ME.BECS.Editor {
     // Coalesced input refresh. Successful export and successful compilation are
     // separate states; the project analysis receipt plus compiled input hashes
     // provide restart-safe evidence without injecting code hashes into inputs.
+    /// <summary>
+    /// Provides input refresh for BECS source-generator publication.
+    /// </summary>
     [UnityEditor.InitializeOnLoad]
     public static class SourceGeneratorInputRefresh {
         private const string DeferredGraphsKey = "ME.BECS.GraphInputs.ManualGraphs";
@@ -113,12 +116,21 @@ namespace ME.BECS.Editor {
 
         // Explicit retry for menus and graph UI; keep failure state even when the
         // exporter declines before raising ExportCompleted (batch/package setup).
+        /// <summary>
+        /// Attempts to export and reports whether the operation succeeded.
+        /// </summary>
         public static bool TryExport() => TryExportExplicit(false);
 
+        /// <summary>
+        /// Attempts to rebuild and reports whether the operation succeeded.
+        /// </summary>
         public static bool TryRebuild() => TryExportExplicit(true);
 
         // UI callers receive acceptance immediately; completion means publication,
         // never merely finishing the worker or successfully compiling Unity code.
+        /// <summary>
+        /// Requests background input export and optionally reports completion through a callback.
+        /// </summary>
         public static bool RequestExport(System.Action<bool> completed = null, bool rebuild = false) {
             if (exporting || UnityEditor.BuildPipeline.isBuildingPlayer || UnityEngine.Application.isBatchMode || UnityEditor.EditorApplication.isCompiling ||
                 UnityEditor.EditorApplication.isUpdating || UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode ||
@@ -398,6 +410,9 @@ namespace ME.BECS.Editor {
 
         // Studio edits are saved separately from publishing compiler inputs. Keep this
         // across consumer reloads so saving an asset cannot silently compile its draft.
+        /// <summary>
+        /// Defers compilation of the supplied graph until its inputs are ready.
+        /// </summary>
         public static void DeferGraphCompilation(ME.BECS.FeaturesGraph.SystemsGraph graph) {
             var guid = UnityEditor.AssetDatabase.AssetPathToGUID(UnityEditor.AssetDatabase.GetAssetPath(graph));
             if (string.IsNullOrEmpty(guid)) return;
@@ -406,6 +421,9 @@ namespace ME.BECS.Editor {
             UnityEditor.SessionState.SetString(DeferredGraphsKey, string.Join(";", entries));
         }
 
+        /// <summary>
+        /// Tests whether the context is graph compilation deferred.
+        /// </summary>
         public static bool IsGraphCompilationDeferred(ME.BECS.FeaturesGraph.SystemsGraph graph) {
             var guid = UnityEditor.AssetDatabase.AssetPathToGUID(UnityEditor.AssetDatabase.GetAssetPath(graph));
             return !string.IsNullOrEmpty(guid) && System.Array.IndexOf(UnityEditor.SessionState.GetString(DeferredGraphsKey, "").Split(';'), guid) >= 0;
@@ -417,6 +435,9 @@ namespace ME.BECS.Editor {
             return false;
         }
 
+        /// <summary>
+        /// Requests a refresh of source-generator input analysis.
+        /// </summary>
         public static void Request() {
             unchecked { ++requestVersion; }
             if (IsAnalyzing) {

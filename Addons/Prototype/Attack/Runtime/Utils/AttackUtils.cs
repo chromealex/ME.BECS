@@ -23,17 +23,38 @@ namespace ME.BECS.Attack {
     using ME.BECS.Views;
     using Unity.Collections.LowLevel.Unsafe;
 
+    /// <summary>
+    /// Provides helper operations for attack.
+    /// </summary>
     public static class AttackUtils {
 
+        /// <summary>
+        /// Defines the supported reaction type values.
+        /// </summary>
         public enum ReactionType {
 
+            /// <summary>
+            /// None option for <c>AttackUtils.ReactionType</c>.
+            /// </summary>
             None,
+            /// <summary>
+            /// Rotate to target option for <c>AttackUtils.ReactionType</c>.
+            /// </summary>
             RotateToTarget,
+            /// <summary>
+            /// Move to target option for <c>AttackUtils.ReactionType</c>.
+            /// </summary>
             MoveToTarget,
+            /// <summary>
+            /// Run away option for <c>AttackUtils.ReactionType</c>.
+            /// </summary>
             RunAway,
 
         }
 
+        /// <summary>
+        /// Creates attack sensor.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateAttackSensor(int targetsMask, Config config, in JobInfo jobInfo) {
 
@@ -71,6 +92,9 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Creates attack sensor spatial.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateAttackSensorSpatial(int targetsMask, Config config, in JobInfo jobInfo) {
 
@@ -108,6 +132,9 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Creates attack sensor.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateAttackSensor<T>(int targetsMask, Config config, in JobInfo jobInfo, in T subFilter) where T : unmanaged, IComponent {
 
@@ -118,6 +145,9 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Returns nearest point.
+        /// </summary>
         [INLINE(256)]
         public static float3 GetNearestPoint(in TransformAspect targetTr, in float3 fromPos) {
 
@@ -142,6 +172,9 @@ namespace ME.BECS.Attack {
             
         }
 
+        /// <summary>
+        /// Tests whether the context can attack.
+        /// </summary>
         [INLINE(256)]
         public static bool CanAttack(in UnitAspect unit, in Ent target) {
 
@@ -158,6 +191,9 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Tests whether the context can attack.
+        /// </summary>
         [INLINE(256)]
         public static bool CanAttack(in AttackAspect attackSensor, in Ent target) {
             
@@ -314,12 +350,18 @@ namespace ME.BECS.Attack {
 
         }
         
+        /// <summary>
+        /// Creates bullet spatial.
+        /// </summary>
         [INLINE(256)]
         public static BulletAspect CreateBulletSpatial(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition,
                                                        in Config config, in ME.BECS.Views.View muzzleView, in JobInfo jobInfo = default) {
             return CreateBulletSpatial(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, 200u, in jobInfo);
         }
         
+        /// <summary>
+        /// Creates bullet spatial.
+        /// </summary>
         [INLINE(256)]
         public static BulletAspect CreateBulletSpatial(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in ME.BECS.Views.View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo = default) {
 
@@ -338,6 +380,9 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Sets target changed.
+        /// </summary>
         [INLINE(256)]
         public static bool SetTargetChanged(in UnitCommandGroupAspect group, ReactionType result, in float3 position, in Ent target) {
             ref var data = ref group.ent.Get<LastTargetDataComponent>();
@@ -352,6 +397,9 @@ namespace ME.BECS.Attack {
             return false;
         }
 
+        /// <summary>
+        /// Returns unit by attack aspect.
+        /// </summary>
         [INLINE(256)]
         public static Ent GetUnitByAttackAspect(AttackAspect aspect) {
             var placement = aspect.ent.ReadParent();
@@ -360,16 +408,28 @@ namespace ME.BECS.Attack {
             return unit;
         }
 
+        /// <summary>
+        /// Stores bullet data for <c>AttackUtils</c>.
+        /// </summary>
         public readonly struct BulletData {
 
+            /// <summary>
+            /// Direction used by <c>AttackUtils.BulletData</c>.
+            /// </summary>
             public readonly float3 direction;
 
+            /// <summary>
+            /// Initializes <c>BulletData</c> from the supplied direction.
+            /// </summary>
             public BulletData(in float3 direction) {
                 this.direction = direction;
             }
 
         }
         
+        /// <summary>
+        /// Builds projectile launch data from the source and target positions.
+        /// </summary>
         [INLINE(256)]
         public static UnsafeList<BulletData> Distribute(in Ent ent, in float3 sourcePosition, in float3 targetPosition) {
             var results = new UnsafeList<BulletData>(1, Constants.ALLOCATOR_TEMP);

@@ -6,6 +6,9 @@ namespace ME.BECS {
     using AOT;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Defines domain allocator state and operations.
+    /// </summary>
     [IgnoreProfiler]
     [BURST]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
@@ -21,6 +24,9 @@ namespace ME.BECS {
         private Spinner spinner;
         #endif
 
+        /// <summary>
+        /// Initializes domain allocator state from the supplied context.
+        /// </summary>
         public void Initialize(int capacity) {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
             this.spinner = default;
@@ -29,6 +35,9 @@ namespace ME.BECS {
             this.handle = Allocator.Persistent;
         }
         
+        /// <summary>
+        /// Releases the resources owned by this domain allocator instance.
+        /// </summary>
         public void Dispose() {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
             this.spinner.Acquire();
@@ -44,6 +53,9 @@ namespace ME.BECS {
             this = default;
         }
 
+        /// <summary>
+        /// Attempts to  and reports whether the operation succeeded.
+        /// </summary>
         public int Try(ref AllocatorManager.Block block) {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
             var alloc = false;
@@ -76,13 +88,25 @@ namespace ME.BECS {
             return result;
         }
 
+        /// <summary>
+        /// Function used by <c>DomainAllocator</c>.
+        /// </summary>
         [ExcludeFromBurstCompatTesting("Uses managed delegate")]
         public AllocatorManager.TryFunction Function => Try;
+        /// <summary>
+        /// Handle used by <c>DomainAllocator</c>.
+        /// </summary>
         public AllocatorManager.AllocatorHandle Handle {
             get => this.handle;
             set => this.handle = value;
         }
+        /// <summary>
+        /// Gets to allocator; this implementation returns <c>this.handle.ToAllocator</c>.
+        /// </summary>
         public Allocator ToAllocator => this.handle.ToAllocator;
+        /// <summary>
+        /// Gets is custom allocator; this implementation returns <c>true</c>.
+        /// </summary>
         public bool IsCustomAllocator => true;
 
         [BURST]

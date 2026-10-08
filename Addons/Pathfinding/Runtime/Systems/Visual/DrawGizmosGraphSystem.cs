@@ -11,17 +11,38 @@ namespace ME.BECS.Pathfinding {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Collections;
 
+    /// <summary>
+    /// Coordinates draw gizmos graph during the ECS system lifecycle.
+    /// </summary>
     [UnityEngine.Tooltip("Draw graph in gizmos.")]
     public partial struct DrawGizmosGraphSystem : IUpdate, IDrawGizmos {
 
+        /// <summary>
+        /// Whether draw graph behavior or state is selected.
+        /// </summary>
         public bbool drawGraph;
+        /// <summary>
+        /// Whether draw path behavior or state is selected.
+        /// </summary>
         public bbool drawPath;
+        /// <summary>
+        /// Whether draw normals behavior or state is selected.
+        /// </summary>
         public bbool drawNormals;
+        /// <summary>
+        /// Whether draw nodes behavior or state is selected.
+        /// </summary>
         public bbool drawNodes;
+        /// <summary>
+        /// Whether draw portals behavior or state is selected.
+        /// </summary>
         public bbool drawPortals;
 
         private int drawIndex;
 
+        /// <summary>
+        /// Updates draw gizmos graph system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
             
             if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.O) == true) {
@@ -35,6 +56,9 @@ namespace ME.BECS.Pathfinding {
             
         }
 
+        /// <summary>
+        /// Draws diagnostic geometry for the associated state.
+        /// </summary>
         public void OnDrawGizmos(ref SystemContext context) {
 
             var logicWorld = context.world.parent;

@@ -4,19 +4,37 @@ namespace ME.BECS.Jobs {
     using System.Threading;
     using static Cuts;
 
+    /// <summary>
+    /// Drives the main-thread callback dispatcher from Unity updates.
+    /// </summary>
     public class DispatcherMono : UnityEngine.MonoBehaviour {
 
+        /// <summary>
+        /// Updates dispatcher mono using the current inputs and execution context.
+        /// </summary>
         public void Update() {
             MainThreadDispatcher.ExecuteTasks();
         }
 
     }
 
+    /// <summary>
+    /// Defines the callback signature for main thread callback.
+    /// </summary>
     public unsafe delegate void MainThreadCallback(void* ptr);
 
+    /// <summary>
+    /// Queues callbacks for execution on the Unity main thread.
+    /// </summary>
     public sealed unsafe class MainThreadDispatcher {
 
+        /// <summary>
+        /// Instance associated with this entry.
+        /// </summary>
         public static MainThreadDispatcher instance;
+        /// <summary>
+        /// Instance go used by <c>MainThreadDispatcher</c>.
+        /// </summary>
         public static UnityEngine.GameObject instanceGo;
         private const int K_AWQ_INITIAL_CAPACITY = 20;
         private readonly List<WorkRequest> mAsyncWorkQueue;
@@ -33,6 +51,9 @@ namespace ME.BECS.Jobs {
             this.mMainThreadID = mainThreadID;
         }
 
+        /// <summary>
+        /// Submits the supplied payload to the associated transport or event channel.
+        /// </summary>
         public static void Send(MainThreadCallback callback, void* state) {
             instance.Send_INTERNAL(callback, state);
         }
@@ -40,6 +61,9 @@ namespace ME.BECS.Jobs {
         // Send will process the call synchronously. If the call is processed on the main thread, we'll invoke it
         // directly here. If the call is processed on another thread it will be queued up like POST to be executed
         // on the main thread and it will wait. Once the main thread processes the work we can continue
+        /// <summary>
+        /// Queues a callback and its state for execution by the main-thread dispatcher.
+        /// </summary>
         public void Send_INTERNAL(MainThreadCallback callback, void* state) {
             if (this.mMainThreadID == System.Threading.Thread.CurrentThread.ManagedThreadId) {
                 callback(state);
@@ -72,6 +96,9 @@ namespace ME.BECS.Jobs {
         }
 
         // Exec will execute tasks off the task list
+        /// <summary>
+        /// Executes the stored operation.
+        /// </summary>
         public void Exec() {
             lock (this.mAsyncWorkQueue) {
                 this.mCurrentFrameWork.AddRange(this.mAsyncWorkQueue);
@@ -86,6 +113,9 @@ namespace ME.BECS.Jobs {
             }
         }
         
+        /// <summary>
+        /// Initializes main thread dispatcher state from the supplied context.
+        /// </summary>
         [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
         public static void Initialize() {
             
@@ -102,6 +132,9 @@ namespace ME.BECS.Jobs {
             instanceGo = go;
         }
 
+        /// <summary>
+        /// Executes tasks queued for the current dispatcher.
+        /// </summary>
         public static void ExecuteTasks() {
             instance.Exec();
         }

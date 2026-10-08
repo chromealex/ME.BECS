@@ -2,13 +2,22 @@ namespace ME.BECS.Blueprints.Nodes {
 
     using gp = Extensions.GraphProcessor;
 
+    /// <summary>
+    /// Defines write to component data used by entity processing.
+    /// </summary>
     [System.Serializable]
     [Extensions.GraphProcessor.NodeMenuItem("Write to Component")]
     public class WriteToComponent : Graph.Node {
 
+        /// <summary>
+        /// Stored value used by this instance.
+        /// </summary>
         [gp::Input(name = "Value", allowMultiple = false)]
         public string value;
 
+        /// <summary>
+        /// Entity processed or represented by this value.
+        /// </summary>
         [gp::Input(name = "Entity", allowMultiple = false, optional = true, fieldType = typeof(Ent))]
         public string entity = "ent";
 
@@ -18,8 +27,14 @@ namespace ME.BECS.Blueprints.Nodes {
             return string.Empty;
         }
 
+        /// <summary>
+        /// Component data accessed by this instance.
+        /// </summary>
         public ComponentField component;
         
+        /// <summary>
+        /// Processes write to component using the supplied job inputs.
+        /// </summary>
         public override void Execute(Writer writer) {
 
             if (this.component.IsValid() == false) {

@@ -13,10 +13,16 @@ namespace ME.BECS {
     using System.Threading;
     using Unity.Collections.LowLevel.Unsafe;
 
+    /// <summary>
+    /// Coordinates read and write access using native synchronization storage.
+    /// </summary>
     [BURST]
     [IgnoreProfiler]
     public unsafe struct ReadWriteNativeSpinner : IIsCreated {
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.value.ptr != null;
 
         private static readonly uint CACHE_LINE_SIZE = _align(TSize<int>.size, JobUtils.CacheLineSize);
@@ -28,6 +34,9 @@ namespace ME.BECS {
         private Unity.Collections.Allocator allocator;
         private byte ownsMemory;
 
+        /// <summary>
+        /// Creates <c>ReadWriteNativeSpinner</c> using the supplied creation arguments.
+        /// </summary>
         [INLINE(256)]
         public static ReadWriteNativeSpinner Create(Unity.Collections.Allocator allocator) {
             var threadsCount = JobUtils.ThreadsCount;
@@ -78,6 +87,9 @@ namespace ME.BECS {
             return cnt;
         }
 
+        /// <summary>
+        /// Reads begin.
+        /// </summary>
         [INLINE(256)]
         public bool ReadBegin() {
             E.IS_CREATED(this);
@@ -111,6 +123,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Reads end.
+        /// </summary>
         [INLINE(256)]
         public void ReadEnd() {
             E.IS_CREATED(this);
@@ -118,6 +133,9 @@ namespace ME.BECS {
             Interlocked.Decrement(ref *ptr);
         }
 
+        /// <summary>
+        /// Writes begin.
+        /// </summary>
         [INLINE(256)]
         public bool WriteBegin() {
             E.IS_CREATED(this);
@@ -149,12 +167,18 @@ namespace ME.BECS {
             return true;
         }
 
+        /// <summary>
+        /// Writes end.
+        /// </summary>
         [INLINE(256)]
         public void WriteEnd() {
             E.IS_CREATED(this);
             Volatile.Write(ref this.writeValue, 0);
         }
 
+        /// <summary>
+        /// Releases the resources owned by this read write native spinner instance.
+        /// </summary>
         public void Dispose() {
             if (this.ownsMemory != 0) _free(this.value, this.allocator);
             this = default;
@@ -162,11 +186,17 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Coordinates concurrent readers and exclusive writers.
+    /// </summary>
     [IgnoreProfiler]
     [BURST]
     [StructLayout(LayoutKind.Sequential)]
     public unsafe struct ReadWriteSpinner : IIsCreated {
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.value.IsValid();
 
         private static readonly uint CACHE_LINE_SIZE = _align(TSize<int>.size, JobUtils.CacheLineSize);
@@ -174,18 +204,27 @@ namespace ME.BECS {
         private MemPtr value;     // per-thread read counters
         private int writeValue;   // 0 = free, 1 = writer active
 
+        /// <summary>
+        /// Writes collection metadata to the stream without serializing the backing allocator blocks.
+        /// </summary>
         [INLINE(256)]
         public void SerializeHeaders(ref StreamBufferWriter writer) {
             writer.Write(this.value);
             writer.Write(this.writeValue);
         }
 
+        /// <summary>
+        /// Restores collection metadata from the stream; backing allocator storage is restored separately.
+        /// </summary>
         [INLINE(256)]
         public void DeserializeHeaders(ref StreamBufferReader reader) {
             reader.Read(ref this.value);
             reader.Read(ref this.writeValue);
         }
 
+        /// <summary>
+        /// Creates <c>ReadWriteSpinner</c> using the supplied creation arguments.
+        /// </summary>
         [INLINE(256)]
         public static ReadWriteSpinner Create(safe_ptr<State> state) {
             var size = CACHE_LINE_SIZE * JobUtils.ThreadsCountMax;
@@ -213,6 +252,9 @@ namespace ME.BECS {
             return cnt;
         }
 
+        /// <summary>
+        /// Reads begin.
+        /// </summary>
         [INLINE(256)]
         public bool ReadBegin(safe_ptr<State> state) {
             E.IS_CREATED(this);
@@ -246,6 +288,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Reads end.
+        /// </summary>
         [INLINE(256)]
         public void ReadEnd(safe_ptr<State> state) {
             E.IS_CREATED(this);
@@ -253,6 +298,9 @@ namespace ME.BECS {
             Interlocked.Decrement(ref *ptr);
         }
 
+        /// <summary>
+        /// Writes begin.
+        /// </summary>
         [INLINE(256)]
         public bool WriteBegin(safe_ptr<State> state) {
             E.IS_CREATED(this);
@@ -284,12 +332,18 @@ namespace ME.BECS {
             return true;
         }
 
+        /// <summary>
+        /// Writes end.
+        /// </summary>
         [INLINE(256)]
         public void WriteEnd() {
             E.IS_CREATED(this);
             Volatile.Write(ref this.writeValue, 0);
         }
     
+        /// <summary>
+        /// Provides the <c>BurstMode</c> callback; this implementation performs no work.
+        /// </summary>
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool value) {
             
@@ -297,6 +351,9 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Provides spin-based synchronization around shared state.
+    /// </summary>
     [IgnoreProfiler]
     [BURST]
     public struct Spinner {
@@ -363,15 +420,27 @@ namespace ME.BECS {
         }
     }
 
+    /// <summary>
+    /// Provides a spin lock for coordinating access to shared state.
+    /// </summary>
     [IgnoreProfiler]
     [BURST]
     public struct LockSpinner {
 
+        /// <summary>
+        /// Storage size or fixed element count used by this representation.
+        /// </summary>
         public const int SIZE = sizeof(int);
 
         internal int value;
+        /// <summary>
+        /// Indicates is locked.
+        /// </summary>
         public bool IsLocked => this.value != 0;
 
+        /// <summary>
+        /// Acquires the synchronization lock before accessing protected state.
+        /// </summary>
         [INLINE(256)]
         public bool Lock() {
             #if EXCEPTIONS_INTERNAL
@@ -398,6 +467,9 @@ namespace ME.BECS {
             return true;
         }
         
+        /// <summary>
+        /// Releases the synchronization lock after accessing protected state.
+        /// </summary>
         [INLINE(256)]
         public bool Unlock() {
             #if EXCEPTIONS_INTERNAL
@@ -424,6 +496,9 @@ namespace ME.BECS {
             return true;
         }
         
+        /// <summary>
+        /// Acquires the lock while honoring the supplied synchronization condition.
+        /// </summary>
         [INLINE(256)]
         public void LockWhile() {
             E.ADDR_4(ref this.value);
@@ -440,6 +515,9 @@ namespace ME.BECS {
             #endif
         }
         
+        /// <summary>
+        /// Releases synchronization for the supplied lock state.
+        /// </summary>
         [INLINE(256)]
         public void UnlockWhile() {
             System.Threading.Interlocked.MemoryBarrier();

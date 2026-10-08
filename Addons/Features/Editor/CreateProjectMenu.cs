@@ -1,8 +1,14 @@
 
 namespace ME.BECS.Features.Editor {
 
+    /// <summary>
+    /// Defines create project menu state and operations.
+    /// </summary>
     public static class CreateProjectMenu {
 
+        /// <summary>
+        /// Shows features graph.
+        /// </summary>
         [UnityEditor.MenuItem("ME.BECS/\u26DC Features Graph...", priority = 10000)]
         public static void ShowFeaturesGraph() {
             
@@ -10,16 +16,28 @@ namespace ME.BECS.Features.Editor {
             
         }
 
+        /// <summary>
+        /// Provides Unity Editor controls for end create project.
+        /// </summary>
         public class EndCreateProject : UnityEditor.ProjectWindowCallback.EndNameEditAction {
 
+            /// <summary>
+            /// Callback invoked for created.
+            /// </summary>
             public System.Action<string> onCreated;
 
+            /// <summary>
+            /// Creates the project asset after the user confirms its name and destination.
+            /// </summary>
             public override void Action(int instanceId, string pathName, string resourceFile) {
                 this.onCreated.Invoke(pathName);
             }
 
         }
 
+        /// <summary>
+        /// Creates project.
+        /// </summary>
         [UnityEditor.MenuItem("Assets/Create/ME.BECS/Create Project")]
         public static void CreateProject() {
 

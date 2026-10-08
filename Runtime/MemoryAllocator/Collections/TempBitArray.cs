@@ -10,13 +10,25 @@ namespace ME.BECS {
     using Unity.Mathematics;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Defines full fill bits state and operations.
+    /// </summary>
     [IgnoreProfiler]
     public class FullFillBits {
 
+        /// <summary>
+        /// Fill bits count constant used by <c>FullFillBits</c>.
+        /// </summary>
         public const uint FILL_BITS_COUNT = 2048u;
         
+        /// <summary>
+        /// Full fill bits used by <c>FullFillBits</c>.
+        /// </summary>
         public static readonly Unity.Burst.SharedStatic<Internal.Array<uint>> fullFillBits = Unity.Burst.SharedStatic<Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<FullFillBits>(TAlign<Internal.Array<uint>>.align, 101L);
 
+        /// <summary>
+        /// Initializes full fill bits state from the supplied context.
+        /// </summary>
         public static void Initialize() {
             if (fullFillBits.Data.IsCreated == true) fullFillBits.Data.Dispose();
             fullFillBits.Data.Resize(FILL_BITS_COUNT);
@@ -25,12 +37,18 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Releases the resources owned by this full fill bits instance.
+        /// </summary>
         public static void Dispose() {
             if (fullFillBits.Data.IsCreated == true) fullFillBits.Data.Dispose();
         }
 
     }
 
+    /// <summary>
+    /// Provides temp bit array storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(TempBitArrayDebugView))]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -45,12 +63,24 @@ namespace ME.BECS {
         internal const int BITS_IN_UINT = sizeof(uint) * 8;
         internal const int BITS_IN_UINT_MASK = BITS_IN_UINT - 1;
 
+        /// <summary>
+        /// Native address of the associated storage; ownership is defined by the containing API.
+        /// </summary>
         public readonly safe_ptr<ulong> ptr;
+        /// <summary>
+        /// Number of elements exposed by this value.
+        /// </summary>
         public uint Length;
         internal readonly Unity.Collections.Allocator allocator;
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.ptr.ptr != null;
 
+        /// <summary>
+        /// Initializes <c>TempBitArray</c> with storage for the requested number of elements.
+        /// </summary>
         [INLINE(256)]
         public TempBitArray(uint length, ClearOptions clearOptions = ClearOptions.ClearMemory, Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMPJOB) {
 
@@ -64,6 +94,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Initializes <c>TempBitArray</c> with storage for the requested number of elements.
+        /// </summary>
         [INLINE(256)]
         public TempBitArray(uint length, ClearOptions clearOptions, Unity.Collections.AllocatorManager.AllocatorHandle allocator) {
 
@@ -77,6 +110,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Initializes <c>TempBitArray</c> from the supplied allocator, bitmap, unity allocator.
+        /// </summary>
         [INLINE(256)]
         public TempBitArray(in MemoryAllocator allocator, in BitArray bitmap, Unity.Collections.Allocator unityAllocator) {
 
@@ -87,6 +123,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Initializes <c>TempBitArray</c> from the supplied allocator, bitmap, unity allocator.
+        /// </summary>
         [INLINE(256)]
         public TempBitArray(in MemoryAllocator allocator, in BitArray bitmap, Unity.Collections.AllocatorManager.AllocatorHandle unityAllocator) {
 
@@ -97,6 +136,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Grows bit storage when the requested length exceeds the current length; smaller requests do not shrink storage.
+        /// </summary>
         [INLINE(256)]
         public void Resize(uint newLength, Unity.Collections.Allocator allocator) {
             E.IS_CREATED(this);
@@ -172,6 +214,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Combines the entries or bounds represented by the supplied values.
+        /// </summary>
         [INLINE(256)]
         public void Union(in MemoryAllocator allocator, in BitArray bitmap) {
             E.IS_CREATED(this);
@@ -209,6 +254,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Computes the overlap between the supplied values.
+        /// </summary>
         [INLINE(256)]
         public void Intersect(in TempBitArray bitmap, uint maxLength) {
             E.IS_CREATED(this);
@@ -228,6 +276,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Computes the overlap between the supplied values.
+        /// </summary>
         [INLINE(256)]
         public void Intersect(in MemoryAllocator allocator, in BitArray bitmap) {
             E.IS_CREATED(this);
@@ -246,6 +297,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Computes the overlap between the supplied values.
+        /// </summary>
         [INLINE(256)]
         public void Intersect(in MemoryAllocator allocator, in BitArray bitmap, uint maxLength) {
             E.IS_CREATED(this);
@@ -266,6 +320,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Removes the specified entry from temp bit array.
+        /// </summary>
         [INLINE(256)]
         public void Remove(in TempBitArray bitmap) {
             E.IS_CREATED(this);
@@ -278,6 +335,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Removes the specified entry from temp bit array.
+        /// </summary>
         [INLINE(256)]
         public void Remove(in MemoryAllocator allocator, in BitArray bitmap) {
             E.IS_CREATED(this);
@@ -339,6 +399,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Zeroes the stored data while preserving the length and backing allocation.
+        /// </summary>
         [INLINE(256)]
         public void Clear() {
 
@@ -347,6 +410,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this temp bit array instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
 
@@ -356,6 +422,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases the resources associated with the read-only wrapper.
+        /// </summary>
         [INLINE(256)]
         public readonly void DisposeReadonly() {
 
@@ -363,11 +432,17 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Returns true bits temp.
+        /// </summary>
         [INLINE(256)]
         public UnsafeList<uint> GetTrueBitsTemp(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
             return ME.BECS.Collections.BitScanner.GetTrueBitsTempFast(in this, allocator);
         }
 
+        /// <summary>
+        /// Returns the amount of reserved storage in bytes.
+        /// </summary>
         public uint GetReservedSizeInBytes() {
             return Bitwise.AlignULongBits(this.Length);
         }

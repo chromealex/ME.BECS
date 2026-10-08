@@ -10,6 +10,9 @@ namespace ME.BECS.Collections {
     using Unity.Burst.Intrinsics;
     using Unity.Mathematics;
 
+    /// <summary>
+    /// Defines bit scanner state and operations.
+    /// </summary>
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
@@ -17,13 +20,22 @@ namespace ME.BECS.Collections {
     #endif
     public static unsafe class BitScanner {
 
+        /// <summary>
+        /// Bits in ulong constant used by <c>BitScanner</c>.
+        /// </summary>
         public const int BITS_IN_ULONG = 64;
 
+        /// <summary>
+        /// Counts the bits that are set in the bit collection.
+        /// </summary>
         [INLINE(256)]
         public static int GetTrueBitsCount(in TempBitArray arr) {
             return GetTrueBitsCount(arr.ptr.ptr, (int)arr.Length);
         }
 
+        /// <summary>
+        /// Counts the bits that are set in the bit collection.
+        /// </summary>
         [INLINE(256)]
         public static int GetTrueBitsCount(ulong* data, int bitLength) {
             var wordCount = (bitLength + BITS_IN_ULONG - 1) / BITS_IN_ULONG;
@@ -36,11 +48,17 @@ namespace ME.BECS.Collections {
             return count;
         }
 
+        /// <summary>
+        /// Writes true bits.
+        /// </summary>
         [INLINE(256)]
         public static int WriteTrueBits(in TempBitArray arr, uint* destination, int startIndex, int count) {
             return WriteTrueBits(arr.ptr.ptr, (int)arr.Length, destination, startIndex, count);
         }
 
+        /// <summary>
+        /// Writes true bits.
+        /// </summary>
         [INLINE(256)]
         public static int WriteTrueBits(ulong* data, int bitLength, uint* destination, int startIndex, int count) {
             if (count <= 0) return 0;
@@ -80,6 +98,9 @@ namespace ME.BECS.Collections {
             return remainder == 0 ? ulong.MaxValue : (1UL << remainder) - 1UL;
         }
         
+        /// <summary>
+        /// Returns true bits temp fast.
+        /// </summary>
         [INLINE(256)]
         public static UnsafeList<uint> GetTrueBitsTempFast(in TempBitArray arr, Unity.Collections.Allocator allocator) {
             /*if (X86.Sse2.IsSse2Supported == true) {
@@ -92,6 +113,9 @@ namespace ME.BECS.Collections {
             return arr.Length < FullFillBits.FILL_BITS_COUNT ? GetTrueBitsTempFastFull(arr.ptr.ptr, (int)arr.Length, allocator) : GetTrueBitsTempFast(arr.ptr.ptr, (int)arr.Length, allocator);
         }
         
+        /// <summary>
+        /// Returns true bits temp fast.
+        /// </summary>
         [INLINE(256)]
         public static UnsafeList<uint> GetTrueBitsTempFast(ulong* data, int bitLength, Unity.Collections.Allocator allocator) {
             var trueBits = new UnsafeList<uint>(bitLength, allocator);
@@ -117,6 +141,9 @@ namespace ME.BECS.Collections {
             return trueBits;
         }
 
+        /// <summary>
+        /// Returns true bits temp fast full.
+        /// </summary>
         [INLINE(256)]
         public static UnsafeList<uint> GetTrueBitsTempFastFull(ulong* data, int bitLength, Unity.Collections.Allocator allocator) {
             var trueBits = new UnsafeList<uint>(bitLength, allocator);

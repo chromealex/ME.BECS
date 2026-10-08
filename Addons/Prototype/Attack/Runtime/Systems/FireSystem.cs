@@ -13,15 +13,27 @@ namespace ME.BECS.Attack {
     using ME.BECS.Jobs;
     using ME.BECS.Bullets;
 
+    /// <summary>
+    /// Coordinates fire during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [UnityEngine.Tooltip("Fire system")]
     public partial struct FireSystem : IUpdate {
 
+        /// <summary>
+        /// Executes fire target work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct FireTargetJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
 
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             public tfloat dt;
             
+            /// <summary>
+            /// Processes fire target using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref TransformAspect tr, ref QuadTreeQueryAspect query) {
 
                 if (aspect.target.IsAlive() == true) {
@@ -70,11 +82,20 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Executes fire targets work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct FireTargetsJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
 
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             public tfloat dt;
             
+            /// <summary>
+            /// Processes fire targets using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref TransformAspect tr, ref QuadTreeQueryAspect query) {
 
                 if (aspect.targets.IsCreated == true) {
@@ -130,6 +151,9 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Updates fire system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var spatialHandle = this.UpdateSpatial(ref context, context.dependsOn);

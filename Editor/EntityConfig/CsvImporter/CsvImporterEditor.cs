@@ -8,11 +8,23 @@ namespace ME.BECS.Editor.CsvImporter {
     using UnityEngine.UIElements;
     using scg = System.Collections.Generic;
     
+    /// <summary>
+    /// Provides Unity Editor controls for entity config CSV importer editor.
+    /// </summary>
     [CustomEditor(typeof(EntityConfigCsvImporter))]
     public class EntityConfigCsvImporterEditor : Editor {
 
+        /// <summary>
+        /// Style sheet base used by <c>EntityConfigCsvImporterEditor</c>.
+        /// </summary>
         public StyleSheet styleSheetBase;
+        /// <summary>
+        /// Style sheet tooltip used by <c>EntityConfigCsvImporterEditor</c>.
+        /// </summary>
         public StyleSheet styleSheetTooltip;
+        /// <summary>
+        /// Style sheet used by <c>EntityConfigCsvImporterEditor</c>.
+        /// </summary>
         public StyleSheet styleSheet;
 
         private Button loadingButton;
@@ -32,6 +44,9 @@ namespace ME.BECS.Editor.CsvImporter {
             }
         }
 
+        /// <summary>
+        /// Builds the UI Toolkit inspector for the inspected object.
+        /// </summary>
         public override VisualElement CreateInspectorGUI() {
 
             this.LoadStyle();
@@ -121,6 +136,9 @@ namespace ME.BECS.Editor.CsvImporter {
         }
 
         private Label completeLabel;
+        /// <summary>
+        /// Loads the registered data required by this operation.
+        /// </summary>
         public void Load(string[] urls, string targetDir, System.Action callback) {
 
             this.result.RemoveFromClassList("hide");
@@ -296,38 +314,104 @@ namespace ME.BECS.Editor.CsvImporter {
             EditorUtility.SetDirty(configInstance);
         }
 
+        /// <summary>
+        /// Defines config file state and operations for <c>EntityConfigCsvImporterEditor</c>.
+        /// </summary>
         public class ConfigFile {
 
+            /// <summary>
+            /// Defines component data used by entity processing.
+            /// </summary>
             public class Component {
 
+                /// <summary>
+                /// Display or lookup name of this entry.
+                /// </summary>
                 public string name;
+                /// <summary>
+                /// Type descriptor used by the associated operation.
+                /// </summary>
                 public System.Type type;
+                /// <summary>
+                /// Fields used by <c>EntityConfigCsvImporterEditor.ConfigFile.Component</c>.
+                /// </summary>
                 public scg::Dictionary<string, string> fields;
+                /// <summary>
+                /// Base fields used by <c>EntityConfigCsvImporterEditor.ConfigFile.Component</c>.
+                /// </summary>
                 public scg::HashSet<string> baseFields;
+                /// <summary>
+                /// Masks used by <c>EntityConfigCsvImporterEditor.ConfigFile.Component</c>.
+                /// </summary>
                 public bool[] masks;
+                /// <summary>
+                /// Component instance used by <c>EntityConfigCsvImporterEditor.ConfigFile.Component</c>.
+                /// </summary>
                 public object componentInstance;
 
             }
 
+            /// <summary>
+            /// Defines aspect state and operations for <c>EntityConfigCsvImporterEditor.ConfigFile</c>.
+            /// </summary>
             public class Aspect {
 
+                /// <summary>
+                /// Display or lookup name of this entry.
+                /// </summary>
                 public string name;
+                /// <summary>
+                /// Type descriptor used by the associated operation.
+                /// </summary>
                 public System.Type type;
 
             }
 
+            /// <summary>
+            /// Whether imported behavior or state is selected.
+            /// </summary>
             public bool imported;
+            /// <summary>
+            /// Display or lookup name of this entry.
+            /// </summary>
             public string name;
+            /// <summary>
+            /// Path selected or processed by this operation.
+            /// </summary>
             public string path;
+            /// <summary>
+            /// Full path used by <c>EntityConfigCsvImporterEditor.ConfigFile</c>.
+            /// </summary>
             public string fullPath;
+            /// <summary>
+            /// Group path used by <c>EntityConfigCsvImporterEditor.ConfigFile</c>.
+            /// </summary>
             public string groupPath;
+            /// <summary>
+            /// Base config used by <c>EntityConfigCsvImporterEditor.ConfigFile</c>.
+            /// </summary>
             public int baseConfig;
+            /// <summary>
+            /// Component storage or descriptors used by this operation.
+            /// </summary>
             public scg::List<Component> components;
+            /// <summary>
+            /// Aspect descriptors used by this operation.
+            /// </summary>
             public scg::List<Aspect> aspects;
+            /// <summary>
+            /// Instance associated with this entry.
+            /// </summary>
             public EntityConfig instance;
 
+            /// <summary>
+            /// Initializes <c>ConfigFile</c> from the supplied defaults.
+            /// </summary>
             public ConfigFile() { }
 
+            /// <summary>
+            /// Initializes <c>ConfigFile</c> from the supplied config.
+            /// </summary>
             public ConfigFile(EntityConfig config) {
                 this.name = config.name;
                 this.fullPath = AssetDatabase.GetAssetPath(config);
@@ -337,6 +421,9 @@ namespace ME.BECS.Editor.CsvImporter {
                 this.imported = false;
             }
 
+            /// <summary>
+            /// Initializes <c>ConfigFile</c> from the supplied target dir, data, groups by.
+            /// </summary>
             public ConfigFile(string targetDir, string data, string groupsBy) {
                 this.name = data;
                 this.path = System.IO.Path.Combine(targetDir, data);
@@ -366,6 +453,9 @@ namespace ME.BECS.Editor.CsvImporter {
 
         }
 
+        /// <summary>
+        /// Parses configs.
+        /// </summary>
         public static scg::List<ConfigFile> ParseConfigs(scg::List<string[]> csv, string targetDir, out string version, out string name) {
             version = csv[0][0];
             name = csv[0][1];
@@ -383,6 +473,9 @@ namespace ME.BECS.Editor.CsvImporter {
             return configFiles;
         }
 
+        /// <summary>
+        /// Parses base configs.
+        /// </summary>
         public static void ParseBaseConfigs(scg::List<ConfigFile> allConfigs, scg::List<ConfigFile> configFiles, scg::List<string[]> csv) {
             var offset = 2;
             var line = csv[1];
@@ -407,6 +500,9 @@ namespace ME.BECS.Editor.CsvImporter {
             }
         }
 
+        /// <summary>
+        /// Parses CSV rows into configuration definitions.
+        /// </summary>
         public static void Parse(scg::List<ConfigFile> allConfigs, scg::List<ConfigFile> configFiles, scg::List<string[]> csv) {
             var offset = 2;
             var components = TypeCache.GetTypesDerivedFrom<IConfigComponentBase>().Where(x => EditorUtils.IsValidTypeForAssembly(false, x)).ToArray();
@@ -479,6 +575,9 @@ namespace ME.BECS.Editor.CsvImporter {
             }
         }
 
+        /// <summary>
+        /// Resolves references between the imported configuration definitions.
+        /// </summary>
         public static void Link(scg::List<ConfigFile> configFiles) {
 
             //ValidateConfigs(configFiles);
@@ -658,10 +757,19 @@ namespace ME.BECS.Editor.CsvImporter {
         }
 
 
+        /// <summary>
+        /// Defines temp component data used by entity processing.
+        /// </summary>
         public class TempComponent : ScriptableObject {
 
+            /// <summary>
+            /// Component data accessed by this instance.
+            /// </summary>
             [SerializeReference]
             public object component;
+            /// <summary>
+            /// Configuration supplying values for this instance.
+            /// </summary>
             public EntityConfig config;
 
         }

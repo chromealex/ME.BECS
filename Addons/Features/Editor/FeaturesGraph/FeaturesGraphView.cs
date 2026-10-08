@@ -6,14 +6,26 @@ namespace ME.BECS.Editor.FeaturesGraph {
     using UnityEngine;
     using UnityEngine.UIElements;
     
+    /// <summary>
+    /// Defines the graph structure used for features graph view.
+    /// </summary>
     public class FeaturesGraphView : BaseGraphView {
 
+        /// <summary>
+        /// Initializes <c>FeaturesGraphView</c> from the supplied window.
+        /// </summary>
         public FeaturesGraphView(UnityEditor.EditorWindow window) : base(window) { }
 
+        /// <summary>
+        /// Indicates is editable.
+        /// </summary>
         public bool isEditable;
         private float timer;
         private System.Action<UnityEditor.Experimental.GraphView.NodeCreationContext> baseNodeCreationRequest;
 
+        /// <summary>
+        /// Updates enable state.
+        /// </summary>
         public void UpdateEnableState() {
             
             if (this.isEditable == false) {
@@ -33,12 +45,18 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
         }
 
+        /// <summary>
+        /// Creates edge view.
+        /// </summary>
         public override EdgeView CreateEdgeView() {
             
             return new FeaturesGraphEdgeView();
             
         }
 
+        /// <summary>
+        /// Initializes view.
+        /// </summary>
         protected override void InitializeView() {
             
             base.InitializeView();
@@ -81,6 +99,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
         }
 
+        /// <summary>
+        /// Builds group contextual menu.
+        /// </summary>
         protected override void BuildGroupContextualMenu(UnityEngine.UIElements.ContextualMenuPopulateEvent evt, int menuPosition = -1) {
             
             if (menuPosition == -1)
@@ -90,6 +111,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
             
         }
 
+        /// <summary>
+        /// Indicates can delete selection.
+        /// </summary>
         protected override bool canDeleteSelection {
             get {
                 if (this.selection.Count == 0) return false;//Debug.Log(base.canDeleteSelection + " :: " + this.selection.Count);
@@ -97,6 +121,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
             }
         }
 
+        /// <summary>
+        /// Builds contextual menu.
+        /// </summary>
         public override void BuildContextualMenu(ContextualMenuPopulateEvent evt) {
             
             base.BuildContextualMenu(evt);

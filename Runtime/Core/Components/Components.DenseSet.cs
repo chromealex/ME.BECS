@@ -22,6 +22,9 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Defines data dense set state and operations.
+    /// </summary>
     [IgnoreProfiler]
     [StructLayout(LayoutKind.Sequential)]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
@@ -31,6 +34,9 @@ namespace ME.BECS {
     #endif
     public unsafe struct DataDenseSet {
 
+        /// <summary>
+        /// Defines page state and operations for <c>DataDenseSet</c>.
+        /// </summary>
         [IgnoreProfiler]
         [StructLayout(LayoutKind.Sequential)]
         #if !BECS_IL2CPP_OPTIONS_DISABLE
@@ -40,23 +46,44 @@ namespace ME.BECS {
         #endif
         public struct Page {
 
+            /// <summary>
+            /// Storage size or fixed element count used by this representation.
+            /// </summary>
             public const int SIZE = MemPtr.SIZE + LockSpinner.SIZE + sizeof(byte);
 
             // [ushort-gen][byte-state][byte-align][data]
+            /// <summary>
+            /// Ent id to data used by <c>DataDenseSet.Page</c>.
+            /// </summary>
             public MemPtr entIdToData;
+            /// <summary>
+            /// Lock spinner local used by <c>DataDenseSet.Page</c>.
+            /// </summary>
             public LockSpinner lockSpinnerLocal;
+            /// <summary>
+            /// Whether the backing state has been initialized.
+            /// </summary>
             public volatile byte isCreated;
             
+            /// <summary>
+            /// Acquires the synchronization lock before accessing protected state.
+            /// </summary>
             [INLINE(256)]
             public void Lock(safe_ptr<State> state) {
                 this.lockSpinnerLocal.Lock();
             }
 
+            /// <summary>
+            /// Releases the synchronization lock after accessing protected state.
+            /// </summary>
             [INLINE(256)]
             public void Unlock(safe_ptr<State> state) {
                 this.lockSpinnerLocal.Unlock();
             }
 
+            /// <summary>
+            /// Initializes the supplied storage or context.
+            /// </summary>
             [INLINE(256)]
             public static void Create(safe_ptr<Page> page, safe_ptr<State> state, uint dataSize, uint length) {
                 var blockSize = _blockSize(dataSize);
@@ -68,6 +95,9 @@ namespace ME.BECS {
                 page.ptr->isCreated = 1;
             }
 
+            /// <summary>
+            /// Returns the amount of reserved storage in bytes.
+            /// </summary>
             public uint GetReservedSizeInBytes(uint dataSize, uint entitiesPerPage) {
                 if (this.isCreated == 0) return SIZE;
                 var blockSize = _blockSize(dataSize);
@@ -175,6 +205,9 @@ namespace ME.BECS {
         private DoubleBuffer buffer;
         private ref ReadWriteNativeSpinner GetReadWriteSpinner(ushort worldId) => ref LocksCache.GetReadWriteSpinner(worldId, LocksCache.COMPONENTS, this.groupIndex);
 
+        /// <summary>
+        /// Initializes <c>DataDenseSet</c> from the supplied group index, state, data size, entities capacity.
+        /// </summary>
         [INLINE(256)]
         public DataDenseSet(uint groupIndex, safe_ptr<State> state, uint dataSize, uint entitiesCapacity) {
             var pages = _sizeData(entitiesCapacity);
@@ -230,11 +263,17 @@ namespace ME.BECS {
             return _headerSize() + dataSize;
         }
 
+        /// <summary>
+        /// Updates cached native access for the requested Burst execution mode.
+        /// </summary>
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             this.buffer.BurstMode(in allocator, state);
         }
         
+        /// <summary>
+        /// Returns the amount of reserved storage in bytes.
+        /// </summary>
         public uint GetReservedSizeInBytes(safe_ptr<State> state) {
             var size = 0u;
             size += this.buffer.GetReservedSizeInBytes(state, this.dataSize);
@@ -256,21 +295,33 @@ namespace ME.BECS {
             return DoubleBuffer.GetActivePages(ref this.buffer).Length * ENTITIES_PER_PAGE;
         }
         
+        /// <summary>
+        /// Handles the entity add callback.
+        /// </summary>
         [INLINE(256)]
         public uint OnEntityAdd(safe_ptr<State> state, ushort worldId, uint entityId) {
             return this.Resize(state, worldId, entityId + 1u);
         }
 
+        /// <summary>
+        /// Clears state associated with the specified entity.
+        /// </summary>
         [INLINE(256)]
         public void CleanUpEntity(safe_ptr<State> state, uint entityId, uint typeId) {
             this.buffer.CleanUpEntity(state, entityId, typeId);
         }
 
+        /// <summary>
+        /// Returns bits.
+        /// </summary>
         [INLINE(256)]
         public BitArray GetBits() {
             return DoubleBuffer.GetActiveBits(ref this.buffer);
         }
 
+        /// <summary>
+        /// Sets state.
+        /// </summary>
         [INLINE(256)]
         public bool SetState(safe_ptr<State> state, uint entityId, ushort entityGen, bool value) {
             var changed = false;
@@ -286,6 +337,9 @@ namespace ME.BECS {
             return changed;
         }
 
+        /// <summary>
+        /// Reads state.
+        /// </summary>
         [INLINE(256)]
         public bool ReadState(safe_ptr<State> state, uint entityId, ushort entityGen) {
             var pageIndex = _pageIndex(entityId);
@@ -295,6 +349,9 @@ namespace ME.BECS {
             return res;
         }
         
+        /// <summary>
+        /// Stores the supplied value in data dense set.
+        /// </summary>
         [INLINE(256)]
         public bool Set(safe_ptr<State> state, ushort worldId, uint entityId, ushort entityGen, void* data, out bool changed) {
             changed = false;
@@ -335,6 +392,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns the requested entry from data dense set.
+        /// </summary>
         [INLINE(256)][Unity.Burst.CompilerServices.SkipLocalsInitAttribute]
         public byte* Get(safe_ptr<State> state, ushort worldId, uint entityId, ushort entityGen, out bool isNew, safe_ptr defaultValue) {
             isNew = false;
@@ -368,6 +428,9 @@ namespace ME.BECS {
             return dataPtr.ptr;
         }
 
+        /// <summary>
+        /// Returns or throw.
+        /// </summary>
         [INLINE(256)][Unity.Burst.CompilerServices.SkipLocalsInitAttribute]
         public byte* GetOrThrow(safe_ptr<State> state, uint entityId, ushort entityGen, out bool isNew, safe_ptr defaultValue) {
             isNew = false;
@@ -391,6 +454,9 @@ namespace ME.BECS {
             return dataPtr.ptr;
         }
 
+        /// <summary>
+        /// Reads the requested value from data dense set.
+        /// </summary>
         [INLINE(256)]
         public byte* Read(safe_ptr<State> state, uint entityId, ushort entityGen, out bool isNew) {
             isNew = false;
@@ -413,6 +479,9 @@ namespace ME.BECS {
             return dataPtr.ptr;
         }
 
+        /// <summary>
+        /// Removes the specified entry from data dense set.
+        /// </summary>
         [INLINE(256)]
         public bool Remove(safe_ptr<State> state, uint entityId, ushort entityGen) {
             var pageIndex = _pageIndex(entityId);
@@ -435,6 +504,9 @@ namespace ME.BECS {
             return false;
         }
 
+        /// <summary>
+        /// Tests whether the requested entry is present.
+        /// </summary>
         [INLINE(256)]
         public bool Has(safe_ptr<State> state, uint entityId, ushort entityGen, bool checkEnabled) {
             var pageIndex = _pageIndex(entityId);
@@ -451,6 +523,9 @@ namespace ME.BECS {
             return gen == entityGen && disableState == 0;
         }
 
+        /// <summary>
+        /// Sets bit.
+        /// </summary>
         [INLINE(256)]
         public void SetBit(safe_ptr<State> state, uint entityId, bool value, uint typeId) {
             DoubleBuffer.GetActiveBits(ref this.buffer).SetThreaded(state.ptr->allocator, entityId, value);

@@ -4,9 +4,15 @@ using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor {
     
+    /// <summary>
+    /// Draws object reference values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(ObjectReference<>))]
     public class ObjectReferenceDrawer : PropertyDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             ObjectReferenceRegistry.Load();
@@ -35,6 +41,9 @@ namespace ME.BECS.Editor {
             
         }
 
+        /// <summary>
+        /// Draws the immediate-mode editor interface for the supplied context.
+        /// </summary>
         public override void OnGUI(UnityEngine.Rect position, SerializedProperty property, UnityEngine.GUIContent label) {
             
             ObjectReferenceRegistry.Load();

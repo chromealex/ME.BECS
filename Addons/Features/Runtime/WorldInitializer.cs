@@ -2,23 +2,47 @@ using UnityEngine;
 
 namespace ME.BECS {
     
+    /// <summary>
+    /// Coordinates initialization of world.
+    /// </summary>
     [DefaultExecutionOrder(-10_000)]
     public class WorldInitializer : BaseWorldInitializer<WorldInitializer.Graph> {
 
+        /// <summary>
+        /// Initializes the system graph represented by <c>Graph</c>.
+        /// </summary>
         [System.Serializable]
         public struct Graph : IGraphInitialize {
 
+            /// <summary>
+            /// Awake used by <c>WorldInitializer.Graph</c>.
+            /// </summary>
             [OptionalGraph]
             public FeaturesGraph.SystemsGraph awake;
+            /// <summary>
+            /// Start used by <c>WorldInitializer.Graph</c>.
+            /// </summary>
             [OptionalGraph]
             public FeaturesGraph.SystemsGraph start;
+            /// <summary>
+            /// Update used by <c>WorldInitializer.Graph</c>.
+            /// </summary>
             [OptionalGraph]
             public FeaturesGraph.SystemsGraph update;
+            /// <summary>
+            /// Fixed update used by <c>WorldInitializer.Graph</c>.
+            /// </summary>
             [OptionalGraph]
             public FeaturesGraph.SystemsGraph fixedUpdate;
+            /// <summary>
+            /// Late update used by <c>WorldInitializer.Graph</c>.
+            /// </summary>
             [OptionalGraph]
             public FeaturesGraph.SystemsGraph lateUpdate;
 
+            /// <summary>
+            /// Initializes graph state from the supplied context.
+            /// </summary>
             public void Initialize(ref SystemGroup group, ref World world) {
                 if (this.awake != null) group.Add(this.awake.DoAwake(ref world, UpdateType.AWAKE));
                 if (this.start != null) group.Add(this.start.DoAwake(ref world, UpdateType.START));
@@ -46,14 +70,32 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Features graph awake used by <c>WorldInitializer</c>.
+        /// </summary>
         [OptionalGraph]
         public FeaturesGraph.SystemsGraph featuresGraphAwake;
+        /// <summary>
+        /// Features graph start used by <c>WorldInitializer</c>.
+        /// </summary>
         [OptionalGraph]
         public FeaturesGraph.SystemsGraph featuresGraphStart;
+        /// <summary>
+        /// Features graph update used by <c>WorldInitializer</c>.
+        /// </summary>
         [UnityEngine.Serialization.FormerlySerializedAsAttribute("featuresGraph")] public FeaturesGraph.SystemsGraph featuresGraphUpdate;
+        /// <summary>
+        /// Features graph fixed update used by <c>WorldInitializer</c>.
+        /// </summary>
         public FeaturesGraph.SystemsGraph featuresGraphFixedUpdate;
+        /// <summary>
+        /// Features graph late update used by <c>WorldInitializer</c>.
+        /// </summary>
         public FeaturesGraph.SystemsGraph featuresGraphLateUpdate;
 
+        /// <summary>
+        /// Invokes world initialization through the configured lifecycle handler.
+        /// </summary>
         protected override void DoWorldAwake() {
             
             var group = SystemGroup.Create(UpdateType.ANY);
@@ -86,6 +128,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Updates world initializer using the current inputs and execution context.
+        /// </summary>
         public void Update() {
 
             this.previousFrameDependsOn.Complete();
@@ -97,6 +142,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Runs the fixed-step update phase for the associated state.
+        /// </summary>
         public void FixedUpdate() {
 
             if (this.featuresGraphFixedUpdate == null) return;
@@ -106,6 +154,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Runs the late-update phase for the associated state.
+        /// </summary>
         protected override void LateUpdate() {
 
             if (this.featuresGraphLateUpdate != null) {

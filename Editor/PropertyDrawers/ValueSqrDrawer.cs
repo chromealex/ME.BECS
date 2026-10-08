@@ -15,9 +15,15 @@ namespace ME.BECS.Editor {
     using UnityEditor;
     using UnityEngine.UIElements;
     
+    /// <summary>
+    /// Draws value sqr values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(ValueSqrAttribute))]
     public class ValueSqrDrawer : PropertyDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             var root = new VisualElement();

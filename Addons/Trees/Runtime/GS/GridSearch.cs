@@ -24,6 +24,9 @@ namespace ME.BECS.Trees {
 
     //Multithreaded sort from https://coffeebraingames.wordpress.com/2020/06/07/a-multithreaded-sorting-attempt/
 
+    /// <summary>
+    /// Defines grid search state and operations.
+    /// </summary>
     [BurstCompile]
     public unsafe partial struct GridSearch<T> where T : unmanaged {
 
@@ -54,10 +57,19 @@ namespace ME.BECS.Trees {
         private safe_ptr<DeferJobCounter> rebuildDataCounter;
         private safe_ptr<DeferJobCounter> rebuildSegmentSortCounter;
 
+        /// <summary>
+        /// Number of elements exposed by this value.
+        /// </summary>
         public int Length => this.data.Length;
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.positions.IsCreated;
 
+        /// <summary>
+        /// Initializes <c>GridSearch</c> from the supplied resolution, target grid.
+        /// </summary>
         public GridSearch(float resolution, int targetGrid = 32) {
             this.minValue = float3.zero;
             this.maxValue = float3.zero;
@@ -86,6 +98,9 @@ namespace ME.BECS.Trees {
 
         }
 
+        /// <summary>
+        /// Initializes grid search state from the supplied context.
+        /// </summary>
         [INLINE(256)]
         public GridSearch<T> Initialize(int capacity, Allocator allocator) {
 
@@ -195,6 +210,9 @@ namespace ME.BECS.Trees {
         }
         */
 
+        /// <summary>
+        /// Releases the resources owned by this grid search instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
             _free((safe_ptr)this.rebuildCellsCounter);
@@ -217,26 +235,44 @@ namespace ME.BECS.Trees {
             }
         }
 
+        /// <summary>
+        /// Clears the current grid search contents.
+        /// </summary>
         [INLINE(256)]
         public void Clear() {
             this.positionsWriter.Clear();
             this.dataWriter.Clear();
         }
 
+        /// <summary>
+        /// Adds point.
+        /// </summary>
         [INLINE(256)]
         public void AddPoint(float3 position, in T data) {
             this.positionsWriter.Add(position);
             this.dataWriter.Add(data);
         }
 
+        /// <summary>
+        /// Executes initialize work through the job scheduler.
+        /// </summary>
         [BurstCompile]
         public partial struct InitializeJob : IJob {
 
+            /// <summary>
+            /// Tree used by <c>GridSearch.InitializeJob</c>.
+            /// </summary>
             [NativeDisableUnsafePtrRestriction]
             public GridSearch<T>* tree;
 
+            /// <summary>
+            /// Entries used by <c>GridSearch.InitializeJob</c>.
+            /// </summary>
             public NativeList<SortEntry> entries;
             
+            /// <summary>
+            /// Processes initialize using the supplied job inputs.
+            /// </summary>
             public void Execute() {
 
                 this.entries.Length = this.tree->positions.Length;
@@ -275,6 +311,9 @@ namespace ME.BECS.Trees {
 
         }
         
+        /// <summary>
+        /// Rebuilds derived state from the current source data.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle Rebuild(GridSearch<T>* tree, JobHandle dependsOn) {
             
@@ -316,6 +355,9 @@ namespace ME.BECS.Trees {
             
         }
         
+        /// <summary>
+        /// Searches closest point sync.
+        /// </summary>
         [INLINE(256)]
         public T SearchClosestPointSync(float3 point, bool checkSelf = false, float epsilon = 0.001f, float maxRange = float.MaxValue) {
             if (this.Length == 0) return default;
@@ -345,6 +387,9 @@ namespace ME.BECS.Trees {
 
         }
 
+        /// <summary>
+        /// Searches within sync.
+        /// </summary>
         [INLINE(256)]
         public uint SearchWithinSync(float3 point, ref UnsafeList<T> results, float rad, int maxNeighborPerQuery) {
             if (this.Length == 0) return 0u;
@@ -360,18 +405,27 @@ namespace ME.BECS.Trees {
 
         }
 
+        /// <summary>
+        /// Queries k nearest.
+        /// </summary>
         [INLINE(256)]
         public uint QueryKNearest(float3 point, ref UnsafeList<T> results, float range, int count) {
             if (this.Length == 0) return 0u;
             return this.SearchWithinSync(point, ref results, range, count);
         }
 
+        /// <summary>
+        /// Queries nearest.
+        /// </summary>
         [INLINE(256)]
         public T QueryNearest(float3 point, float maxRange) {
             if (this.Length == 0) return default;
             return this.SearchClosestPointSync(point, checkSelf: false, maxRange: maxRange);
         }
 
+        /// <summary>
+        /// Queries range.
+        /// </summary>
         [INLINE(256)]
         public void QueryRange(float3 point, ref UnsafeList<T> results, float range) {
             if (this.Length == 0) return;
@@ -773,8 +827,14 @@ namespace ME.BECS.Trees {
 
         }
 
+        /// <summary>
+        /// Orders values using the int2 comparer comparison.
+        /// </summary>
         public struct INT2Comparer : IComparer<int2> {
 
+            /// <summary>
+            /// Compares the supplied values for ordering.
+            /// </summary>
             public int Compare(int2 lhs, int2 rhs) {
                 return lhs.x.CompareTo(rhs.x);
             }
@@ -793,6 +853,9 @@ namespace ME.BECS.Trees {
         }
 
 
+        /// <summary>
+        /// Defines concrete jobs state and operations for <c>GridSearch</c>.
+        /// </summary>
         public static class ConcreteJobs {
 
             static ConcreteJobs() {
@@ -803,14 +866,26 @@ namespace ME.BECS.Trees {
         }
 
         // This is the item to sort
+        /// <summary>
+        /// Stores sort entry for <c>GridSearch</c>.
+        /// </summary>
         public readonly struct SortEntry : System.IComparable<SortEntry> {
 
+            /// <summary>
+            /// Stored value used by this instance.
+            /// </summary>
             public readonly int2 value;
 
+            /// <summary>
+            /// Initializes <c>SortEntry</c> from the supplied value.
+            /// </summary>
             public SortEntry(int2 value) {
                 this.value = value;
             }
 
+            /// <summary>
+            /// Compares this value with the supplied value for sorting.
+            /// </summary>
             public int CompareTo(SortEntry other) {
                 return this.value.x.CompareTo(other.value.x);
             }
@@ -819,11 +894,20 @@ namespace ME.BECS.Trees {
 
     }
 
+    /// <summary>
+    /// Defines multithreaded sort state and operations.
+    /// </summary>
     public static partial class MultithreadedSort {
 
         // Use quicksort when sub-array length is less than or equal than this value
+        /// <summary>
+        /// Quicksort threshold length constant used by <c>MultithreadedSort</c>.
+        /// </summary>
         public const int QUICKSORT_THRESHOLD_LENGTH = 400;
 
+        /// <summary>
+        /// Orders the stored entries using the supplied comparison.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle Sort<T>(NativeArray<T> array, JobHandle parentHandle) where T : unmanaged, System.IComparable<T> {
             return MergeSort(array, new SortRange(0, array.Length - 1), parentHandle);
@@ -857,33 +941,69 @@ namespace ME.BECS.Trees {
             }.Schedule(combined);
         }
 
+        /// <summary>
+        /// Defines sort range state and operations for <c>MultithreadedSort</c>.
+        /// </summary>
         public readonly struct SortRange {
 
+            /// <summary>
+            /// Left-hand entry or direction in the represented structure.
+            /// </summary>
             public readonly int left;
+            /// <summary>
+            /// Right-hand entry or direction in the represented structure.
+            /// </summary>
             public readonly int right;
 
+            /// <summary>
+            /// Initializes <c>SortRange</c> from the supplied left, right.
+            /// </summary>
             public SortRange(int left, int right) {
                 this.left = left;
                 this.right = right;
             }
 
+            /// <summary>
+            /// Number of elements exposed by this value.
+            /// </summary>
             public int Length => this.right - this.left + 1;
 
+            /// <summary>
+            /// Middle used by <c>MultithreadedSort.SortRange</c>.
+            /// </summary>
             public int Middle => (this.left + this.right) >> 1; // divide 2
 
+            /// <summary>
+            /// Gets max; this implementation returns <c>this.right</c>.
+            /// </summary>
             public int Max => this.right;
 
         }
 
+        /// <summary>
+        /// Executes merge work through the job scheduler.
+        /// </summary>
         [BurstCompile]
         public partial struct Merge<T> : IJob where T : unmanaged, System.IComparable<T> {
 
+            /// <summary>
+            /// Backing array used by this value.
+            /// </summary>
             [NativeDisableContainerSafetyRestriction]
             public NativeArray<T> array;
 
+            /// <summary>
+            /// First used by <c>MultithreadedSort.Merge</c>.
+            /// </summary>
             public SortRange first;
+            /// <summary>
+            /// Second used by <c>MultithreadedSort.Merge</c>.
+            /// </summary>
             public SortRange second;
 
+            /// <summary>
+            /// Processes merge using the supplied job inputs.
+            /// </summary>
             public void Execute() {
                 var firstIndex = this.first.left;
                 var secondIndex = this.second.left;
@@ -932,15 +1052,30 @@ namespace ME.BECS.Trees {
 
         }
 
+        /// <summary>
+        /// Executes quicksort work through the job scheduler.
+        /// </summary>
         [BurstCompile]
         public partial struct QuicksortJob<T> : IJob where T : unmanaged, System.IComparable<T> {
 
+            /// <summary>
+            /// Backing array used by this value.
+            /// </summary>
             [NativeDisableContainerSafetyRestriction]
             public NativeArray<T> array;
 
+            /// <summary>
+            /// Left-hand entry or direction in the represented structure.
+            /// </summary>
             public int left;
+            /// <summary>
+            /// Right-hand entry or direction in the represented structure.
+            /// </summary>
             public int right;
 
+            /// <summary>
+            /// Processes quicksort using the supplied job inputs.
+            /// </summary>
             public void Execute() {
                 this.Quicksort(this.left, this.right);
             }

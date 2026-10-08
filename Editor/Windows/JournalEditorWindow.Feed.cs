@@ -5,6 +5,9 @@ using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor {
     using scg = System.Collections.Generic;
+    /// <summary>
+    /// Defines journal editor window state and operations.
+    /// </summary>
     public unsafe partial class JournalEditorWindow {
         private const int SnapshotLimit = 20000;
         private sealed class FeedRow {
@@ -26,8 +29,14 @@ namespace ME.BECS.Editor {
         private bool entityHistory, frozen;
         private double nextRefresh;
         private FeedRow selectedEvent;
+        /// <summary>
+        /// Current state of the associated operation.
+        /// </summary>
         public string Status => this.feedStatus != null ? this.feedStatus.text : "Journal";
 
+        /// <summary>
+        /// Builds the editor window's UI Toolkit hierarchy.
+        /// </summary>
         public void CreateGUI(VisualElement root) {
             root.Clear();
             EditorUIUtils.ApplyDefaultStyles(root);
@@ -131,6 +140,9 @@ namespace ME.BECS.Editor {
             return row;
         }
 
+        /// <summary>
+        /// Updates journal editor window using the current inputs and execution context.
+        /// </summary>
         public void Update() {
             if (this.feed == null || this.frozen || EditorApplication.timeSinceStartup < this.nextRefresh) return;
             this.nextRefresh = EditorApplication.timeSinceStartup + .25;

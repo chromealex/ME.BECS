@@ -12,12 +12,27 @@ namespace ME.BECS.FogOfWar {
     using System;
     using System.Runtime.CompilerServices;
 
+    /// <summary>
+    /// Stores a rectangle using unsigned integer coordinates and extents.
+    /// </summary>
     [System.Serializable]
     public struct RectUInt : IEquatable<RectUInt>, IFormattable {
 
+        /// <summary>
+        /// M x min used by <c>RectUInt</c>.
+        /// </summary>
         public uint mXMin;
+        /// <summary>
+        /// M y min used by <c>RectUInt</c>.
+        /// </summary>
         public uint mYMin;
+        /// <summary>
+        /// M width used by <c>RectUInt</c>.
+        /// </summary>
         public uint mWidth;
+        /// <summary>
+        /// M height used by <c>RectUInt</c>.
+        /// </summary>
         public uint mHeight;
 
         /// <summary>
@@ -308,6 +323,9 @@ namespace ME.BECS.FogOfWar {
             private readonly uint2 _max;
             private uint2 _current;
 
+            /// <summary>
+            /// Initializes <c>PositionEnumerator</c> from the supplied min, max.
+            /// </summary>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public PositionEnumerator(uint2 min, uint2 max) {
                 this._min = this._current = min;

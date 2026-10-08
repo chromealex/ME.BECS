@@ -7,11 +7,20 @@ namespace ME.BECS.Editor {
 
     // Analysis freshness and compiled input identity are separate evidence. An
     // unchanged semantic manifest need not recompile merely because code changed.
+    /// <summary>
+    /// Provides graph snapshot for BECS source-generator publication.
+    /// </summary>
     public static class SourceGeneratorGraphSnapshot {
+        /// <summary>
+        /// Metadata key used by <c>SourceGeneratorGraphSnapshot</c>.
+        /// </summary>
         public const string MetadataKey = "ME.BECS.GraphInputSnapshot.v1";
         private const string RecoveryMetadataKey = "ME.BECS.InputRecovery.v1";
         private static readonly string[] Consumers = { "runtime", "editor" };
 
+        /// <summary>
+        /// Returns current.
+        /// </summary>
         public static string GetCurrent() {
             return Combine(GetCompilerSnapshot(), "analysis", new[] { GetCodeFingerprint() });
         }
@@ -120,6 +129,9 @@ namespace ME.BECS.Editor {
 
         // Import/save callbacks only request a coalesced comparison. Unrelated
         // assets need no export when their effective input fingerprint is unchanged.
+        /// <summary>
+        /// Tests whether the context can affect asset inputs.
+        /// </summary>
         public static bool CanAffectAssetInputs(string path) {
             if (string.IsNullOrEmpty(path)) return false;
             path = path.Replace('\\', '/');
@@ -138,6 +150,9 @@ namespace ME.BECS.Editor {
             return ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(text.ToString());
         }
 
+        /// <summary>
+        /// Attempts to validate current and reports whether the operation succeeded.
+        /// </summary>
         public static bool TryValidateCurrent(out string reason) {
             if (UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating) {
                 reason = "Wait for script compilation and asset import to finish.";
@@ -147,6 +162,9 @@ namespace ME.BECS.Editor {
             catch (Exception exception) { reason = "Cannot inspect graph inputs: " + exception.Message; return false; }
         }
 
+        /// <summary>
+        /// Tests whether the context is compiled current.
+        /// </summary>
         public static bool IsCompiledCurrent(string expected, out string reason) {
             try {
                 var assemblies = AppDomain.CurrentDomain.GetAssemblies();

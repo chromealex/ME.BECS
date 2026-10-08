@@ -16,6 +16,9 @@ namespace ME.BECS {
     using Unity.Jobs.LowLevel.Unsafe;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides helper operations for batches.
+    /// </summary>
     [IgnoreProfiler]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -24,16 +27,25 @@ namespace ME.BECS {
     #endif
     public static class BatchesExt {
 
+        /// <summary>
+        /// Applies the supplied data or pending changes to the target state.
+        /// </summary>
         [INLINE(256)]
         public static void Apply(this ref SystemContext context) {
             context.SetDependency(Batches.Apply(context.dependsOn, in context.world));
         } 
 
+        /// <summary>
+        /// Applies the supplied data or pending changes to the target state.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle Apply(this in SystemContext context, JobHandle dependsOn) {
             return Batches.Apply(dependsOn, in context.world);
         }
 
+        /// <summary>
+        /// Applies the supplied data or pending changes to the target state.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle Apply(this in World world, JobHandle dependsOn) {
             return Batches.Apply(dependsOn, in world);
@@ -42,6 +54,9 @@ namespace ME.BECS {
     }
     
     
+    /// <summary>
+    /// Collects component mutations and applies structural changes to world storage.
+    /// </summary>
     [IgnoreProfiler]
     [BURST]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
@@ -52,12 +67,18 @@ namespace ME.BECS {
     public unsafe partial struct Batches {
 
         
+        /// <summary>
+        /// Applies the supplied data or pending changes to the target state.
+        /// </summary>
         [BURST]
         [INLINE(256)]
         public static void Apply(in World world) {
             Apply(world.id, world.state);
         }
 
+        /// <summary>
+        /// Applies the supplied data or pending changes to the target state.
+        /// </summary>
         [BURST]
         [INLINE(256)]
         public static void Apply(ushort worldId, in safe_ptr<State> state) {
@@ -67,6 +88,9 @@ namespace ME.BECS {
             }.Execute();
         }
 
+        /// <summary>
+        /// Applies the supplied data or pending changes to the target state.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle Apply(JobHandle jobHandle, ushort worldId, safe_ptr<State> state) {
             var handle2 = new ApplyDestroyedJob() { 
@@ -78,6 +102,9 @@ namespace ME.BECS {
             return handle;
         }
 
+        /// <summary>
+        /// Applies the supplied data or pending changes to the target state.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle Apply(JobHandle jobHandle, in World world) {
             HandleStorage.lastApplyHandleBurst.Data = JobHandle.CombineDependencies(HandleStorage.lastApplyHandleBurst.Data, jobHandle);
@@ -87,6 +114,9 @@ namespace ME.BECS {
     }
     
 
+    /// <summary>
+    /// Collects component mutations and applies structural changes to world storage.
+    /// </summary>
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
@@ -94,6 +124,9 @@ namespace ME.BECS {
     #endif
     public unsafe partial struct Batches {
 
+        /// <summary>
+        /// Provides the <c>OnEntityAdd</c> callback; this implementation performs no work.
+        /// </summary>
         [INLINE(256)]
         public static void OnEntityAdd(ushort worldId, uint entId, byte growFactor = 2) {
 

@@ -5,21 +5,48 @@ namespace ME.BECS.Network {
     using static Cuts;
     using System.Runtime.InteropServices;
 
+    /// <summary>
+    /// Implements network transport using local.
+    /// </summary>
     public partial class LocalTransport : INetworkTransport {
 
+        /// <summary>
+        /// Defines the supported simulation mode values.
+        /// </summary>
         public enum SimulationMode {
 
+            /// <summary>
+            /// Normal option for <c>LocalTransport.SimulationMode</c>.
+            /// </summary>
             Normal = 0,
+            /// <summary>
+            /// Record replay option for <c>LocalTransport.SimulationMode</c>.
+            /// </summary>
             RecordReplay,
+            /// <summary>
+            /// Simulate replay option for <c>LocalTransport.SimulationMode</c>.
+            /// </summary>
             SimulateReplay,
 
         }
 
         private const string REPLAYS_DIRECTORY = "Assets/ME.BECS.Replays";
         
+        /// <summary>
+        /// Use absolute time in the time units used by the containing API.
+        /// </summary>
         public bool useAbsoluteTime = true;
+        /// <summary>
+        /// Simulation mode used by <c>LocalTransport</c>.
+        /// </summary>
         public SimulationMode simulationMode = SimulationMode.Normal;
+        /// <summary>
+        /// Replay data used by <c>LocalTransport</c>.
+        /// </summary>
         public UnityEngine.TextAsset replayData;
+        /// <summary>
+        /// Ping expressed in milliseconds.
+        /// </summary>
         public uint pingMs = 0u;
         
         private unsafe partial struct ConnectJob : Unity.Jobs.IJob {
@@ -129,20 +156,41 @@ namespace ME.BECS.Network {
         private readonly byte[] header = new byte[8];
         private byte[] buffer = new byte[100];
         private byte[] replayDataBytes;
+        /// <summary>
+        /// Start tick used by <c>LocalTransport</c>.
+        /// </summary>
         public ulong StartTick { private set; get; }
 
+        /// <summary>
+        /// Gets events behaviour; this implementation returns <c>EventsBehaviour.SendToNetworkOnly</c>.
+        /// </summary>
         public EventsBehaviour EventsBehaviour => EventsBehaviour.SendToNetworkOnly;
 
+        /// <summary>
+        /// Current state of the associated operation.
+        /// </summary>
         public virtual TransportStatus Status { get; set; }
+        /// <summary>
+        /// Server time supplied by the associated transport.
+        /// </summary>
         public double ServerTime { get; private set; }
+        /// <summary>
+        /// Input delay expressed as a number of simulation ticks.
+        /// </summary>
         public ulong InputLagInTicks { get; private set; }
 
+        /// <summary>
+        /// Initializes local transport state from the supplied context.
+        /// </summary>
         public void OnAwake() {
             this.sendBytes = new System.Collections.Generic.Queue<byte[]>();
             this.receivedBytes = new System.Collections.Generic.Queue<byte[]>();
             this.Status = TransportStatus.Unknown;
         }
 
+        /// <summary>
+        /// Releases the resources owned by this local transport instance.
+        /// </summary>
         public void Dispose() {
 
             if (this.simulationMode == SimulationMode.RecordReplay) {
@@ -161,6 +209,9 @@ namespace ME.BECS.Network {
             this.Status = TransportStatus.Unknown;
         }
 
+        /// <summary>
+        /// Starts a connection using the supplied transport configuration.
+        /// </summary>
         public virtual Unity.Jobs.JobHandle Connect(in World world, NetworkModule module, Unity.Jobs.JobHandle dependsOn) {
 
             if (this.simulationMode == SimulationMode.SimulateReplay) {
@@ -210,6 +261,9 @@ namespace ME.BECS.Network {
 
         }
 
+        /// <summary>
+        /// Submits the supplied payload to the associated transport or event channel.
+        /// </summary>
         public void Send(byte[] bytes) {
 
             if (this.simulationMode == SimulationMode.SimulateReplay) {
@@ -235,6 +289,9 @@ namespace ME.BECS.Network {
         }
 
         private uint currentPingCounter;
+        /// <summary>
+        /// Retrieves incoming data from the associated transport.
+        /// </summary>
         public byte[] Receive() {
             
             if (this.Status != TransportStatus.Connected) return null;

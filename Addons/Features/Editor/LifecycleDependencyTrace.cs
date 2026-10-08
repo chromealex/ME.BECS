@@ -7,11 +7,17 @@ namespace ME.BECS.Editor.Systems {
     using scg = System.Collections.Generic;
 
     // Symbolic handles only. No jobs, allocations in State, or lifecycle methods are executed.
+    /// <summary>
+    /// Defines lifecycle dependency trace state and operations.
+    /// </summary>
     public sealed class LifecycleDependencyTrace {
         private readonly scg.Dictionary<string, string> values = new(StringComparer.Ordinal);
         private readonly scg.Dictionary<string, string[]> joins = new(StringComparer.Ordinal);
         internal readonly scg.List<string> Events = new();
         internal string Result => this.Read("dependsOn");
+        /// <summary>
+        /// Initializes <c>LifecycleDependencyTrace</c> from the supplied defaults.
+        /// </summary>
         public LifecycleDependencyTrace() => this.Reset();
         internal void Reset() { this.values.Clear(); this.joins.Clear(); this.Events.Clear(); this.values.Add("dependsOn", "input"); }
         private string Read(string name) => this.values.TryGetValue(name, out var value) ? value :

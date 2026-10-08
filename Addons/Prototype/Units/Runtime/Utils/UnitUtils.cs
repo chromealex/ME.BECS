@@ -18,14 +18,32 @@ namespace ME.BECS.Units {
     using ME.BECS.Transforms;
     using ME.BECS.Players;
 
+    /// <summary>
+    /// Provides helper operations for unit.
+    /// </summary>
     public static partial class UnitUtils {
 
+        /// <summary>
+        /// Volume factor constant used by <c>UnitUtils</c>.
+        /// </summary>
         public const float VOLUME_FACTOR = 1.2f;
+        /// <summary>
+        /// Float to uint constant used by <c>UnitUtils</c>.
+        /// </summary>
         public const uint FLOAT_TO_UINT = 1000u;
+        /// <summary>
+        /// Uint to float constant used by <c>UnitUtils</c>.
+        /// </summary>
         public const float UINT_TO_FLOAT = 1f / FLOAT_TO_UINT;
 
+        /// <summary>
+        /// Golden angle constant used by <c>UnitUtils</c>.
+        /// </summary>
         public const float GOLDEN_ANGLE = 2.399963f; // 137.5
 
+        /// <summary>
+        /// Returns circle ring position.
+        /// </summary>
         [INLINE(256)]
         public static float3 GetCircleRingPosition(float3 center, uint index, tfloat unitRadius) {
             if (index == 0) return center;
@@ -55,6 +73,9 @@ namespace ME.BECS.Units {
             );
         }
         
+        /// <summary>
+        /// Returns circle ring position.
+        /// </summary>
         [INLINE(256)]
         public static float3 GetCircleRingPosition(float3 center, uint index, uint maxCount, tfloat unitRadius) {
             if (index == 0) return center;
@@ -107,6 +128,9 @@ namespace ME.BECS.Units {
             );
         }
         
+        /// <summary>
+        /// Returns snail position.
+        /// </summary>
         [INLINE(256)]
         public static float3 GetSnailPosition(float3 center, uint index, tfloat unitRadius) {
             tfloat spacing = unitRadius * 2f;
@@ -119,6 +143,9 @@ namespace ME.BECS.Units {
             );
         }
         
+        /// <summary>
+        /// Returns spiral position.
+        /// </summary>
         [INLINE(256)]
         public static float3 GetSpiralPosition(in float3 center, uint index, tfloat radius) {
             if (index == 0) return center;
@@ -152,6 +179,9 @@ namespace ME.BECS.Units {
             return center + new float3(x * radius, 0f, y * radius);
         }
         
+        /// <summary>
+        /// Destroys unit.
+        /// </summary>
         [INLINE(256)]
         public static void DestroyUnit(in UnitAspect unit) {
             
@@ -162,6 +192,9 @@ namespace ME.BECS.Units {
             
         }
 
+        /// <summary>
+        /// Creates unit.
+        /// </summary>
         [INLINE(256)]
         public static UnitAspect CreateUnit(in AgentType agentType, int treeIndex, in JobInfo jobInfo) {
 
@@ -170,6 +203,9 @@ namespace ME.BECS.Units {
             
         }
 
+        /// <summary>
+        /// Creates unit.
+        /// </summary>
         [INLINE(256)]
         public static UnitAspect CreateUnit(in Ent ent, in AgentType agentType, int treeIndex) {
             
@@ -189,6 +225,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Creates unit spatial.
+        /// </summary>
         [INLINE(256)]
         public static UnitAspect CreateUnitSpatial(in AgentType agentType, int treeIndex, in JobInfo jobInfo) {
 
@@ -197,6 +236,9 @@ namespace ME.BECS.Units {
             
         }
 
+        /// <summary>
+        /// Creates unit spatial.
+        /// </summary>
         [INLINE(256)]
         public static UnitAspect CreateUnitSpatial(in Ent ent, in AgentType agentType, int treeIndex) {
             
@@ -216,11 +258,17 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Computes the volume of the represented bounds.
+        /// </summary>
         [INLINE(256)]
         public static uint GetVolume(in UnitAspect unit) {
             return (uint)(VOLUME_FACTOR * math.PI * (unit.radius * unit.radius) * FLOAT_TO_UINT);
         }
 
+        /// <summary>
+        /// Orients the instance toward target.
+        /// </summary>
         [INLINE(256)]
         public static void LookToTarget(in ME.BECS.Transforms.TransformAspect tr, in UnitAspect unit, in float3 target, tfloat dt) {
 
@@ -232,16 +280,25 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is owner.
+        /// </summary>
         [INLINE(256)]
         public static bool IsOwner(in Ent unit, in PlayerAspect owner) {
             return unit.Read<OwnerComponent>().ent == owner.ent;
         }
 
+        /// <summary>
+        /// Tests whether the context is team.
+        /// </summary>
         [INLINE(256)]
         public static bool IsTeam(in Ent unit, in PlayerAspect owner) {
             return GetTeam(unit) == PlayerUtils.GetTeam(owner);
         }
 
+        /// <summary>
+        /// Assigns the entity to a player and records an ownership change when the owner differs.
+        /// </summary>
         [INLINE(256)]
         public static void SetOwner(in Ent unit, in PlayerAspect player) {
             unit.Set(new OwnerComponent() {
@@ -249,6 +306,9 @@ namespace ME.BECS.Units {
             });
         }
         
+        /// <summary>
+        /// Returns team.
+        /// </summary>
         [INLINE(256)]
         public static Ent GetTeam(in Ent ent) {
 
@@ -256,6 +316,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Returns team.
+        /// </summary>
         [INLINE(256)]
         public static Ent GetTeam(in EntRO ent) {
 
@@ -263,6 +326,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Returns team.
+        /// </summary>
         [INLINE(256)]
         public static Ent GetTeam(in UnitAspect unit) {
 

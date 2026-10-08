@@ -7,8 +7,14 @@ using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor.ComponentsViewer {
 
+    /// <summary>
+    /// Provides the Unity Editor window for component metadata editor.
+    /// </summary>
     public class ComponentMetadataEditorWindow : EditorWindow {
 
+        /// <summary>
+        /// Opens or focuses the associated editor window.
+        /// </summary>
         public static void ShowWindow(VisualElement element, EditorUtils.ComponentGroupItem.ComponentMetaInfo info, System.Action onChanged) {
 
             var win = ComponentMetadataEditorWindow.CreateInstance<ComponentMetadataEditorWindow>();

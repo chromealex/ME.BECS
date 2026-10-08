@@ -1,12 +1,30 @@
 namespace ME.BECS.Pathfinding {
 
+    /// <summary>
+    /// Stores queue entries in native memory.
+    /// </summary>
     public struct NativeQueue<T> where T : unmanaged {
 
+        /// <summary>
+        /// Number of entries currently tracked by this value.
+        /// </summary>
         public int Count;
+        /// <summary>
+        /// Backing array used by this value.
+        /// </summary>
         public Unity.Collections.NativeList<T> arr;
+        /// <summary>
+        /// Head used by <c>NativeQueue</c>.
+        /// </summary>
         public int head;
+        /// <summary>
+        /// Last used by <c>NativeQueue</c>.
+        /// </summary>
         public int last;
             
+        /// <summary>
+        /// Initializes <c>NativeQueue</c> from the supplied size, allocator.
+        /// </summary>
         public NativeQueue(int size, Unity.Collections.Allocator allocator) {
                 
             this.arr = new Unity.Collections.NativeList<T>(size, allocator);
@@ -16,6 +34,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Clears the current native queue contents.
+        /// </summary>
         public void Clear() {
             
             this.Count = 0;
@@ -24,6 +45,9 @@ namespace ME.BECS.Pathfinding {
             
         }
 
+        /// <summary>
+        /// Removes and returns the entry at the head of the queue.
+        /// </summary>
         public T Dequeue() {
                 
             var data = this.arr[this.head];
@@ -39,6 +63,9 @@ namespace ME.BECS.Pathfinding {
                 
         }
 
+        /// <summary>
+        /// Adds an entry at the tail of the queue.
+        /// </summary>
         public void Enqueue(T data) {
 
             ++this.last;
@@ -49,6 +76,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this native queue instance.
+        /// </summary>
         public void Dispose() {
 
             this.arr.Dispose();

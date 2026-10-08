@@ -10,6 +10,9 @@ namespace ME.BECS {
     using static Cuts;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
+    /// <summary>
+    /// Tracks entity-owned resources requiring destruction callbacks.
+    /// </summary>
     [IgnoreProfiler]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -18,17 +21,29 @@ namespace ME.BECS {
     #endif
     public unsafe struct AutoDestroyRegistry {
 
+        /// <summary>
+        /// Defines the callback signature for destroy delegate.
+        /// </summary>
         public delegate void DestroyDelegate(in Ent ent, byte* comp);
 
 
+        /// <summary>
+        /// Provides the <c>SerializeHeaders</c> callback; this implementation performs no work.
+        /// </summary>
         [INLINE(256)]
         public void SerializeHeaders(ref StreamBufferWriter writer) {
         }
 
+        /// <summary>
+        /// Provides the <c>DeserializeHeaders</c> callback; this implementation performs no work.
+        /// </summary>
         [INLINE(256)]
         public void DeserializeHeaders(ref StreamBufferReader reader) {
         }
 
+        /// <summary>
+        /// Creates <c>AutoDestroyRegistry</c> using the supplied creation arguments.
+        /// </summary>
         [INLINE(256)]
         public static AutoDestroyRegistry Create(safe_ptr<State> state, uint capacity) {
 
@@ -36,12 +51,18 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Provides the <c>OnEntityAdd</c> callback; this implementation performs no work.
+        /// </summary>
         [INLINE(256)]
         public static void OnEntityAdd(safe_ptr<State> state, uint entId) {
 
             
         }
 
+        /// <summary>
+        /// Destroys the referenced instance and applies its registered destruction handling.
+        /// </summary>
         [INLINE(256)]
         public static void Destroy(safe_ptr<State> state, in Ent ent) {
 
@@ -52,6 +73,9 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Destroys the referenced instance and applies its registered destruction handling.
+        /// </summary>
         [INLINE(256)]
         public static void Destroy(safe_ptr<State> state, in Ent ent, uint typeId) {
 
@@ -80,12 +104,18 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Provides the <c>Add</c> callback; this implementation performs no work.
+        /// </summary>
         [INLINE(256)]
         public static void Add(safe_ptr<State> state, in Ent ent, uint typeId) {
 
             
         }
 
+        /// <summary>
+        /// Provides the <c>Remove</c> callback; this implementation performs no work.
+        /// </summary>
         [INLINE(256)]
         public static void Remove(safe_ptr<State> state, in Ent ent, uint typeId) {
 

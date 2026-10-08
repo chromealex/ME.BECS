@@ -22,17 +22,26 @@ namespace ME.BECS {
     using Unity.Collections;
     using ME.BECS.NativeCollections;
     
+    /// <summary>
+    /// Stores additional query configuration alongside the command buffer.
+    /// </summary>
     public struct QueryData {
 
         internal uint steps;
         internal uint minElementsPerStep;
 
+        /// <summary>
+        /// Resets this value to its default state.
+        /// </summary>
         public void Dispose() {
             this = default;
         }
 
     }
 
+    /// <summary>
+    /// Owns a deferred query count and the job dependency required to read it.
+    /// </summary>
     public struct OnDemandCount : IIsCreated {
 
         internal struct Data {
@@ -41,6 +50,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Job dependency that must complete before the associated work can access its inputs.
+        /// </summary>
         public JobHandle dependsOn {
             set => this.jobHandle.Value = value;
             get => this.jobHandle.Value;
@@ -50,6 +62,9 @@ namespace ME.BECS {
         internal NativeReference<JobHandle> jobHandle;
         internal Allocator allocator;
 
+        /// <summary>
+        /// Completes the producing job and returns the resulting element count.
+        /// </summary>
         public int Length {
             [INLINE(256)]
             get {
@@ -59,8 +74,14 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.data.IsCreated;
 
+        /// <summary>
+        /// Completes the producing job and frees this result's native storage.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
             if (this.allocator == Allocator.Invalid) return;
@@ -70,6 +91,9 @@ namespace ME.BECS {
             this = default;
         }
 
+        /// <summary>
+        /// Clears the current on demand count contents.
+        /// </summary>
         [INLINE(256)]
         public void Clear() {
             E.IS_CREATED(this);
@@ -81,6 +105,9 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Owns native query results that become readable after the producing job completes.
+    /// </summary>
     public unsafe struct OnDemandArray : IIsCreated {
         
         internal struct Data {
@@ -98,11 +125,17 @@ namespace ME.BECS {
         internal NativeReference<JobHandle> jobHandle;
         internal Allocator allocator;
 
+        /// <summary>
+        /// Job dependency that must complete before the associated work can access its inputs.
+        /// </summary>
         public JobHandle dependsOn {
             set => this.jobHandle.Value = value;
             get => this.jobHandle.Value;
         }
 
+        /// <summary>
+        /// Initializes <c>OnDemandArray</c> from the supplied depends on, allocator.
+        /// </summary>
         public OnDemandArray(JobHandle dependsOn, AllocatorManager.AllocatorHandle allocator) {
             
             #if ENABLE_UNITY_COLLECTIONS_CHECKS
@@ -120,6 +153,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Completes the producing job and returns the resulting element count.
+        /// </summary>
         public int Length {
             [INLINE(256)]
             get {
@@ -129,8 +165,14 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.data.IsCreated;
 
+        /// <summary>
+        /// Completes the producing job and returns a borrowed array view; do not dispose it separately or use it after the result is cleared or disposed.
+        /// </summary>
         [INLINE(256)]
         public NativeArray<Ent> GetResults() {
             E.IS_CREATED(this);
@@ -147,6 +189,9 @@ namespace ME.BECS {
             return array;
         }
 
+        /// <summary>
+        /// Provides indexed access to the requested entry.
+        /// </summary>
         public Ent this[int index] {
             [INLINE(256)]
             get {
@@ -156,26 +201,42 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Completes the producing job and returns an enumerator over its result storage.
+        /// </summary>
         public UnsafeList<Ent>.Enumerator GetEnumerator() {
             E.IS_CREATED(this);
             this.dependsOn.Complete();
             return this.data.Value.results.GetEnumerator();
         }
 
+        /// <summary>
+        /// Completes the producing job and frees this result's native storage.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
             if (this.allocator == Allocator.Invalid) return;
             this.dependsOn.Complete();
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            AtomicSafetyHandle.CheckDeallocateAndThrow(this.m_Safety);
+            CollectionHelper.DisposeSafetyHandle(ref this.m_Safety);
+            #endif
             this.data.Value.results.Dispose();
             this.data.Dispose();
             this.jobHandle.Dispose();
             this = default;
         }
 
+        /// <summary>
+        /// Clears the current on demand array contents.
+        /// </summary>
         [INLINE(256)]
         public void Clear() {
             E.IS_CREATED(this);
             this.dependsOn.Complete();
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(this.m_Safety);
+            #endif
             var value = this.data.Value;
             value.results.Clear();
             this.data.Value = value;
@@ -183,6 +244,9 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Builds an entity query and carries the dependencies needed to evaluate or schedule it.
+    /// </summary>
     [BURST]
     public unsafe ref partial struct QueryBuilder {
         
@@ -200,6 +264,9 @@ namespace ME.BECS {
         internal bool useSort;
         internal bool isCreated;
         
+        /// <summary>
+        /// World id used to locate the associated entry.
+        /// </summary>
         public ushort WorldId => this.commandBuffer.ptr->worldId;
 
         [BURST]
@@ -224,12 +291,18 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Completes the dependency currently stored by this query builder.
+        /// </summary>
         [INLINE(256)]
         public QueryBuilder WaitForAllJobs() {
             this.builderDependsOn.Complete();
             return this;
         }
         
+        /// <summary>
+        /// Releases query storage after the supplied dependency; combine the builder dependency explicitly and do not reuse or dispose copied builder handles.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
             E.IS_CREATED(this);
@@ -242,6 +315,9 @@ namespace ME.BECS {
             this = default;
         }
 
+        /// <summary>
+        /// Releases query storage after the supplied dependency; combine the builder dependency explicitly and do not reuse or dispose copied builder handles.
+        /// </summary>
         [INLINE(256)]
         public JobHandle Dispose(JobHandle handle) {
             E.IS_CREATED(this);
@@ -254,6 +330,9 @@ namespace ME.BECS {
             return job.Schedule(handle);
         }
 
+        /// <summary>
+        /// Configures the step count and minimum number of elements per step for query execution.
+        /// </summary>
         [INLINE(256)]
         public QueryBuilder Step(uint steps, uint minElementsPerStep) {
             E.IS_CREATED(this);
@@ -285,12 +364,18 @@ namespace ME.BECS {
             return this;
         }
 
+        /// <summary>
+        /// Enables sorting for subsequent query execution.
+        /// </summary>
         [INLINE(256)]
         public QueryBuilder Sort() {
             this.useSort = true;
             return this;
         }
 
+        /// <summary>
+        /// Selects parallel execution for the query using the requested batch size.
+        /// </summary>
         [INLINE(256)]
         public QueryBuilder AsParallel(uint batch = 0u) {
             E.IS_CREATED(this);
@@ -299,6 +384,9 @@ namespace ME.BECS {
             return this;
         }
 
+        /// <summary>
+        /// Schedules or configures work over parallel iteration ranges.
+        /// </summary>
         [INLINE(256)][System.Obsolete("ParallelFor is obsolete, use AsParallel(batch) instead.")]
         public QueryBuilder ParallelFor(uint batch) {
             E.IS_CREATED(this);
@@ -308,6 +396,9 @@ namespace ME.BECS {
             return this;
         }
 
+        /// <summary>
+        /// Selects job execution for the query.
+        /// </summary>
         [INLINE(256)][System.ObsoleteAttribute("ForEach methods is obsolete and will be removed in a future version. Please use Schedule instead.")]
         public QueryBuilder AsJob() {
             E.IS_CREATED(this);
@@ -316,6 +407,9 @@ namespace ME.BECS {
             return this;
         }
 
+        /// <summary>
+        /// Selects Burst execution for the associated operation.
+        /// </summary>
         [INLINE(256)][System.ObsoleteAttribute("ForEach methods is obsolete and will be removed in a future version. Please use Schedule instead.")]
         public QueryBuilder WithBurst() {
             E.IS_CREATED(this);
@@ -324,6 +418,9 @@ namespace ME.BECS {
         }
         
         
+        /// <summary>
+        /// Requires all specified component types in the query.
+        /// </summary>
         [INLINE(256)]
         public QueryBuilder WithAll<T0, T1>() where T0 : unmanaged, IComponentBase
                                               where T1 : unmanaged, IComponentBase {
@@ -332,6 +429,9 @@ namespace ME.BECS {
             return this;
         }
 
+        /// <summary>
+        /// Requires all specified component types in the query.
+        /// </summary>
         [INLINE(256)]
         public QueryBuilder WithAll<T0, T1, T2>() where T0 : unmanaged, IComponentBase
                                                   where T1 : unmanaged, IComponentBase
@@ -342,6 +442,9 @@ namespace ME.BECS {
             return this;
         }
 
+        /// <summary>
+        /// Requires all specified component types in the query.
+        /// </summary>
         [INLINE(256)]
         public QueryBuilder WithAll<T0, T1, T2, T3>() where T0 : unmanaged, IComponentBase
                                                       where T1 : unmanaged, IComponentBase
@@ -354,6 +457,9 @@ namespace ME.BECS {
             return this;
         }
 
+        /// <summary>
+        /// Accepts entities matching at least one of the specified component types.
+        /// </summary>
         [INLINE(256)]
         public QueryBuilder WithAny<T0, T1>() where T0 : unmanaged, IComponentBase
                                               where T1 : unmanaged, IComponentBase {
@@ -362,6 +468,9 @@ namespace ME.BECS {
             return this;
         }
 
+        /// <summary>
+        /// Accepts entities matching at least one of the specified component types.
+        /// </summary>
         [INLINE(256)]
         public QueryBuilder WithAny<T0, T1, T2>() where T0 : unmanaged, IComponentBase
                                                   where T1 : unmanaged, IComponentBase
@@ -372,6 +481,9 @@ namespace ME.BECS {
             return this;
         }
 
+        /// <summary>
+        /// Accepts entities matching at least one of the specified component types.
+        /// </summary>
         [INLINE(256)]
         public QueryBuilder WithAny<T0, T1, T2, T3>() where T0 : unmanaged, IComponentBase 
                                                       where T1 : unmanaged, IComponentBase 
@@ -383,6 +495,9 @@ namespace ME.BECS {
             return this;
         }
 
+        /// <summary>
+        /// Requires the specified component or filter in the query.
+        /// </summary>
         [INLINE(256)]
         public QueryBuilder With<T>() where T : unmanaged, IComponentBase {
             E.IS_CREATED(this);
@@ -390,6 +505,9 @@ namespace ME.BECS {
             return this;
         }
 
+        /// <summary>
+        /// Excludes entities matching the specified component or filter.
+        /// </summary>
         [INLINE(256)]
         public QueryBuilder Without<T>() where T : unmanaged, IComponentBase {
             E.IS_CREATED(this);
@@ -397,6 +515,9 @@ namespace ME.BECS {
             return this;
         }
 
+        /// <summary>
+        /// Adds the component requirements of the specified aspect to the query.
+        /// </summary>
         [INLINE(256)]
         public QueryBuilder WithAspect<T>() where T : unmanaged, IAspect {
             E.IS_CREATED(this);
@@ -490,6 +611,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Defines the callback signature for query delegate.
+        /// </summary>
         public delegate void QueryDelegate(in CommandBufferJob commandBuffer);
 
         /// <summary>
@@ -594,12 +718,21 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Executes on demand work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct OnDemandJob : IJob {
 
             internal NativeReference<OnDemandArray.Data> handle;
+            /// <summary>
+            /// Command buffer containing the query or mutation work.
+            /// </summary>
             public safe_ptr<CommandBuffer> commandBuffer;
             
+            /// <summary>
+            /// Processes on demand using the supplied job inputs.
+            /// </summary>
             public void Execute() {
                 
                 var cnt = (int)this.commandBuffer.ptr->count;
@@ -614,12 +747,21 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Executes on demand count work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct OnDemandCountJob : IJob {
 
             internal NativeReference<OnDemandCount.Data> handle;
+            /// <summary>
+            /// Command buffer containing the query or mutation work.
+            /// </summary>
             public safe_ptr<CommandBuffer> commandBuffer;
             
+            /// <summary>
+            /// Processes on demand count using the supplied job inputs.
+            /// </summary>
             public void Execute() {
                 
                 var value = this.handle.Value;
@@ -684,7 +826,7 @@ namespace ME.BECS {
             
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
             var array = new OnDemandCount() {
-                dependsOn = this.builderDependsOn,
+                jobHandle = new NativeReference<JobHandle>(this.builderDependsOn, allocator),
                 data = new NativeReference<OnDemandCount.Data>(new OnDemandCount.Data(), allocator),
                 allocator = allocator,
             };
@@ -829,6 +971,9 @@ namespace ME.BECS {
         }
         
 
+        /// <summary>
+        /// Executes set entities work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct SetEntitiesJob : IJob {
 
@@ -886,16 +1031,40 @@ namespace ME.BECS {
             }
 
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+            /// <summary>
+            /// Safety used by <c>QueryBuilder.SetEntitiesJob</c>.
+            /// </summary>
             public SafetyComponentContainerRO<TNull> safety;
             #endif
 
+            /// <summary>
+            /// Compose used by <c>QueryBuilder.SetEntitiesJob</c>.
+            /// </summary>
             public FlatQueries.QueryCompose compose;
+            /// <summary>
+            /// State accessed by the containing operation.
+            /// </summary>
             public safe_ptr<State> state;
+            /// <summary>
+            /// Buffer used to exchange or store the associated data.
+            /// </summary>
             public safe_ptr<CommandBuffer> buffer;
+            /// <summary>
+            /// Query data used by <c>QueryBuilder.SetEntitiesJob</c>.
+            /// </summary>
             public safe_ptr<QueryData> queryData;
+            /// <summary>
+            /// Allocator used to access or manage the associated native storage.
+            /// </summary>
             public Allocator allocator;
+            /// <summary>
+            /// Whether use sort behavior or state is selected.
+            /// </summary>
             public bool useSort;
 
+            /// <summary>
+            /// Processes set entities using the supplied job inputs.
+            /// </summary>
             public void Execute() {
 
                 var allCount = (this.state.ptr->entities.Capacity + DataDenseSet.ENTITIES_PER_PAGE_MASK) / DataDenseSet.ENTITIES_PER_PAGE * DataDenseSet.ENTITIES_PER_PAGE;
@@ -1013,21 +1182,48 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Traverses the entries exposed by <c>QueryBuilder</c>.
+        /// </summary>
         public struct Enumerator : System.Collections.Generic.IEnumerator<Ent> {
 
+            /// <summary>
+            /// Query builder used by <c>QueryBuilder.Enumerator</c>.
+            /// </summary>
             public QueryBuilderDispose queryBuilder;
+            /// <summary>
+            /// Command buffer containing the query or mutation work.
+            /// </summary>
             public safe_ptr<CommandBuffer> commandBuffer;
+            /// <summary>
+            /// Index of this entry within its containing storage.
+            /// </summary>
             public uint index;
+            /// <summary>
+            /// Identifier of the world whose state this value addresses.
+            /// </summary>
             public ushort worldId;
             
+            /// <summary>
+            /// Advances the enumerator and reports whether a current element is available.
+            /// </summary>
             public bool MoveNext() => this.index++ < this.commandBuffer.ptr->count;
 
+            /// <summary>
+            /// Element at the enumerator's current position.
+            /// </summary>
             public Ent Current => new Ent(this.commandBuffer.ptr->entities[this.index - 1u], this.commandBuffer.ptr->state, this.worldId);
 
             object System.Collections.IEnumerator.Current => this.Current;
 
+            /// <summary>
+            /// Provides the <c>Reset</c> callback; this implementation performs no work.
+            /// </summary>
             public void Reset() { }
 
+            /// <summary>
+            /// Releases the resources owned by this enumerator instance.
+            /// </summary>
             [INLINE(256)]
             public void Dispose() {
                 this.queryBuilder.Dispose();
@@ -1038,6 +1234,9 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Provides disposal support for query-builder state.
+    /// </summary>
     public unsafe struct QueryBuilderDispose {
 
         private safe_ptr<CommandBuffer> commandBuffer;
@@ -1045,6 +1244,9 @@ namespace ME.BECS {
         private JobHandle builderDependsOn;
         internal readonly bool isCreated;
 
+        /// <summary>
+        /// Initializes <c>QueryBuilderDispose</c> from the supplied query builder.
+        /// </summary>
         [INLINE(256)]
         public QueryBuilderDispose(in QueryBuilder queryBuilder) {
             this.commandBuffer = queryBuilder.commandBuffer;
@@ -1053,6 +1255,9 @@ namespace ME.BECS {
             this.isCreated = queryBuilder.isCreated;
         }
         
+        /// <summary>
+        /// Releases the resources owned by this query builder dispose instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
             E.IS_CREATED(this);

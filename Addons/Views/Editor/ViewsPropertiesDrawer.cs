@@ -5,6 +5,9 @@ using ME.BECS.Editor;
 
 namespace ME.BECS.Views.Editor {
 
+    /// <summary>
+    /// Draws views properties values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(ViewsModuleProperties))]
     public class ViewsPropertiesDrawer : PropertyDrawer {
 
@@ -16,6 +19,9 @@ namespace ME.BECS.Views.Editor {
             }
         }
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
             
             this.LoadStyle();

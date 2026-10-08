@@ -6,9 +6,15 @@ namespace ME.BECS.Editor {
     using UnityEditor;
     using UnityEngine;
 
+    /// <summary>
+    /// Provides Unity Editor controls for scene entity editor.
+    /// </summary>
     [CustomEditor(typeof(SceneEntity), true)]
     public class SceneEntityEditor : Editor {
 
+        /// <summary>
+        /// Builds the UI Toolkit inspector for the inspected object.
+        /// </summary>
         public override VisualElement CreateInspectorGUI() {
             
             var root = new VisualElement();

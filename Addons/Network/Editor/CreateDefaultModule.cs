@@ -2,10 +2,19 @@ namespace ME.BECS.Network.Editor {
     
     using ME.BECS.Editor;
 
+    /// <summary>
+    /// Provides lifecycle integration for the create default feature.
+    /// </summary>
     public class CreateDefaultModule : CreateProjectDefaultModule {
 
+        /// <summary>
+        /// Selected execution or presentation mode.
+        /// </summary>
         public override ModeSupport mode => ModeSupport.Multiplayer;
 
+        /// <summary>
+        /// Creates module.
+        /// </summary>
         public override string CreateModule(string projectPath, string projectName) {
             
             var viewsModuleContent = EditorUtils.LoadResource<UnityEngine.TextAsset>("ME.BECS.Resources/Templates/DefaultNetworkModule-Template.txt").text;

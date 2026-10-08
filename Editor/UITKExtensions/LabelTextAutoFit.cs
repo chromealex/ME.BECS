@@ -77,6 +77,9 @@ namespace ME.BECS.Editor {
     /// </summary>
     public class LabelAutoFit : Label
     {
+        /// <summary>
+        /// Initializes <c>LabelAutoFit</c> from the supplied defaults.
+        /// </summary>
         public LabelAutoFit() => TextElementAutoFitter.RegisterAutoFitCallbacks(this);
     }
     
@@ -85,12 +88,18 @@ namespace ME.BECS.Editor {
     /// </summary>
     public class ButtonAutoFit : Button
     {
+        /// <summary>
+        /// Initializes <c>ButtonAutoFit</c> from the supplied click event.
+        /// </summary>
         public ButtonAutoFit(System.Action clickEvent) : base(clickEvent) {
             TextElementAutoFitter.UpdateFontSize(this);
             //TextElementAutoFitter.RegisterAutoFitCallbacks(this);
             // bug - button alignment becomes broken
             //style.unityTextAlign = new StyleEnum<TextAnchor>(TextAnchor.UpperCenter);
         }
+        /// <summary>
+        /// Initializes <c>ButtonAutoFit</c> from the supplied defaults.
+        /// </summary>
         public ButtonAutoFit(): this(null) {}
     }
 

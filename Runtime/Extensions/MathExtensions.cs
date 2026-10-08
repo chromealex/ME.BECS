@@ -19,6 +19,9 @@ namespace ME.BECS {
     #endif
     using um = Unity.Mathematics;
 
+    /// <summary>
+    /// Provides math operations within <c>ME.BECS</c>.
+    /// </summary>
     public static class Math {
 
         private static readonly int[] sqrtIntLut = new int[] {
@@ -234,6 +237,9 @@ namespace ME.BECS {
             93, 93, 93, 93, 93, 93, 93, 93, 93, 93, 93, 93, 93, 93, 93, 93, 93,
         };
         
+        /// <summary>
+        /// Computes an integer square root of the supplied value.
+        /// </summary>
         [INLINE(256)]
         public static int SqrtInt(int value) {
             if (value < sqrtIntLut.Length) return sqrtIntLut[value];
@@ -251,6 +257,9 @@ namespace ME.BECS {
             return c; 
         }
 
+        /// <summary>
+        /// Moves the current value toward the target using the supplied movement limit.
+        /// </summary>
         [INLINE(256)]
         public static float3 MoveTowards(float3 current, float3 target, tfloat maxDistanceDelta) {
             var delta = target - current;
@@ -260,6 +269,9 @@ namespace ME.BECS {
             return current + delta / dist * maxDistanceDelta;
         }
 
+        /// <summary>
+        /// Moves the current value toward the target using the supplied movement limit.
+        /// </summary>
         [INLINE(256)]
         public static tfloat MoveTowards(tfloat current, tfloat target, tfloat maxDelta) {
             return math.abs(target - current) <= maxDelta ? target : current + math.sign(target - current) * maxDelta;
@@ -320,6 +332,9 @@ namespace ME.BECS {
             return result;
         }
 
+        /// <summary>
+        /// Tests whether the supplied rectangles overlap.
+        /// </summary>
         [INLINE(256)]
         public static bool IntersectsRect(float2 from, float2 to, Rect rect, out float2 intersect) {
 
@@ -332,6 +347,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests overlap using the two-dimensional projection.
+        /// </summary>
         [INLINE(256)]
         public static bool Intersects2D(float2 l1from, float2 l1to, float2 l2from, float2 l2to, out float2 intersect) {
             
@@ -358,6 +376,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Approximates spherical interpolation between the supplied rotations.
+        /// </summary>
         [INLINE(256)]
         public static quaternion FastSlerp(quaternion a, quaternion b, sfloat t) {
             tfloat dot = math.dot(a.value, b.value);
@@ -384,6 +405,9 @@ namespace ME.BECS {
             return new quaternion(outv);
         }
 
+        /// <summary>
+        /// Approximates spherical interpolation between the supplied rotations.
+        /// </summary>
         [INLINE(256)]
         public static um::quaternion FastSlerp(um::quaternion a, um::quaternion b, float t) {
             float dot = um::math.dot(a.value, b.value);

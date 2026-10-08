@@ -6,9 +6,15 @@ namespace ME.BECS.Editor {
     using UnityEditor;
     using UnityEngine.UIElements;
 
+    /// <summary>
+    /// Draws quaternion property values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(quaternion))]
     public class QuaternionPropertyDrawer : PropertyDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             var vec = (UnityEngine.Quaternion)(quaternion)property.boxedValue;

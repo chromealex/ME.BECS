@@ -21,6 +21,9 @@ namespace ME.BECS {
     using static Cuts;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides mem array thread cache line storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(MemArrayThreadCacheLineProxy<>))]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
@@ -33,23 +36,38 @@ namespace ME.BECS {
         private static readonly uint CACHE_LINE_SIZE = _align(TSize<T>.size, JobUtils.CacheLineSizeFixed);
 
         private MemPtr arrPtr;
+        /// <summary>
+        /// Number of elements exposed by this value.
+        /// </summary>
         public readonly uint Length => JobUtils.ThreadsCountMax;
 
+        /// <summary>
+        /// Writes collection metadata to the stream without serializing the backing allocator blocks.
+        /// </summary>
         [INLINE(256)]
         public void SerializeHeaders(ref StreamBufferWriter writer) {
             writer.Write(this.arrPtr);
         }
 
+        /// <summary>
+        /// Restores collection metadata from the stream; backing allocator storage is restored separately.
+        /// </summary>
         [INLINE(256)]
         public void DeserializeHeaders(ref StreamBufferReader reader) {
             reader.Read(ref this.arrPtr);
         }
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public readonly bool IsCreated {
             [INLINE(256)]
             get => this.arrPtr.IsValid();
         }
 
+        /// <summary>
+        /// Initializes <c>MemArrayThreadCacheLine</c> from the supplied allocator, clear options.
+        /// </summary>
         [INLINE(256)]
         public MemArrayThreadCacheLine(ref MemoryAllocator allocator, ClearOptions clearOptions = ClearOptions.ClearMemory) {
 
@@ -63,6 +81,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this mem array thread cache line instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose(ref MemoryAllocator allocator) {
 
@@ -75,6 +96,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Schedules release of the owned storage after the supplied dependency and returns the disposal handle.
+        /// </summary>
         [INLINE(256)]
         public Unity.Jobs.JobHandle Dispose(ushort worldId, Unity.Jobs.JobHandle inputDeps) {
 
@@ -89,6 +113,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns a borrowed pointer to collection storage; mutation that reallocates storage or disposal invalidates it.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
 
@@ -96,6 +123,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public readonly ref T this[safe_ptr<State> state, int index] {
             [INLINE(256)]
             get {
@@ -104,6 +134,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public readonly ref T this[in MemoryAllocator allocator, int index] {
             [INLINE(256)]
             get {
@@ -112,6 +145,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public readonly ref T this[in MemoryAllocator allocator, uint index] {
             [INLINE(256)]
             get {
@@ -120,6 +156,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public readonly ref T this[safe_ptr<State> state, uint index] {
             [INLINE(256)]
             get {
@@ -128,6 +167,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Zeroes the stored data while preserving the length and backing allocation.
+        /// </summary>
         [INLINE(256)]
         public void Clear(ref MemoryAllocator allocator) {
 
@@ -135,11 +177,17 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Provides the <c>BurstMode</c> callback; this implementation performs no work.
+        /// </summary>
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             
         }
 
+        /// <summary>
+        /// Returns the amount of reserved storage in bytes.
+        /// </summary>
         public uint GetReservedSizeInBytes() {
 
             return this.Length * CACHE_LINE_SIZE;

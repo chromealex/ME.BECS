@@ -12,6 +12,9 @@ namespace ME.BECS.Pathfinding.Views {
     
     using ME.BECS.Views;
     
+    /// <summary>
+    /// Presents grid view state through the associated view.
+    /// </summary>
     public class GridView : ME.BECS.Views.EntityView {
 
         private static readonly int centerPos = Shader.PropertyToID("_ObjPos");
@@ -22,13 +25,22 @@ namespace ME.BECS.Pathfinding.Views {
         private static readonly int isValid = Shader.PropertyToID("_IsValid");
         private static readonly int gridOffset = Shader.PropertyToID("_GridOffset");
 
+        /// <summary>
+        /// Material used by the associated renderer.
+        /// </summary>
         public Material material;
         private uint2 gridSize;
         private float nodeSize;
         private float2 viewWorldSize;
         private float4 objPos;
+        /// <summary>
+        /// Offset into the associated storage or coordinate space.
+        /// </summary>
         public float2 offset;
 
+        /// <summary>
+        /// Activates presentation state when the view is taken from the pool.
+        /// </summary>
         protected override void OnEnableFromPool(in ViewData viewData) {
             EntRO ent = viewData;
             var grid = ent.World.GetSystem<ShowBuildingGridSystem>();
@@ -36,6 +48,9 @@ namespace ME.BECS.Pathfinding.Views {
             this.nodeSize = (float)grid.nodeSize;
         }
 
+        /// <summary>
+        /// Applies the current logic state to the presentation instance.
+        /// </summary>
         protected override void ApplyState(in ViewData viewData) {
 
             EntRO ent = viewData;
@@ -58,6 +73,9 @@ namespace ME.BECS.Pathfinding.Views {
 
         }
 
+        /// <summary>
+        /// Updates grid view using the current inputs and execution context.
+        /// </summary>
         protected override void OnUpdate(in ViewData viewData, float dt) { 
             
             EntRO ent = viewData;

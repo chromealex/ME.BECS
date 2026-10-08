@@ -18,15 +18,27 @@ namespace ME.BECS.Commands {
     using Units;
     using Transforms;
     
+    /// <summary>
+    /// Coordinates command build update during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem), typeof(CommandBuildSystem))]
     public partial struct CommandBuildUpdateSystem : IUpdate {
 
+        /// <summary>
+        /// Executes update progress work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct UpdateProgressJob : IJobForComponents<BuildInProgress> {
 
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             public tfloat dt;
             
+            /// <summary>
+            /// Processes update progress using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref BuildInProgress buildInProgress) {
 
                 if (buildInProgress.building.IsAlive() == false) {
@@ -64,9 +76,15 @@ namespace ME.BECS.Commands {
 
         }
 
+        /// <summary>
+        /// Executes complete work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct CompleteJob : IJobForComponents<BuildingInProgress> {
 
+            /// <summary>
+            /// Processes complete using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref BuildingInProgress building) {
 
                 if (building.value >= 1f) {
@@ -80,6 +98,9 @@ namespace ME.BECS.Commands {
 
         }
 
+        /// <summary>
+        /// Updates command build update system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var handle = context.Query().AsParallel().Schedule<UpdateProgressJob, BuildInProgress>(new UpdateProgressJob() {

@@ -24,60 +24,132 @@ namespace ME.BECS {
     using NativeTrees;
     using static Cuts;
 
+    /// <summary>
+    /// Stores per-entity state for quad tree element.
+    /// </summary>
     [ComponentGroup(typeof(QuadTreeComponentGroup))]
     [StructLayout(LayoutKind.Explicit)]
     public struct QuadTreeElement : IComponent {
 
+        /// <summary>
+        /// Radius used by the associated shape or query.
+        /// </summary>
         [FieldOffset(0)]
         public tfloat radius;
+        /// <summary>
+        /// Extent along the X dimension.
+        /// </summary>
         [FieldOffset(0)]
         public tfloat sizeX;
+        /// <summary>
+        /// Tree index used to locate the associated entry.
+        /// </summary>
         [FieldOffset(4)]
         public int treeIndex;
+        /// <summary>
+        /// Whether the spatial calculation ignores the vertical coordinate.
+        /// </summary>
         [FieldOffset(8)]
         public byte ignoreY;
 
     }
 
+    /// <summary>
+    /// Stores per-entity state for quad tree element rect.
+    /// </summary>
     [ComponentGroup(typeof(QuadTreeComponentGroup))]
     public struct QuadTreeElementRect : IComponent {
 
+        /// <summary>
+        /// Extent along the Y dimension.
+        /// </summary>
         public tfloat sizeY;
         
     }
 
+    /// <summary>
+    /// Stores per-entity state for quad tree height.
+    /// </summary>
     [ComponentGroup(typeof(QuadTreeComponentGroup))]
     public struct QuadTreeHeightComponent : IComponent {
         
+        /// <summary>
+        /// Vertical extent used by the associated geometry or query.
+        /// </summary>
         public tfloat height;
         
     }
 
+    /// <summary>
+    /// Provides typed access to the entity components used for quad tree.
+    /// </summary>
     [EditorComment("Used by QuadTreeInsertSystem to filter entities by treeIndex")]
     public partial struct QuadTreeAspect : IAspect {
         
+        /// <summary>
+        /// Entity whose components or lifetime are associated with this value.
+        /// </summary>
         public Ent ent { get; set; }
 
+        /// <summary>
+        /// Native pointer or typed storage accessor for quad tree element.
+        /// </summary>
         [QueryWith]
         public AspectDataPtr<QuadTreeElement> quadTreeElementPtr;
+        /// <summary>
+        /// Native pointer or typed storage accessor for quad tree rect.
+        /// </summary>
         public AspectDataPtr<QuadTreeElementRect> quadTreeRectPtr;
+        /// <summary>
+        /// Native pointer or typed storage accessor for quad tree height.
+        /// </summary>
         public AspectDataPtr<QuadTreeHeightComponent> quadTreeHeightPtr;
 
+        /// <summary>
+        /// Quad tree element used by <c>QuadTreeAspect</c>.
+        /// </summary>
         public readonly ref QuadTreeElement quadTreeElement => ref this.quadTreeElementPtr.Get(this.ent.id, this.ent.gen);
+        /// <summary>
+        /// Read-only access to quad tree element.
+        /// </summary>
         public readonly ref readonly QuadTreeElement readQuadTreeElement => ref this.quadTreeElementPtr.Read(this.ent.id, this.ent.gen);
+        /// <summary>
+        /// Tree index used to locate the associated entry.
+        /// </summary>
         public readonly ref int treeIndex => ref this.quadTreeElement.treeIndex;
+        /// <summary>
+        /// Read-only access to tree index.
+        /// </summary>
         public readonly ref readonly int readTreeIndex => ref this.readQuadTreeElement.treeIndex;
+        /// <summary>
+        /// Indicates is rect.
+        /// </summary>
         public readonly bool isRect => this.ent.Has<QuadTreeElementRect>();
+        /// <summary>
+        /// Indicates has height.
+        /// </summary>
         public readonly bool hasHeight => this.ent.Has<QuadTreeHeightComponent>();
+        /// <summary>
+        /// Rect size used by <c>QuadTreeAspect</c>.
+        /// </summary>
         public readonly float2 rectSize => new float2(this.readQuadTreeElement.sizeX, this.quadTreeRectPtr.Read(this.ent.id, this.ent.gen).sizeY);
+        /// <summary>
+        /// Vertical extent used by the associated geometry or query.
+        /// </summary>
         public readonly tfloat height => this.quadTreeHeightPtr.Read(this.ent.id, this.ent.gen).height;
 
+        /// <summary>
+        /// Sets height.
+        /// </summary>
         public readonly void SetHeight(tfloat height) {
             this.ent.Set(new QuadTreeHeightComponent() {
                 height = height,
             });
         }
         
+        /// <summary>
+        /// Sets as rect with size.
+        /// </summary>
         public readonly void SetAsRectWithSize(tfloat sizeX, tfloat sizeY) {
             ref var rect = ref this.quadTreeRectPtr.Get(this.ent.id, this.ent.gen);
             rect.sizeY = sizeY;
@@ -86,25 +158,49 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Coordinates quad tree insert during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     public unsafe partial struct QuadTreeInsertSystem : IAwake, IUpdate, IDestroy, IDrawGizmos {
         
+        /// <summary>
+        /// Default settings or value supplied by this type.
+        /// </summary>
         public static QuadTreeInsertSystem Default => new QuadTreeInsertSystem() {
             mapSize = new float2(200f, 200f),
         };
 
+        /// <summary>
+        /// Map position used by the associated spatial operation.
+        /// </summary>
         public float2 mapPosition;
+        /// <summary>
+        /// Map size used by <c>QuadTreeInsertSystem</c>.
+        /// </summary>
         public float2 mapSize;
         
         private UnsafeList<safe_ptr> trees;
+        /// <summary>
+        /// Trees count for the associated storage.
+        /// </summary>
         public readonly uint treesCount => (uint)this.trees.Length;
         private ushort worldId;
 
+        /// <summary>
+        /// Executes collect rect work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct CollectRectJob : IJobForAspects<QuadTreeAspect, TransformAspect> {
             
+            /// <summary>
+            /// Spatial trees used by the query or update.
+            /// </summary>
             public UnsafeList<safe_ptr> trees;
 
+            /// <summary>
+            /// Processes collect rect using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeAspect quadTreeAspect, ref TransformAspect tr) {
                 
                 var tree = (safe_ptr<NativeTrees.NativeQuadtree<Ent>>)this.trees[quadTreeAspect.readTreeIndex];
@@ -118,11 +214,20 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Executes collect work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct CollectJob : IJobForAspects<QuadTreeAspect, TransformAspect> {
             
+            /// <summary>
+            /// Spatial trees used by the query or update.
+            /// </summary>
             public UnsafeList<safe_ptr> trees;
 
+            /// <summary>
+            /// Processes collect using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeAspect quadTreeAspect, ref TransformAspect tr) {
                 
                 var tree = (safe_ptr<NativeTrees.NativeQuadtree<Ent>>)this.trees[quadTreeAspect.readTreeIndex];
@@ -136,11 +241,20 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Executes apply work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct ApplyJob : Unity.Jobs.IJobParallelFor {
 
+            /// <summary>
+            /// Spatial trees used by the query or update.
+            /// </summary>
             public UnsafeList<safe_ptr> trees;
             
+            /// <summary>
+            /// Processes apply using the supplied job inputs.
+            /// </summary>
             public void Execute(int index) {
 
                 var tree = (safe_ptr<NativeTrees.NativeQuadtree<Ent>>)this.trees[index];
@@ -150,12 +264,24 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Executes clear work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct ClearJob : Unity.Jobs.IJobParallelFor {
 
+            /// <summary>
+            /// System instance used by the associated operation.
+            /// </summary>
             public QuadTreeInsertSystem system;
+            /// <summary>
+            /// Spatial trees used by the query or update.
+            /// </summary>
             public UnsafeList<safe_ptr> trees;
 
+            /// <summary>
+            /// Processes clear using the supplied job inputs.
+            /// </summary>
             public void Execute(int index) {
 
                 var size = new NativeTrees.AABB2D(this.system.mapPosition, this.system.mapPosition + this.system.mapSize);
@@ -167,6 +293,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Returns tree.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr<NativeTrees.NativeQuadtree<Ent>> GetTree(int treeIndex) {
 
@@ -174,6 +303,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Adds tree.
+        /// </summary>
         [INLINE(256)]
         public int AddTree() {
 
@@ -183,6 +315,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes quad tree insert system state from the supplied context.
+        /// </summary>
         public void OnAwake(ref SystemContext context) {
 
             this.worldId = context.world.id;
@@ -190,6 +325,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Updates quad tree insert system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var clearJob = new ClearJob() {
@@ -215,6 +353,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases quad tree insert system state at the end of its owning lifecycle.
+        /// </summary>
         public void OnDestroy(ref SystemContext context) {
 
             for (int i = 0; i < this.trees.Length; ++i) {
@@ -227,6 +368,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Populates all requested entries in the destination.
+        /// </summary>
         public readonly void FillAll(ref QuadTreeQueryAspect query, in TransformAspect tr) {
             
             if (tr.IsCalculated == false) return;
@@ -248,6 +392,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Populates results with entries nearest to the requested location.
+        /// </summary>
         public readonly void FillNearest<T>(ref QuadTreeQueryAspect query, in TransformAspect tr, in T subFilter = default) where T : struct, ISubFilter<Ent> {
             
             if (tr.IsCalculated == false) return;
@@ -278,11 +425,17 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Returns nearest first.
+        /// </summary>
         public readonly Ent GetNearestFirst(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default,
                                             tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreY = default, bool ignoreSorting = false) {
             return this.GetNearestFirst(mask, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreSorting, new AlwaysTrueSubFilter());
         }
 
+        /// <summary>
+        /// Returns nearest first.
+        /// </summary>
         public readonly Ent GetNearestFirst<T>(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default, tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreSorting = default, in T subFilter = default) where T : struct, ISubFilter<Ent> {
 
             const uint nearestCount = 1u;
@@ -324,10 +477,16 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns nearest.
+        /// </summary>
         public readonly void GetNearest(int mask, ushort nearestCount, ref QueryResults results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, bool ignoreSorting) {
             this.GetNearest(mask, nearestCount, ref results, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreSorting, new AlwaysTrueSubFilter());
         }
 
+        /// <summary>
+        /// Returns nearest.
+        /// </summary>
         public readonly void GetNearest<T>(int mask, ushort nearestCount, ref QueryResults results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreSorting, in T subFilter = default) where T : struct, ISubFilter<Ent> {
             
             var bitsCount = math.countbits(mask);
@@ -446,6 +605,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Queries geometry intersected by the supplied ray and reports the matching hit.
+        /// </summary>
         public bool Raycast(Ray2D ray, int mask, tfloat distance, out QuadtreeRaycastHit<Ent> raycastHit, bool ignoreSorting = false) {
             
             raycastHit = default;
@@ -473,6 +635,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Draws diagnostic geometry for the associated state.
+        /// </summary>
         public void OnDrawGizmos(ref SystemContext context) {
             UnityEngine.Gizmos.color = UnityEngine.Color.green;
             for (int i = 0; i < this.treesCount; ++i) {

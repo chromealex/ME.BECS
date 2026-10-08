@@ -5,9 +5,15 @@ using ME.BECS.Editor;
 
 namespace ME.BECS.Views.Editor {
     
+    /// <summary>
+    /// Draws view source values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(ViewSource))]
     public class ViewSourceDrawer : UnityEditor.PropertyDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
             
             ObjectReferenceRegistry.LoadForced();

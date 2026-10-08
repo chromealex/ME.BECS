@@ -17,9 +17,15 @@ namespace ME.BECS.Pathfinding {
     using Unity.Collections.LowLevel.Unsafe;
 
     //[BURST]
+    /// <summary>
+    /// Coordinates build graph during the ECS system lifecycle.
+    /// </summary>
     [UnityEngine.Tooltip("Schedule building a pathfinding graph.")]
     public unsafe partial struct BuildGraphSystem : IAwake, IDestroy {
 
+        /// <summary>
+        /// Agent types config used by <c>BuildGraphSystem</c>.
+        /// </summary>
         public BECS.ObjectReference<AgentTypesConfig> agentTypesConfig;
 
         internal MemArray<Ent> graphs;
@@ -28,10 +34,19 @@ namespace ME.BECS.Pathfinding {
         internal World world;
         private tfloat nodeSize;
 
+        /// <summary>
+        /// Returns node size.
+        /// </summary>
         public readonly tfloat GetNodeSize() => this.nodeSize;
         
+        /// <summary>
+        /// Reads heights.
+        /// </summary>
         public readonly Heights ReadHeights() => this.heights;
 
+        /// <summary>
+        /// Initializes build graph system state from the supplied context.
+        /// </summary>
         public void OnAwake(ref SystemContext context) {
 
             context.dependsOn.Complete();
@@ -70,18 +85,27 @@ namespace ME.BECS.Pathfinding {
             
         }
         
+        /// <summary>
+        /// Releases build graph system state at the end of its owning lifecycle.
+        /// </summary>
         public void OnDestroy(ref SystemContext context) {
             
             this.heights.Dispose();
 
         }
 
+        /// <summary>
+        /// Returns graph by type ID.
+        /// </summary>
         [INLINE(256)]
         public readonly Ent GetGraphByTypeId(uint agentTypeId) {
             E.RANGE(agentTypeId, 0u, (uint)this.graphs.Length);
             return this.graphs[in this.world.state.ptr->allocator, agentTypeId];
         }
 
+        /// <summary>
+        /// Returns agent properties.
+        /// </summary>
         [INLINE(256)]
         public readonly ME.BECS.Units.AgentType GetAgentProperties(uint agentTypeId) {
             E.RANGE(agentTypeId, 0u, (uint)this.types.Length);
@@ -90,6 +114,9 @@ namespace ME.BECS.Pathfinding {
             return type;
         }
 
+        /// <summary>
+        /// Returns targets capacity.
+        /// </summary>
         [INLINE(256)]
         public readonly uint GetTargetsCapacity() {
             return (uint)this.types.Length;

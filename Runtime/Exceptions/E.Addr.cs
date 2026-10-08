@@ -5,12 +5,24 @@ namespace ME.BECS {
     using HIDE_CALLSTACK = UnityEngine.HideInCallstackAttribute;
     using static Cuts;
 
+    /// <summary>
+    /// Provides conditional runtime assertions and diagnostic exceptions for ECS invariants.
+    /// </summary>
     public partial class E {
 
+        /// <summary>
+        /// Reports a violation of the addr invariant.
+        /// </summary>
         public class AddrException : System.Exception {
 
+            /// <summary>
+            /// Initializes <c>AddrException</c> from the supplied str.
+            /// </summary>
             public AddrException(string str) : base(str) { }
 
+            /// <summary>
+            /// Throws the diagnostic exception represented by <c>E.AddrException</c>.
+            /// </summary>
             [HIDE_CALLSTACK]
             public static void Throw() {
                 throw new AddrException("Addr of value must be % 4");
@@ -20,8 +32,14 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Provides conditional runtime assertions and diagnostic exceptions for ECS invariants.
+    /// </summary>
     public static unsafe partial class E {
 
+        /// <summary>
+        /// Asserts that the supplied value has a four-byte-aligned address when safety checks are enabled.
+        /// </summary>
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void ADDR_4<T>(ref T value) where T : unmanaged {
@@ -33,6 +51,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Checks the check field offset invariant when the corresponding safety checks are enabled.
+        /// </summary>
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void CHECK_FIELD_OFFSET<T>(int offset, string fieldName) {

@@ -16,16 +16,31 @@ namespace ME.BECS.Pathfinding {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     #endif
 
+    /// <summary>
+    /// Provides height samples used to build the navigation graph.
+    /// </summary>
     public struct GraphHeights {
 
+        /// <summary>
+        /// Height map used by <c>GraphHeights</c>.
+        /// </summary>
         public MemArray<tfloat> heightMap;
         private int resolution;
         private float2 sampleSize;
+        /// <summary>
+        /// Aabb constant used by <c>GraphHeights</c>.
+        /// </summary>
         public Bounds AABB { get; private set; }
+        /// <summary>
+        /// Gets is valid; this implementation returns <c>this.heightMap.IsCreated</c>.
+        /// </summary>
         public readonly bool IsValid => this.heightMap.IsCreated;
         private readonly int QuadCount => this.resolution - 1;
         private World world;
 
+        /// <summary>
+        /// Initializes <c>GraphHeights</c> from the supplied position, terrain data, world.
+        /// </summary>
         [INLINE(256)]
         public GraphHeights(float3 position, UnityEngine.TerrainData terrainData, World world) {
             this.resolution = terrainData.heightmapResolution;
@@ -75,6 +90,9 @@ namespace ME.BECS.Pathfinding {
             tri = new Triangle(v0, v1, v2);
         }
 
+        /// <summary>
+        /// Provides the <c>Dispose</c> callback; this implementation performs no work.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() { }
 
@@ -119,18 +137,36 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    /// <summary>
+    /// Defines triangle state and operations.
+    /// </summary>
     public readonly struct Triangle {
 
+        /// <summary>
+        /// Endpoint or vertex <c>V0</c> of the represented geometry.
+        /// </summary>
         public float3 V0 { get; }
+        /// <summary>
+        /// Endpoint or vertex <c>V1</c> of the represented geometry.
+        /// </summary>
         public float3 V1 { get; }
+        /// <summary>
+        /// Endpoint or vertex <c>V2</c> of the represented geometry.
+        /// </summary>
         public float3 V2 { get; }
 
         ///
         /// This is already normalized.
         ///
 
+        /// <summary>
+        /// Normal used by <c>Triangle</c>.
+        /// </summary>
         public float3 Normal { get; }
 
+        /// <summary>
+        /// Initializes <c>Triangle</c> from the supplied v0, v1, v2.
+        /// </summary>
         [INLINE(256)]
         public Triangle(float3 v0, float3 v1, float3 v2) {
             this.V0 = v0;
@@ -139,6 +175,9 @@ namespace ME.BECS.Pathfinding {
             this.Normal = math.normalize(math.cross(this.V1 - this.V0, this.V2 - this.V0));
         }
 
+        /// <summary>
+        /// Samples height.
+        /// </summary>
         [INLINE(256)]
         public tfloat SampleHeight(float3 position) {
             // plane formula: a(x - x0) + b(y - y0) + c(z - z0) = 0

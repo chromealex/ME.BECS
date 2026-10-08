@@ -6,15 +6,27 @@ namespace ME.BECS.Commands {
     using Units;
     using Transforms;
     
+    /// <summary>
+    /// Coordinates command build during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public partial struct CommandBuildSystem : IUpdate {
 
+        /// <summary>
+        /// Executes command build system work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct Job : IJobForAspects<UnitCommandGroupAspect> {
 
+            /// <summary>
+            /// Graph-building system used by this operation.
+            /// </summary>
             public BuildGraphSystem buildGraphSystem;
             
+            /// <summary>
+            /// Processes the job inputs for <c>CommandBuildSystem</c>.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitCommandGroupAspect commandGroup) {
 
                 var parameters = commandGroup.ent.Read<CommandBuild>();
@@ -71,6 +83,9 @@ namespace ME.BECS.Commands {
 
         }
 
+        /// <summary>
+        /// Updates command build system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var buildGraphSystem = context.world.GetSystem<BuildGraphSystem>();

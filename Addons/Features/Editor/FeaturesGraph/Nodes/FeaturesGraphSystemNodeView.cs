@@ -5,6 +5,9 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
     
     using UnityEditor;
     
+    /// <summary>
+    /// Presents features graph system node view state through the associated view.
+    /// </summary>
     [ME.BECS.Extensions.GraphProcessor.NodeCustomEditor(typeof(ME.BECS.FeaturesGraph.Nodes.SystemNode))]
     public class FeaturesGraphSystemNodeView : FeaturesGraphNodeView {
 
@@ -40,6 +43,9 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             return isBurst;
         }
 
+        /// <summary>
+        /// Creates labels.
+        /// </summary>
         protected override void CreateLabels(UnityEngine.UIElements.VisualElement container) {
 
             var node = this.nodeTarget as ME.BECS.FeaturesGraph.Nodes.SystemNode;
@@ -99,6 +105,9 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             
         }
 
+        /// <summary>
+        /// Builds contextual menu.
+        /// </summary>
         public override void BuildContextualMenu(UnityEngine.UIElements.ContextualMenuPopulateEvent evt) {
             
             var system = (this.nodeTarget as ME.BECS.FeaturesGraph.Nodes.SystemNode)?.system;

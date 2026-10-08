@@ -8,6 +8,9 @@ namespace ME.BECS.Editor {
 
     // Graph UI consumes advisory compiler tables through a framework API. No
     // assembly names, generated implementation types or reflection per node draw.
+    /// <summary>
+    /// Registers and resolves system dependency entries.
+    /// </summary>
     public static class SystemDependencyCatalog {
         private static bool searched;
         private static Type publisher;
@@ -24,6 +27,9 @@ namespace ME.BECS.Editor {
             };
         }
 
+        /// <summary>
+        /// Indicates is available.
+        /// </summary>
         public static bool IsAvailable {
             get { Find(); return publisher != null; }
         }
@@ -47,13 +53,28 @@ namespace ME.BECS.Editor {
 
         // Explicit queries report unavailable diagnostics rather than pretending
         // to prove an empty dependency set. UI callers may check IsAvailable.
+        /// <summary>
+        /// Returns publisher type.
+        /// </summary>
         public static Type GetPublisherType() {
             Find();
             return publisher ?? throw new InvalidOperationException("System dependency hints are unavailable. Wait for source input export/compilation; runtime scheduling is unaffected.");
         }
+        /// <summary>
+        /// Returns system components dependencies.
+        /// </summary>
         public static Components GetSystemComponentsDependencies(Type system) { GetPublisherType(); return components(system); }
+        /// <summary>
+        /// Tests whether the dependency catalog contains the specified system type.
+        /// </summary>
         public static bool ContainsSystem(Type system) => system != null && IsAvailable && contains(system);
+        /// <summary>
+        /// Returns system dependencies.
+        /// </summary>
         public static Dependencies GetSystemDependencies(Type system) { GetPublisherType(); return dependencies(system); }
+        /// <summary>
+        /// Returns system dependencies errors.
+        /// </summary>
         public static Errors GetSystemDependenciesErrors(Type system) { GetPublisherType(); return errors(system); }
     }
 }

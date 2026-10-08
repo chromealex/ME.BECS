@@ -13,16 +13,28 @@ namespace ME.BECS.Attack {
     using ME.BECS.Transforms;
     using ME.BECS.Units;
 
+    /// <summary>
+    /// Coordinates search target during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [UnityEngine.Tooltip("Search Target system")]
     [RequiredDependencies(typeof(QuadTreeQuerySystem))]
     public partial struct SearchTargetSystem : IUpdate {
 
+        /// <summary>
+        /// Executes search target work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct SearchTargetJob : IJobForAspects<AttackAspect, QuadTreeQueryAspect, TransformAspect> {
 
+            /// <summary>
+            /// World used by the containing operation.
+            /// </summary>
             public World world;
             
+            /// <summary>
+            /// Processes search target using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
 
                 Ent requiredTarget = default;
@@ -56,11 +68,20 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Executes search targets work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct SearchTargetsJob : IJobFor3Aspects1Components<AttackAspect, QuadTreeQueryAspect, TransformAspect, AttackTargetsCountComponent> {
 
+            /// <summary>
+            /// World used by the containing operation.
+            /// </summary>
             public World world;
             
+            /// <summary>
+            /// Processes search targets using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref QuadTreeQueryAspect query, ref TransformAspect tr, ref AttackTargetsCountComponent targetsCountComponent) {
 
                 var hasTarget = true;
@@ -96,6 +117,9 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Updates search target system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var handle = this.UpdateSpatial(ref context);

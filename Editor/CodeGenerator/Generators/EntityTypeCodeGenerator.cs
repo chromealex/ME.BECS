@@ -3,10 +3,19 @@ using System.Reflection;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Exports entity type registration data for generated code.
+    /// </summary>
     [CodeGeneratorOrder(-100)]
     public class EntityTypeCodeGenerator : CustomCodeGenerator {
+        /// <summary>
+        /// Source initialization kind used by <c>EntityTypeCodeGenerator</c>.
+        /// </summary>
         public override string SourceInitializationKind => this.GetType() == typeof(EntityTypeCodeGenerator) ? "entities" : base.SourceInitializationKind;
 
+        /// <summary>
+        /// Returns all types.
+        /// </summary>
         public static (System.Type, uint)[] GetAllTypes(CustomCodeGenerator codeGenerator, out uint count) {
 
             var content = new System.Collections.Generic.List<(System.Type, uint)>();

@@ -31,13 +31,28 @@ namespace ME.BECS.Pathfinding {
     using Unity.Collections.LowLevel.Unsafe;
     using ME.BECS.Jobs;
 
+    /// <summary>
+    /// Provides node storage used during path searches.
+    /// </summary>
     [System.Serializable]
     public struct GraphNodeMemory {
 
+        /// <summary>
+        /// Graph used by the associated operation.
+        /// </summary>
         public Ent graph;
+        /// <summary>
+        /// Node processed or represented by this entry.
+        /// </summary>
         public Graph.TempNode node;
+        /// <summary>
+        /// Memory used by <c>GraphNodeMemory</c>.
+        /// </summary>
         public Node memory;
 
+        /// <summary>
+        /// Initializes <c>GraphNodeMemory</c> from the supplied graph, node, node data.
+        /// </summary>
         public GraphNodeMemory(in Ent graph, in Graph.TempNode node, in Node nodeData) {
             this.graph = graph;
             this.node = node;
@@ -46,45 +61,96 @@ namespace ME.BECS.Pathfinding {
 
     }
     
+    /// <summary>
+    /// Defines the graph structure used for graph.
+    /// </summary>
     public static unsafe class Graph {
 
+        /// <summary>
+        /// Target byte constant used by <c>Graph</c>.
+        /// </summary>
         public const byte TARGET_BYTE = 255;
+        /// <summary>
+        /// Los byte constant used by <c>Graph</c>.
+        /// </summary>
         public const byte LOS_BYTE = 254;
+        /// <summary>
+        /// Unwalkable constant used by <c>Graph</c>.
+        /// </summary>
         public const byte UNWALKABLE = 255;
+        /// <summary>
+        /// Unwalkable cost constant used by <c>Graph</c>.
+        /// </summary>
         public const float UNWALKABLE_COST = float.MaxValue * 0.5f;
         
+        /// <summary>
+        /// Defines a temp node entry in the associated graph.
+        /// </summary>
         [System.Serializable]
         public struct TempNode : System.IEquatable<TempNode> {
 
+            /// <summary>
+            /// Sentinel value representing an invalid entry.
+            /// </summary>
             public static TempNode Invalid => new TempNode() { chunkIndex = uint.MaxValue, nodeIndex = uint.MaxValue };
 
+            /// <summary>
+            /// Chunk index used to locate the associated entry.
+            /// </summary>
             public uint chunkIndex;
+            /// <summary>
+            /// Node index used to locate the associated entry.
+            /// </summary>
             public uint nodeIndex;
 
+            /// <summary>
+            /// Tests whether the context is valid.
+            /// </summary>
             [INLINE(256)]
             public bool IsValid() => this.chunkIndex != uint.MaxValue && this.nodeIndex != uint.MaxValue;
 
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             public bool Equals(TempNode other) {
                 return this.chunkIndex == other.chunkIndex && this.nodeIndex == other.nodeIndex;
             }
 
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             public override bool Equals(object obj) {
                 return obj is TempNode other && this.Equals(other);
             }
 
+            /// <summary>
+            /// Returns a hash code consistent with this type's equality comparison.
+            /// </summary>
             public override int GetHashCode() {
                 return (int)(31 * this.chunkIndex + this.nodeIndex);
             }
 
         }
 
+        /// <summary>
+        /// Describes the route computed within a graph chunk.
+        /// </summary>
         public struct ChunkPathInfo {
 
+            /// <summary>
+            /// Number of elements in the associated storage.
+            /// </summary>
             public uint length;
+            /// <summary>
+            /// Path state used by <c>Graph.ChunkPathInfo</c>.
+            /// </summary>
             public PathState pathState;
 
         }
 
+        /// <summary>
+        /// Updates path.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle UpdatePath(in World world, MemArrayAuto<byte> chunksToUpdate, ref Path path, JobHandle dependsOn) {
 
@@ -147,6 +213,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Updates the requested path chunks synchronously using the supplied traversal filter.
+        /// </summary>
         [INLINE(256)]
         public static void PathUpdateSync(in World world, ref Path path, in Ent graph, MemArrayAuto<byte> chunksToUpdate, in Filter filter, Unity.Collections.NativeReference<byte> updateRequired) {
 
@@ -165,6 +234,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Sets target.
+        /// </summary>
         [INLINE(256)]
         public static void SetTarget(ref Path path, in Path.Target target, in Filter filter) {
             
@@ -175,6 +247,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Creates path.
+        /// </summary>
         [INLINE(256)]
         public static void MakePath(in World world, out Path path, in Ent graph, in Path.Target to, in Filter filter) {
 
@@ -190,11 +265,17 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Returns coord info.
+        /// </summary>
         [INLINE(256)]
         public static TempNode GetCoordInfo(in RootGraphComponent root, int globalX, int globalY) {
             return GetCoordInfo(globalX, globalY, root.chunkWidth, root.chunkHeight, root.width, root.height);
         }
 
+        /// <summary>
+        /// Returns coord info.
+        /// </summary>
         [INLINE(256)]
         public static TempNode GetCoordInfo(int globalX, int globalY, uint chunkWidth, uint chunkHeight, uint chunksX, uint chunksY) {
 
@@ -211,6 +292,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Returns global coord.
+        /// </summary>
         [INLINE(256)]
         public static int2 GetGlobalCoord(in RootGraphComponent root, float3 position) {
 
@@ -220,6 +304,9 @@ namespace ME.BECS.Pathfinding {
             
         }
 
+        /// <summary>
+        /// Returns global coord.
+        /// </summary>
         [INLINE(256)]
         public static int2 GetGlobalCoord(uint chunkIndex, uint nodeIndex, uint chunkWidth, uint chunkHeight, uint chunksX) {
 
@@ -233,6 +320,9 @@ namespace ME.BECS.Pathfinding {
 
         }
         
+        /// <summary>
+        /// Returns direction.
+        /// </summary>
         [INLINE(256)]
         public static float3 GetDirection(in World world, float3 position, in Path path, out bool complete) {
 
@@ -256,6 +346,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Returns direction.
+        /// </summary>
         [INLINE(256)]
         public static float3 GetDirection(byte dir) {
 
@@ -266,6 +359,9 @@ namespace ME.BECS.Pathfinding {
             
         }
 
+        /// <summary>
+        /// Builds a route between positions through the graph's hierarchy.
+        /// </summary>
         [INLINE(256)]
         public static PathInfo HierarchyPath(safe_ptr<State> state, in Ent graph, float3 from, float3 to, in Filter filter, tfloat nodeSize) {
 
@@ -526,6 +622,9 @@ namespace ME.BECS.Pathfinding {
 
         }
         
+        /// <summary>
+        /// Builds a route within the specified graph chunk.
+        /// </summary>
         [INLINE(256)]
         public static ChunkPathInfo ChunkPath(safe_ptr<State> state, in Ent graph, uint chunkIndex, float3 from, float3 to, in Filter filter = default) {
 
@@ -723,6 +822,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Returns direction by side.
+        /// </summary>
         [INLINE(256)]
         public static int2 GetDirectionBySide(Side side) {
 
@@ -737,6 +839,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Returns coord direction.
+        /// </summary>
         [INLINE(256)]
         public static uint GetCoordDirection(uint i) {
 
@@ -757,6 +862,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Returns coord direction.
+        /// </summary>
         [INLINE(256)]
         public static Direction GetCoordDirection(int x, int y) {
 
@@ -931,6 +1039,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Returns position.
+        /// </summary>
         [INLINE(256)]
         public static float3 GetPosition(safe_ptr<State> state, in Ent graphEnt, uint chunkIndex, uint nodeIndex) {
 
@@ -940,6 +1051,9 @@ namespace ME.BECS.Pathfinding {
 
         }
         
+        /// <summary>
+        /// Returns position.
+        /// </summary>
         [INLINE(256)]
         public static float3 GetPosition(in RootGraphComponent root, in ChunkComponent chunk, uint index) {
 
@@ -952,11 +1066,17 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Returns height.
+        /// </summary>
         [INLINE(256)]
         public static tfloat GetHeight(in RootGraphComponent root, in ChunkComponent chunk, uint nodeIndex) {
             return GetPosition(in root, in chunk, nodeIndex).y;
         }
 
+        /// <summary>
+        /// Returns min height.
+        /// </summary>
         [INLINE(256)]
         public static tfloat GetMinHeight(in RootGraphComponent root, uint chunkIndex, uint nodeIndex, bool checkNeighbours = false) {
             var nodeHeight = GetPosition(in root, in root.chunks[chunkIndex], nodeIndex).y;
@@ -987,6 +1107,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Constrains the path target to the graph's supported area.
+        /// </summary>
         [INLINE(256)]
         public static Path.Target ClampPosition(in Ent graphEnt, in Path.Target target) {
 
@@ -1002,6 +1125,9 @@ namespace ME.BECS.Pathfinding {
             
         }
 
+        /// <summary>
+        /// Returns chunk index.
+        /// </summary>
         [INLINE(256)]
         public static uint GetChunkIndex(in RootGraphComponent root, in float3 position, bool clamp = true) {
             
@@ -1046,6 +1172,9 @@ namespace ME.BECS.Pathfinding {
             return GetNodeIndex(in root, in chunk, math.mul(rotation, pos - rotPoint) + rotPoint, clamp);
         }
 
+        /// <summary>
+        /// Returns node index.
+        /// </summary>
         [INLINE(256)]
         public static uint GetNodeIndex(in RootGraphComponent root, in ChunkComponent chunk, in float3 pos, bool clamp = true) {
 
@@ -1071,6 +1200,9 @@ namespace ME.BECS.Pathfinding {
             return y * root.chunkWidth + x;
         }
 
+        /// <summary>
+        /// Updates obstacles.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle UpdateObstacles(in World world, in Ent graph, in Unity.Collections.NativeArray<ulong> changedChunks, JobHandle dependsOn) {
 
@@ -1107,6 +1239,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Builds the derived representation from its source data.
+        /// </summary>
         [INLINE(256)]
         public static JobHandle Build(in JobInfo jobInfo, in Heights heights, out Ent graph, in GraphProperties properties, in ME.BECS.Units.AgentType agentConfig, JobHandle dependsOn = default) {
 
@@ -1180,6 +1315,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Creates chunk.
+        /// </summary>
         [INLINE(256)]
         public static ChunkComponent CreateChunk(in World world, in Heights heights, in Ent graph, uint chunkIndex, float3 center) {
 
@@ -1218,6 +1356,9 @@ namespace ME.BECS.Pathfinding {
             
         }
         
+        /// <summary>
+        /// Applies an obstacle cost and channel to the graph cells covered by the supplied shape.
+        /// </summary>
         [INLINE(256)]
         public static void Stamp(in World world, in RootGraphComponent root, in ChunkComponent chunkComponent, float3 position, quaternion rotation, float3 size, byte cost, ObstacleChannel obstacleChannel) {
             var posMin = position - size * 0.5f;
@@ -1235,6 +1376,9 @@ namespace ME.BECS.Pathfinding {
             }
         }
 
+        /// <summary>
+        /// Updates chunk.
+        /// </summary>
         [INLINE(256)]
         public static bool UpdateChunk(in World world, in Ent graph, uint chunkIndex, ref ChunkComponent chunkComponent, Unity.Collections.NativeArray<ulong> changedChunks, bool forced = false) {
 
@@ -1332,6 +1476,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Builds portals.
+        /// </summary>
         [INLINE(256)]
         public static void BuildPortals(in Ent graph, uint chunkIndex, ref ChunkComponent chunkComponent, in World world, ref uint globalArea) {
 
@@ -1386,14 +1533,29 @@ namespace ME.BECS.Pathfinding {
             
         }
 
+        /// <summary>
+        /// Defines gizmos parameters state and operations for <c>Graph</c>.
+        /// </summary>
         public struct GizmosParameters {
 
+            /// <summary>
+            /// Whether draw normals behavior or state is selected.
+            /// </summary>
             public bool drawNormals;
+            /// <summary>
+            /// Whether draw nodes behavior or state is selected.
+            /// </summary>
             public bool drawNodes;
+            /// <summary>
+            /// Whether draw portals behavior or state is selected.
+            /// </summary>
             public bool drawPortals;
 
         }
 
+        /// <summary>
+        /// Draws diagnostic geometry for the supplied data.
+        /// </summary>
         [INLINE(256)]
         public static void DrawGizmos(Path path, GizmosParameters parameters) {
 
@@ -1447,6 +1609,9 @@ namespace ME.BECS.Pathfinding {
             
         }
 
+        /// <summary>
+        /// Draws diagnostic geometry for the supplied data.
+        /// </summary>
         [INLINE(256)]
         public static void DrawGizmos(Ent graph, GizmosParameters parameters) {
 
@@ -1591,6 +1756,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Draws gizmos arrow.
+        /// </summary>
         [INLINE(256)]
         public static void DrawGizmosArrow(UnityEngine.Vector3 pos, UnityEngine.Vector3 direction, float arrowHeadLength = 0.25f, float arrowHeadAngle = 20.0f, float scale = 1f) {
             if (direction == UnityEngine.Vector3.zero) return;
@@ -1602,6 +1770,9 @@ namespace ME.BECS.Pathfinding {
             UnityEngine.Gizmos.DrawRay(pos + direction * (float)scale, left * (float)arrowHeadLength * (float)scale);
         }
 
+        /// <summary>
+        /// Tests whether the context is slope valid.
+        /// </summary>
         [INLINE(256)]
         public static bool IsSlopeValid(tfloat maxSlopeAngle, tfloat nodeHeight, tfloat neighbourNodeHeight, tfloat nodeSize) {
 
@@ -1611,6 +1782,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Returns obstacle rect.
+        /// </summary>
         [INLINE(256)]
         public static Rect GetObstacleRect(in float3 position, in quaternion rotation, in float2 size) {
             Rect aabb;
@@ -1630,6 +1804,9 @@ namespace ME.BECS.Pathfinding {
             return aabb;
         }
 
+        /// <summary>
+        /// Returns chunks by bounds.
+        /// </summary>
         [INLINE(256)]
         public static UnsafeHashSet<uint> GetChunksByBounds(in RootGraphComponent root, in Rect obstacleBounds, Unity.Collections.Allocator allocator) {
             var list = new UnsafeHashSet<uint>(4, allocator);
@@ -1656,8 +1833,14 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    /// <summary>
+    /// Provides helper operations for math float3.
+    /// </summary>
     public static class MathFloat3Ext {
 
+        /// <summary>
+        /// Embeds a two-dimensional vector in the XZ plane with a zero Y component.
+        /// </summary>
         [INLINE(256)]
         public static float3 x0y(this float2 f) {
             return new float3(f.x, 0f, f.y);

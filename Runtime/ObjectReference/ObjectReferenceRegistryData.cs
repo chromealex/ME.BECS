@@ -3,15 +3,39 @@ using System.Linq;
 
 namespace ME.BECS {
 
+    /// <summary>
+    /// Stores object item for the associated runtime API.
+    /// </summary>
     public readonly struct ObjectItem {
 
+        /// <summary>
+        /// Source data or instance used by this operation.
+        /// </summary>
         public readonly UnityEngine.Object source;
+        /// <summary>
+        /// Source reference used by <c>ObjectItem</c>.
+        /// </summary>
         public readonly UnityEngine.AddressableAssets.AssetReference sourceReference;
+        /// <summary>
+        /// Source type used by <c>ObjectItem</c>.
+        /// </summary>
         public readonly System.Type sourceType;
+        /// <summary>
+        /// Source id used to locate the associated entry.
+        /// </summary>
         public readonly uint sourceId;
+        /// <summary>
+        /// Indicates is game object.
+        /// </summary>
         public readonly bool isGameObject;
+        /// <summary>
+        /// Data consumed or produced by the containing operation.
+        /// </summary>
         public readonly IObjectItemData data;
         
+        /// <summary>
+        /// Initializes <c>ObjectItem</c> from the supplied data.
+        /// </summary>
         public ObjectItem(ItemInfo data) {
             this.source = data.source;
             this.sourceReference = data.sourceReference;
@@ -21,6 +45,9 @@ namespace ME.BECS {
             this.isGameObject = data.isGameObject;
         }
 
+        /// <summary>
+        /// Tests whether the context is valid.
+        /// </summary>
         public bool IsValid() {
             if (this.source == null && this.sourceType == null) {
                 return false;
@@ -28,6 +55,9 @@ namespace ME.BECS {
             return true;
         }
 
+        /// <summary>
+        /// Loads the registered data required by this operation.
+        /// </summary>
         public T Load<T>() where T : UnityEngine.Object {
             if (this.source != null) {
                 if (this.source is T obj) return obj;
@@ -65,6 +95,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Loads async.
+        /// </summary>
         public async UnityEngine.Awaitable<T> LoadAsync<T>() where T : UnityEngine.Object {
             if (this.source != null) {
                 if (this.source is T obj) return obj;
@@ -102,11 +135,17 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Returns instance ID.
+        /// </summary>
         public int GetInstanceID() {
             if (this.source != null) return this.source.GetInstanceID();
             return (int)this.sourceId;
         }
 
+        /// <summary>
+        /// Tests whether the value matches the requested type or condition.
+        /// </summary>
         public bool Is<T>() {
             if (this.source is T) return true;
             if (typeof(T).IsAssignableFrom(this.sourceType) == true) return true;
@@ -115,41 +154,86 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Defines the operations required by object item data.
+    /// </summary>
     public interface IObjectItemData {
 
+        /// <summary>
+        /// Tests whether the context is valid.
+        /// </summary>
         bool IsValid(UnityEngine.Object obj);
+        /// <summary>
+        /// Checks the supplied state against the constraints required by this API.
+        /// </summary>
         void Validate(UnityEngine.Object obj);
 
     }
     
+    /// <summary>
+    /// Stores item info for the associated runtime API.
+    /// </summary>
     [System.Serializable]
     public struct ItemInfo : System.IEquatable<ItemInfo> {
 
+        /// <summary>
+        /// Source data or instance used by this operation.
+        /// </summary>
         public UnityEngine.Object source;
+        /// <summary>
+        /// Source reference used by <c>ItemInfo</c>.
+        /// </summary>
         public UnityEngine.AddressableAssets.AssetReference sourceReference;
+        /// <summary>
+        /// Indicates is game object.
+        /// </summary>
         public bool isGameObject;
+        /// <summary>
+        /// Source type used by <c>ItemInfo</c>.
+        /// </summary>
         public string sourceType;
+        /// <summary>
+        /// Source id used to locate the associated entry.
+        /// </summary>
         public uint sourceId;
         
+        /// <summary>
+        /// Custom data used by <c>ItemInfo</c>.
+        /// </summary>
         [UnityEngine.SerializeReference]
         public IObjectItemData customData;
         
+        /// <summary>
+        /// Releases assets retained by the loading operation.
+        /// </summary>
         public void CleanUpLoadedAssets() {
             if (this.sourceReference.IsValid() == true) this.sourceReference.ReleaseAsset();
         }
 
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         public bool Equals(ItemInfo other) {
             return this.source == other.source && Equals(this.sourceReference, other.sourceReference) && this.sourceType == other.sourceType && this.sourceId == other.sourceId && Equals(this.customData, other.customData);
         }
 
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         public override bool Equals(object obj) {
             return obj is ItemInfo other && this.Equals(other);
         }
 
+        /// <summary>
+        /// Returns a hash code consistent with this type's equality comparison.
+        /// </summary>
         public override int GetHashCode() {
             return System.HashCode.Combine(this.source, this.sourceReference, this.sourceType, this.sourceId, this.customData);
         }
 
+        /// <summary>
+        /// Tests whether the value matches the requested type or condition.
+        /// </summary>
         public bool Is<T>(bool ignoreErrors = false) {
             if (this.source is T) return true;
             if (string.IsNullOrEmpty(this.sourceType) == true) {
@@ -160,6 +244,9 @@ namespace ME.BECS {
             return false;
         }
         
+        /// <summary>
+        /// Tests whether the value matches the requested type or condition.
+        /// </summary>
         public bool Is(UnityEngine.Object obj) {
             if (this.source == obj) return true;
             #if UNITY_EDITOR
@@ -173,6 +260,9 @@ namespace ME.BECS {
             return false;
         }
 
+        /// <summary>
+        /// Tests whether the context is valid.
+        /// </summary>
         public bool IsValid() {
             #if UNITY_EDITOR
             return this.source != null || this.sourceReference.editorAsset != null;
@@ -183,15 +273,27 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Stores object reference registry data for the associated runtime API.
+    /// </summary>
     public class ObjectReferenceRegistryData : UnityEngine.ScriptableObject {
 
+        /// <summary>
+        /// Entries stored by this container.
+        /// </summary>
         public ItemInfo[] items = System.Array.Empty<ItemInfo>();
+        /// <summary>
+        /// Objects used by <c>ObjectReferenceRegistryData</c>.
+        /// </summary>
         public ObjectReferenceRegistryItem[] objects = System.Array.Empty<ObjectReferenceRegistryItem>();
 
         internal uint sourceId;
         internal readonly Dictionary<uint, ItemInfo> itemLookup = new Dictionary<uint, ItemInfo>();
         internal readonly Dictionary<UnityEngine.Object, uint> objectLookup = new Dictionary<UnityEngine.Object, uint>();
 
+        /// <summary>
+        /// Validates removed.
+        /// </summary>
         public bool ValidateRemoved() {
             var result = false;
             #if UNITY_EDITOR
@@ -214,6 +316,9 @@ namespace ME.BECS {
             return result;
         }
         
+        /// <summary>
+        /// Checks the supplied state against the constraints required by this API.
+        /// </summary>
         [UnityEngine.ContextMenu("Call OnValidate")]
         public void Validate() {
 
@@ -266,6 +371,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Validates now.
+        /// </summary>
         public void ValidateNow() {
             
             var newObjects = new System.Collections.Generic.List<ItemInfo>();
@@ -315,6 +423,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Initializes object reference registry data state from the supplied context.
+        /// </summary>
         public void Initialize() {
             this.itemLookup.Clear();
             this.objectLookup.Clear();
@@ -327,12 +438,18 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Releases assets retained by the loading operation.
+        /// </summary>
         public void CleanUpLoadedAssets() {
             foreach (var item in this.objects) {
                 item.data.CleanUpLoadedAssets();
             }
         }
         
+        /// <summary>
+        /// Returns object by source ID.
+        /// </summary>
         public ObjectItem GetObjectBySourceId(uint sourceId) {
             if (this.itemLookup.Count == 0) {
                 this.Initialize();
@@ -348,6 +465,9 @@ namespace ME.BECS {
             return default;
         }
 
+        /// <summary>
+        /// Adds the supplied entry to object reference registry data.
+        /// </summary>
         public uint Add(UnityEngine.Object source, out bool isNew) {
 
             isNew = false;
@@ -419,6 +539,9 @@ namespace ME.BECS {
             #endif
         }
 
+        /// <summary>
+        /// Removes the specified entry from object reference registry data.
+        /// </summary>
         public bool Remove(UnityEngine.Object source) {
             
             /*for (int i = 0; i < this.objects.Length; ++i) {
@@ -443,6 +566,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns source ID.
+        /// </summary>
         public uint GetSourceId() {
             return this.sourceId;
         }

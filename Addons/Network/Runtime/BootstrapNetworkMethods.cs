@@ -26,14 +26,29 @@ namespace ME.BECS.Network {
         }
     }
 
+    /// <summary>
+    /// Installs generated network-method registrations.
+    /// </summary>
     public static class BootstrapNetworkMethods {
         private static readonly NetworkMethodBootstrapRegistry runtime = new NetworkMethodBootstrapRegistry();
         private static readonly NetworkMethodBootstrapRegistry editor = new NetworkMethodBootstrapRegistry();
+        /// <summary>
+        /// Installs fragment.
+        /// </summary>
         public static void InstallFragment(string identity, string owner, int count, int[] ordinals, NetworkMethodDelegate[] callbacks, bool editor) =>
             (editor ? BootstrapNetworkMethods.editor : runtime).Install(identity, owner, count, ordinals, callbacks);
+        /// <summary>
+        /// Checks for the expected plan.
+        /// </summary>
         public static void ExpectPlan(string identity, int count, bool editor) =>
             (editor ? BootstrapNetworkMethods.editor : runtime).Expect(identity, count);
+        /// <summary>
+        /// Requires complete.
+        /// </summary>
         public static void RequireComplete(bool editor) => (editor ? BootstrapNetworkMethods.editor : runtime).RequireComplete();
+        /// <summary>
+        /// Registers installed.
+        /// </summary>
         public static void RegisterInstalled(bool editor) {
             var registry = editor ? BootstrapNetworkMethods.editor : runtime;
             registry.RequireComplete();

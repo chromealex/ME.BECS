@@ -31,6 +31,9 @@ using System.IO;
 
 namespace ME.BECS.Mono.Reflection {
 
+    /// <summary>
+    /// Defines image state and operations.
+    /// </summary>
     public sealed class Image : IDisposable {
 
         private long position;
@@ -108,6 +111,9 @@ namespace ME.BECS.Mono.Reflection {
             return this.ReadUInt32() != 0;
         }
 
+        /// <summary>
+        /// Tests whether the context is assembly.
+        /// </summary>
         public static bool IsAssembly(string file) {
             if (file == null) {
                 throw new ArgumentNullException("file");
@@ -118,6 +124,9 @@ namespace ME.BECS.Mono.Reflection {
             }
         }
 
+        /// <summary>
+        /// Tests whether the context is assembly.
+        /// </summary>
         public static bool IsAssembly(Stream stream) {
             if (stream == null) {
                 throw new ArgumentNullException("stream");

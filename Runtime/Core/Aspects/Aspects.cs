@@ -13,50 +13,98 @@ namespace ME.BECS {
     using System.Runtime.InteropServices;
     using LAYOUT = System.Runtime.InteropServices.StructLayoutAttribute;
     
+    /// <summary>
+    /// Exposes a typed view of the components belonging to an entity.
+    /// </summary>
     public interface IAspect {
 
+        /// <summary>
+        /// Entity whose components or lifetime are associated with this value.
+        /// </summary>
         Ent ent { get; set; }
         
     }
 
+    /// <summary>
+    /// Defines the supported ref op values.
+    /// </summary>
     public enum RefOp {
+        /// <summary>
+        /// Read only option for <c>RefOp</c>.
+        /// </summary>
         ReadOnly  = 0,
+        /// <summary>
+        /// Write only option for <c>RefOp</c>.
+        /// </summary>
         WriteOnly = 1,
+        /// <summary>
+        /// Read write option for <c>RefOp</c>.
+        /// </summary>
         ReadWrite = 2,
     }
 
+    /// <summary>
+    /// Defines the operations required by ref op.
+    /// </summary>
     public interface IRefOp {
+        /// <summary>
+        /// Op used by <c>IRefOp</c>.
+        /// </summary>
         RefOp Op { get; }
     }
 
+    /// <summary>
+    /// Supplies disable container safety restriction metadata to annotated declarations.
+    /// </summary>
     [System.AttributeUsageAttribute(System.AttributeTargets.Field | System.AttributeTargets.Method)]
     public class DisableContainerSafetyRestrictionAttribute : System.Attribute {
 
     }
 
+    /// <summary>
+    /// Supplies safety check metadata to annotated declarations.
+    /// </summary>
     [IgnoreProfiler]
     public class SafetyCheckAttribute : System.Attribute {
 
+        /// <summary>
+        /// Op used by <c>SafetyCheckAttribute</c>.
+        /// </summary>
         public RefOp Op { get; set; }
 
+        /// <summary>
+        /// Initializes <c>SafetyCheckAttribute</c> from the supplied op.
+        /// </summary>
         public SafetyCheckAttribute(RefOp op) {
             this.Op = op;
         }
 
     }
     
+    /// <summary>
+    /// Defines safety component container ro data used by entity processing.
+    /// </summary>
     [IgnoreProfiler]
     public unsafe struct SafetyComponentContainerRO<T> where T : unmanaged, IComponentBase {
 
+        /// <summary>
+        /// Safety used by <c>SafetyComponentContainerRO</c>.
+        /// </summary>
         [Unity.Collections.ReadOnly]
         public SafetyComponentContainerRW<T> safety;
         
+        /// <summary>
+        /// Initializes <c>SafetyComponentContainerRO</c> from the supplied state, world ID.
+        /// </summary>
         public SafetyComponentContainerRO(safe_ptr<State> state, ushort worldId) {
             this.safety = new SafetyComponentContainerRW<T>(state, worldId);
         }
 
     }
 
+    /// <summary>
+    /// Defines safety component container wo data used by entity processing.
+    /// </summary>
     [IgnoreProfiler]
     [NativeContainer]
     [NativeContainerSupportsMinMaxWriteRestriction]
@@ -71,6 +119,9 @@ namespace ME.BECS {
         #pragma warning restore
         #endif
         
+        /// <summary>
+        /// Initializes <c>SafetyComponentContainerWO</c> from the supplied state, world ID.
+        /// </summary>
         public SafetyComponentContainerWO(safe_ptr<State> state, ushort worldId) {
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             this.m_MinIndex = 0;
@@ -82,6 +133,9 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Defines safety component container rw data used by entity processing.
+    /// </summary>
     [IgnoreProfiler]
     [NativeContainer]
     [NativeContainerSupportsMinMaxWriteRestriction]
@@ -96,6 +150,9 @@ namespace ME.BECS {
         #pragma warning restore
         #endif
         
+        /// <summary>
+        /// Initializes <c>SafetyComponentContainerRW</c> from the supplied state, world ID.
+        /// </summary>
         public SafetyComponentContainerRW(safe_ptr<State> state, ushort worldId) {
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             this.m_MinIndex = 0;
@@ -107,11 +164,17 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Provides read-only component access with native-container safety tracking.
+    /// </summary>
     [IgnoreProfiler]
     [NativeContainer]
     [NativeContainerSupportsMinMaxWriteRestriction]
     public unsafe struct RefROSafe<T> : IRefOp where T : unmanaged, IComponentBase {
 
+        /// <summary>
+        /// Gets op; this implementation returns <c>RefOp.ReadOnly</c>.
+        /// </summary>
         public RefOp Op => RefOp.ReadOnly;
         
         private RefRO<T> data;
@@ -122,6 +185,9 @@ namespace ME.BECS {
         private int m_MaxIndex;
         #endif
 
+        /// <summary>
+        /// Initializes <c>RefROSafe</c> from the supplied state, world ID.
+        /// </summary>
         public RefROSafe(safe_ptr<State> state, ushort worldId) {
             this.data = state.ptr->components.GetRO<T>(state, worldId);
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
@@ -132,6 +198,9 @@ namespace ME.BECS {
             #endif
         }
 
+        /// <summary>
+        /// Reads the requested value from ref ro safe.
+        /// </summary>
         #if !NO_INLINE
         [INLINE(256)]
         #endif
@@ -143,6 +212,9 @@ namespace ME.BECS {
             return ref this.data.Read(entId, gen);
         }
 
+        /// <summary>
+        /// Returns a pointer for reading the component at the specified entity slot and generation.
+        /// </summary>
         #if !NO_INLINE
         [INLINE(256)]
         #endif
@@ -169,11 +241,17 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Provides writable component access with native-container safety tracking.
+    /// </summary>
     [IgnoreProfiler]
     [NativeContainer]
     [NativeContainerSupportsMinMaxWriteRestriction]
     public unsafe struct RefRWSafe<T> : IRefOp where T : unmanaged, IComponentBase {
 
+        /// <summary>
+        /// Gets op; this implementation returns <c>RefOp.ReadWrite</c>.
+        /// </summary>
         public RefOp Op => RefOp.ReadWrite;
 
         private RefRW<T> data;
@@ -184,6 +262,9 @@ namespace ME.BECS {
         private int m_MaxIndex;
         #endif
 
+        /// <summary>
+        /// Initializes <c>RefRWSafe</c> from the supplied state, world ID.
+        /// </summary>
         public RefRWSafe(safe_ptr<State> state, ushort worldId) {
             this.data = state.ptr->components.GetRW<T>(state, worldId);
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
@@ -194,6 +275,9 @@ namespace ME.BECS {
             #endif
         }
 
+        /// <summary>
+        /// Returns the requested entry from ref rw safe.
+        /// </summary>
         #if !NO_INLINE
         [INLINE(256)]
         #endif
@@ -205,6 +289,9 @@ namespace ME.BECS {
             return ref this.data.Get(entId, gen);
         }
 
+        /// <summary>
+        /// Reads the requested value from ref rw safe.
+        /// </summary>
         #if !NO_INLINE
         [INLINE(256)]
         #endif
@@ -216,6 +303,9 @@ namespace ME.BECS {
             return ref this.data.Read(entId, gen);
         }
 
+        /// <summary>
+        /// Returns a pointer for reading the component at the specified entity slot and generation.
+        /// </summary>
         #if !NO_INLINE
         [INLINE(256)]
         #endif
@@ -242,23 +332,47 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Provides writable access to component storage through a typed accessor.
+    /// </summary>
     [IgnoreProfiler]
     [LAYOUT(LayoutKind.Sequential, Size = 24, Pack = 4)]
     public unsafe struct RefRW<T> : IRefOp, IIsCreated where T : unmanaged, IComponentBase {
 
+        /// <summary>
+        /// Gets op; this implementation returns <c>RefOp.ReadWrite</c>.
+        /// </summary>
         public RefOp Op => RefOp.ReadWrite;
 
+        /// <summary>
+        /// State accessed by the containing operation.
+        /// </summary>
         public safe_ptr<State> state;
+        /// <summary>
+        /// Storage containing the associated data.
+        /// </summary>
         public MemAllocatorPtr storage;
+        /// <summary>
+        /// Identifier of the world whose state this value addresses.
+        /// </summary>
         public ushort worldId;
         
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.state.ptr != null;
         
+        /// <summary>
+        /// Initializes <c>RefRW</c> from the supplied world.
+        /// </summary>
         [INLINE(256)]
         public RefRW(in World world) {
             this = world.state.ptr->components.GetRW<T>(world.state, world.id);
         }
 
+        /// <summary>
+        /// Returns the requested entry from ref rw.
+        /// </summary>
         #if !NO_INLINE
         [INLINE(256)]
         #endif
@@ -279,6 +393,9 @@ namespace ME.BECS {
             return ref res;
         }
 
+        /// <summary>
+        /// Returns or throw.
+        /// </summary>
         #if !NO_INLINE
         [INLINE(256)]
         #endif
@@ -308,6 +425,9 @@ namespace ME.BECS {
             return ref res;
         }
 
+        /// <summary>
+        /// Reads the requested value from ref rw.
+        /// </summary>
         #if !NO_INLINE
         [INLINE(256)]
         #endif
@@ -320,6 +440,9 @@ namespace ME.BECS {
             return ref res;
         }
 
+        /// <summary>
+        /// Returns a pointer for reading the component at the specified entity slot and generation.
+        /// </summary>
         #if !NO_INLINE
         [INLINE(256)]
         #endif
@@ -334,22 +457,43 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Provides read-only access to component storage through a typed accessor.
+    /// </summary>
     [IgnoreProfiler]
     [LAYOUT(LayoutKind.Sequential, Size = 16)]
     public unsafe struct RefRO<T> : IRefOp, IIsCreated where T : unmanaged, IComponentBase {
 
+        /// <summary>
+        /// Gets op; this implementation returns <c>RefOp.ReadOnly</c>.
+        /// </summary>
         public RefOp Op => RefOp.ReadOnly;
 
+        /// <summary>
+        /// State accessed by the containing operation.
+        /// </summary>
         public safe_ptr<State> state;
+        /// <summary>
+        /// Storage containing the associated data.
+        /// </summary>
         public MemAllocatorPtr storage;
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.state.ptr != null;
 
+        /// <summary>
+        /// Initializes <c>RefRO</c> from the supplied world.
+        /// </summary>
         [INLINE(256)]
         public RefRO(in World world) {
             this = world.state.ptr->components.GetRO<T>(world.state, world.id);
         }
         
+        /// <summary>
+        /// Reads the requested value from ref ro.
+        /// </summary>
         #if !NO_INLINE
         [INLINE(256)]
         #endif
@@ -362,6 +506,9 @@ namespace ME.BECS {
             return ref res;
         }
 
+        /// <summary>
+        /// Returns a pointer for reading the component at the specified entity slot and generation.
+        /// </summary>
         #if !NO_INLINE
         [INLINE(256)]
         #endif
@@ -376,9 +523,15 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Stores and indexes aspect entries.
+    /// </summary>
     [IgnoreProfiler]
     public struct AspectStorage<T> where T : unmanaged, IAspect {
 
+        /// <summary>
+        /// Returns a typed aspect view over the existing entity components.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static T GetAspect(in World world) {
 
@@ -386,6 +539,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes aspect.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static unsafe ref T InitAspect(in World world) {
 
@@ -395,9 +551,15 @@ namespace ME.BECS {
 
     } 
 
+    /// <summary>
+    /// Provides helper operations for aspect.
+    /// </summary>
     [IgnoreProfiler]
     public static unsafe class AspectExt {
 
+        /// <summary>
+        /// Tests whether the referenced entity or world still matches its registered lifetime.
+        /// </summary>
         [INLINE(256)]
         [CodeGeneratorIgnore]
         public static bool IsAlive<T>(this ref T aspect) where T : unmanaged, IAspect {
@@ -406,6 +568,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Stores the supplied value in aspect ext.
+        /// </summary>
         [INLINE(256)]
         public static T Set<T>(in this Ent ent) where T : unmanaged, IAspect {
 
@@ -417,6 +582,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Returns the requested entry from aspect ext.
+        /// </summary>
         [INLINE(256)]
         public static T Get<T>(this in Ent ent) where T : unmanaged, IAspect {
 
@@ -424,12 +592,21 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns a typed aspect view over the existing entity components.
+        /// </summary>
         [INLINE(256)]
         public static T GetAspect<T>(this in EntRO ent) where T : unmanaged, IAspect => ent.ent.GetAspect<T>();
 
+        /// <summary>
+        /// Returns the requested aspect and creates any components required for it.
+        /// </summary>
         [INLINE(256)]
         public static T GetOrCreateAspect<T>(this in EntRO ent) where T : unmanaged, IAspect => ent.ent.GetOrCreateAspect<T>();
 
+        /// <summary>
+        /// Returns a typed aspect view over the existing entity components.
+        /// </summary>
         [INLINE(256)]
         public static T GetAspect<T>(this in Ent ent) where T : unmanaged, IAspect {
 
@@ -441,6 +618,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns the requested aspect and creates any components required for it.
+        /// </summary>
         [INLINE(256)]
         public static T GetOrCreateAspect<T>(this in Ent ent) where T : unmanaged, IAspect {
 
@@ -450,6 +630,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes aspect.
+        /// </summary>
         public static ref T InitializeAspect<T>(this in World world) where T : unmanaged, IAspect {
             
             return ref AspectStorage<T>.InitAspect(in world);

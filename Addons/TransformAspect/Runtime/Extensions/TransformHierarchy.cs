@@ -7,6 +7,9 @@ namespace ME.BECS.Transforms {
     #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides storage and traversal support for entity transform hierarchies.
+    /// </summary>
     [IgnoreProfiler]
     public static class TransformHierarchy {
         

@@ -9,6 +9,9 @@ namespace ME.BECS.Editor {
 
     // One export pass. Compiled IL selects production dependencies; source
     // catalogs remain a comparison oracle. Neither path invokes view callbacks.
+    /// <summary>
+    /// Provides view safety for BECS source-generator publication.
+    /// </summary>
     public sealed class SourceGeneratorViewSafety {
         private readonly Dictionary<Assembly, Dictionary<string, string[]>> catalogs = new Dictionary<Assembly, Dictionary<string, string[]>>();
         private readonly Dictionary<(Type Owner, string Phase), HashSet<TypeInfo>> selected = new Dictionary<(Type, string), HashSet<TypeInfo>>();
@@ -16,6 +19,9 @@ namespace ME.BECS.Editor {
         private readonly Func<Type, string, HashSet<TypeInfo>> legacy;
         private readonly object selectionLock = new object();
 
+        /// <summary>
+        /// Initializes <c>SourceGeneratorViewSafety</c> from the supplied defaults.
+        /// </summary>
         public SourceGeneratorViewSafety() : this((owner, phase) => {
             var method = GetCallback(owner, phase);
             return method == null ? new HashSet<TypeInfo>() : Jobs.JobsEarlyInitCodeGenerator.GetMethodTypesInfo(method, useAnalyzer: false);
@@ -26,6 +32,9 @@ namespace ME.BECS.Editor {
         }
 
         // Source-first comparison/testing path, isolated from production caches.
+        /// <summary>
+        /// Selects the component types accessed by the specified view owner and phase.
+        /// </summary>
         public HashSet<TypeInfo> Select(Type owner, string phase) {
             lock (this.selectionLock) {
                 if (this.selected.TryGetValue((owner, phase), out var cached)) return new HashSet<TypeInfo>(cached);
@@ -38,6 +47,9 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Selects for export.
+        /// </summary>
         public HashSet<TypeInfo> SelectForExport(Type owner, string phase, bool module, out bool sourceSelected) {
             if (module) phase = ModulePhase(owner, phase);
             lock (this.selectionLock) {
@@ -52,6 +64,9 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Selects module.
+        /// </summary>
         public HashSet<TypeInfo> SelectModule(Type owner, string phase) => this.Select(owner, ModulePhase(owner, phase));
 
         private static string ModulePhase(Type owner, string phase) => typeof(EntityView).IsAssignableFrom(owner) ? "module:" + phase : phase;
@@ -104,6 +119,9 @@ namespace ME.BECS.Editor {
 
         // Resolve the callback actually dispatched by EntityView, including explicit
         // module implementations. Same-named overloads and hidden new slots are not callbacks.
+        /// <summary>
+        /// Returns callback.
+        /// </summary>
         public static MethodInfo GetCallback(Type owner, string phase) {
             if (owner == null) throw new ArgumentNullException(nameof(owner));
             var moduleRole = phase != null && phase.StartsWith("module:", StringComparison.Ordinal);
@@ -122,6 +140,9 @@ namespace ME.BECS.Editor {
             return MostDerived(owner, map.TargetMethods[index]);
         }
 
+        /// <summary>
+        /// Returns module callback.
+        /// </summary>
         public static MethodInfo GetModuleCallback(Type owner, string phase) => GetCallback(owner, ModulePhase(owner, phase));
 
         private static MethodInfo MostDerived(Type owner, MethodInfo slot) {
@@ -136,6 +157,9 @@ namespace ME.BECS.Editor {
         }
 
         // Explicit diagnostic oracle only; differences never veto production IL selection.
+        /// <summary>
+        /// Compares the supplied values for ordering.
+        /// </summary>
         public int Compare(Type owner, string phase, HashSet<TypeInfo> legacy, out string detail) {
             var coverage = this.ReadSource(owner, phase, out var summary, out _, out var reason);
             if (coverage != SourceStatus.Complete) {
@@ -154,6 +178,9 @@ namespace ME.BECS.Editor {
             return status;
         }
 
+        /// <summary>
+        /// Compares module.
+        /// </summary>
         public int CompareModule(Type owner, string phase, HashSet<TypeInfo> legacy, out string detail) =>
             this.Compare(owner, ModulePhase(owner, phase), legacy, out detail);
     }

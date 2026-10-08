@@ -21,6 +21,9 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides bit array storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(BitArrayDebugView))]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
@@ -33,13 +36,28 @@ namespace ME.BECS {
         private const int BITS_IN_ULONG = sizeof(ulong) * 8;
         private const int BITS_IN_ULONG_MASK = BITS_IN_ULONG - 1;
 
+        /// <summary>
+        /// Native address of the associated storage; ownership is defined by the containing API.
+        /// </summary>
         public MemPtr ptr;
+        /// <summary>
+        /// Locks used by <c>BitArray</c>.
+        /// </summary>
         public MemArray<LockSpinner> locks;
+        /// <summary>
+        /// Number of elements exposed by this value.
+        /// </summary>
         public uint Length;
         #if USE_CACHE_PTR
+        /// <summary>
+        /// Cached native address; its lifetime is tied to the backing allocation.
+        /// </summary>
         public CachedPtr cachedPtr;
         #endif
 
+        /// <summary>
+        /// Writes collection metadata to the stream without serializing the backing allocator blocks.
+        /// </summary>
         [INLINE(256)]
         public void SerializeHeaders(ref StreamBufferWriter writer) {
             writer.Write(this.ptr);
@@ -50,6 +68,9 @@ namespace ME.BECS {
             #endif
         }
 
+        /// <summary>
+        /// Restores collection metadata from the stream; backing allocator storage is restored separately.
+        /// </summary>
         [INLINE(256)]
         public void DeserializeHeaders(ref StreamBufferReader reader) {
             reader.Read(ref this.ptr);
@@ -60,8 +81,14 @@ namespace ME.BECS {
             #endif
         }
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public bool IsCreated => this.ptr.IsValid();
 
+        /// <summary>
+        /// Initializes <c>BitArray</c> with storage for the requested number of elements.
+        /// </summary>
         [INLINE(256)]
         public BitArray(ref MemoryAllocator allocator, uint length, ClearOptions clearOptions = ClearOptions.ClearMemory, bool threadSafe = false) {
 
@@ -83,6 +110,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes <c>BitArray</c> from the supplied allocator, source.
+        /// </summary>
         [INLINE(256)]
         public BitArray(ref MemoryAllocator allocator, BitArray source) {
 
@@ -100,6 +130,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes <c>BitArray</c> from the supplied allocator, source.
+        /// </summary>
         [INLINE(256)]
         public BitArray(ref MemoryAllocator allocator, bool[] source) {
 
@@ -117,6 +150,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Copies the supplied source state into this bit array instance.
+        /// </summary>
         [INLINE(256)]
         public void CopyFrom(ref MemoryAllocator allocator, in BitArray other) {
 
@@ -132,6 +168,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Stores the supplied value in bit array.
+        /// </summary>
         [INLINE(256)]
         public void Set(ref MemoryAllocator allocator, BitArray source) {
 
@@ -142,6 +181,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Tests whether every requested value is present.
+        /// </summary>
         [INLINE(256)]
         public bool ContainsAll(in MemoryAllocator allocator, BitArray other) {
 
@@ -156,6 +198,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests whether every requested value is present.
+        /// </summary>
         [INLINE(256)]
         public bool ContainsAll(in MemoryAllocator allocator, BitArray other, TempBitArray otherAdd) {
 
@@ -180,6 +225,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests whether every requested value is present.
+        /// </summary>
         [INLINE(256)]
         public bool ContainsAll(in MemoryAllocator allocator, TempBitArray other) {
 
@@ -201,6 +249,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests the exclusion condition for the requested values.
+        /// </summary>
         [INLINE(256)]
         public bool NotContainsAll(in MemoryAllocator allocator, TempBitArray other) {
 
@@ -222,6 +273,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Grows bit storage when the requested length exceeds the current length; smaller requests do not shrink storage.
+        /// </summary>
         [INLINE(256)]
         public void Resize(ref MemoryAllocator allocator, uint newLength, ClearOptions clearOptions = ClearOptions.ClearMemory, byte growFactor = 1) {
 
@@ -246,6 +300,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Updates cached native access for the requested Burst execution mode.
+        /// </summary>
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             #if USE_CACHE_PTR
@@ -363,6 +420,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Combines the entries or bounds represented by the supplied values.
+        /// </summary>
         [INLINE(256)]
         public void Union(ref MemoryAllocator allocator, TempBitArray bitmap) {
             this.Resize(ref allocator, bitmap.Length > this.Length ? bitmap.Length : this.Length);
@@ -393,6 +453,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Removes the specified entry from bit array.
+        /// </summary>
         [INLINE(256)]
         public void Remove(in MemoryAllocator allocator, BitArray bitmap) {
             var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(in this.ptr);
@@ -403,6 +466,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Removes the specified entry from bit array.
+        /// </summary>
         [INLINE(256)]
         public void Remove(in MemoryAllocator allocator, TempBitArray bitmap) {
             var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(in this.ptr);
@@ -464,6 +530,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Zeroes the stored data while preserving the length and backing allocation.
+        /// </summary>
         [INLINE(256)]
         public void Clear(in MemoryAllocator memoryAllocator) {
 
@@ -471,6 +540,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this bit array instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose(ref MemoryAllocator allocator) {
 
@@ -480,6 +552,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns the amount of reserved storage in bytes.
+        /// </summary>
         public uint GetReservedSizeInBytes() {
             var sizeInBytes = Bitwise.AlignULongBits(this.Length);
             return sizeInBytes;

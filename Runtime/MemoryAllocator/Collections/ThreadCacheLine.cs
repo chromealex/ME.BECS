@@ -21,6 +21,9 @@ namespace ME.BECS {
     using static Cuts;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides thread cache line storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(MemArrayThreadCacheLineProxy<>))]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
@@ -34,14 +37,26 @@ namespace ME.BECS {
 
         private readonly safe_ptr arrPtr;
         private readonly Unity.Collections.Allocator allocator;
+        /// <summary>
+        /// Number of elements exposed by this value.
+        /// </summary>
         public static uint Length => JobUtils.ThreadsCount;
+        /// <summary>
+        /// Number of entries currently tracked by this value.
+        /// </summary>
         public uint Count => Length;
 
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public readonly bool IsCreated {
             [INLINE(256)]
             get => this.arrPtr.ptr != null;
         }
 
+        /// <summary>
+        /// Initializes <c>ThreadCacheLine</c> from the supplied allocator, clear options.
+        /// </summary>
         [INLINE(256)]
         public ThreadCacheLine(Unity.Collections.Allocator allocator, ClearOptions clearOptions = ClearOptions.ClearMemory) {
 
@@ -55,6 +70,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this thread cache line instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
 
@@ -67,6 +85,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Schedules release of the owned storage after the supplied dependency and returns the disposal handle.
+        /// </summary>
         [INLINE(256)]
         public Unity.Jobs.JobHandle Dispose(Unity.Jobs.JobHandle inputDeps) {
 
@@ -81,6 +102,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns a borrowed pointer to collection storage; mutation that reallocates storage or disposal invalidates it.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtr() {
 
@@ -88,6 +112,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public readonly ref T this[uint index] {
             [INLINE(256)]
             get {
@@ -96,6 +123,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Zeroes the stored data while preserving the length and backing allocation.
+        /// </summary>
         [INLINE(256)]
         public void Clear() {
 
@@ -103,6 +133,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns the amount of reserved storage in bytes.
+        /// </summary>
         public uint GetReservedSizeInBytes() {
 
             return Length * CACHE_LINE_SIZE;

@@ -13,40 +13,88 @@ namespace ME.BECS {
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     using static Cuts;
 
+    /// <summary>
+    /// Supplies allocator tag info metadata to annotated declarations.
+    /// </summary>
     public class AllocatorTagInfoAttribute : System.Attribute {}
     
+    /// <summary>
+    /// Stores allocator tag info for the associated runtime API.
+    /// </summary>
     public struct AllocatorTagInfo {
 
+        /// <summary>
+        /// Tag used by <c>AllocatorTagInfo</c>.
+        /// </summary>
         public ushort tag;
+        /// <summary>
+        /// Display or lookup name of this entry.
+        /// </summary>
         public Unity.Collections.FixedString32Bytes name;
+        /// <summary>
+        /// Color used to render or identify this value.
+        /// </summary>
         public UnityEngine.Color color;
 
     }
 
+    /// <summary>
+    /// Stores allocator tag data for the associated runtime API.
+    /// </summary>
     public struct AllocatorTagData {
 
+        /// <summary>
+        /// Tag info used by <c>AllocatorTagData</c>.
+        /// </summary>
         public AllocatorTagInfo tagInfo;
+        /// <summary>
+        /// Component id used to locate the associated entry.
+        /// </summary>
         public uint componentId;
+        /// <summary>
+        /// Parent entry in the represented hierarchy.
+        /// </summary>
         public safe_ptr<AllocatorTagData> parent;
 
     }
 
+    /// <summary>
+    /// Defines allocator tag locks state and operations.
+    /// </summary>
     public class AllocatorTagLocks {
 
+        /// <summary>
+        /// Lck used by <c>AllocatorTagLocks</c>.
+        /// </summary>
         public static readonly SharedStatic<LockSpinner> lck = SharedStatic<LockSpinner>.GetOrCreate<AllocatorTagLocks>();
 
     }
     
+    /// <summary>
+    /// Defines allocator tag dummy state and operations.
+    /// </summary>
     public class AllocatorTagDummy {
 
+        /// <summary>
+        /// Dummy used by <c>AllocatorTagDummy</c>.
+        /// </summary>
         public static readonly SharedStatic<AllocatorTagData> dummy = SharedStatic<AllocatorTagData>.GetOrCreate<AllocatorTagDummy>();
 
     }
     
+    /// <summary>
+    /// Marks entities with the allocator state.
+    /// </summary>
     public struct AllocatorTag : System.IDisposable {
 
+        /// <summary>
+        /// Tags used by <c>AllocatorTag</c>.
+        /// </summary>
         public static readonly SharedStatic<Internal.Array<AllocatorTagData>> tags = SharedStatic<Internal.Array<AllocatorTagData>>.GetOrCreate<AllocatorTag>();
         
+        /// <summary>
+        /// Initializes <c>AllocatorTag</c> from the supplied tag, ID, all threads.
+        /// </summary>
         public AllocatorTag(AllocatorTagInfo tag, uint id = 0u, bool allThreads = false) {
             #if LEAK_DETECTION || LEAK_DETECTION_ALLOCATOR
             AllocatorTagLocks.lck.Data.Lock();
@@ -78,6 +126,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Releases the resources owned by this allocator tag instance.
+        /// </summary>
         public unsafe void Dispose() {
             #if LEAK_DETECTION || LEAK_DETECTION_ALLOCATOR
             if (Get().parent.ptr != null) {
@@ -88,6 +139,9 @@ namespace ME.BECS {
             #endif
         }
 
+        /// <summary>
+        /// Returns the requested entry from allocator tag.
+        /// </summary>
         public static ref AllocatorTagData Get() {
             #if LEAK_DETECTION || LEAK_DETECTION_ALLOCATOR
             if (JobUtils.ThreadIndex >= tags.Data.Length) return ref AllocatorTagDummy.dummy.Data;
@@ -99,28 +153,49 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Stores leak detector data for the associated runtime API.
+    /// </summary>
     [IgnoreProfiler]
     public unsafe class LeakDetectorData {
 
+        /// <summary>
+        /// Stores a key record used by <c>LeakDetectorData</c>.
+        /// </summary>
         [IgnoreProfiler]
         public readonly struct Key : System.IEquatable<Key> {
 
+            /// <summary>
+            /// Native address of the associated storage; ownership is defined by the containing API.
+            /// </summary>
             public readonly System.IntPtr ptr;
 
+            /// <summary>
+            /// Initializes <c>Key</c> from the supplied ptr.
+            /// </summary>
             [INLINE(256)]
             public Key(void* ptr) {
                 this.ptr = (System.IntPtr)ptr;
             }
 
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             [INLINE(256)]
             public bool Equals(Key other) {
                 return this.ptr == other.ptr;
             }
 
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             public override bool Equals(object obj) {
                 return obj is Key other && this.Equals(other);
             }
 
+            /// <summary>
+            /// Returns a hash code consistent with this type's equality comparison.
+            /// </summary>
             [INLINE(256)]
             public override int GetHashCode() {
                 return this.ptr.GetHashCode();
@@ -128,16 +203,40 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Stores a item record used by <c>LeakDetectorData</c>.
+        /// </summary>
         [IgnoreProfiler]
         public struct Item : System.IEquatable<Item> {
 
+            /// <summary>
+            /// Native address of the associated storage; ownership is defined by the containing API.
+            /// </summary>
             public System.IntPtr ptr;
+            /// <summary>
+            /// Native pointer or typed storage accessor for hi.
+            /// </summary>
             public System.IntPtr hiPtr;
+            /// <summary>
+            /// Native pointer or typed storage accessor for mem.
+            /// </summary>
             public readonly MemPtr memPtr;
+            /// <summary>
+            /// Allocator used to access or manage the associated native storage.
+            /// </summary>
             public readonly Unity.Collections.Allocator allocator;
+            /// <summary>
+            /// Stack trace used by <c>LeakDetectorData.Item</c>.
+            /// </summary>
             public Unity.Collections.FixedString4096Bytes stackTrace;
+            /// <summary>
+            /// Tag used by <c>LeakDetectorData.Item</c>.
+            /// </summary>
             public readonly AllocatorTagData tag;
 
+            /// <summary>
+            /// Initializes <c>Item</c> from the supplied ptr, hi ptr, mem ptr, allocator, with stack trace, tag.
+            /// </summary>
             public Item(void* ptr, void* hiPtr, MemPtr memPtr, Unity.Collections.Allocator allocator = Unity.Collections.Allocator.None, bool withStackTrace = true, AllocatorTagData tag = default) {
                 this = default;
                 this.memPtr = memPtr;
@@ -148,10 +247,16 @@ namespace ME.BECS {
                 if (withStackTrace == true && this.IsTrackableAllocator() == true) this.AddStackTrace();
             }
 
+            /// <summary>
+            /// Tests whether the context is trackable allocator.
+            /// </summary>
             public bool IsTrackableAllocator() {
                 return (this.allocator == Unity.Collections.Allocator.Domain || this.allocator == Unity.Collections.Allocator.Persistent || this.allocator == Unity.Collections.Allocator.TempJob || this.allocator >= Unity.Collections.Allocator.FirstUserIndex);
             }
 
+            /// <summary>
+            /// Adds stack trace.
+            /// </summary>
             [BURST_DISCARD]
             public void AddStackTrace() {
                 var str = UnityEngine.StackTraceUtility.ExtractStackTrace();
@@ -164,37 +269,76 @@ namespace ME.BECS {
                 this.stackTrace = str.Substring(0, 2000);
             }
 
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             public bool Equals(Item other) {
                 return this.ptr == other.ptr && this.memPtr == other.memPtr;
             }
 
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             public override bool Equals(object obj) {
                 return obj is Item other && this.Equals(other);
             }
 
+            /// <summary>
+            /// Returns a hash code consistent with this type's equality comparison.
+            /// </summary>
             public override int GetHashCode() {
                 return this.ptr.GetHashCode() ^ this.memPtr.GetHashCode();
             }
 
         }
         
+        /// <summary>
+        /// Defines shard state and operations for <c>LeakDetectorData</c>.
+        /// </summary>
         public struct Shard {
 
+            /// <summary>
+            /// Tracked used by <c>LeakDetectorData.Shard</c>.
+            /// </summary>
             public UnsafeHashMap<Key, Item> tracked;
+            /// <summary>
+            /// Spin lock used to coordinate access to this state.
+            /// </summary>
             public LockSpinner spinner;
 
         }
 
+        /// <summary>
+        /// Shards count constant used by <c>LeakDetectorData</c>.
+        /// </summary>
         public const int SHARDS_COUNT = 64;
         private const int SHARD_INITIAL_CAPACITY = 1;
 
+        /// <summary>
+        /// Shards used by <c>LeakDetectorData</c>.
+        /// </summary>
         public static readonly SharedStatic<UnsafeList<Shard>> shards = SharedStatic<UnsafeList<Shard>>.GetOrCreatePartiallyUnsafeWithHashCode<LeakDetectorData>(TAlign<UnsafeList<Shard>>.align, 1L);
+        /// <summary>
+        /// Shards spinner used by <c>LeakDetectorData</c>.
+        /// </summary>
         public static readonly SharedStatic<LockSpinner> shardsSpinner = SharedStatic<LockSpinner>.GetOrCreatePartiallyUnsafeWithHashCode<LeakDetectorData>(TAlign<LockSpinner>.align, 2L);
+        /// <summary>
+        /// Counter tracking the associated quantity.
+        /// </summary>
         public static readonly SharedStatic<Internal.Array<int>> counter = SharedStatic<Internal.Array<int>>.GetOrCreatePartiallyUnsafeWithHashCode<LeakDetectorData>(TAlign<Internal.Array<int>>.align, 3L);
+        /// <summary>
+        /// Counter spinner used by <c>LeakDetectorData</c>.
+        /// </summary>
         public static readonly SharedStatic<LockSpinner> counterSpinner = SharedStatic<LockSpinner>.GetOrCreatePartiallyUnsafeWithHashCode<LeakDetectorData>(TAlign<LockSpinner>.align, 4L);
+        /// <summary>
+        /// Counter await used by <c>LeakDetectorData</c>.
+        /// </summary>
         public static readonly SharedStatic<bbool> counterAwait = SharedStatic<bbool>.GetOrCreatePartiallyUnsafeWithHashCode<LeakDetectorData>(TAlign<bbool>.align, 5L);
         private static readonly SharedStatic<int> shardsInitialized = SharedStatic<int>.GetOrCreatePartiallyUnsafeWithHashCode<LeakDetectorData>(TAlign<int>.align, 6L);
 
+        /// <summary>
+        /// Returns shard index.
+        /// </summary>
         [INLINE(256)]
         public static int GetShardIndex(void* ptr) {
             var value = (ulong)ptr;
@@ -205,6 +349,9 @@ namespace ME.BECS {
             return (int)(value & (SHARDS_COUNT - 1));
         }
 
+        /// <summary>
+        /// Checks the supplied state against the constraints required by this API.
+        /// </summary>
         public static void Validate() {
             if (System.Threading.Volatile.Read(ref shardsInitialized.Data) == 1) return;
             shardsSpinner.Data.Lock();
@@ -217,12 +364,18 @@ namespace ME.BECS {
             shardsSpinner.Data.Unlock();
         }
 
+        /// <summary>
+        /// Returns shard.
+        /// </summary>
         [INLINE(256)]
         public static ref Shard GetShard(void* ptr) {
             Validate();
             return ref shards.Data.ElementAt(GetShardIndex(ptr));
         }
 
+        /// <summary>
+        /// Checks the supplied state against the constraints required by this API.
+        /// </summary>
         [INLINE(256)]
         public static void Validate(ref Shard shard) {
             if (shard.tracked.IsCreated == false) {
@@ -232,8 +385,14 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Tracks native allocations and reports unreleased storage when detection is enabled.
+    /// </summary>
     public unsafe struct LeakDetector {
 
+        /// <summary>
+        /// Tracks count.
+        /// </summary>
         [Conditional(COND.LEAK_DETECTION_COUNTER)]
         [HIDE_CALLSTACK]
         [INLINE(256)]
@@ -252,6 +411,9 @@ namespace ME.BECS {
             System.Threading.Interlocked.Increment(ref LeakDetectorData.counter.Data.Get((int)allocator));
         }
 
+        /// <summary>
+        /// Stops tracking count.
+        /// </summary>
         [Conditional(COND.LEAK_DETECTION_COUNTER)]
         [HIDE_CALLSTACK]
         [INLINE(256)]
@@ -270,6 +432,9 @@ namespace ME.BECS {
             System.Threading.Interlocked.Decrement(ref LeakDetectorData.counter.Data.Get((int)allocator));
         }
 
+        /// <summary>
+        /// Tracks allocator.
+        /// </summary>
         [Conditional(COND.LEAK_DETECTION)]
         [HIDE_CALLSTACK]
         [INLINE(256)]
@@ -286,6 +451,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tracks allocator.
+        /// </summary>
         [Conditional(COND.LEAK_DETECTION_ALLOCATOR)]
         [HIDE_CALLSTACK]
         [INLINE(256)]
@@ -302,6 +470,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Records the supplied instance for subsequent tracking.
+        /// </summary>
         [Conditional(COND.LEAK_DETECTION)]
         [HIDE_CALLSTACK]
         [INLINE(256)]
@@ -318,6 +489,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Records the supplied instance for subsequent tracking.
+        /// </summary>
         [Conditional(COND.LEAK_DETECTION)]
         [HIDE_CALLSTACK]
         [INLINE(256)]
@@ -341,6 +515,9 @@ namespace ME.BECS {
             return false;
         }
 
+        /// <summary>
+        /// Removes tracking for a freed allocator block.
+        /// </summary>
         [Conditional(COND.LEAK_DETECTION_ALLOCATOR)]
         [HIDE_CALLSTACK]
         [INLINE(256)]
@@ -357,6 +534,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Returns the addressed native block to its allocator.
+        /// </summary>
         [Conditional(COND.LEAK_DETECTION)]
         [HIDE_CALLSTACK]
         [INLINE(256)]
@@ -374,6 +554,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Removes tracking for a freed allocator zone.
+        /// </summary>
         [Conditional(COND.LEAK_DETECTION)]
         [Conditional(COND.LEAK_DETECTION_ALLOCATOR)]
         public static void FreeAllocatorZone(void* start, uint size) {
@@ -400,6 +583,9 @@ namespace ME.BECS {
             keys.Dispose();
         }
 
+        /// <summary>
+        /// Clears allocated.
+        /// </summary>
         public static void ClearAllocated() {
             if (LeakDetectorData.counter.Data.IsCreated == true) LeakDetectorData.counter.Data.Dispose();
             LeakDetectorData.Validate();
@@ -411,6 +597,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Prints allocated.
+        /// </summary>
         public static void PrintAllocated(Unity.Collections.Allocator allocator) {
             
             if (LeakDetectorData.counter.Data.IsCreated == true) {
@@ -439,6 +628,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Tests whether the referenced entity or world still matches its registered lifetime.
+        /// </summary>
         [Conditional(COND.LEAK_DETECTION)]
         public static void IsAlive(safe_ptr ptr) {
             
@@ -469,6 +661,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Finds stack.
+        /// </summary>
         public static Unity.Collections.FixedString4096Bytes FindStack(safe_ptr ptr) {
             ref var shard = ref LeakDetectorData.GetShard(ptr.ptr);
             shard.spinner.Lock();
@@ -478,6 +673,9 @@ namespace ME.BECS {
             return result == true ? value.stackTrace : default;
         }
 
+        /// <summary>
+        /// Finds the entry satisfying the supplied lookup arguments.
+        /// </summary>
         public static LeakDetectorData.Item Find(safe_ptr ptr) {
             ref var shard = ref LeakDetectorData.GetShard(ptr.ptr);
             shard.spinner.Lock();

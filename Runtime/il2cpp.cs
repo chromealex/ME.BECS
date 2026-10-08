@@ -64,9 +64,18 @@ namespace Unity.IL2CPP.CompilerServices {
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Method | AttributeTargets.Property, Inherited = false, AllowMultiple = true)]
     public class Il2CppSetOptionAttribute : Attribute {
 
+        /// <summary>
+        /// Option used by <c>Il2CppSetOptionAttribute</c>.
+        /// </summary>
         public Option Option { get; private set; }
+        /// <summary>
+        /// Value wrapped or resolved by this instance.
+        /// </summary>
         public object Value { get; private set; }
 
+        /// <summary>
+        /// Initializes <c>Il2CppSetOptionAttribute</c> from the supplied option, value.
+        /// </summary>
         public Il2CppSetOptionAttribute(Option option, object value) {
             this.Option = option;
             this.Value = value;

@@ -56,6 +56,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
             internal SystemNode node;
         }
 
+        /// <summary>
+        /// Opens window.
+        /// </summary>
         [MenuItem("ME.BECS/Features Graph Studio")]
         public static void OpenWindow() {
             var window = GetWindow<FeaturesGraphStudioWindow>();
@@ -94,6 +97,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
             this.serializedGraph = null;
         }
 
+        /// <summary>
+        /// Builds the editor window's UI Toolkit hierarchy.
+        /// </summary>
         public void CreateGUI() {
             this.SaveCamera();
             this.UnsubscribeGraph();

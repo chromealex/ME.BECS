@@ -13,16 +13,31 @@ namespace ME.BECS.Pathfinding {
     using ME.BECS.Transforms;
     using ME.BECS.Units;
 
+    /// <summary>
+    /// Coordinates look at during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [UnityEngine.Tooltip("Look at target system")]
     public partial struct LookAtSystem : IUpdate {
 
+        /// <summary>
+        /// Executes look at system work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct Job : IJobForAspects<TransformAspect, UnitAspect> {
 
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             public tfloat dt;
+            /// <summary>
+            /// Graph-building system used by this operation.
+            /// </summary>
             public BuildGraphSystem buildGraphSystem;
 
+            /// <summary>
+            /// Processes the job inputs for <c>LookAtSystem</c>.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit) {
 
                 var lookAtComponent = unit.ent.Read<UnitLookAtComponent>();
@@ -47,6 +62,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Updates look at system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var dependsOn = context.Query().With<UnitLookAtComponent>().Without<PathFollowComponent>().Without<IsUnitStaticComponent>().AsParallel().Schedule<Job, TransformAspect, UnitAspect>(new Job() {

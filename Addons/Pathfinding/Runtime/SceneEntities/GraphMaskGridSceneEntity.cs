@@ -8,16 +8,43 @@ using Unity.Mathematics;
 
 namespace ME.BECS.Pathfinding {
     
+    /// <summary>
+    /// Defines graph mask grid scene entity state and operations.
+    /// </summary>
     public class GraphMaskGridSceneEntity : SceneEntity {
 
+        /// <summary>
+        /// Grid size used by <c>GraphMaskGridSceneEntity</c>.
+        /// </summary>
         public uint gridSize = 1u;
+        /// <summary>
+        /// Level limit used by <c>GraphMaskGridSceneEntity</c>.
+        /// </summary>
         public tfloat levelLimit = 0f;
+        /// <summary>
+        /// Height samples used by the geometry or graph.
+        /// </summary>
         public tfloat[] heights;
+        /// <summary>
+        /// Cost assigned to this entry by the associated calculation.
+        /// </summary>
         public byte cost;
+        /// <summary>
+        /// Whether ignore graph radius behavior or state is selected.
+        /// </summary>
         public bool ignoreGraphRadius;
+        /// <summary>
+        /// Obstacle channel used by <c>GraphMaskGridSceneEntity</c>.
+        /// </summary>
         public ObstacleChannel obstacleChannel;
+        /// <summary>
+        /// Graph mask used to select the applicable bits or entries.
+        /// </summary>
         public int graphMask = -1;
         
+        /// <summary>
+        /// Handles the create callback.
+        /// </summary>
         protected override void OnCreate(in Ent ent) {
 
             var bounds = this.GetComponentInChildren<UnityEngine.MeshFilter>().sharedMesh.bounds;
@@ -29,10 +56,16 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Refreshes or validates state after values change in the Unity Inspector.
+        /// </summary>
         public void OnValidate() {
             this.CreateGrid((float3)this.transform.position, (quaternion)this.transform.rotation);
         }
 
+        /// <summary>
+        /// Creates grid.
+        /// </summary>
         public void CreateGrid(float3 position, quaternion rotation) {
 
             var mesh = this.GetComponentInChildren<UnityEngine.MeshFilter>().sharedMesh;
@@ -60,6 +93,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Draws grid.
+        /// </summary>
         public void DrawGrid(float3 position, quaternion rotation, float3 scale) {
 
             var mesh = this.GetComponentInChildren<UnityEngine.MeshFilter>().sharedMesh;
@@ -127,6 +163,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Draws diagnostic geometry for the associated state.
+        /// </summary>
         public void OnDrawGizmos() {
 
             var renderer = this.GetComponentInChildren<UnityEngine.MeshFilter>().sharedMesh;

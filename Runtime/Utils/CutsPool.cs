@@ -9,14 +9,23 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides pooled native storage used by temporary ECS operations.
+    /// </summary>
     [IgnoreProfiler]
     public static unsafe class CutsPool {
 
+        /// <summary>
+        /// Creates a handle-backed reference to the supplied managed object.
+        /// </summary>
         [INLINE(256)]
         public static ClassPtr<T> _classPtr<T>(T data) where T : class {
             return new ClassPtr<T>(data);
         }
 
+        /// <summary>
+        /// Returns the native address of the supplied value.
+        /// </summary>
         [INLINE(256)]
         public static safe_ptr<T> _address<T>(ref T val) where T : unmanaged {
 
@@ -24,6 +33,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns a typed reference to the supplied native address.
+        /// </summary>
         [INLINE(256)]
         public static ref T _ref<T>(T* ptr) where T : unmanaged {
 
@@ -31,6 +43,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Allocates native array storage for the requested element count.
+        /// </summary>
         [INLINE(256)]
         public static safe_ptr<T> _makeArray<T>(uint elementsCount) where T : unmanaged {
             
@@ -39,6 +54,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Allocates native array storage for the requested element count.
+        /// </summary>
         [INLINE(256)]
         public static safe_ptr<T> _makeArray<T>(uint elementsCount, Unity.Collections.Allocator allocator) where T : unmanaged {
             
@@ -46,6 +64,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Allocates native array storage for the requested element count.
+        /// </summary>
         [INLINE(256)]
         public static safe_ptr<T> _makeArray<T>(uint elementsCount, Unity.Collections.Allocator allocator, bool clearMemory) where T : unmanaged {
             
@@ -53,6 +74,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Allocates native storage and initializes the requested value.
+        /// </summary>
         [INLINE(256)]
         public static safe_ptr<T> _make<T>() where T : unmanaged {
 
@@ -61,6 +85,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Allocates native storage and initializes the requested value.
+        /// </summary>
         [INLINE(256)]
         public static safe_ptr<T> _make<T>(T obj) where T : unmanaged {
 
@@ -69,6 +96,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Allocates storage using the default allocator and initializes the requested value.
+        /// </summary>
         [INLINE(256)]
         public static safe_ptr<T> _makeDefault<T>(T obj, Unity.Collections.Allocator allocator) where T : unmanaged {
 
@@ -76,9 +106,15 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Allocates storage using the default allocator and initializes the requested value.
+        /// </summary>
         [INLINE(256)]
         public static safe_ptr<T> _makeDefault<T>(in T obj) where T : unmanaged => Cuts._makeDefault(in obj);
         
+        /// <summary>
+        /// Fills a native byte range with zeroes.
+        /// </summary>
         [INLINE(256)]
         public static void _memclear(safe_ptr ptr, uint lengthInBytes) {
             
@@ -86,6 +122,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Copies bytes between non-overlapping native ranges.
+        /// </summary>
         [INLINE(256)]
         public static void _memcpy(safe_ptr srcPtr, safe_ptr dstPtr, int lengthInBytes) {
             
@@ -93,6 +132,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Copies bytes between non-overlapping native ranges.
+        /// </summary>
         [INLINE(256)]
         public static void _memcpy(safe_ptr srcPtr, safe_ptr dstPtr, uint lengthInBytes) {
             
@@ -100,6 +142,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Copies bytes between native ranges that may overlap.
+        /// </summary>
         [INLINE(256)]
         public static void _memmove(safe_ptr srcPtr, safe_ptr dstPtr, uint lengthInBytes) {
             
@@ -107,6 +152,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Releases native storage using the matching allocator.
+        /// </summary>
         [INLINE(256)]
         public static void _free<T>(ref safe_ptr<T> obj) where T : unmanaged {
             
@@ -115,6 +163,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Releases native storage using the matching allocator.
+        /// </summary>
         [INLINE(256)]
         public static void _free<T>(safe_ptr<T> obj) where T : unmanaged {
             
@@ -123,6 +174,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Frees native array storage with the supplied allocator.
+        /// </summary>
         [INLINE(256)]
         public static void _freeArray<T>(safe_ptr<T> obj, uint elementsCount) where T : unmanaged {
             
@@ -131,6 +185,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Frees native array storage with the supplied allocator.
+        /// </summary>
         [INLINE(256)]
         public static void _freeArray<T>(safe_ptr<T> obj, uint elementsCount, Unity.Collections.Allocator allocator) where T : unmanaged {
             
@@ -139,6 +196,9 @@ namespace ME.BECS {
         }
 
         #region MAKE/FREE unity allocator
+        /// <summary>
+        /// Allocates native storage and initializes the requested value.
+        /// </summary>
         [INLINE(256)]
         public static safe_ptr _make(int size, int align, Unity.Collections.Allocator allocator) {
             
@@ -146,6 +206,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Allocates native storage and initializes the requested value.
+        /// </summary>
         [INLINE(256)]
         public static safe_ptr _make(uint size, int align, Unity.Collections.Allocator allocator) {
 
@@ -153,6 +216,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases native storage using the matching allocator.
+        /// </summary>
         [INLINE(256)]
         public static void _free<T>(safe_ptr<T> obj, Unity.Collections.Allocator allocator) where T : unmanaged {
 
@@ -160,6 +226,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases native storage using the matching allocator.
+        /// </summary>
         [INLINE(256)]
         public static void _free(safe_ptr obj, Unity.Collections.Allocator allocator) {
             

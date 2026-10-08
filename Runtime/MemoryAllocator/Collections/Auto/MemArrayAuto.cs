@@ -19,28 +19,52 @@ namespace ME.BECS {
     using System.Runtime.InteropServices;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides mem array auto data storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [IgnoreProfiler]
     [StructLayout(LayoutKind.Explicit, Size = MemArrayAutoData.SIZE)]
     [System.Serializable]
     public struct MemArrayAutoData {
 
         #if USE_CACHE_PTR
+        /// <summary>
+        /// Storage size or fixed element count used by this representation.
+        /// </summary>
         public const int SIZE = 36;
         #else
+        /// <summary>
+        /// Storage size or fixed element count used by this representation.
+        /// </summary>
         public const int SIZE = 24;
         #endif
 
+        /// <summary>
+        /// Native pointer or typed storage accessor for arr.
+        /// </summary>
         [FieldOffset(0)]
         public MemPtr arrPtr;
+        /// <summary>
+        /// Entity whose components or lifetime are associated with this value.
+        /// </summary>
         [FieldOffset(8)]
         public Ent ent;
+        /// <summary>
+        /// Number of elements exposed by this value.
+        /// </summary>
         [FieldOffset(16)]
         public uint Length;
         #if USE_CACHE_PTR
+        /// <summary>
+        /// Cached native address; its lifetime is tied to the backing allocation.
+        /// </summary>
         [FieldOffset(20)]
         public CachedPtr cachedPtr;
         #endif
 
+        /// <summary>
+        /// Writes collection metadata to the stream without serializing the backing allocator blocks.
+        /// </summary>
         [INLINE(256)]
         public void SerializeHeaders(ref StreamBufferWriter writer) {
             writer.Write(this.arrPtr);
@@ -51,6 +75,9 @@ namespace ME.BECS {
             #endif
         }
 
+        /// <summary>
+        /// Restores collection metadata from the stream; backing allocator storage is restored separately.
+        /// </summary>
         [INLINE(256)]
         public void DeserializeHeaders(ref StreamBufferReader reader) {
             reader.Read(ref this.arrPtr);
@@ -61,11 +88,20 @@ namespace ME.BECS {
             #endif
         }
 
+        /// <summary>
+        /// Returns a hash code consistent with this type's equality comparison.
+        /// </summary>
         public override int GetHashCode() => this.arrPtr.GetHashCode();
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         public bool Equals(MemArrayAutoData obj) => this.arrPtr.Equals(obj.arrPtr);
 
     }
 
+    /// <summary>
+    /// Provides mem array auto storage backed by native memory; value copies share the underlying allocation.
+    /// </summary>
     [IgnoreProfiler]
     [System.Serializable]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(MemArrayAutoProxy<>))]
@@ -76,6 +112,9 @@ namespace ME.BECS {
     #endif
     public unsafe struct MemArrayAuto<T> : IMemArray, IUnmanagedList, System.IEquatable<MemArrayAuto<T>> where T : unmanaged {
 
+        /// <summary>
+        /// Empty used by <c>MemArrayAuto</c>.
+        /// </summary>
         public static readonly MemArrayAuto<T> Empty = new MemArrayAuto<T>() {
             data = new MemArrayAutoData() {
                 arrPtr = MemPtr.Invalid,
@@ -83,29 +122,59 @@ namespace ME.BECS {
             },
         };
 
+        /// <summary>
+        /// Data consumed or produced by the containing operation.
+        /// </summary>
         public MemArrayAutoData data;
+        /// <summary>
+        /// Number of elements exposed by this value.
+        /// </summary>
         public readonly uint Length => this.data.Length;
+        /// <summary>
+        /// Entity whose components or lifetime are associated with this value.
+        /// </summary>
         public readonly Ent ent => this.data.ent;
+        /// <summary>
+        /// Gets arr ptr; this implementation returns <c>this.data.arrPtr</c>.
+        /// </summary>
         public readonly MemPtr arrPtr => this.data.arrPtr;
+        /// <summary>
+        /// Number of stored elements exposed by the collection interface.
+        /// </summary>
         public uint ElementsCount => this.Length;
         
+        /// <summary>
+        /// Whether the backing state has been initialized.
+        /// </summary>
         public readonly bool IsCreated {
             [INLINE(256)]
             get => (this.data.arrPtr.IsValid() == true || this.IsInlined == true) && this.data.ent.IsAlive() == true;
         }
 
+        /// <summary>
+        /// Entity whose components or lifetime are associated with this value.
+        /// </summary>
         public Ent Ent => this.ent;
 
+        /// <summary>
+        /// Writes collection metadata to the stream without serializing the backing allocator blocks.
+        /// </summary>
         [INLINE(256)]
         public void SerializeHeaders(ref StreamBufferWriter writer) {
             this.data.SerializeHeaders(ref writer);
         }
 
+        /// <summary>
+        /// Restores collection metadata from the stream; backing allocator storage is restored separately.
+        /// </summary>
         [INLINE(256)]
         public void DeserializeHeaders(ref StreamBufferReader reader) {
             this.data.DeserializeHeaders(ref reader);
         }
 
+        /// <summary>
+        /// Returns config ID.
+        /// </summary>
         public uint GetConfigId() => this.data.Length;
 
         private readonly bool IsInlined => false; // TSize<T>.size * this.Length <= MemPtr.SIZE;
@@ -118,6 +187,9 @@ namespace ME.BECS {
             return arr;
         }
 
+        /// <summary>
+        /// Initializes <c>MemArrayAuto</c> with storage for the requested number of elements.
+        /// </summary>
         public MemArrayAuto(in Ent ent, safe_ptr data, uint length) : this(in ent, length, ClearOptions.UninitializedMemory) {
 
             if (this.IsCreated == true) {
@@ -129,6 +201,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes <c>MemArrayAuto</c> with storage for the requested number of elements.
+        /// </summary>
         public MemArrayAuto(in Ent ent, uint length, ClearOptions clearOptions = ClearOptions.ClearMemory) {
 
             if (length == 0u) {
@@ -163,6 +238,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes <c>MemArrayAuto</c> from the supplied ent, arr.
+        /// </summary>
         public MemArrayAuto(in Ent ent, in MemArrayAuto<T> arr) {
 
             if (arr.Length == 0u) {
@@ -191,6 +269,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Initializes <c>MemArrayAuto</c> from the supplied ent, arr.
+        /// </summary>
         public MemArrayAuto(in Ent ent, in ME.BECS.Internal.Array<T> arr) {
 
             if (arr.Length == 0u) {
@@ -220,12 +301,18 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Exposes the value through the requested typed view.
+        /// </summary>
         [INLINE(256)]
         public readonly ref U As<U>(uint index) where U : unmanaged {
             E.RANGE(index, 0, this.Length);
             return ref this.data.ent.World.state.ptr->allocator.RefArray<U>(this.data.arrPtr, index);
         }
         
+        /// <summary>
+        /// Disposes the current storage and copies the other collection handle; the two values then refer to the same allocation.
+        /// </summary>
         [INLINE(256)]
         public void ReplaceWith(in MemArrayAuto<T> other) {
             
@@ -238,6 +325,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Releases the resources owned by this mem array auto instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose() {
 
@@ -255,6 +345,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Schedules release of the owned storage after the supplied dependency and returns the disposal handle.
+        /// </summary>
         [INLINE(256)]
         public Unity.Jobs.JobHandle Dispose(Unity.Jobs.JobHandle inputDeps) {
 
@@ -277,6 +370,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Updates cached native access for the requested Burst execution mode.
+        /// </summary>
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             #if USE_CACHE_PTR
@@ -288,6 +384,9 @@ namespace ME.BECS {
             #endif
         }
 
+        /// <summary>
+        /// Returns a borrowed pointer to collection storage; mutation that reallocates storage or disposal invalidates it.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtr() {
 
@@ -301,6 +400,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns a borrowed pointer to collection storage; mutation that reallocates storage or disposal invalidates it.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
 
@@ -314,6 +416,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns unsafe ptr cached.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtrCached(in MemoryAllocator allocator) {
 
@@ -331,6 +436,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns unsafe ptr cached.
+        /// </summary>
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtrCached() {
 
@@ -342,6 +450,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns alloc ptr.
+        /// </summary>
         [INLINE(256)]
         public readonly MemPtr GetAllocPtr(uint index) {
 
@@ -350,6 +461,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Reads the requested value from mem array auto.
+        /// </summary>
         [INLINE(256)]
         public readonly ref T Read(in MemoryAllocator allocator, uint index) {
             
@@ -362,6 +476,9 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public readonly ref T this[uint index] {
             [INLINE(256)]
             get {
@@ -370,6 +487,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public readonly ref T this[int index] {
             [INLINE(256)]
             get {
@@ -378,6 +498,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public readonly ref T this[safe_ptr<State> state, int index] {
             [INLINE(256)]
             get {
@@ -386,6 +509,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public readonly ref T this[in MemoryAllocator allocator, int index] {
             [INLINE(256)]
             get {
@@ -394,6 +520,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public readonly ref T this[in MemoryAllocator allocator, uint index] {
             [INLINE(256)]
             get {
@@ -402,6 +531,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Provides writable reference access to the requested entry.
+        /// </summary>
         public readonly ref T this[safe_ptr<State> state, uint index] {
             [INLINE(256)]
             get {
@@ -410,6 +542,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Grows storage using the requested length and growth factor; returns false when the requested length does not exceed the current length.
+        /// </summary>
         [INLINE(256)]
         public bool Resize(uint newLength, ushort growFactor, ClearOptions options = ClearOptions.ClearMemory) {
 
@@ -461,6 +596,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Zeroes the addressed elements while preserving the array length and backing allocation.
+        /// </summary>
         [INLINE(256)]
         public readonly void Clear() {
 
@@ -468,6 +606,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Zeroes the addressed elements while preserving the array length and backing allocation.
+        /// </summary>
         [INLINE(256)]
         public readonly void Clear(uint index, uint length) {
 
@@ -486,6 +627,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests whether the specified value is present.
+        /// </summary>
         [INLINE(256)]
         public readonly bool Contains<U>(U obj) where U : unmanaged, System.IEquatable<T> {
             
@@ -505,6 +649,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Copies the supplied source state into this mem array auto instance.
+        /// </summary>
         [INLINE(256)]
         public void CopyFrom(in MemArrayAuto<T> other) {
 
@@ -520,20 +667,32 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Returns the amount of reserved storage in bytes.
+        /// </summary>
         public uint GetReservedSizeInBytes() {
 
             return this.Length * TSize<T>.size;
 
         }
 
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         public bool Equals(MemArrayAuto<T> other) {
             return this.data.Equals(other.data);
         }
 
+        /// <summary>
+        /// Tests equality using the identity or value comparison defined by this type.
+        /// </summary>
         public override bool Equals(object obj) {
             return obj is MemArrayAuto<T> other && this.Equals(other);
         }
 
+        /// <summary>
+        /// Returns a hash code consistent with this type's equality comparison.
+        /// </summary>
         public override int GetHashCode() {
             return this.data.GetHashCode();
         }

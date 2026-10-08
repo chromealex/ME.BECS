@@ -5,8 +5,14 @@ namespace ME.BECS.Editor {
     using Unity.Collections;
     using System.Linq;
 
+    /// <summary>
+    /// Defines main menu state and operations.
+    /// </summary>
     public static class MainMenu {
         
+        /// <summary>
+        /// Shows worlds viewer.
+        /// </summary>
         [MenuItem("ME.BECS/\u2630 Worlds Viewer...", priority = 10000)]
         public static void ShowWorldsViewer() {
             
@@ -14,6 +20,9 @@ namespace ME.BECS.Editor {
             
         }
 
+        /// <summary>
+        /// Shows quick start.
+        /// </summary>
         [MenuItem("ME.BECS/✪ Quick Start...", priority = 300)]
         public static void ShowQuickStart() {
             
@@ -22,6 +31,9 @@ namespace ME.BECS.Editor {
         }
 
         #if ME_BECS_EDITOR_INTERNAL
+        /// <summary>
+        /// Clears allocations state.
+        /// </summary>
         [MenuItem("ME.BECS/Internal/Clear Allocations State", priority = 0)]
         public static void ClearAllocationsState() {
             
@@ -29,6 +41,9 @@ namespace ME.BECS.Editor {
             
         }
 
+        /// <summary>
+        /// Prints allocations all.
+        /// </summary>
         [MenuItem("ME.BECS/Internal/Print Allocations (All)", priority = 0)]
         public static void PrintAllocationsAll() {
             
@@ -36,6 +51,9 @@ namespace ME.BECS.Editor {
             
         }
 
+        /// <summary>
+        /// Prints allocations persistent.
+        /// </summary>
         [MenuItem("ME.BECS/Internal/Print Allocations (Persistent)", priority = 0)]
         public static void PrintAllocationsPersistent() {
             
@@ -43,6 +61,9 @@ namespace ME.BECS.Editor {
             
         }
 
+        /// <summary>
+        /// Prints allocations domain.
+        /// </summary>
         [MenuItem("ME.BECS/Internal/Print Allocations (Domain)", priority = 0)]
         public static void PrintAllocationsDomain() {
             
@@ -50,6 +71,9 @@ namespace ME.BECS.Editor {
             
         }
 
+        /// <summary>
+        /// Generates fp.
+        /// </summary>
         [MenuItem("ME.BECS/Internal/Generate Fp", priority = 0)]
         public static void GenerateFp() {
             
@@ -60,12 +84,18 @@ namespace ME.BECS.Editor {
 
     }
 
+    /// <summary>
+    /// Defines code generator menu state and operations.
+    /// </summary>
     public static class CodeGeneratorMenu {
 
         private const string MENU_NAME = "ME.BECS/Source Generator/Rebuild Inputs (Full Analysis)";
         
         // Compatibility for external callers. Asset/code refresh is mandatory;
         // the old optional auto-codegen preference must not leave stale inputs.
+        /// <summary>
+        /// Gets is enabled auto; this implementation returns <c>true</c>.
+        /// </summary>
         public static bool IsEnabledAuto => true;
         
         [MenuItem(MENU_NAME, priority = 100)]
@@ -77,26 +107,47 @@ namespace ME.BECS.Editor {
 
     }
 
+    /// <summary>
+    /// Exports themes registration data for generated code.
+    /// </summary>
     public class ThemesCodeGenerator : CustomCodeGenerator {
 
+        /// <summary>
+        /// Defines theme state and operations for <c>ThemesCodeGenerator</c>.
+        /// </summary>
         public struct Theme {
 
+            /// <summary>
+            /// Menu name used by <c>ThemesCodeGenerator.Theme</c>.
+            /// </summary>
             public string menuName;
+            /// <summary>
+            /// Style used by <c>ThemesCodeGenerator.Theme</c>.
+            /// </summary>
             public string style;
 
         }
 
+        /// <summary>
+        /// Themes used by <c>ThemesCodeGenerator</c>.
+        /// </summary>
         public static readonly Theme[] themes = new Theme[] {
             new Theme { menuName = "Default", style = "ME.BECS.Resources/Styles/Themes/Default.uss" },
             new Theme { menuName = "Classic", style = "ME.BECS.Resources/Styles/Themes/Classic.uss" },
             new Theme { menuName = "Alternative", style = "ME.BECS.Resources/Styles/Themes/Alternative.uss" },
         };
         
+        /// <summary>
+        /// Default settings or value supplied by this type.
+        /// </summary>
         public static readonly string DEFAULT = themes[0].style;
 
         private Theme[] collected;
         private int builtInCount;
 
+        /// <summary>
+        /// Adds this feature's registration inputs to the source-generator export.
+        /// </summary>
         public override void AppendSourceGeneratorInputs(System.Text.StringBuilder manifest) {
             // Inherited compatibility hooks must not export the global menu twice.
             if (!this.editorAssembly || this.GetType() != typeof(ThemesCodeGenerator)) return;
@@ -110,10 +161,16 @@ namespace ME.BECS.Editor {
                 Append("theme-menu", index, plan[index].menuName + "\n" + plan[index].style);
         }
 
+        /// <summary>
+        /// Adds the assembly references required by this feature's generated code.
+        /// </summary>
         public override void AddSourceGeneratorReferences(System.Collections.Generic.List<System.Type> references) {
             if (this.editorAssembly && this.GetType() == typeof(ThemesCodeGenerator)) references.Add(typeof(Themes));
         }
 
+        /// <summary>
+        /// Returns retired source files.
+        /// </summary>
         public override System.Collections.Generic.IEnumerable<string> GetRetiredSourceFiles() =>
             this.editorAssembly ? new[] { "MenuThemes" } : System.Array.Empty<string>();
 
@@ -151,10 +208,19 @@ namespace ME.BECS.Editor {
 
     }
     
+    /// <summary>
+    /// Defines themes state and operations.
+    /// </summary>
     public static class Themes {
 
+        /// <summary>
+        /// Raised when changed is reported by this API.
+        /// </summary>
         public static event System.Action Changed;
         
+        /// <summary>
+        /// Current theme used by <c>Themes</c>.
+        /// </summary>
         public static string CurrentTheme {
             get => EditorPrefs.GetString("ME.BECS.Editor.Theme", ThemesCodeGenerator.DEFAULT);
             set {
@@ -166,6 +232,9 @@ namespace ME.BECS.Editor {
 
     }
     
+    /// <summary>
+    /// Defines threading toggle state and operations.
+    /// </summary>
     public static class ThreadingToggle {
 
         private const string MENU_NAME = "ME.BECS/Jobs/Enable Multithreading";
@@ -198,6 +267,9 @@ namespace ME.BECS.Editor {
         
     }
 
+    /// <summary>
+    /// Configures native-allocation leak diagnostics.
+    /// </summary>
     public static class LeakDetection {
 
         private const string LEAK_OFF = "ME.BECS/Jobs/Leak Detection Off";

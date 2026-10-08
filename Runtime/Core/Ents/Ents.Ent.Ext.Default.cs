@@ -7,8 +7,14 @@ namespace ME.BECS {
     #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Groups core components for change tracking and queries.
+    /// </summary>
     public struct CoreComponentGroup {
 
+        /// <summary>
+        /// Color used to render or identify this value.
+        /// </summary>
         public static UnityEngine.Color color = UnityEngine.Color.white;
 
     }
@@ -20,6 +26,9 @@ namespace ME.BECS {
     [ComponentGroup(typeof(CoreComponentGroup))]
     public struct IsInactive : IComponent { }
     
+    /// <summary>
+    /// Provides component, lifecycle and identity operations on entity handles.
+    /// </summary>
     [IgnoreProfiler]
     public static unsafe partial class EntExt {
 
@@ -36,11 +45,17 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Tests whether the context is active.
+        /// </summary>
         [IgnoreProfiler]
         public static bool IsActive(in this Ent ent) {
             return ent.Has<IsInactive>() == false;
         }
 
+        /// <summary>
+        /// Tests whether the referenced entity or world still matches its registered lifetime.
+        /// </summary>
         [IgnoreProfiler]
         public static bool IsAlive(in this Ent ent) {
 
@@ -50,9 +65,15 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests whether the entity slot, generation and world identifier are all zero.
+        /// </summary>
         [IgnoreProfiler]
         public static bool IsEmpty(in this Ent ent) => ent is { id: 0u, gen: 0, worldId: 0 };
 
+        /// <summary>
+        /// Destroys the referenced instance and applies its registered destruction handling.
+        /// </summary>
         [CodeGeneratorIgnore][IgnoreProfiler]
         public static void Destroy(in this Ent ent) {
 

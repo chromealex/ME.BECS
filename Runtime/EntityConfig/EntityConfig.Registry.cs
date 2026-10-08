@@ -1,11 +1,20 @@
 namespace ME.BECS {
 
+    /// <summary>
+    /// Stores shared registration state for entity configurations.
+    /// </summary>
     public class EntityConfigRegistryShared {
 
+        /// <summary>
+        /// Static world used by <c>EntityConfigRegistryShared</c>.
+        /// </summary>
         public static readonly Unity.Burst.SharedStatic<World> staticWorld = Unity.Burst.SharedStatic<World>.GetOrCreate<EntityConfigRegistryShared>();
 
     }
 
+    /// <summary>
+    /// Resolves entity configurations registered for runtime use.
+    /// </summary>
     public static unsafe class EntityConfigRegistry {
 
         private static ref World staticWorld => ref EntityConfigRegistryShared.staticWorld.Data;
@@ -14,6 +23,9 @@ namespace ME.BECS {
         private static UIntDictionary<UnsafeEntityConfig> registryFromId;
         private static LockSpinner lockSpinner = new LockSpinner();
 
+        /// <summary>
+        /// Initializes entity config registry state from the supplied context.
+        /// </summary>
         public static void Initialize() {
             //UnityEngine.Debug.Log("Initialize static world for configs");
             lockSpinner.Lock();
@@ -28,6 +40,9 @@ namespace ME.BECS {
             lockSpinner.Unlock();
         }
         
+        /// <summary>
+        /// Registers the supplied instance or type for subsequent lookup.
+        /// </summary>
         public static uint Register(EntityConfig config, out UnsafeEntityConfig unsafeConfig) {
 
             if (staticWorld.isCreated == false) {
@@ -61,6 +76,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Synchronizes the associated state with the supplied source.
+        /// </summary>
         public static void Sync(EntityConfig config) {
             
             lockSpinner.Lock();

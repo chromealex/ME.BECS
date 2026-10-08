@@ -79,13 +79,34 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Defines the supported method values.
+    /// </summary>
     public enum Method : byte {
 
+        /// <summary>
+        /// Undefined option for <c>Method</c>.
+        /// </summary>
         Undefined = 0,
+        /// <summary>
+        /// Awake option for <c>Method</c>.
+        /// </summary>
         Awake,
+        /// <summary>
+        /// Start option for <c>Method</c>.
+        /// </summary>
         Start,
+        /// <summary>
+        /// Update option for <c>Method</c>.
+        /// </summary>
         Update,
+        /// <summary>
+        /// Destroy option for <c>Method</c>.
+        /// </summary>
         Destroy,
+        /// <summary>
+        /// Draw gizmos option for <c>Method</c>.
+        /// </summary>
         DrawGizmos,
 
     }

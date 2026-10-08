@@ -6,13 +6,22 @@ namespace ME.BECS.Units {
     using ME.BECS.Transforms;
     using ME.BECS.Effects;
 
+    /// <summary>
+    /// Coordinates destroy during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [UnityEngine.Tooltip("Destroy units with health <= 0")]
     public partial struct DestroySystem : IUpdate {
 
+        /// <summary>
+        /// Executes destroy work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct DestroyJob : IJobForAspects<UnitAspect> {
 
+            /// <summary>
+            /// Processes destroy using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit) {
                 if (unit.readHealth <= 0u) {
                     var tr = unit.ent.GetAspect<TransformAspect>();
@@ -23,6 +32,9 @@ namespace ME.BECS.Units {
 
         }
 
+        /// <summary>
+        /// Updates destroy system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var dependsOn = context.Query().Schedule<DestroyJob, UnitAspect>();

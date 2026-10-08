@@ -17,6 +17,9 @@ namespace ME.BECS.Attack.Editor {
     using ME.BECS.Editor;
     using UnityEngine;
 
+    /// <summary>
+    /// Draws sector values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(Sector))]
     public class SectorDrawer : PropertyDrawer {
 
@@ -29,6 +32,9 @@ namespace ME.BECS.Attack.Editor {
             }
         }
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             SectorDrawer.LoadStyle();
@@ -198,20 +204,56 @@ namespace ME.BECS.Attack.Editor {
 
     }
 
+    /// <summary>
+    /// Defines sector preview state and operations.
+    /// </summary>
     public class SectorPreview : VisualElement {
 
+        /// <summary>
+        /// Angle color used for presentation.
+        /// </summary>
         public Color angleColor = Color.green;
+        /// <summary>
+        /// Fill color used for presentation.
+        /// </summary>
         public Color fillColor = new Color(0f, 0f, 0f, 0.5f);
+        /// <summary>
+        /// Minimum range fill color.
+        /// </summary>
         public Color minRangeFillColor = new Color(1f, 0f, 0f, 0.2f);
+        /// <summary>
+        /// Border color used for presentation.
+        /// </summary>
         public Color borderColor = new Color(0f, 0f, 0f, 0.5f);
+        /// <summary>
+        /// Grid back color used for presentation.
+        /// </summary>
         public Color gridBackColor = new Color(1f, 1f, 1f, 0.05f);
+        /// <summary>
+        /// Grid main color used for presentation.
+        /// </summary>
         public Color gridMainColor = new Color(1f, 1f, 1f, 0.1f);
+        /// <summary>
+        /// Direction color used for presentation.
+        /// </summary>
         public Color directionColor = new Color(1f, 1f, 0f, 0.3f);
 
+        /// <summary>
+        /// Angle used by <c>SectorPreview</c>.
+        /// </summary>
         public float angle;
+        /// <summary>
+        /// Range limiting the associated operation.
+        /// </summary>
         public float range;
+        /// <summary>
+        /// Minimum range.
+        /// </summary>
         public float minRange;
 
+        /// <summary>
+        /// Initializes <c>SectorPreview</c> from the supplied defaults.
+        /// </summary>
         public SectorPreview() {
             this.generateVisualContent += this.OnGenerateVisualContent;
         }
@@ -331,6 +373,9 @@ namespace ME.BECS.Attack.Editor {
             painter.Stroke();
         }
 
+        /// <summary>
+        /// Redraws element.
+        /// </summary>
         public void RedrawElement() {
             this.MarkDirtyRepaint();
         }

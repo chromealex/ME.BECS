@@ -10,6 +10,9 @@ namespace ME.BECS {
     using static Cuts;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    /// <summary>
+    /// Provides helper operations for native array.
+    /// </summary>
     [IgnoreProfiler]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -18,12 +21,18 @@ namespace ME.BECS {
     #endif
     public static unsafe class NativeArrayUtils {
 
+        /// <summary>
+        /// Copies data between the supplied source and destination.
+        /// </summary>
         [INLINE(256)]
         public static void Copy<T>(in MemArrayAuto<T> fromArr,
                                    ref MemArrayAuto<T> arr) where T : unmanaged {
             NativeArrayUtils.Copy(fromArr, 0, ref arr, 0, fromArr.Length);
         }
         
+        /// <summary>
+        /// Copies data between the supplied source and destination.
+        /// </summary>
         [INLINE(256)]
         public static void Copy<T>(T[] src, int srcIndex, MemArrayAuto<T> dst, int dstIndex, int length) where T : unmanaged {
             var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc((object) src, System.Runtime.InteropServices.GCHandleType.Pinned);
@@ -32,26 +41,41 @@ namespace ME.BECS {
             gcHandle.Free();
         }
 
+        /// <summary>
+        /// Copies data between the supplied source and destination.
+        /// </summary>
         [INLINE(256)]
         public static void Copy<T>(ref MemoryAllocator allocator, in MemArray<T> fromArr, ref MemArray<T> arr) where T : unmanaged {
             NativeArrayUtils.Copy(ref allocator, fromArr, 0, ref arr, 0, fromArr.Length);
         }
 
+        /// <summary>
+        /// Copies data between the supplied source and destination.
+        /// </summary>
         [INLINE(256)]
         public static void Copy(ref MemoryAllocator allocator, in BitArray fromArr, ref BitArray arr) {
             NativeArrayUtils.Copy(ref allocator, fromArr, ref arr, fromArr.Length);
         }
 
+        /// <summary>
+        /// Copies exact.
+        /// </summary>
         [INLINE(256)]
         public static void CopyExact<T>(ref MemoryAllocator allocator, in MemArray<T> fromArr, ref MemArray<T> arr) where T : unmanaged {
             NativeArrayUtils.Copy(ref allocator, fromArr, 0, ref arr, 0, fromArr.Length, true);
         }
 
+        /// <summary>
+        /// Copies exact.
+        /// </summary>
         [INLINE(256)]
         public static void CopyExact<T>(in MemArrayAuto<T> fromArr, ref MemArrayAuto<T> arr) where T : unmanaged {
             NativeArrayUtils.Copy(fromArr, 0, ref arr, 0, fromArr.Length, true);
         }
 
+        /// <summary>
+        /// Copies data between the supplied source and destination.
+        /// </summary>
         [INLINE(256)]
         public static void Copy(ref MemoryAllocator allocator,
                                    in BitArray fromArr,
@@ -82,6 +106,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Copies data between the supplied source and destination.
+        /// </summary>
         [INLINE(256)]
         public static void Copy<T>(ref MemoryAllocator allocator,
                                    in MemArray<T> fromArr,
@@ -110,6 +137,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Copies data between the supplied source and destination.
+        /// </summary>
         [INLINE(256)]
         public static void Copy<T>(in MemArrayAuto<T> fromArr,
                                    uint sourceIndex,
@@ -137,6 +167,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Copies no checks.
+        /// </summary>
         [INLINE(256)]
         public static void CopyNoChecks<T>(ref MemoryAllocator allocator,
                                            in MemArray<T> fromArr,
@@ -148,6 +181,9 @@ namespace ME.BECS {
             allocator.MemCopy(arr.arrPtr, destIndex * size, fromArr.arrPtr, sourceIndex * size, length * size);
         }
 
+        /// <summary>
+        /// Copies no checks.
+        /// </summary>
         [INLINE(256)]
         public static void CopyNoChecks<T>(in MemArrayAuto<T> fromArr,
                                            uint sourceIndex,

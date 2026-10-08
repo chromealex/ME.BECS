@@ -19,8 +19,14 @@ namespace ME.BECS.Bullets {
     using ME.BECS.Transforms;
     using ME.BECS.Players;
     
+    /// <summary>
+    /// Provides helper operations for bullet.
+    /// </summary>
     public static class BulletUtils {
 
+        /// <summary>
+        /// Calculates damage factor.
+        /// </summary>
         [INLINE(256)]
         public static tfloat CalculateDamageFactor(tfloat hitRangeSqr, float2 bulletPosition, float2 unitPosition, tfloat unitRadius) {
             var dist = math.distance(bulletPosition, unitPosition) - unitRadius;
@@ -30,6 +36,9 @@ namespace ME.BECS.Bullets {
             return math.clamp(dist / hitRangeSqr, 0, 1);
         }
 
+        /// <summary>
+        /// Calculates damage factor.
+        /// </summary>
         [INLINE(256)]
         public static tfloat CalculateDamageFactor(tfloat hitRangeSqr, float3 bulletPosition, float3 unitPosition, tfloat unitRadius) {
             var dist = math.distance(bulletPosition, unitPosition) - unitRadius;
@@ -39,6 +48,9 @@ namespace ME.BECS.Bullets {
             return math.clamp(dist / hitRangeSqr, 0, 1);
         }
 
+        /// <summary>
+        /// Calculates damage.
+        /// </summary>
         [INLINE(256)]
         public static uint CalculateDamage(uint minDamage, uint maxDamage, tfloat hitRangeSqr, float2 bulletPosition, float2 unitPosition, tfloat unitRadius) {
             var damageMin = minDamage;
@@ -49,6 +61,9 @@ namespace ME.BECS.Bullets {
             return (uint)math.lerp(damageMax, damageMin, CalculateDamageFactor(hitRangeSqr, bulletPosition, unitPosition, unitRadius));
         }
 
+        /// <summary>
+        /// Calculates damage.
+        /// </summary>
         [INLINE(256)]
         public static uint CalculateDamage(uint minDamage, uint maxDamage, tfloat hitRangeSqr, float3 bulletPosition, float3 unitPosition, tfloat unitRadius) {
             var damageMin = minDamage;
@@ -60,6 +75,9 @@ namespace ME.BECS.Bullets {
             return (uint)math.lerp(damageMax, damageMin, CalculateDamageFactor(hitRangeSqr, bulletPosition, unitPosition, unitRadius));
         }
 
+        /// <summary>
+        /// Registers fire point.
+        /// </summary>
         [INLINE(256)]
         public static Ent RegisterFirePoint(in Ent root, in float3 position, in quaternion rotation, in JobInfo jobInfo) {
 
@@ -77,6 +95,9 @@ namespace ME.BECS.Bullets {
 
         }
 
+        /// <summary>
+        /// Returns next fire point.
+        /// </summary>
         [INLINE(256)]
         public static Ent GetNextFirePoint(in Ent root) {
             
@@ -90,6 +111,9 @@ namespace ME.BECS.Bullets {
 
         }
 
+        /// <summary>
+        /// Returns fire points.
+        /// </summary>
         [INLINE(256)]
         public static ListAuto<Ent> GetFirePoints(in Ent root) {
 

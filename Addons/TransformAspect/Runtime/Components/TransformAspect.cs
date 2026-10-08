@@ -18,9 +18,15 @@ namespace ME.BECS.Transforms {
     using System.Runtime.InteropServices;
     using LAYOUT = System.Runtime.InteropServices.StructLayoutAttribute;
 
+    /// <summary>
+    /// Provides typed access to the entity components used for transform.
+    /// </summary>
     [EditorComment("Give access to the transform methods")]
     public partial struct TransformAspect : IAspect {
         
+        /// <summary>
+        /// Entity whose components or lifetime are associated with this value.
+        /// </summary>
         public Ent ent { get; set; }
         
         [QueryWith]
@@ -37,7 +43,13 @@ namespace ME.BECS.Transforms {
         internal AspectDataPtr<WorldMatrixComponent> worldMatrixData;
         internal AspectDataPtr<BoundsSizeComponent> boundsSizeData;
 
+        /// <summary>
+        /// Indicates is calculated.
+        /// </summary>
         public readonly bool IsCalculated => math.all(math.isnan(this.GetWorldMatrixRotation().value)) == false;
+        /// <summary>
+        /// Indicates is dirty.
+        /// </summary>
         public readonly bool IsDirty {
             [INLINE(256)] get => this.dirtyMoveComponent.Read(this.ent.id, this.ent.gen).tick == this.ent.World.CurrentTick;
             [INLINE(256)] set => this.dirtyMoveComponent.Get(this.ent.id, this.ent.gen).tick = this.ent.World.CurrentTick;
@@ -75,6 +87,9 @@ namespace ME.BECS.Transforms {
 
         /// <get>Returns true if all parent objects and current object has IsStatic as true.</get>
         /// <set>Set current object and all children IsStatic as true.</set>
+        /// <summary>
+        /// Indicates is static hierarchy.
+        /// </summary>
         public readonly bool IsStaticHierarchy {
             [INLINE(256)] get {
                 if (this.parent.IsAlive() == true) {
@@ -108,65 +123,128 @@ namespace ME.BECS.Transforms {
             }
         }
         
+        /// <summary>
+        /// Forward used by <c>TransformAspect</c>.
+        /// </summary>
         public readonly float3 forward {
             [INLINE(256)] get => math.mul(this.rotation, math.forward());
             [INLINE(256)] set => this.rotation = MatrixUtils.FromToRotation(math.forward(), value); 
         }
         
+        /// <summary>
+        /// Back used by <c>TransformAspect</c>.
+        /// </summary>
         public readonly float3 back {
             [INLINE(256)] get => math.mul(this.rotation, math.back());
             [INLINE(256)] set => this.rotation = MatrixUtils.FromToRotation(math.back(), value); 
         }
         
+        /// <summary>
+        /// Right-hand entry or direction in the represented structure.
+        /// </summary>
         public readonly float3 right {
             [INLINE(256)] get => math.mul(this.rotation, math.right());
             [INLINE(256)] set => this.rotation = MatrixUtils.FromToRotation(math.right(), value); 
         }
         
+        /// <summary>
+        /// Left-hand entry or direction in the represented structure.
+        /// </summary>
         public readonly float3 left {
             [INLINE(256)] get => math.mul(this.rotation, math.left());
             [INLINE(256)] set => this.rotation = MatrixUtils.FromToRotation(math.left(), value); 
         }
 
+        /// <summary>
+        /// Up used by <c>TransformAspect</c>.
+        /// </summary>
         public readonly float3 up {
             [INLINE(256)] get => math.mul(this.rotation, math.up());
             [INLINE(256)] set => this.rotation = MatrixUtils.FromToRotation(math.up(), value); 
         }
 
+        /// <summary>
+        /// Down used by <c>TransformAspect</c>.
+        /// </summary>
         public readonly float3 down {
             [INLINE(256)] get => math.mul(this.rotation, math.down());
             [INLINE(256)] set => this.rotation = MatrixUtils.FromToRotation(math.down(), value); 
         }
         
+        /// <summary>
+        /// Local position used by the associated spatial operation.
+        /// </summary>
         public readonly ref float3 localPosition {
             [INLINE(256)]
             get => ref this.localPositionData.GetOrThrow(this.ent.id, this.ent.gen).value;
         }
 
+        /// <summary>
+        /// Local rotation used by <c>TransformAspect</c>.
+        /// </summary>
         public readonly ref quaternion localRotation {
             [INLINE(256)]
             get => ref this.localRotationData.GetOrThrow(this.ent.id, this.ent.gen).value;
         }
 
+        /// <summary>
+        /// Local scale used by <c>TransformAspect</c>.
+        /// </summary>
         public readonly ref float3 localScale {
             [INLINE(256)]
             get => ref this.localScaleData.Get(this.ent.id, this.ent.gen).value;
         }
 
+        /// <summary>
+        /// Read-only access to local position.
+        /// </summary>
         public readonly ref readonly float3 readLocalPosition => ref this.localPositionData.Read(this.ent.id, this.ent.gen).value;
+        /// <summary>
+        /// Read-only access to local rotation.
+        /// </summary>
         public readonly ref readonly quaternion readLocalRotation => ref this.localRotationData.Read(this.ent.id, this.ent.gen).value;
+        /// <summary>
+        /// Read-only access to local scale.
+        /// </summary>
         public readonly ref readonly float3 readLocalScale => ref this.localScaleData.Read(this.ent.id, this.ent.gen).value;
+        /// <summary>
+        /// Parent entry in the represented hierarchy.
+        /// </summary>
         public readonly ref readonly Ent parent => ref this.parentData.Read(this.ent.id, this.ent.gen).value;
+        /// <summary>
+        /// Children used by <c>TransformAspect</c>.
+        /// </summary>
         public readonly ref readonly ListAuto<Ent> children => ref this.childrenData.Read(this.ent.id, this.ent.gen).list;
+        /// <summary>
+        /// World matrix used to transform between the associated coordinate spaces.
+        /// </summary>
         public readonly ref float4x4 worldMatrix => ref this.worldMatrixData.GetOrThrow(this.ent.id, this.ent.gen).value;
+        /// <summary>
+        /// Local matrix used to transform between the associated coordinate spaces.
+        /// </summary>
         public readonly ref float4x4 localMatrix => ref this.localMatrixData.GetOrThrow(this.ent.id, this.ent.gen).value;
 
+        /// <summary>
+        /// Read-only access to world matrix.
+        /// </summary>
         public readonly ref readonly float4x4 readWorldMatrix => ref this.worldMatrixData.Read(this.ent.id, this.ent.gen).value;
+        /// <summary>
+        /// Read-only access to local matrix.
+        /// </summary>
         public readonly ref readonly float4x4 readLocalMatrix => ref this.localMatrixData.Read(this.ent.id, this.ent.gen).value;
 
+        /// <summary>
+        /// Bounds size used by <c>TransformAspect</c>.
+        /// </summary>
         public readonly ref float3 boundsSize => ref this.boundsSizeData.Get(this.ent.id, this.ent.gen).value;
+        /// <summary>
+        /// Read-only access to bounds size.
+        /// </summary>
         public readonly ref readonly float3 readBoundsSize => ref this.boundsSizeData.Read(this.ent.id, this.ent.gen).value;
 
+        /// <summary>
+        /// Indicates is world matrix tick calculated.
+        /// </summary>
         public readonly bool IsWorldMatrixTickCalculated {
             [INLINE(256)]
             get => this.worldMatrixData.Read(this.ent.id, this.ent.gen).isTickCalculated;
@@ -174,15 +252,37 @@ namespace ME.BECS.Transforms {
             set => this.worldMatrixData.GetOrThrow(this.ent.id, this.ent.gen).isTickCalculated = value;
         }
         
+        /// <summary>
+        /// Position in the coordinate space used by the containing API.
+        /// </summary>
         public readonly float3 position {
             [INLINE(256)]
             set {
                 ref readonly var parent = ref this.parent;
                 if (parent.IsEmpty() == false) {
                     var parentTr = (TransformAspect)parent;
-                    var containerRotation = parentTr.rotation;
-                    var containerPosition = parentTr.position;
-                    this.localPosition = math.mul(math.inverse(containerRotation), GetInvScale_INTERNAL(in parent) * (value - containerPosition));
+                    if (parentTr.parent.IsEmpty() == true) {
+                        this.localPosition = GetInvScale_INTERNAL(in parent) *
+                                             math.mul(math.inverse(parentTr.readLocalRotation), value - parentTr.readLocalPosition);
+                    } else {
+                        // Compose inverse local transforms from the nearest parent to the root.
+                        // Keeping the full linear transform preserves rotated nonuniform scales.
+                        var worldToLocal = float3x3.identity;
+                        var offset = float3.zero;
+                        ref readonly var container = ref parent;
+                        while (container.IsEmpty() == false) {
+                            var transform = (TransformAspect)container;
+                            var inverseLinear = new float3x3(math.inverse(transform.readLocalRotation));
+                            var inverseScale = GetInvScale_INTERNAL(in container);
+                            inverseLinear.c0 *= inverseScale;
+                            inverseLinear.c1 *= inverseScale;
+                            inverseLinear.c2 *= inverseScale;
+                            worldToLocal = math.mul(worldToLocal, inverseLinear);
+                            offset -= math.mul(worldToLocal, transform.readLocalPosition);
+                            container = ref transform.parent;
+                        }
+                        this.localPosition = math.mul(worldToLocal, value) + offset;
+                    }
                     this.SetDirty();
                 } else {
                     ref var val = ref this.localPosition;
@@ -212,6 +312,9 @@ namespace ME.BECS.Transforms {
             }
         }
 
+        /// <summary>
+        /// Orientation in the coordinate space used by the containing API.
+        /// </summary>
         public readonly quaternion rotation {
             [INLINE(256)]
             set {
@@ -246,6 +349,9 @@ namespace ME.BECS.Transforms {
             }
         }
 
+        /// <summary>
+        /// Sets dirty.
+        /// </summary>
         [INLINE(256)]
         public readonly void SetDirty() {
             this.IsDirty = true;
@@ -307,22 +413,34 @@ namespace ME.BECS.Transforms {
         [INLINE(256)]
         public readonly float3 GetWorldMatrixScale() => MatrixUtils.GetScale(in this.readWorldMatrix);
 
+        /// <summary>
+        /// Returns bounds.
+        /// </summary>
         [INLINE(256)]
         public readonly Bounds GetBounds() {
             return new Bounds(this.GetWorldMatrixPosition(), this.readBoundsSize);
         }
 
+        /// <summary>
+        /// Converts the supplied value to <c>TransformAspect</c>.
+        /// </summary>
         [INLINE(256)]
         public static implicit operator TransformAspect(in Ent ent) {
             if (ent.IsAlive() == false) return default;
             return ent.GetOrCreateAspect<TransformAspect>();
         }
 
+        /// <summary>
+        /// Locks world matrix.
+        /// </summary>
         [INLINE(256)]
         public readonly void LockWorldMatrix() {
             this.worldMatrixData.GetOrThrow(this.ent.id, this.ent.gen).spinner.Lock();
         }
 
+        /// <summary>
+        /// Unlocks world matrix.
+        /// </summary>
         [INLINE(256)]
         public readonly void UnlockWorldMatrix() {
             this.worldMatrixData.GetOrThrow(this.ent.id, this.ent.gen).spinner.Unlock();

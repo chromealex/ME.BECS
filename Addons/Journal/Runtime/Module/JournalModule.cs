@@ -3,12 +3,21 @@ namespace ME.BECS {
     using static Cuts;
     using System.Diagnostics;
     
+    /// <summary>
+    /// Provides lifecycle integration for the journal feature.
+    /// </summary>
     [UnityEngine.CreateAssetMenu(menuName = "ME.BECS/Journal Module")]
     public unsafe class JournalModule : Module {
 
+        /// <summary>
+        /// Configuration values used by this operation.
+        /// </summary>
         public JournalProperties properties = JournalProperties.Default;
         private uint worldId;
 
+        /// <summary>
+        /// Initializes journal module state from the supplied context.
+        /// </summary>
         public override void OnAwake(ref World world) {
 
             this.worldId = world.id;
@@ -24,14 +33,23 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Starts journal module processing for the supplied context.
+        /// </summary>
         public override Unity.Jobs.JobHandle OnStart(ref World world, Unity.Jobs.JobHandle dependsOn) {
             return dependsOn;
         }
 
+        /// <summary>
+        /// Updates journal module using the current inputs and execution context.
+        /// </summary>
         public override Unity.Jobs.JobHandle OnUpdate(Unity.Jobs.JobHandle dependsOn) {
             return dependsOn;
         }
 
+        /// <summary>
+        /// Releases journal module state at the end of its owning lifecycle.
+        /// </summary>
         public override void DoDestroy() {
 
             JournalsStorage.Dispose(this.worldId);

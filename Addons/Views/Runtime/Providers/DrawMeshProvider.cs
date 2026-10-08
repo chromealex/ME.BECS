@@ -22,9 +22,15 @@ namespace ME.BECS.Views {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using UnityEngine.Pool;
 
+    /// <summary>
+    /// Stores per-entity state for draw mesh provider tag.
+    /// </summary>
     [ComponentGroup(typeof(ViewsComponentGroup))]
     public struct DrawMeshProviderTag : IComponent {}
 
+    /// <summary>
+    /// Updates view presentation for draw mesh provider.
+    /// </summary>
     [BURST]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
@@ -33,13 +39,31 @@ namespace ME.BECS.Views {
     #endif
     public unsafe partial struct DrawMeshProvider : IViewProvider<EntityView> {
 
+        /// <summary>
+        /// Stores a info record used by <c>DrawMeshProvider</c>.
+        /// </summary>
         public struct Info : System.IEquatable<Info> {
 
+            /// <summary>
+            /// Mesh used by <c>DrawMeshProvider.Info</c>.
+            /// </summary>
             public UnityEngine.Mesh mesh;
+            /// <summary>
+            /// Submesh index used to locate the associated entry.
+            /// </summary>
             public int submeshIndex;
+            /// <summary>
+            /// Whether rendering instanced behavior or state is selected.
+            /// </summary>
             public bool renderingInstanced;
+            /// <summary>
+            /// Render params used by <c>DrawMeshProvider.Info</c>.
+            /// </summary>
             public UnityEngine.RenderParams renderParams;
 
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             public bool Equals(Info other) {
                 return this.renderingInstanced == other.renderingInstanced &&
                        this.submeshIndex == other.submeshIndex &&
@@ -47,6 +71,9 @@ namespace ME.BECS.Views {
                        Equals(this.mesh, other.mesh);
             }
 
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             public bool Equals(in UnityEngine.RenderParams current, in UnityEngine.RenderParams other) {
                 return current.layer == other.layer &&
                        current.renderingLayerMask == other.renderingLayerMask &&
@@ -63,10 +90,16 @@ namespace ME.BECS.Views {
                        Equals(current.matProps, other.matProps);
             }
             
+            /// <summary>
+            /// Tests equality using the identity or value comparison defined by this type.
+            /// </summary>
             public override bool Equals(object obj) {
                 return obj is Info other && this.Equals(other);
             }
 
+            /// <summary>
+            /// Returns a hash code consistent with this type's equality comparison.
+            /// </summary>
             public override int GetHashCode() {
                 var hashCode = new System.HashCode();
                 hashCode.Add(this.renderParams.layer);
@@ -90,12 +123,27 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Stores objects per info for <c>DrawMeshProvider</c>.
+        /// </summary>
         public struct ObjectsPerInfo {
 
+            /// <summary>
+            /// Matrices used by <c>DrawMeshProvider.ObjectsPerInfo</c>.
+            /// </summary>
             public NativeList<UnityEngine.Matrix4x4> matrices;
+            /// <summary>
+            /// Entity handles processed or stored by this operation.
+            /// </summary>
             public NativeList<Ent> entities;
+            /// <summary>
+            /// Prefab world matrices used by <c>DrawMeshProvider.ObjectsPerInfo</c>.
+            /// </summary>
             public NativeList<float4x4> prefabWorldMatrices;
 
+            /// <summary>
+            /// Releases the resources owned by this objects per info instance.
+            /// </summary>
             public void Dispose(safe_ptr<State> state) {
 
                 this.matrices.Dispose();
@@ -109,14 +157,23 @@ namespace ME.BECS.Views {
         private System.Collections.Generic.Dictionary<Info, ObjectsPerInfo> objectsPerMeshAndMaterial;
         private ViewsModuleProperties properties;
 
+        /// <summary>
+        /// Creates a query over entities in the associated world.
+        /// </summary>
         [INLINE(256)]
         public void Query(ref QueryBuilder builder) {
             builder.With<DrawMeshProviderTag>();
         }
 
+        /// <summary>
+        /// Returns view by entity.
+        /// </summary>
         [INLINE(256)]
         public IView GetViewByEntity(safe_ptr<ViewsModuleData> data, in Ent entity) => null;
 
+        /// <summary>
+        /// Initializes draw mesh provider state from the supplied context.
+        /// </summary>
         [INLINE(256)]
         public void Initialize(uint providerId, World viewsWorld, ViewsModuleProperties properties) {
 
@@ -143,6 +200,9 @@ namespace ME.BECS.Views {
             
         }
 
+        /// <summary>
+        /// Commits the accumulated work to its destination.
+        /// </summary>
         [INLINE(256)]
         public JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn, float dt) {
             
@@ -192,6 +252,9 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Creates or reuses a presentation instance for the requested entity.
+        /// </summary>
         [INLINE(256)]
         public JobHandle Spawn(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
 
@@ -219,26 +282,32 @@ namespace ME.BECS.Views {
 
                 var rendering = prefabEnt.Read<MeshRendererComponent>();
                 var mesh = prefabEnt.Read<MeshFilterComponent>().mesh.Value;
-                var renderParams = GetRenderingParams(ref rendering, ref mesh);
-                var info = new Info {
-                    renderParams = renderParams,
-                    mesh = mesh,
-                    submeshIndex = 0,
-                    renderingInstanced = renderParams.material.enableInstancing,
-                };
-                if (this.objectsPerMeshAndMaterial.TryGetValue(info, out var objectsPerInfo) == false) {
-                    var allocatorPersistent = WorldsPersistentAllocator.allocatorPersistent.Get(world.id).Allocator.ToAllocator;
-                    objectsPerInfo = new ObjectsPerInfo() {
-                        matrices = new NativeList<UnityEngine.Matrix4x4>((int)this.properties.renderingObjectsCapacity, allocatorPersistent),
-                        entities = new NativeList<Ent>((int)this.properties.renderingObjectsCapacity, allocatorPersistent),
-                        prefabWorldMatrices = new NativeList<float4x4>((int)this.properties.renderingObjectsCapacity, allocatorPersistent),
+                var slotCount = rendering.materials.Length > 0u ? (int)rendering.materials.Length : 1;
+                if (mesh == null || mesh.subMeshCount == 0) slotCount = 0;
+                for (int slot = 0; slot < slotCount; ++slot) {
+                    if (rendering.materials.Length > 0u) rendering.material = rendering.materials[(uint)slot];
+                    if (rendering.material.Value == null) continue;
+                    var renderParams = GetRenderingParams(ref rendering, ref mesh);
+                    var info = new Info {
+                        renderParams = renderParams,
+                        mesh = mesh,
+                        submeshIndex = math.min(slot, mesh.subMeshCount - 1),
+                        renderingInstanced = renderParams.material.enableInstancing,
                     };
-                    this.objectsPerMeshAndMaterial.Add(info, objectsPerInfo);
-                }
+                    if (this.objectsPerMeshAndMaterial.TryGetValue(info, out var objectsPerInfo) == false) {
+                        var allocatorPersistent = WorldsPersistentAllocator.allocatorPersistent.Get(world.id).Allocator.ToAllocator;
+                        objectsPerInfo = new ObjectsPerInfo() {
+                            matrices = new NativeList<UnityEngine.Matrix4x4>((int)this.properties.renderingObjectsCapacity, allocatorPersistent),
+                            entities = new NativeList<Ent>((int)this.properties.renderingObjectsCapacity, allocatorPersistent),
+                            prefabWorldMatrices = new NativeList<float4x4>((int)this.properties.renderingObjectsCapacity, allocatorPersistent),
+                        };
+                        this.objectsPerMeshAndMaterial.Add(info, objectsPerInfo);
+                    }
 
-                objectsPerInfo.matrices.Add((UnityEngine.Matrix4x4)worldEnt.Read<ME.BECS.Transforms.WorldMatrixComponent>().value);
-                objectsPerInfo.entities.Add(worldEnt);
-                objectsPerInfo.prefabWorldMatrices.Add(prefabEnt.Read<ME.BECS.Transforms.WorldMatrixComponent>().value);
+                    objectsPerInfo.matrices.Add((UnityEngine.Matrix4x4)worldEnt.Read<ME.BECS.Transforms.WorldMatrixComponent>().value);
+                    objectsPerInfo.entities.Add(worldEnt);
+                    objectsPerInfo.prefabWorldMatrices.Add(prefabEnt.Read<ME.BECS.Transforms.WorldMatrixComponent>().value);
+                }
             }
             
             ref readonly var children = ref prefabEnt.Read<ME.BECS.Transforms.ChildrenComponent>();
@@ -292,6 +361,9 @@ namespace ME.BECS.Views {
             }
         }
 
+        /// <summary>
+        /// Removes an active presentation instance and returns it to its provider.
+        /// </summary>
         [INLINE(256)]
         public JobHandle Despawn(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
             
@@ -316,19 +388,25 @@ namespace ME.BECS.Views {
                 
                 var rendering = prefabEnt.Read<MeshRendererComponent>();
                 var mesh = prefabEnt.Read<MeshFilterComponent>().mesh.Value;
-                var renderParams = GetRenderingParams(ref rendering, ref mesh);
-                var info = new Info {
-                    renderParams = renderParams,
-                    submeshIndex = 0,
-                    mesh = mesh,
-                    renderingInstanced = renderParams.material.enableInstancing,
-                };
-                if (this.objectsPerMeshAndMaterial.TryGetValue(info, out var objectsPerInfo) == true) {
-                    var idx = objectsPerInfo.entities.IndexOf(worldEnt);
-                    if (idx >= 0) {
-                        objectsPerInfo.matrices.RemoveAtSwapBack(idx);
-                        objectsPerInfo.entities.RemoveAtSwapBack(idx);
-                        objectsPerInfo.prefabWorldMatrices.RemoveAtSwapBack(idx);
+                var slotCount = rendering.materials.Length > 0u ? (int)rendering.materials.Length : 1;
+                if (mesh == null || mesh.subMeshCount == 0) slotCount = 0;
+                for (int slot = 0; slot < slotCount; ++slot) {
+                    if (rendering.materials.Length > 0u) rendering.material = rendering.materials[(uint)slot];
+                    if (rendering.material.Value == null) continue;
+                    var renderParams = GetRenderingParams(ref rendering, ref mesh);
+                    var info = new Info {
+                        renderParams = renderParams,
+                        submeshIndex = math.min(slot, mesh.subMeshCount - 1),
+                        mesh = mesh,
+                        renderingInstanced = renderParams.material.enableInstancing,
+                    };
+                    if (this.objectsPerMeshAndMaterial.TryGetValue(info, out var objectsPerInfo) == true) {
+                        var idx = objectsPerInfo.entities.IndexOf(worldEnt);
+                        if (idx >= 0) {
+                            objectsPerInfo.matrices.RemoveAtSwapBack(idx);
+                            objectsPerInfo.entities.RemoveAtSwapBack(idx);
+                            objectsPerInfo.prefabWorldMatrices.RemoveAtSwapBack(idx);
+                        }
                     }
                 }
             }
@@ -340,26 +418,41 @@ namespace ME.BECS.Views {
             
         }
         
+        /// <summary>
+        /// Provides the <c>ApplyStateParallel</c> callback; this implementation performs no work.
+        /// </summary>
         [INLINE(256)]
         public void ApplyStateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData) {
             
         }
 
+        /// <summary>
+        /// Provides the <c>ApplyState</c> callback; this implementation performs no work.
+        /// </summary>
         [INLINE(256)]
         public void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData) {
             
         }
 
+        /// <summary>
+        /// Provides the <c>OnUpdate</c> callback; this implementation performs no work.
+        /// </summary>
         [INLINE(256)]
         public void OnUpdate(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData, float dt) {
             
         }
 
+        /// <summary>
+        /// Provides the <c>OnUpdateParallel</c> callback; this implementation performs no work.
+        /// </summary>
         [INLINE(256)]
         public void OnUpdateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData, float dt) {
             
         }
 
+        /// <summary>
+        /// Releases the resources owned by this draw mesh provider instance.
+        /// </summary>
         [INLINE(256)]
         public void Dispose(safe_ptr<State> state, safe_ptr<ViewsModuleData> data) {
 
@@ -373,6 +466,9 @@ namespace ME.BECS.Views {
             
         }
         
+        /// <summary>
+        /// Loads the registered data required by this operation.
+        /// </summary>
         public void Load(safe_ptr<ViewsModuleData> viewsModuleData, ObjectReferenceRegistryData data) {
 
             viewsModuleData.ptr->prefabId = math.max(viewsModuleData.ptr->prefabId, data.GetSourceId());
@@ -385,6 +481,9 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Registers the supplied instance or type for subsequent lookup.
+        /// </summary>
         public void Register(safe_ptr<ViewsModuleData> viewsModuleData, EntityView prefab, ObjectItem prefabItem, uint prefabId = 0u) {
 
             if ((((ViewObjectItemData)prefabItem.data).info.supportedProviders & 1u << (int)ViewsModule.DRAW_MESH_PROVIDER_ID) == 0) {
@@ -395,6 +494,9 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Registers the supplied instance or type for subsequent lookup.
+        /// </summary>
         public ViewSource Register(safe_ptr<ViewsModuleData> viewsModuleData, EntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false) {
 
             ViewSource viewSource;

@@ -20,6 +20,9 @@ namespace ME.BECS.Views.Editor {
     using ME.BECS.Editor;
     using UnityEngine;
 
+    /// <summary>
+    /// Draws avatar animator data values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(InstantiateAvatarViewComponent.AnimatorData))]
     public class AvatarAnimatorDataDrawer : PropertyDrawerWithDispose {
 
@@ -35,14 +38,23 @@ namespace ME.BECS.Views.Editor {
             }
         }
 
+        /// <summary>
+        /// Provides the <c>OnEnable</c> callback; this implementation performs no work.
+        /// </summary>
         public override void OnEnable(SerializedProperty property) {
             
         }
 
+        /// <summary>
+        /// Provides the <c>OnDisable</c> callback; this implementation performs no work.
+        /// </summary>
         public override void OnDisable() {
             
         }
 
+        /// <summary>
+        /// Releases avatar animator data drawer state at the end of its owning lifecycle.
+        /// </summary>
         public override void OnDestroy() {
             this.CleanUp();
         }
@@ -64,14 +76,23 @@ namespace ME.BECS.Views.Editor {
             return $"#{index}: {name}";
         }
 
+        /// <summary>
+        /// Identifies an animation clip selection and its playback data.
+        /// </summary>
         public class ClipSelection {
 
+            /// <summary>
+            /// Clip used by <c>AvatarAnimatorDataDrawer.ClipSelection</c>.
+            /// </summary>
             public AnimationClip clip;
 
         }
 
         private static Material[] pointMaterials = new Material[100];
         private static Material[] pointSelectedMaterials = new Material[100];
+        /// <summary>
+        /// Creates property.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreateProperty(SerializedProperty property) {
             
             this.LoadStyle();

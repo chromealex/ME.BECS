@@ -2,14 +2,26 @@ namespace ME.BECS.Editor {
     
     using System.Text.RegularExpressions;
 
+    /// <summary>
+    /// Expands named variables and counter-driven repetitions in source templates.
+    /// </summary>
     public class Tpl {
 
+        /// <summary>
+        /// Data consumed or produced by the containing operation.
+        /// </summary>
         public string data;
 
+        /// <summary>
+        /// Initializes <c>Tpl</c> from the supplied data.
+        /// </summary>
         public Tpl(string data) {
             this.data = data;
         }
 
+        /// <summary>
+        /// Returns the expanded template, adding counter values to the supplied variable dictionary when absent.
+        /// </summary>
         public string GetString(System.Collections.Generic.Dictionary<string, int> counters, System.Collections.Generic.Dictionary<string, string> variables) {
 
             foreach (var kv in counters) {

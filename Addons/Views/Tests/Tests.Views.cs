@@ -3,6 +3,7 @@ using NUnit.Framework;
 namespace ME.BECS.Tests {
     
     using BECS.Views;
+    using BECS.Transforms;
 
     public unsafe class Tests_Views {
 
@@ -16,6 +17,353 @@ namespace ME.BECS.Tests {
         public System.Collections.IEnumerator TearDown() {
             AllTests.Dispose();
             yield return null;
+        }
+
+        [Test]
+        public void PooledViewMovingBetweenRootsKeepsCountsBalanced() {
+            var go = new UnityEngine.GameObject("Root accounting");
+            var prefab = go.AddComponent<DefaultView>();
+            var world = World.Create(); TestInitialize(in world);
+            var views = UnsafeViewsModule<EntityView>.Create(1u, ref world, new EntityViewProvider(), WorldProperties.Default.stateProperties.EntitiesCapacity, ViewsModuleProperties.Default);
+            try {
+                var provider = views.provider.Value;
+                provider.GetType().GetField("batchPerRoot", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(provider, 1);
+                var source = views.RegisterViewSource(prefab, checkPrefab: false);
+                var a = world.NewEnt(); a.Set<ME.BECS.Transforms.TransformAspect>(); a.InstantiateView(source);
+                var b = world.NewEnt(); b.Set<ME.BECS.Transforms.TransformAspect>(); b.InstantiateView(source);
+                Batches.Apply(world); views.Update(0.01f).Complete();
+                var secondInstance = (EntityView)views.GetViewByEntity(b);
+                Assert.AreEqual(1, secondInstance.rootInfo.index);
+                a.DestroyView(); Batches.Apply(world); views.Update(0.01f).Complete();
+                b.DestroyView(); Batches.Apply(world); views.Update(0.01f).Complete();
+                b.InstantiateView(source); Batches.Apply(world); views.Update(0.01f).Complete();
+                Assert.AreSame(secondInstance, views.GetViewByEntity(b));
+                Assert.AreEqual(0, secondInstance.rootInfo.index);
+                b.DestroyView(); Batches.Apply(world); views.Update(0.01f).Complete();
+                var roots = (System.Collections.IEnumerable)provider.GetType().GetField("roots", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(provider);
+                foreach (ViewRoot root in roots) Assert.AreEqual(0, root.Count);
+            } finally {
+                views.Dispose(); world.Dispose(); UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [UnityEngine.TestTools.UnityTest]
+        public System.Collections.IEnumerator DisposedActiveProviderDoesNotRetainModules() => VerifyDisposedModuleCollection(pooled: false);
+
+        [UnityEngine.TestTools.UnityTest]
+        public System.Collections.IEnumerator DisposedPooledProviderDoesNotRetainModules() => VerifyDisposedModuleCollection(pooled: true);
+
+        private static System.Collections.IEnumerator VerifyDisposedModuleCollection(bool pooled) {
+            using var name = new TrackerNameScope(typeof(LifecycleProbe));
+            LifecycleProbe.ResetCounts();
+            var references = CreateAndDisposeTrackedViews(pooled);
+            // Leave the destruction call stack and let the Editor release its per-frame references.
+            yield return null;
+            System.GC.Collect();
+            System.GC.WaitForPendingFinalizers();
+            System.GC.Collect();
+            Assert.IsFalse(references[0].IsAlive, "Disposed provider retains the prefab module.");
+            Assert.IsFalse(references[1].IsAlive, "Disposed provider retains the instance module.");
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static System.WeakReference[] CreateAndDisposeTrackedViews(bool pooled) {
+            var go = new UnityEngine.GameObject("Handle lifetime");
+            var prefab = CreateLifecyclePrefab(go);
+            var world = World.Create(); TestInitialize(in world);
+            var views = UnsafeViewsModule<EntityView>.Create(1u, ref world, new EntityViewProvider(), WorldProperties.Default.stateProperties.EntitiesCapacity, ViewsModuleProperties.Default);
+            try {
+                var source = views.RegisterViewSource(prefab, checkPrefab: false);
+                var ent = world.NewEnt(); ent.Set<ME.BECS.Transforms.TransformAspect>(); ent.InstantiateView(source);
+                Batches.Apply(world); views.Update(0.01f).Complete();
+                var instance = (EntityView)views.GetViewByEntity(ent);
+                var refs = new[] { new System.WeakReference(prefab.GetModule<LifecycleProbe>()), new System.WeakReference(instance.GetModule<LifecycleProbe>()) };
+                if (pooled == true) { ent.DestroyView(); Batches.Apply(world); views.Update(0.01f).Complete(); }
+                return refs;
+            } finally {
+                views.Dispose(); world.Dispose(); UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void GameObjectAssignmentChainKeepsInstancesAndDoesNotReenable(bool reverseIds) {
+            using var name = new TrackerNameScope(typeof(LifecycleProbe));
+            LifecycleProbe.ResetCounts();
+            var go = new UnityEngine.GameObject("Assignment chain");
+            var prefab = CreateLifecyclePrefab(go);
+            var world = World.Create(); TestInitialize(in world);
+            var properties = ViewsModuleProperties.Default; properties.spawnLimitPerFrame = 1;
+            var views = UnsafeViewsModule<EntityView>.Create(1u, ref world, new EntityViewProvider(), WorldProperties.Default.stateProperties.EntitiesCapacity, properties);
+            try {
+                var low = world.NewEnt(); var high = world.NewEnt(); var b = world.NewEnt();
+                var a = reverseIds == true ? low : high; var x = reverseIds == true ? high : low;
+                var source = views.RegisterViewSource(prefab, checkPrefab: false);
+                foreach (var ent in new[] { a, b, x }) ent.Set<ME.BECS.Transforms.TransformAspect>();
+                a.InstantiateView(source); b.InstantiateView(source); Batches.Apply(world);
+                views.Update(0.01f).Complete(); views.Update(0.01f).Complete();
+                var aView = views.GetViewByEntity(a); var bView = views.GetViewByEntity(b);
+                var aLocal = aView.GetViewData().localViewEnt; var bLocal = bView.GetViewData().localViewEnt;
+                Assert.IsTrue(x.AssignView(a)); Assert.IsTrue(a.AssignView(b)); Batches.Apply(world);
+                views.Update(0.01f).Complete();
+                Assert.AreSame(aView, views.GetViewByEntity(x)); Assert.AreSame(bView, views.GetViewByEntity(a));
+                Assert.AreEqual(aLocal, views.GetViewByEntity(x).GetViewData().localViewEnt);
+                Assert.AreEqual(bLocal, views.GetViewByEntity(a).GetViewData().localViewEnt);
+                Assert.AreEqual(2, LifecycleProbe.enabledCount); Assert.AreEqual(0, LifecycleProbe.disabledCount);
+            } finally {
+                views.Dispose(); world.Dispose(); UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        private sealed class TrackerNameScope : System.IDisposable {
+            private readonly System.Type type;
+            private readonly bool existed;
+            private readonly string oldName;
+            public TrackerNameScope(System.Type type) {
+                this.type = type;
+                this.existed = ViewsTracker.Tracker.names.TryGetValue(type, out this.oldName);
+                ViewsTracker.Tracker.names[type] = type.Name;
+            }
+            public void Dispose() {
+                if (this.existed == true) {
+                    ViewsTracker.Tracker.names[this.type] = this.oldName;
+                } else {
+                    ViewsTracker.Tracker.names.Remove(this.type);
+                }
+            }
+        }
+
+        [System.Serializable]
+        public class LifecycleProbe : IViewInitialize, IViewEnableFromPool, IViewDisableToPool, IViewDeInitialize, IViewUpdateParallel {
+            public static int initialized, enabledCount, disabledCount, deinitialized, parallelCalls;
+            private bool initializedState;
+            private bool enabledState;
+            public static void ResetCounts() { initialized = enabledCount = disabledCount = deinitialized = parallelCalls = 0; }
+            public void OnInitialize() { Assert.IsFalse(this.initializedState); this.initializedState = true; ++initialized; }
+            public void OnEnableFromPool(in ViewData data) {
+                Assert.IsTrue(this.initializedState);
+                Assert.IsFalse(this.enabledState, "Enable must be paired with Disable.");
+                this.enabledState = true;
+                ++enabledCount;
+            }
+            public void OnDisableToPool() {
+                Assert.IsTrue(this.enabledState, "Disable must not run before Enable or run twice.");
+                this.enabledState = false;
+                ++disabledCount;
+            }
+            public void OnDeInitialize() {
+                Assert.IsTrue(this.initializedState);
+                Assert.IsFalse(this.enabledState);
+                this.initializedState = false;
+                ++deinitialized;
+            }
+            public void OnUpdateParallel(in ViewData data, float dt) { System.Threading.Interlocked.Increment(ref parallelCalls); }
+        }
+
+        private static DefaultView CreateLifecyclePrefab(UnityEngine.GameObject go) {
+            var prefab = go.AddComponent<DefaultView>();
+            prefab.modules.items = new[] { new ViewModules.Module() { enabled = true, module = new LifecycleProbe() } };
+            prefab.OnValidate();
+            return prefab;
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        public void ModuleLifecycleAndParallelUpdateSurvivePooling(int scenario) {
+            using var name = new TrackerNameScope(typeof(LifecycleProbe));
+            LifecycleProbe.ResetCounts();
+            var go = new UnityEngine.GameObject("Lifecycle");
+            var prefab = CreateLifecyclePrefab(go);
+            var world = World.Create();
+            TestInitialize(in world);
+            var views = UnsafeViewsModule<EntityView>.Create(1u, ref world, new EntityViewProvider(), WorldProperties.Default.stateProperties.EntitiesCapacity, ViewsModuleProperties.Default);
+            try {
+                var source = views.RegisterViewSource(prefab, checkPrefab: false);
+                var ent = world.NewEnt();
+                ent.Set<ME.BECS.Transforms.TransformAspect>();
+                ent.InstantiateView(source);
+                Batches.Apply(world);
+                views.Update(0.01f).Complete();
+                Assert.AreEqual(1, LifecycleProbe.parallelCalls, "Parallel-only modules must run.");
+                if (scenario != 2) {
+                    ent.DestroyView();
+                    Batches.Apply(world);
+                    views.Update(0.01f).Complete();
+                }
+                if (scenario == 1) {
+                    ent.InstantiateView(source);
+                    Batches.Apply(world);
+                    views.Update(0.01f).Complete();
+                }
+            } finally {
+                views.Dispose();
+                world.Dispose();
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+            Assert.AreEqual(1, LifecycleProbe.initialized);
+            Assert.AreEqual(1, LifecycleProbe.deinitialized);
+            Assert.AreEqual(scenario == 1 ? 2 : 1, LifecycleProbe.enabledCount);
+            Assert.AreEqual(LifecycleProbe.enabledCount, LifecycleProbe.disabledCount);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void GenerationReplacementDoesNotDisableReplacementBeforeEnable(bool newCustomPool) {
+            using var name = new TrackerNameScope(typeof(LifecycleProbe));
+            LifecycleProbe.ResetCounts();
+            var go = new UnityEngine.GameObject("Generation lifecycle");
+            var prefab = CreateLifecyclePrefab(go);
+            var world = World.Create();
+            TestInitialize(in world);
+            var views = UnsafeViewsModule<EntityView>.Create(1u, ref world, new EntityViewProvider(), WorldProperties.Default.stateProperties.EntitiesCapacity, ViewsModuleProperties.Default);
+            try {
+                var source = views.RegisterViewSource(prefab, checkPrefab: false);
+                var first = world.NewEnt();
+                first.Set<ME.BECS.Transforms.TransformAspect>();
+                first.InstantiateView(source);
+                Batches.Apply(world);
+                views.Update(0.01f).Complete();
+                first.Destroy();
+                Batches.Apply(world);
+                var replacement = world.NewEnt();
+                Assert.AreEqual(first.id, replacement.id);
+                Assert.AreNotEqual(first.gen, replacement.gen);
+                replacement.Set<ME.BECS.Transforms.TransformAspect>();
+                if (newCustomPool == true) replacement.Set(new ViewCustomIdComponent() { uniqueId = 99u });
+                replacement.InstantiateView(source);
+                Batches.Apply(world);
+                views.Update(0.01f).Complete();
+                Assert.AreEqual(2, LifecycleProbe.enabledCount);
+                Assert.AreEqual(1, LifecycleProbe.disabledCount);
+            } finally {
+                views.Dispose();
+                world.Dispose();
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+            Assert.AreEqual(newCustomPool == true ? 2 : 1, LifecycleProbe.initialized);
+            Assert.AreEqual(LifecycleProbe.initialized, LifecycleProbe.deinitialized);
+            Assert.AreEqual(2, LifecycleProbe.disabledCount);
+        }
+
+        [Test]
+        public void SwitchingProviderWithEqualPrefabIdsRemovesPreviousInstance() {
+            var go = UnityEngine.GameObject.CreatePrimitive(UnityEngine.PrimitiveType.Cube);
+            var prefab = go.AddComponent<DefaultView>();
+            var world = World.Create();
+            TestInitialize(in world);
+            var a = UnsafeViewsModule<EntityView>.Create(1u, ref world, new EntityViewProvider(), WorldProperties.Default.stateProperties.EntitiesCapacity, ViewsModuleProperties.Default);
+            var b = UnsafeViewsModule<EntityView>.Create(3u, ref world, new ParticlesProvider(), WorldProperties.Default.stateProperties.EntitiesCapacity, ViewsModuleProperties.Default);
+            try {
+                var first = a.provider.Value.Register(a.data, prefab, prefabId: 700u, checkPrefab: false);
+                var second = b.provider.Value.Register(b.data, prefab, prefabId: 700u, checkPrefab: false);
+                var ent = world.NewEnt();
+                ent.Set<ME.BECS.Transforms.TransformAspect>();
+                ent.InstantiateView(first);
+                Batches.Apply(world);
+                a.Update(0.01f).Complete();
+                var oldLocal = a.GetViewByEntity(ent).GetViewData().localViewEnt;
+                ent.InstantiateView(second);
+                Batches.Apply(world);
+                b.Update(0.01f).Complete();
+                a.Update(0.01f).Complete();
+                Assert.AreEqual(0u, a.data.ptr->renderingOnSceneCount);
+                Assert.AreEqual(1u, b.data.ptr->renderingOnSceneCount);
+                Assert.IsFalse(oldLocal.IsAlive());
+                Assert.IsFalse(ent.Has<EntityViewProviderTag>());
+                AssertProviderOwner(b, 3u, ent, 0);
+            } finally {
+                a.Dispose(); b.Dispose(); world.Dispose();
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void ParticlesRegisterUsesEachExplicitPrefabId() {
+            var goA = UnityEngine.GameObject.CreatePrimitive(UnityEngine.PrimitiveType.Cube);
+            var goB = UnityEngine.GameObject.CreatePrimitive(UnityEngine.PrimitiveType.Sphere);
+            var world = World.Create();
+            TestInitialize(in world);
+            var views = UnsafeViewsModule<EntityView>.Create(3u, ref world, new ParticlesProvider(), WorldProperties.Default.stateProperties.EntitiesCapacity, ViewsModuleProperties.Default);
+            try {
+                views.data.ptr->prefabId = 999u;
+                var a = views.provider.Value.Register(views.data, goA.AddComponent<DefaultView>(), prefabId: 701u, checkPrefab: false);
+                var b = views.provider.Value.Register(views.data, goB.AddComponent<DefaultView>(), prefabId: 702u, checkPrefab: false);
+                Assert.IsTrue(ProviderMap(views, "systemForPrefab").Contains(701u));
+                Assert.IsTrue(ProviderMap(views, "systemForPrefab").Contains(702u));
+                var first = world.NewEnt(); first.Set<ME.BECS.Transforms.TransformAspect>(); first.InstantiateView(a);
+                var second = world.NewEnt(); second.Set<ME.BECS.Transforms.TransformAspect>(); second.InstantiateView(b);
+                Batches.Apply(world);
+                views.Update(0.01f).Complete();
+                Assert.AreEqual(2u, views.data.ptr->renderingOnSceneCount);
+                Assert.AreEqual(701u, ProviderMap(views, "entityToPrefabId")[first]);
+                Assert.AreEqual(702u, ProviderMap(views, "entityToPrefabId")[second]);
+            } finally {
+                views.Dispose(); world.Dispose();
+                UnityEngine.Object.DestroyImmediate(goA); UnityEngine.Object.DestroyImmediate(goB);
+            }
+        }
+
+        [Test]
+        public void ChildWithoutUpdateReparentsWhenParentViewArrives() {
+            var go = new UnityEngine.GameObject("Hierarchy");
+            var prefab = go.AddComponent<DefaultView>();
+            var world = World.Create(); TestInitialize(in world);
+            var properties = ViewsModuleProperties.Default; properties.useUnityHierarchy = true; properties.interpolateState = false;
+            var views = UnsafeViewsModule<EntityView>.Create(1u, ref world, new EntityViewProvider(), WorldProperties.Default.stateProperties.EntitiesCapacity, properties);
+            try {
+                var source = views.RegisterViewSource(prefab, checkPrefab: false);
+                var parent = world.NewEnt(); parent.Set<ME.BECS.Transforms.TransformAspect>(); SetTestPosition(parent, 10);
+                var child = world.NewEnt(); child.Set<ME.BECS.Transforms.TransformAspect>();
+                child.SetParent(parent);
+                #if FIXED_POINT
+                child.Get<ME.BECS.Transforms.LocalMatrixComponent>().value = ME.BECS.FixedPoint.float4x4.Translate(new ME.BECS.FixedPoint.float3(2, 0, 0));
+                #else
+                child.Get<ME.BECS.Transforms.LocalMatrixComponent>().value = Unity.Mathematics.float4x4.Translate(new Unity.Mathematics.float3(2, 0, 0));
+                #endif
+                child.InstantiateView(source); Batches.Apply(world); views.Update(0.01f).Complete();
+                var childView = (EntityView)views.GetViewByEntity(child);
+                Assert.AreEqual(0u, views.data.ptr->renderingOnSceneUpdate.Count);
+                parent.InstantiateView(source); Batches.Apply(world); views.Update(0.01f).Complete();
+                Assert.AreSame(((EntityView)views.GetViewByEntity(parent)).transform, childView.transform.parent);
+                Assert.AreEqual(12f, childView.transform.position.x, 0.001f);
+            } finally {
+                views.Dispose(); world.Dispose(); UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void DrawMeshKeepsMaterialSlotsAndAuthoredVisibility() {
+            var go = UnityEngine.GameObject.CreatePrimitive(UnityEngine.PrimitiveType.Cube);
+            var prefab = go.AddComponent<DefaultView>();
+            var mesh = UnityEngine.Object.Instantiate(go.GetComponent<UnityEngine.MeshFilter>().sharedMesh);
+            var triangles = mesh.GetTriangles(0); mesh.subMeshCount = 2; mesh.SetTriangles(triangles, 0); mesh.SetTriangles(triangles, 1);
+            go.GetComponent<UnityEngine.MeshFilter>().sharedMesh = mesh;
+            var material = go.GetComponent<UnityEngine.MeshRenderer>().sharedMaterial;
+            var otherMaterial = new UnityEngine.Material(material);
+            go.GetComponent<UnityEngine.MeshRenderer>().sharedMaterials = new[] { material, otherMaterial };
+            var hidden = UnityEngine.GameObject.CreatePrimitive(UnityEngine.PrimitiveType.Cube); hidden.transform.SetParent(go.transform); hidden.SetActive(false);
+            var disabled = UnityEngine.GameObject.CreatePrimitive(UnityEngine.PrimitiveType.Cube); disabled.transform.SetParent(go.transform); disabled.GetComponent<UnityEngine.MeshRenderer>().enabled = false;
+            var world = World.Create(); TestInitialize(in world);
+            var views = UnsafeViewsModule<EntityView>.Create(2u, ref world, new DrawMeshProvider(), WorldProperties.Default.stateProperties.EntitiesCapacity, ViewsModuleProperties.Default);
+            try {
+                var source = views.RegisterViewSource(prefab, checkPrefab: false);
+                var ent = world.NewEnt(); ent.Set<ME.BECS.Transforms.TransformAspect>(); ent.InstantiateView(source);
+                Batches.Apply(world); views.Update(0.01f).Complete();
+                var map = ProviderMap(views, "objectsPerMeshAndMaterial");
+                Assert.AreEqual(2, map.Count);
+                var slots = new System.Collections.Generic.HashSet<int>();
+                foreach (System.Collections.DictionaryEntry pair in map) {
+                    var key = (DrawMeshProvider.Info)pair.Key; slots.Add(key.submeshIndex);
+                    Assert.AreSame(key.submeshIndex == 0 ? material : otherMaterial, key.renderParams.material);
+                    Assert.AreEqual(1, ((DrawMeshProvider.ObjectsPerInfo)pair.Value).entities.Length);
+                }
+                CollectionAssert.AreEquivalent(new[] { 0, 1 }, slots);
+                ent.DestroyView(); Batches.Apply(world); views.Update(0.01f).Complete(); AssertProviderEmpty(views, 2u);
+            } finally {
+                views.Dispose(); world.Dispose(); UnityEngine.Object.DestroyImmediate(go);
+                UnityEngine.Object.DestroyImmediate(mesh); UnityEngine.Object.DestroyImmediate(otherMaterial);
+            }
         }
 
         public class SpawnPoseView : EntityView {
@@ -457,16 +805,6 @@ namespace ME.BECS.Tests {
                 Assert.IsTrue(x.AssignView(a));
                 Assert.IsTrue(a.AssignView(b));
                 Batches.Apply(world);
-                // Resolve the two valid handoffs explicitly. Provider remapping must work
-                // for either hash-map order, independently of query iteration order.
-                var assign = new ME.BECS.Views.Jobs.JobAssignViews() {
-                    viewsWorld = views.data.ptr->viewsWorld,
-                    viewsModuleData = views.data,
-                    toAssign = views.data.ptr->toAssign.AsParallelWriter(),
-                };
-                assign.Execute(default, x, ref x.Get<AssignViewComponent>());
-                assign.Execute(default, a, ref a.Get<AssignViewComponent>());
-                Assert.AreEqual(2, views.data.ptr->toAssign.Count());
                 SetTestPosition(x, 11);
                 SetTestPosition(a, 22);
                 if (removeFirstDestination == true) x.DestroyView();

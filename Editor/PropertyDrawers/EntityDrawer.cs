@@ -10,6 +10,9 @@ using static ME.BECS.Cuts;
 
 namespace ME.BECS.Editor {
 
+    /// <summary>
+    /// Draws entity values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(Ent))]
     public unsafe class EntityDrawer : PropertyDrawer {
         // A controller belongs to a visual tree, not to the cached PropertyDrawer instance.
@@ -30,20 +33,38 @@ namespace ME.BECS.Editor {
             selectedEntity = null;
         }
         // Optional network addon supplies replay state without a runtime Network dependency.
+        /// <summary>
+        /// Replay mode resolver used by <c>EntityDrawer</c>.
+        /// </summary>
         public static Func<World, bool> ReplayModeResolver { get; set; }
+        /// <summary>
+        /// Tests whether the context can edit components.
+        /// </summary>
         public static bool CanEditComponents(Ent entity) {
             if (entity.IsEmpty() || !entity.World.isCreated || !entity.IsAlive()) return false;
             return CanEditWorld(entity.World);
         }
+        /// <summary>
+        /// Tests whether the context can edit world.
+        /// </summary>
         public static bool CanEditWorld(World world) {
             return world.isCreated && (world.state.ptr->Mode != WorldMode.Logic || ReplayModeResolver?.Invoke(world) == true);
         }
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
             var controller = new View(property);
             this.view = controller;
             return controller.root;
         }
+        /// <summary>
+        /// Sets foldout state.
+        /// </summary>
         public void SetFoldoutState(bool value) { this.view?.SetExpanded(value); }
+        /// <summary>
+        /// Updates entity drawer using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate() { this.view?.Refresh(); }
 
         private sealed class Access {
@@ -74,9 +95,15 @@ namespace ME.BECS.Editor {
                 read = ent => Components.ReadSharedDirect<T>(ent), write = (ent, value) => Components.SetSharedDirect(ent, (T)value),
                 equal = (a, b) => StructCopy((T)a, (T)b), clone = value => (T)value };
         }
+        /// <summary>
+        /// Processes structure copy.
+        /// </summary>
         public static bool StructCopy<T>(T a, T b) where T : unmanaged {
             return _memcmp(_address(ref a), _address(ref b), TSize<T>.size) == 0;
         }
+        /// <summary>
+        /// Compares two boxed structures using their serialized field values.
+        /// </summary>
         public static bool StructsAreEqual(object a, object b) {
             if (a == null || b == null) return a == b;
             if (a.GetType() != b.GetType()) return false;
@@ -120,7 +147,14 @@ namespace ME.BECS.Editor {
             }
             public void Refresh() {
                 if (this.disposed || !this.owner.Alive || !this.access.has(this.owner.entity)) return;
-                this.element.EnableInClassList("runtime-component-disabled", !this.access.enabled(this.owner.entity));
+                var disabled = this.access.enabled(this.owner.entity) == false;
+                this.element.EnableInClassList("runtime-component-disabled", disabled);
+                var title = EditorUtils.GetComponentName(this.type) + (disabled == true ? " (Disabled)" : string.Empty);
+                if (this.foldout != null) {
+                    this.foldout.text = title;
+                } else {
+                    ((Label)this.element).text = title;
+                }
                 if (this.editable != this.owner.Editable) {
                     this.editable = this.owner.Editable;
                     foreach (var control in this.controls) this.ApplyEditability(control);
@@ -198,7 +232,10 @@ namespace ME.BECS.Editor {
                         }
                         navigation = navigation.parent;
                     }
-                    if (nestedInspector == false) input.SetEnabled(this.owner.Editable);
+                    if (nestedInspector == false) {
+                        input.EnableInClassList("runtime-readonly-field", this.owner.Editable == false);
+                        input.SetEnabled(this.owner.Editable);
+                    }
                 }
                 control.Query<Button>().ForEach(button => {
                     var parent = button.parent;
@@ -360,7 +397,7 @@ namespace ME.BECS.Editor {
                 var worldName = world.isCreated ? world.Name.ToString() : "Unavailable world";
                 this.metadata.text = ent.IsEmpty() ? "Entity is empty" :
                     $"ID {ent.id}  ·  Gen {ent.gen}  ·  {worldName} (#{ent.worldId})" +
-                    (alive ? $"  ·  v{ent.Version}" + (this.Editable ? "" : "  ·  Read only") : "  ·  Not alive");
+                    (alive ? $"  ·  v{ent.Version}" + (ent.IsActive() == false ? "  ·  Disabled" : "") + (this.Editable ? "" : "  ·  Read only") : "  ·  Not alive");
                 this.reference.tooltip = this.reference.text + "\n" + this.metadata.text;
                 if (!alive) { this.ClearRows(); return; }
                 if (!this.header.value) return;

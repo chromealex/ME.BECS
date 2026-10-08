@@ -9,6 +9,9 @@ namespace ME.BECS.Commands {
     using Pathfinding;
     using Unity.Collections;
 
+    /// <summary>
+    /// Provides helper operations for commands.
+    /// </summary>
     public static class CommandsUtils {
 
         /// <summary>

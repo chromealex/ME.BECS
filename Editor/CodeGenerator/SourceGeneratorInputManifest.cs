@@ -7,6 +7,9 @@ namespace ME.BECS.Editor {
     using System.Linq;
     using System.Text;
 
+    /// <summary>
+    /// Provides input manifest for BECS source-generator publication.
+    /// </summary>
     public static class SourceGeneratorInputManifest {
         internal static Type[] OrderFeederTypes(IEnumerable<Type> types) => types
             .Where(type => typeof(CustomCodeGenerator).IsAssignableFrom(type) && !type.IsAbstract && !type.ContainsGenericParameters)
@@ -403,6 +406,9 @@ namespace ME.BECS.Editor {
                 ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(payload) + "\n";
         }
 
+        /// <summary>
+        /// Attempts to get partial delta time method and reports whether the operation succeeded.
+        /// </summary>
         public static bool TryGetPartialDeltaTimeMethod(System.Reflection.FieldInfo field, out string call) {
             call = null;
             var owner = field.DeclaringType;
@@ -420,13 +426,22 @@ namespace ME.BECS.Editor {
 
         // Optional addon transport: only Type identities and compilation owners,
         // never executable code or a core-to-Views assembly reference.
+        /// <summary>
+        /// Appends view publication owners.
+        /// </summary>
         public static void AppendViewPublicationOwners(StringBuilder manifest, Type[] components, (Type type, bool module)[] trackers,
                                                        Type[] views, Type addonContract, bool editor) =>
             SourceGeneratorRegistrationOwners.AppendViews(manifest, components, trackers, views, addonContract, editor);
 
+        /// <summary>
+        /// Attempts to get private system injection method and reports whether the operation succeeded.
+        /// </summary>
         public static bool TryGetPrivateSystemInjectionMethod(System.Reflection.FieldInfo field, out string call) =>
             TryGetPartialInjectionMethod(field, out call, allowPublic: false);
 
+        /// <summary>
+        /// Attempts to get partial injection method and reports whether the operation succeeded.
+        /// </summary>
         public static bool TryGetPartialInjectionMethod(System.Reflection.FieldInfo field, out string call, bool allowPublic = true) {
             call = null;
             var owner = field.DeclaringType;
@@ -442,6 +457,9 @@ namespace ME.BECS.Editor {
             return true;
         }
 
+        /// <summary>
+        /// Returns closed type name.
+        /// </summary>
         public static string GetClosedTypeName(Type type) {
             if (type.IsArray) return GetClosedTypeName(type.GetElementType()) + "[" + new string(',', type.GetArrayRank() - 1) + "]";
             if (type.IsPointer) return GetClosedTypeName(type.GetElementType()) + "*";
@@ -474,19 +492,43 @@ namespace ME.BECS.Editor {
         }
 
         // Shared by the core exporter and Features.Editor without a reverse assembly dependency.
+        /// <summary>
+        /// Defines graph system input state and operations for <c>SourceGeneratorInputManifest</c>.
+        /// </summary>
         public readonly struct GraphSystemInput {
+            /// <summary>
+            /// Type descriptor used by the associated operation.
+            /// </summary>
             public readonly Type type;
+            /// <summary>
+            /// Graph used by the associated operation.
+            /// </summary>
             public readonly ME.BECS.FeaturesGraph.SystemsGraph graph;
+            /// <summary>
+            /// Node index used to locate the associated entry.
+            /// </summary>
             public readonly int nodeIndex;
+            /// <summary>
+            /// Whether use default behavior or state is selected.
+            /// </summary>
             public readonly bool useDefault;
+            /// <summary>
+            /// Initializes <c>GraphSystemInput</c> from the supplied type, graph, node index, use default.
+            /// </summary>
             public GraphSystemInput(Type type, ME.BECS.FeaturesGraph.SystemsGraph graph, int nodeIndex, bool useDefault) {
                 this.type = type; this.graph = graph; this.nodeIndex = nodeIndex; this.useDefault = useDefault;
             }
         }
 
+        /// <summary>
+        /// Returns systems count.
+        /// </summary>
         public static int GetSystemsCount(ME.BECS.FeaturesGraph.SystemsGraph graph) =>
             GetGraphSystems(graph).Count;
 
+        /// <summary>
+        /// Returns graph systems.
+        /// </summary>
         public static List<GraphSystemInput> GetGraphSystems(ME.BECS.FeaturesGraph.SystemsGraph graph) {
             var result = new List<GraphSystemInput>();
             CollectGraphSystems(graph, new HashSet<ME.BECS.FeaturesGraph.SystemsGraph>(), result);

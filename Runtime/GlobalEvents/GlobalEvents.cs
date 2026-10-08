@@ -12,30 +12,54 @@ namespace ME.BECS {
     using Unity.Jobs;
     using static Cuts;
 
+    /// <summary>
+    /// Defines registry caller base state and operations.
+    /// </summary>
     public abstract class RegistryCallerBase {
 
+        /// <summary>
+        /// Invokes the registered callback with the supplied arguments.
+        /// </summary>
         public abstract void Call(safe_ptr data);
 
+        /// <summary>
+        /// Provides the <c>Add</c> callback; this implementation performs no work.
+        /// </summary>
         public virtual void Add(System.Delegate callback) {
             
         }
 
+        /// <summary>
+        /// Removes the specified entry from registry caller base.
+        /// </summary>
         public virtual bool Remove(System.Delegate callback) {
             return false;
         }
 
     }
 
+    /// <summary>
+    /// Defines registry caller state and operations.
+    /// </summary>
     public unsafe class RegistryCaller<T> : RegistryCallerBase where T : unmanaged {
 
+        /// <summary>
+        /// Callback invoked for callback.
+        /// </summary>
         public GlobalEventWithDataCallback<T> callback;
 
+        /// <summary>
+        /// Adds the supplied entry to registry caller.
+        /// </summary>
         public override void Add(System.Delegate callback) {
 
             this.callback += (GlobalEventWithDataCallback<T>)callback;
 
         }
 
+        /// <summary>
+        /// Removes the specified entry from registry caller.
+        /// </summary>
         public override bool Remove(System.Delegate callback) {
 
             this.callback -= (GlobalEventWithDataCallback<T>)callback;
@@ -43,22 +67,37 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Invokes the registered callback with the supplied arguments.
+        /// </summary>
         public override void Call(safe_ptr data) {
             this.callback?.Invoke(*(T*)data.ptr);
         }
 
     }
 
+    /// <summary>
+    /// Defines registry caller state and operations.
+    /// </summary>
     public class RegistryCaller : RegistryCallerBase {
 
+        /// <summary>
+        /// Callback invoked for callback.
+        /// </summary>
         public GlobalEventCallback callback;
 
+        /// <summary>
+        /// Adds the supplied entry to registry caller.
+        /// </summary>
         public override void Add(System.Delegate callback) {
 
             this.callback += (GlobalEventCallback)callback;
 
         }
 
+        /// <summary>
+        /// Removes the specified entry from registry caller.
+        /// </summary>
         public override bool Remove(System.Delegate callback) {
 
             this.callback -= (GlobalEventCallback)callback;
@@ -66,28 +105,52 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Invokes the registered callback with the supplied arguments.
+        /// </summary>
         public override void Call(safe_ptr data) {
             this.callback?.Invoke();
         }
 
     }
 
+    /// <summary>
+    /// Stores the data and callbacks used by global events.
+    /// </summary>
     public struct GlobalEventsData {
 
+        /// <summary>
+        /// Stores a item record used by <c>GlobalEventsData</c>.
+        /// </summary>
         public struct Item {
 
+            /// <summary>
+            /// Data consumed or produced by the containing operation.
+            /// </summary>
             public safe_ptr data;
 
         }
         
+        /// <summary>
+        /// Events queued or stored by this operation.
+        /// </summary>
         public NativeHashMap<Event, Item> events;
+        /// <summary>
+        /// Spin lock used to coordinate access to this state.
+        /// </summary>
         public LockSpinner spinner;
 
+        /// <summary>
+        /// Acquires the synchronization lock before accessing protected state.
+        /// </summary>
         [INLINE(256)]
         public void Lock() {
             this.spinner.Lock();
         }
         
+        /// <summary>
+        /// Releases the synchronization lock after accessing protected state.
+        /// </summary>
         [INLINE(256)]
         public void Unlock() {
             this.spinner.Unlock();
@@ -95,24 +158,51 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Stores or dispatches events associated with a world.
+    /// </summary>
     public class WorldEvents {
 
+        /// <summary>
+        /// Events queued or stored by this operation.
+        /// </summary>
         public static readonly SharedStatic<Internal.Array<GlobalEventsData>> events = SharedStatic<Internal.Array<GlobalEventsData>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldEvents>(TAlign<Internal.Array<GlobalEventsData>>.align, 30100L);
+        /// <summary>
+        /// Read-only access to write spinner.
+        /// </summary>
         public static readonly SharedStatic<ReadWriteNativeSpinner> readWriteSpinner = SharedStatic<ReadWriteNativeSpinner>.GetOrCreatePartiallyUnsafeWithHashCode<WorldEvents>(TAlign<ReadWriteNativeSpinner>.align, 30101L);
+        /// <summary>
+        /// Evt to callers used by <c>WorldEvents</c>.
+        /// </summary>
         public static System.Collections.Generic.Dictionary<Event, RegistryCallerBase>[] evtToCallers;
 
     }
 
+    /// <summary>
+    /// Defines the callback signature for global event with data callback.
+    /// </summary>
     public delegate void GlobalEventWithDataCallback<T>(T data) where T : unmanaged;
+    /// <summary>
+    /// Defines the callback signature for global event callback.
+    /// </summary>
     public delegate void GlobalEventCallback();
 
+    /// <summary>
+    /// Dispatches registered world-associated callbacks through the global event infrastructure.
+    /// </summary>
     public static unsafe class GlobalEvents {
 
+        /// <summary>
+        /// Initializes global events state from the supplied context.
+        /// </summary>
         public static void Initialize() {
             Dispose();
             WorldEvents.readWriteSpinner.Data = ReadWriteNativeSpinner.Create(Constants.ALLOCATOR_PERSISTENT);
         }
 
+        /// <summary>
+        /// Releases the resources owned by this global events instance.
+        /// </summary>
         public static void Dispose() {
             if (WorldEvents.readWriteSpinner.Data.IsCreated == true) WorldEvents.readWriteSpinner.Data.Dispose();
             ref var items = ref WorldEvents.events.Data;
@@ -120,6 +210,9 @@ namespace ME.BECS {
             WorldEvents.evtToCallers = null;
         }
 
+        /// <summary>
+        /// Releases the resources registered for the specified world.
+        /// </summary>
         public static void DisposeWorld(ushort worldId) {
             if (WorldEvents.evtToCallers == null) return;
             ref var dic = ref WorldEvents.evtToCallers[worldId];
@@ -294,12 +387,24 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Owns an ECS simulation state, entity storage and scheduled system work.
+    /// </summary>
     public partial struct World {
 
+        /// <summary>
+        /// Executes global events process work through the job scheduler.
+        /// </summary>
         public unsafe partial struct GlobalEventsProcessJob : IJob {
 
+            /// <summary>
+            /// Identifier of the world whose state this value addresses.
+            /// </summary>
             public ushort worldId;
             
+            /// <summary>
+            /// Processes global events process using the supplied job inputs.
+            /// </summary>
             public void Execute() {
                 
                 WorldEvents.readWriteSpinner.Data.ReadBegin();
@@ -337,6 +442,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Raises events.
+        /// </summary>
         [INLINE(256)]
         public readonly JobHandle RaiseEvents(JobHandle dependsOn) {
             

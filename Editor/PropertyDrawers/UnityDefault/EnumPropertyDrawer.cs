@@ -14,13 +14,28 @@ namespace ME.BECS.Editor {
      * public class YOUR_ENUMPropertyDrawer : EnumPropertyDrawer<YOUR_ENUM> { }
      */
 
+    /// <summary>
+    /// Draws enum property values in the Unity Inspector.
+    /// </summary>
     public class EnumPropertyDrawer<T> : PropertyDrawer where T : Enum {
         private static readonly System.Collections.Generic.List<T> _enumValues = Enum.GetValues(typeof(T)).OfType<T>().ToList();
 
+        /// <summary>
+        /// Custom name used by <c>EnumPropertyDrawer</c>.
+        /// </summary>
         public string customName;
+        /// <summary>
+        /// Callback invoked for value set.
+        /// </summary>
         public Func<T, T> onValueSet;
+        /// <summary>
+        /// Callback invoked for value changed.
+        /// </summary>
         public Func<T, T> onValueChanged;
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             var root = new VisualElement();

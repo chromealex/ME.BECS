@@ -15,12 +15,27 @@ namespace ME.BECS.Pathfinding {
     #endif
     using ME.BECS.Transforms;
 
+    /// <summary>
+    /// Filters candidates according to the nearest position to attack filter condition.
+    /// </summary>
     public struct NearestPositionToAttackFilter : ME.BECS.Pathfinding.IFilter {
 
+        /// <summary>
+        /// Source pos used by the associated spatial operation.
+        /// </summary>
         public float3 sourcePos;
+        /// <summary>
+        /// Target pos used by the associated spatial operation.
+        /// </summary>
         public float3 targetPos;
+        /// <summary>
+        /// Squared range used for distance comparisons without a square root.
+        /// </summary>
         public tfloat rangeSqr;
         
+        /// <summary>
+        /// Tests whether the context is valid.
+        /// </summary>
         [INLINE(256)]
         public bool IsValid(in ME.BECS.Pathfinding.NodeInfo info, in ME.BECS.Pathfinding.RootGraphComponent root) {
 
@@ -37,8 +52,14 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    /// <summary>
+    /// Provides helper operations for graph.
+    /// </summary>
     public static class GraphUtils {
 
+        /// <summary>
+        /// Returns building heights.
+        /// </summary>
         [INLINE(256)]
         public static MemArrayAuto<float> GetBuildingHeights(in Ent ent, float height, uint2 size, out uint sizeX) {
 
@@ -57,6 +78,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Aligns a world position to the graph grid for the requested footprint.
+        /// </summary>
         [INLINE(256)]
         public static float3 SnapWorldPosition(in Ent graph, float3 worldPosition, uint2 size) {
 
@@ -89,6 +113,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Computes the placement offset for the requested grid footprint.
+        /// </summary>
         [INLINE(256)]
         public static float2 SizeOffset(uint2 size) {
 
@@ -104,6 +131,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Queries geometry intersected by the supplied ray and reports the matching hit.
+        /// </summary>
         [INLINE(256)]
         public static bool Raycast(in BuildGraphSystem system, in float3 position, in float3 direction, tfloat distance, out float3 hitPoint, byte minCost, byte maxCost, bool debug = false) {
 
@@ -117,6 +147,9 @@ namespace ME.BECS.Pathfinding {
             
         }
 
+        /// <summary>
+        /// Queries geometry intersected by the supplied ray and reports the matching hit.
+        /// </summary>
         [INLINE(256)]
         public static bool Raycast(in Ent graph, in float3 position, in float3 direction, tfloat distance, out float3 hitPoint, byte minCost, byte maxCost, bool debug = false) {
             
@@ -189,6 +222,9 @@ namespace ME.BECS.Pathfinding {
             
         }
         
+        /// <summary>
+        /// Tests whether the context is graph mask valid.
+        /// </summary>
         [INLINE(256)]
         public static bool IsGraphMaskValid(in BuildGraphSystem system, in float3 position, in quaternion rotation, uint2 size, byte minCost, byte maxCost) {
 
@@ -201,6 +237,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Tests whether the context is graph mask valid.
+        /// </summary>
         [INLINE(256)]
         public static bool IsGraphMaskValid(in Ent graph, in float3 position, in quaternion rotation, uint2 size, byte minCost, byte maxCost) {
 
@@ -228,6 +267,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Destroys graph mask.
+        /// </summary>
         [INLINE(256)]
         public static void DestroyGraphMask(in Ent ent) {
 
@@ -235,6 +277,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Creates graph mask.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateGraphMask(in float3 position, in quaternion rotation, uint2 size, byte cost = Graph.UNWALKABLE, ObstacleChannel obstacleChannel = default, bool ignoreGraphRadius = false, int graphMask = -1, in JobInfo jobInfo = default) {
 
@@ -243,6 +288,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Creates graph mask.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateGraphMask(in Ent ent, in float3 position, in quaternion rotation, uint2 size, byte cost = Graph.UNWALKABLE, ObstacleChannel obstacleChannel = default, bool ignoreGraphRadius = false, int graphMask = -1) {
 
@@ -252,6 +300,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Creates graph mask.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateGraphMask(in float3 position, in quaternion rotation, uint2 size, byte cost, tfloat height, ObstacleChannel obstacleChannel = default, bool ignoreGraphRadius = false, int graphMask = -1, in JobInfo jobInfo = default) {
 
@@ -260,6 +311,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Creates graph mask.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateGraphMask(in Ent ent, in float3 position, in quaternion rotation, uint2 size, byte cost, tfloat height, ObstacleChannel obstacleChannel = default, bool ignoreGraphRadius = false, int graphMask = -1) {
 
@@ -269,6 +323,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Creates graph mask.
+        /// </summary>
         [INLINE(256)]
         public static Ent CreateGraphMask(in Ent ent, in float3 position, in quaternion rotation, uint2 size, byte cost, ObstacleChannel obstacleChannel, bool ignoreGraphRadius, MemArrayAuto<tfloat> heights, uint heightsSizeX, int graphMask) {
 
@@ -296,6 +353,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Returns position with map borders node.
+        /// </summary>
         [INLINE(256)]
         public static unsafe bool GetPositionWithMapBordersNode(out NodeInfo node, in Ent graph, in float3 newPos) {
 
@@ -322,14 +382,29 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Defines temp node traverse state and operations for <c>GraphUtils</c>.
+        /// </summary>
         public struct TempNodeTraverse {
 
+            /// <summary>
+            /// Node processed or represented by this entry.
+            /// </summary>
             public Graph.TempNode node;
+            /// <summary>
+            /// Side used by <c>GraphUtils.TempNodeTraverse</c>.
+            /// </summary>
             public Side side;
+            /// <summary>
+            /// Coord used by <c>GraphUtils.TempNodeTraverse</c>.
+            /// </summary>
             public int2 coord;
 
         }
 
+        /// <summary>
+        /// Returns nearest node by filter.
+        /// </summary>
         [INLINE(256)]
         public static unsafe float3 GetNearestNodeByFilter<T>(in Ent graph, in float3 position, T filter) where T : struct, IFilter {
 
@@ -384,6 +459,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Returns position with map borders.
+        /// </summary>
         [INLINE(256)]
         public static float3 GetPositionWithMapBorders(in Ent graph, out float3 collisionDirection, in float3 newPos, in float3 prevPos, in Filter filter = default) {
 
@@ -432,6 +510,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Returns position with map borders clamp.
+        /// </summary>
         [INLINE(256)]
         public static bool GetPositionWithMapBordersClamp(in Ent graph, in float3 newPos, in float3 prevPos, out float3 result, in Filter filter = default) {
 
@@ -449,6 +530,9 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Returns obstacle height.
+        /// </summary>
         [INLINE(256)]
         public static tfloat GetObstacleHeight(in float3 localObstaclePosition, in MemArrayAuto<tfloat> obstacleHeights, in float2 obstacleSize, uint obstacleHeightsSizeX) {
             var obstacleHeightsSizeY = obstacleHeights.Length / obstacleHeightsSizeX;
@@ -461,6 +545,9 @@ namespace ME.BECS.Pathfinding {
             return obstacleHeights[(uint)y * obstacleHeightsSizeX + (uint)x];
         }
 
+        /// <summary>
+        /// Returns obstacle height.
+        /// </summary>
         [INLINE(256)]
         public static tfloat GetObstacleHeight(float3 localObstaclePosition, tfloat[] obstacleHeights, in float2 obstacleSize, uint obstacleHeightsSizeX) {
             var x = (int)(localObstaclePosition.x / obstacleSize.x * obstacleHeightsSizeX);

@@ -11,8 +11,14 @@ namespace ME.BECS {
     using static Cuts;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
+    /// <summary>
+    /// Collects component mutations and applies structural changes to world storage.
+    /// </summary>
     public unsafe partial struct Batches {
 
+        /// <summary>
+        /// Returns shared.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static ref T GetShared<T>(in Ent ent, safe_ptr<State> state, uint hash = 0u) where T : unmanaged, IComponentShared {
 
@@ -25,6 +31,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Reads shared.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static ref readonly T ReadShared<T>(in Ent ent, safe_ptr<State> state, uint hash = 0u) where T : unmanaged, IComponentShared {
 
@@ -32,6 +41,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Sets shared.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool SetShared<T>(in Ent ent, in T data, safe_ptr<State> state, uint hash = 0u) where T : unmanaged, IComponentShared {
 
@@ -45,6 +57,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Sets shared.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool SetShared(in Ent ent, uint groupId, void* data, uint dataSize, uint typeId, uint sharedTypeId, safe_ptr<State> state, uint hash) {
 
@@ -57,6 +72,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Sets shared.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool SetShared(in Ent ent, uint groupId, void* data, uint dataSize, uint typeId, uint sharedTypeId, safe_ptr<State> state, uint hash, out safe_ptr dataPtr) {
 
@@ -69,6 +87,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Removes shared.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool RemoveShared<T>(in Ent ent, safe_ptr<State> state, uint hash = 0u) where T : unmanaged, IComponentShared {
 
@@ -82,6 +103,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Tests whether the context has shared.
+        /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static bool HasShared<T>(in Ent ent, safe_ptr<State> state, uint hash = 0u) where T : unmanaged, IComponentShared {
 

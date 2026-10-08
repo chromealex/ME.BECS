@@ -16,12 +16,21 @@ namespace ME.BECS {
     using ME.BECS.Jobs;
     using ME.BECS.Transforms;
 
+    /// <summary>
+    /// Groups octree components for change tracking and queries.
+    /// </summary>
     public struct OctreeComponentGroup {
 
+        /// <summary>
+        /// Color used to render or identify this value.
+        /// </summary>
         public static UnityEngine.Color color = UnityEngine.Color.yellow;
 
     }
     
+    /// <summary>
+    /// Defines configuration-backed entity data for octree query.
+    /// </summary>
     [ComponentGroup(typeof(OctreeComponentGroup))]
     public struct OctreeQuery : IConfigComponent {
 
@@ -65,42 +74,87 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Stores per-entity state for octree query has custom filter tag.
+    /// </summary>
     [ComponentGroup(typeof(OctreeComponentGroup))]
     public struct OctreeQueryHasCustomFilterTag : IComponent {}
 
+    /// <summary>
+    /// Stores per-entity state for octree result.
+    /// </summary>
     [ComponentGroup(typeof(OctreeComponentGroup))]
     public struct OctreeResult : IComponent {
 
+        /// <summary>
+        /// Destination or stored results of the associated operation.
+        /// </summary>
         public QueryResults results;
 
     }
 
+    /// <summary>
+    /// Provides typed access to the entity components used for octree query.
+    /// </summary>
     [EditorComment("Filter all entities which suitable for this query")]
     public partial struct OctreeQueryAspect : IAspect {
 
+        /// <summary>
+        /// Entity whose components or lifetime are associated with this value.
+        /// </summary>
         public Ent ent { get; set; }
 
+        /// <summary>
+        /// Native pointer or typed storage accessor for query.
+        /// </summary>
         [QueryWith]
         public AspectDataPtr<OctreeQuery> queryPtr;
+        /// <summary>
+        /// Native pointer or typed storage accessor for result.
+        /// </summary>
         public AspectDataPtr<OctreeResult> resultPtr;
 
+        /// <summary>
+        /// Query describing the candidates to process.
+        /// </summary>
         public readonly ref OctreeQuery query => ref this.queryPtr.Get(this.ent.id, this.ent.gen);
+        /// <summary>
+        /// Destination or stored results of the associated operation.
+        /// </summary>
         public readonly ref OctreeResult results => ref this.resultPtr.Get(this.ent.id, this.ent.gen);
 
+        /// <summary>
+        /// Read-only access to query.
+        /// </summary>
         public readonly ref readonly OctreeQuery readQuery => ref this.queryPtr.Read(this.ent.id, this.ent.gen);
+        /// <summary>
+        /// Read-only access to results.
+        /// </summary>
         public readonly ref readonly OctreeResult readResults => ref this.resultPtr.Read(this.ent.id, this.ent.gen);
 
     }
     
+    /// <summary>
+    /// Coordinates octree query during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [RequiredDependencies(typeof(OctreeInsertSystem))]
     public partial struct OctreeQuerySystem : IUpdate {
 
+        /// <summary>
+        /// Executes octree query system work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct Job : IJobForAspects<OctreeQueryAspect, TransformAspect> {
 
+            /// <summary>
+            /// System instance used by the associated operation.
+            /// </summary>
             public OctreeInsertSystem system;
 
+            /// <summary>
+            /// Processes the job inputs for <c>OctreeQuerySystem</c>.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref OctreeQueryAspect query, ref TransformAspect tr) {
 
                 this.system.FillNearest(ref query, in tr, new AlwaysTrueOctreeSubFilter());
@@ -109,6 +163,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Updates octree query system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var querySystem = context.world.GetSystem<OctreeInsertSystem>();

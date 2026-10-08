@@ -3,6 +3,9 @@ namespace ME.BECS.Editor {
     using UnityEngine.UIElements;
     using UnityEngine;
     
+    /// <summary>
+    /// Defines gradient animated state and operations.
+    /// </summary>
     public class GradientAnimated : VisualElement {
         
         private static CustomStyleProperty<UnityEngine.Color> leftColorProp = new CustomStyleProperty<UnityEngine.Color>("--left-color");
@@ -28,6 +31,9 @@ namespace ME.BECS.Editor {
         private static readonly Vertex[] animVerticesBack = new Vertex[4];
         private static readonly ushort[] indexes = { 0, 1, 2, 2, 3, 0 };
 
+        /// <summary>
+        /// Initializes <c>GradientAnimated</c> from the supplied defaults.
+        /// </summary>
         public GradientAnimated() {
             this.generateVisualContent += this.OnGenerateVisualContent;
             this.RegisterCallback<CustomStyleResolvedEvent>(new EventCallback<CustomStyleResolvedEvent>(this.OnCustomStyleResolved));
@@ -108,6 +114,9 @@ namespace ME.BECS.Editor {
             }
         }
 
+        /// <summary>
+        /// Starts decision-making for the associated unit state.
+        /// </summary>
         public void ThinkStart() {
             if (this.animate == true) return;
             this.animate = true;
@@ -116,12 +125,18 @@ namespace ME.BECS.Editor {
             this.updateItem.Resume();
         }
 
+        /// <summary>
+        /// Ends the current decision-making phase for the associated unit state.
+        /// </summary>
         public void ThinkEnd() {
             if (this.animate == false) return;
             this.animate = false;
             this.stopOnNext = false;
         }
         
+        /// <summary>
+        /// Runs one decision-making step for the associated unit state.
+        /// </summary>
         public void ThinkOnce() {
             if (this.animate == true) return;
             this.ThinkStart();

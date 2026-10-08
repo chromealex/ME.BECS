@@ -32,6 +32,9 @@ using System.Reflection.Emit;
 
 namespace ME.BECS.Mono.Reflection {
 
+    /// <summary>
+    /// Provides backing field resolver operations for the associated BECS data.
+    /// </summary>
     public static class BackingFieldResolver {
 
         private class FieldPattern : ILPattern {
@@ -102,6 +105,9 @@ namespace ME.BECS.Mono.Reflection {
             return (FieldInfo)value;
         }
 
+        /// <summary>
+        /// Returns backing field.
+        /// </summary>
         public static FieldInfo GetBackingField(this PropertyInfo self) {
             if (self == null) {
                 throw new ArgumentNullException("self");

@@ -3,6 +3,9 @@ using UnityEngine;
 
 namespace ME.BECS.Editor.Systems {
     
+    /// <summary>
+    /// Provides Unity Editor controls for systems graph post processor.
+    /// </summary>
     public class SystemsGraphPostProcessor : UnityEditor.AssetPostprocessor {
         
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths, bool didDomainReload) {

@@ -6,6 +6,9 @@ using UnityEditor.UIElements;
 
 namespace ME.BECS.Network.Editor {
 
+    /// <summary>
+    /// Draws network properties values in the Unity Inspector.
+    /// </summary>
     [CustomPropertyDrawer(typeof(NetworkModuleProperties))]
     public class NetworkPropertiesDrawer : PropertyDrawer {
 
@@ -17,6 +20,9 @@ namespace ME.BECS.Network.Editor {
             }
         }
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
             
             this.LoadStyle();

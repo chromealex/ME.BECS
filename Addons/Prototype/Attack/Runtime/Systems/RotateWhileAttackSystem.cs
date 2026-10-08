@@ -14,15 +14,27 @@ namespace ME.BECS.Attack {
     using ME.BECS.Jobs;
     using ME.BECS.Units;
 
+    /// <summary>
+    /// Coordinates rotate while attack during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [UnityEngine.Tooltip("Rotate unit while attacking")]
     public partial struct RotateWhileAttackSystem : IUpdate {
 
+        /// <summary>
+        /// Executes idle work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct IdleJob : IJobForAspects<UnitAspect, TransformAspect> {
 
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             public tfloat dt;
             
+            /// <summary>
+            /// Processes idle using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref TransformAspect transformAspect) {
 
                 for (uint i = 0u; i < unit.readComponentRuntime.placements.Count; ++i) {
@@ -39,11 +51,20 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Executes rotate attack sensor work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct RotateAttackSensorJob : IJobFor2Aspects1Components<AttackAspect, TransformAspect, RotateAttackSensorComponent> {
 
+            /// <summary>
+            /// Time step supplied to this update.
+            /// </summary>
             public tfloat dt;
             
+            /// <summary>
+            /// Processes rotate attack sensor using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect attack, ref TransformAspect transformAspect, ref RotateAttackSensorComponent sensor) {
 
                 var speedFactor = sensor.rotationSpeed;
@@ -70,6 +91,9 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Updates rotate while attack system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var dependsOn = context.Query().AsParallel()

@@ -2,9 +2,15 @@
 
     using UnityEngine.UIElements;
 
+    /// <summary>
+    /// Draws layer mask property values in the Unity Inspector.
+    /// </summary>
     [UnityEditor.CustomPropertyDrawer(typeof(ME.BECS.Units.LayerMask))]
     public class LayerMaskPropertyDrawer : UnityEditor.PropertyDrawer {
 
+        /// <summary>
+        /// Builds the UI Toolkit editor for the supplied serialized property.
+        /// </summary>
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(UnityEditor.SerializedProperty property) {
 
             var maskSp = property.FindPropertyRelative(nameof(ME.BECS.Units.LayerMask.mask));

@@ -6,10 +6,16 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     #endif
 
+    /// <summary>
+    /// Tracks component-group versions to detect changes for an entity.
+    /// </summary>
     public struct GroupChangedTracker {
 
         private ushort[] versionByGroup;
 
+        /// <summary>
+        /// Initializes group changed tracker state from the supplied context.
+        /// </summary>
         [INLINE(256)]
         public void Initialize(in ViewsTracker.ViewInfo tracker) {
             E.IS_ALREADY_INITIALIZED(versionByGroup);
@@ -20,6 +26,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Marks cached state as requiring recomputation.
+        /// </summary>
         [INLINE(256)]
         public readonly void Invalidate(in EntRO worldEnt, in ViewsTracker.ViewInfo tracker) {
             for (uint i = 0u; i < tracker.tracker.Length; ++i) {
@@ -27,11 +36,17 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Releases the resources owned by this group changed tracker instance.
+        /// </summary>
         [INLINE(256)]
         public readonly void Dispose() {
             System.Buffers.ArrayPool<ushort>.Shared.Return(this.versionByGroup, false);
         }
 
+        /// <summary>
+        /// Tests whether the context has changed.
+        /// </summary>
         [INLINE(256)]
         public readonly bool HasChanged(in EntRO worldEnt, in ViewsTracker.ViewInfo tracker) {
             var changed = true;

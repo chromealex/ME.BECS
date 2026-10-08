@@ -32,8 +32,14 @@ using System.Reflection;
 
 namespace ME.BECS.Mono.Reflection {
 
+    /// <summary>
+    /// Defines disassembler state and operations.
+    /// </summary>
     public static class Disassembler {
 
+        /// <summary>
+        /// Returns instructions.
+        /// </summary>
         public static IList<Instruction> GetInstructions(this MethodBase self) {
             if (self == null) {
                 throw new ArgumentNullException("self");

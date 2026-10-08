@@ -19,13 +19,22 @@ namespace ME.BECS.Attack {
     using ME.BECS.Jobs;
     using ME.BECS.Units;
 
+    /// <summary>
+    /// Coordinates stop while attack during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     [UnityEngine.Tooltip("Stop unit while attacking")]
     public partial struct StopWhileAttackSystem : IUpdate {
 
+        /// <summary>
+        /// Executes job set work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct JobSet : IJobFor1Aspects1Components<AttackAspect, ParentComponent> {
 
+            /// <summary>
+            /// Processes job set using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect sensor, ref ParentComponent parent) {
 
                 if (sensor.target.IsAlive() == true) {
@@ -40,9 +49,15 @@ namespace ME.BECS.Attack {
 
         }
         
+        /// <summary>
+        /// Executes job remove work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct JobRemove : IJobFor1Aspects1Components<AttackAspect, ParentComponent> {
 
+            /// <summary>
+            /// Processes job remove using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect sensor, ref ParentComponent parentComponent) {
 
                 var unit = parentComponent.value;
@@ -52,6 +67,9 @@ namespace ME.BECS.Attack {
 
         }
 
+        /// <summary>
+        /// Updates stop while attack system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var dependsOnSet = context.Query()

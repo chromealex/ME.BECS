@@ -15,31 +15,52 @@ namespace ME.BECS {
 
     namespace Internal {
 
+        /// <summary>
+        /// Defines array cache line state and operations.
+        /// </summary>
         [IgnoreProfiler]
         public unsafe struct ArrayCacheLine<T> where T : unmanaged {
 
+            /// <summary>
+            /// Cache line size constant used by <c>ArrayCacheLine</c>.
+            /// </summary>
             public static readonly uint CACHE_LINE_SIZE = _align(TSize<T>.size, JobUtils.CacheLineSize);
 
+            /// <summary>
+            /// Number of elements exposed by this value.
+            /// </summary>
             public readonly uint Length => JobUtils.ThreadsCount;
             internal safe_ptr ptr;
 
+            /// <summary>
+            /// Initializes array cache line state from the supplied context.
+            /// </summary>
             [INLINE(256)]
             public void Initialize() {
                 this.ptr = _make(CACHE_LINE_SIZE * this.Length);
             }
 
+            /// <summary>
+            /// Returns the requested entry from array cache line.
+            /// </summary>
             [INLINE(256)]
             public ref T Get(int index) {
                 E.RANGE(index, 0, this.Length);
                 return ref *(T*)(this.ptr + (uint)index * CACHE_LINE_SIZE).ptr;
             }
 
+            /// <summary>
+            /// Returns the requested entry from array cache line.
+            /// </summary>
             [INLINE(256)]
             public ref T Get(uint index) {
                 E.RANGE(index, 0, this.Length);
                 return ref *(T*)(this.ptr + index * CACHE_LINE_SIZE).ptr;
             }
 
+            /// <summary>
+            /// Releases the resources owned by this array cache line instance.
+            /// </summary>
             [INLINE(256)]
             public void Dispose() {
                 if (this.ptr.ptr != null) _free(this.ptr);
@@ -48,32 +69,53 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Defines array state and operations.
+        /// </summary>
         [IgnoreProfiler]
         public unsafe struct Array<T> : IIsCreated where T : unmanaged {
 
+            /// <summary>
+            /// Number of elements exposed by this value.
+            /// </summary>
             public volatile uint Length;
             internal safe_ptr<T> ptr;
             
+            /// <summary>
+            /// Whether the backing state has been initialized.
+            /// </summary>
             public bool IsCreated => this.ptr.ptr != null;
 
+            /// <summary>
+            /// Returns the requested entry from array.
+            /// </summary>
             [INLINE(256)]
             public readonly ref T Get(int index) {
                 E.RANGE(index, 0, this.Length);
                 return ref *(this.ptr + index).ptr;
             }
 
+            /// <summary>
+            /// Returns the requested entry from array.
+            /// </summary>
             [INLINE(256)]
             public readonly ref T Get(uint index) {
                 E.RANGE(index, 0, this.Length);
                 return ref *(this.ptr + index).ptr;
             }
 
+            /// <summary>
+            /// Returns the first matching entry, or the default value when none exists.
+            /// </summary>
             [INLINE(256)]
             public readonly T FirstOrDefault() {
                 if (this.Length > 0u) return this.Get(0u);
                 return default;
             }
 
+            /// <summary>
+            /// Changes the storage size to the requested element count.
+            /// </summary>
             [INLINE(256)]
             public void Resize(uint length) {
 
@@ -85,12 +127,18 @@ namespace ME.BECS {
 
             }
 
+            /// <summary>
+            /// Releases the resources owned by this array instance.
+            /// </summary>
             [INLINE(256)]
             public void Dispose() {
                 if (this.ptr.ptr != null) _free(this.ptr);
                 this = default;
             }
 
+            /// <summary>
+            /// Resolves the requested address to a native pointer.
+            /// </summary>
             [INLINE(256)]
             public safe_ptr GetPtr() {
                 return this.ptr;
@@ -98,21 +146,45 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Defines list u short state and operations.
+        /// </summary>
         [IgnoreProfiler]
         public unsafe struct ListUShort {
 
+            /// <summary>
+            /// Defines a node entry in the associated graph.
+            /// </summary>
             public struct Node {
 
+                /// <summary>
+                /// Data consumed or produced by the containing operation.
+                /// </summary>
                 public ushort data;
+                /// <summary>
+                /// Link or index of the next entry in the sequence.
+                /// </summary>
                 public safe_ptr<Node> next;
 
             }
 
+            /// <summary>
+            /// Root entry of the represented hierarchy.
+            /// </summary>
             public safe_ptr<Node> root;
+            /// <summary>
+            /// Number of entries currently tracked by this value.
+            /// </summary>
             public uint Count;
 
+            /// <summary>
+            /// Whether the backing state has been initialized.
+            /// </summary>
             public bool isCreated => this.root.ptr != null;
 
+            /// <summary>
+            /// Converts the value to array.
+            /// </summary>
             [INLINE(256)]
             public ushort[] ToArray() {
 
@@ -129,6 +201,9 @@ namespace ME.BECS {
 
             }
 
+            /// <summary>
+            /// Adds the supplied entry to list u short.
+            /// </summary>
             [INLINE(256)]
             public void Add(ushort value) {
 
@@ -158,6 +233,9 @@ namespace ME.BECS {
 
             }
 
+            /// <summary>
+            /// Removes and returns the next entry according to this container's ordering.
+            /// </summary>
             [INLINE(256)]
             public ushort Pop() {
 
@@ -170,6 +248,9 @@ namespace ME.BECS {
 
             }
 
+            /// <summary>
+            /// Removes the specified entry from list u short.
+            /// </summary>
             [INLINE(256)]
             public bool Remove(ushort value) {
 
@@ -196,6 +277,9 @@ namespace ME.BECS {
 
             }
 
+            /// <summary>
+            /// Clears the current list u short contents.
+            /// </summary>
             [INLINE(256)]
             public void Clear() {
 
@@ -211,6 +295,9 @@ namespace ME.BECS {
 
             }
 
+            /// <summary>
+            /// Releases the resources owned by this list u short instance.
+            /// </summary>
             [INLINE(256)]
             public void Dispose() {
                 this.Clear();
@@ -221,21 +308,48 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Defines world header state and operations.
+    /// </summary>
     public struct WorldHeader {
 
+        /// <summary>
+        /// World used by the containing operation.
+        /// </summary>
         public World world;
+        /// <summary>
+        /// Display or lookup name of this entry.
+        /// </summary>
         public Unity.Collections.FixedString64Bytes name;
+        /// <summary>
+        /// End tick handles lock used by <c>WorldHeader</c>.
+        /// </summary>
         public LockSpinner endTickHandlesLock;
+        /// <summary>
+        /// End tick handles used by <c>WorldHeader</c>.
+        /// </summary>
         public Unity.Collections.LowLevel.Unsafe.UnsafeList<Unity.Jobs.JobHandle> endTickHandles;
+        /// <summary>
+        /// Src name used by <c>WorldHeader</c>.
+        /// </summary>
         public Unity.Collections.FixedString64Bytes srcName;
+        /// <summary>
+        /// Elapsed simulation time supplied to this update.
+        /// </summary>
         public uint deltaTime;
 
+        /// <summary>
+        /// Releases the resources owned by this world header instance.
+        /// </summary>
         public void Dispose() {
             this.endTickHandles.Dispose();
         }
 
     }
     
+    /// <summary>
+    /// Stores and indexes worlds entries.
+    /// </summary>
     [IgnoreProfiler]
     public struct WorldsStorage {
 
@@ -244,6 +358,9 @@ namespace ME.BECS {
         
     }
 
+    /// <summary>
+    /// Stores and indexes worlds ID entries.
+    /// </summary>
     [IgnoreProfiler]
     public struct WorldsIdStorage {
 
@@ -252,6 +369,9 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Stores per-world allocators whose backing storage follows the registered world lifecycle.
+    /// </summary>
     [IgnoreProfiler]
     public struct WorldsDomainAllocator {
 
@@ -265,6 +385,9 @@ namespace ME.BECS {
         internal static bool allocatorDomainValid => allocatorDomainValidBurst.Data.IsCreated == true && allocatorDomainValidBurst.Data.Value;
         #endif
 
+        /// <summary>
+        /// Initializes worlds domain allocator state from the supplied context.
+        /// </summary>
         public static void Initialize() {
 
             #if !UNITY_2023_1_OR_NEWER
@@ -278,6 +401,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this worlds domain allocator instance.
+        /// </summary>
         public static void Dispose() {
 
             #if !UNITY_2023_1_OR_NEWER
@@ -291,15 +417,27 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Stores per-world allocators used for persistent native allocations.
+    /// </summary>
     [IgnoreProfiler]
     public struct WorldsPersistentAllocator {
 
         private static readonly Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>> allocatorPersistentBurst = Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>>.align, 10006);
+        /// <summary>
+        /// Allocator persistent used by <c>WorldsPersistentAllocator</c>.
+        /// </summary>
         public static ref Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>> allocatorPersistent => ref allocatorPersistentBurst.Data;
 
         private static readonly Unity.Burst.SharedStatic<Internal.Array<bool>> allocatorPersistentValidBurst = Unity.Burst.SharedStatic<Internal.Array<bool>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Internal.Array<bool>>.align, 10007);
+        /// <summary>
+        /// Allocator persistent valid used by <c>WorldsPersistentAllocator</c>.
+        /// </summary>
         public static ref Internal.Array<bool> allocatorPersistentValid => ref allocatorPersistentValidBurst.Data;
 
+        /// <summary>
+        /// Initializes worlds persistent allocator state from the supplied context.
+        /// </summary>
         public static void Initialize(ushort worldId) {
 
             var prevMode = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetLeakDetectionMode();
@@ -320,6 +458,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this worlds persistent allocator instance.
+        /// </summary>
         public static void Dispose(ushort worldId) {
 
             if (worldId >= allocatorPersistentValidBurst.Data.Length || allocatorPersistentValidBurst.Data.Get(worldId) == false) return;
@@ -333,15 +474,24 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Stores per-world allocators used for temporary native allocations.
+    /// </summary>
     [IgnoreProfiler]
     public struct WorldsTempAllocator {
 
         private static readonly Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>>> allocatorTempBurst = Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsTempAllocator>(TAlign<Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>>>.align, 10005);
+        /// <summary>
+        /// Allocator temp used by <c>WorldsTempAllocator</c>.
+        /// </summary>
         public static ref Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>> allocatorTemp => ref allocatorTempBurst.Data;
 
         private static readonly Unity.Burst.SharedStatic<Internal.Array<bool>> allocatorTempValidBurst = Unity.Burst.SharedStatic<Internal.Array<bool>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsTempAllocator>(TAlign<Internal.Array<bool>>.align, 10008);
         internal static ref Internal.Array<bool> allocatorTempValid => ref allocatorTempValidBurst.Data;
 
+        /// <summary>
+        /// Initializes worlds temp allocator state from the supplied context.
+        /// </summary>
         public static void Initialize(ushort worldId) {
 
             var prevMode = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetLeakDetectionMode();
@@ -362,6 +512,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Releases the resources owned by this worlds temp allocator instance.
+        /// </summary>
         public static void Dispose(ushort worldId) {
             
             if (worldId >= allocatorTempValidBurst.Data.Length || allocatorTempValidBurst.Data.Get(worldId) == false) return;
@@ -373,6 +526,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Restores the tracked state to its initial values.
+        /// </summary>
         public static void Reset(ushort worldId) {
             
             allocatorTemp.Get(worldId).Allocator.Rewind();
@@ -381,6 +537,9 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Stores and indexes handle entries.
+    /// </summary>
     [IgnoreProfiler]
     public struct HandleStorage {
 
@@ -389,14 +548,23 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Registers worlds and resolves world identifiers to their current instances.
+    /// </summary>
     [IgnoreProfiler]
     public unsafe struct Worlds {
 
         private static readonly Unity.Burst.SharedStatic<ushort> worldsCounterBurst = Unity.Burst.SharedStatic<ushort>.GetOrCreate<Worlds>();
         private static ref ushort counter => ref worldsCounterBurst.Data;
 
+        /// <summary>
+        /// Maximum world ID.
+        /// </summary>
         public static uint MaxWorldId => counter;
 
+        /// <summary>
+        /// Initializes worlds state from the supplied context.
+        /// </summary>
         public static void Initialize() {
             
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
@@ -426,6 +594,9 @@ namespace ME.BECS {
         }
         #endif
 
+        /// <summary>
+        /// Releases the resources owned by this worlds instance.
+        /// </summary>
         public static void Dispose() {
 
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
@@ -436,11 +607,17 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Returns worlds.
+        /// </summary>
         [INLINE(256)]
         public static Array<WorldHeader> GetWorlds() {
             return WorldsStorage.worlds;
         }
 
+        /// <summary>
+        /// Tests whether the referenced entity or world still matches its registered lifetime.
+        /// </summary>
         [INLINE(256)]
         public static bool IsAlive(uint id) {
 
@@ -449,6 +626,9 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Returns world.
+        /// </summary>
         [INLINE(256)]
         public static ref readonly World GetWorld(ushort id) {
 
@@ -482,6 +662,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Sets world delta time.
+        /// </summary>
         [INLINE(256)]
         public static void SetWorldDeltaTime(ushort worldId, uint deltaTimeMs) {
             
@@ -491,6 +674,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns world delta time.
+        /// </summary>
         [INLINE(256)]
         public static uint GetWorldDeltaTime(ushort worldId) {
             
@@ -500,6 +686,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns world name.
+        /// </summary>
         [INLINE(256)]
         public static Unity.Collections.FixedString64Bytes GetWorldName(ushort worldId) {
             
@@ -509,6 +698,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns world source name.
+        /// </summary>
         [INLINE(256)]
         public static Unity.Collections.FixedString64Bytes GetWorldSourceName(ushort worldId) {
             
@@ -518,6 +710,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Adds end tick handle.
+        /// </summary>
         [INLINE(256)]
         public static void AddEndTickHandle(ushort worldId, Unity.Jobs.JobHandle handle) {
             
@@ -534,6 +729,9 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Returns end tick handle.
+        /// </summary>
         [INLINE(256)]
         public static Unity.Jobs.JobHandle GetEndTickHandle(ushort worldId) {
             
@@ -603,6 +801,7 @@ namespace ME.BECS {
         [INLINE(256)]
         internal static void ReleaseWorld(in World world) {
 
+            RuntimeObjectReference.DisposeWorld(world.id);
             Worlds.ReleaseWorldId(world.id);
             LocksCache.DisposeWorld(world.id);
             ref var worldsStorage = ref WorldsStorage.worlds;

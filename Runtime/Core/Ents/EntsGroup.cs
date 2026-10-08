@@ -15,15 +15,27 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// Registers typed entity categories used by creation and bootstrap.
+    /// </summary>
     public class EntityTypes {
 
         private static readonly Unity.Burst.SharedStatic<uint> groupsCountData = Unity.Burst.SharedStatic<uint>.GetOrCreate<EntityTypes>();
+        /// <summary>
+        /// Groups count for the associated storage.
+        /// </summary>
         public static ref uint groupsCount => ref groupsCountData.Data;
 
+        /// <summary>
+        /// Initializes entity types state from the supplied context.
+        /// </summary>
         public static void Init() {
             EntityTypesManaged.typeByGroupId.Clear();
         }
 
+        /// <summary>
+        /// Registers the supplied instance or type for subsequent lookup.
+        /// </summary>
         public static void Register<T>(ushort id) where T : unmanaged, IEntityType {
             EntityTypes<T>.id = id;
             EntityTypesManaged.typeByGroupId.Add(id, typeof(T));
@@ -31,26 +43,59 @@ namespace ME.BECS {
 
     }
     
+    /// <summary>
+    /// Registers typed entity categories used by creation and bootstrap.
+    /// </summary>
     public class EntityTypes<T> where T : unmanaged, IEntityType {
 
         private static readonly Unity.Burst.SharedStatic<ushort> idData = Unity.Burst.SharedStatic<ushort>.GetOrCreate<EntityTypes<T>>();
+        /// <summary>
+        /// Identifier used to address this entry within its containing registry.
+        /// </summary>
         public static ref ushort id => ref idData.Data;
 
     }
     
+    /// <summary>
+    /// Marks a typed entity creation category used by bootstrap registration.
+    /// </summary>
     public interface IEntityType { }
 
+    /// <summary>
+    /// Manages entity slots, generations and version storage within a world.
+    /// </summary>
     public unsafe partial struct Ents {
 
+        /// <summary>
+        /// Entities per page constant used by <c>Ents</c>.
+        /// </summary>
         public const uint ENTITIES_PER_PAGE = sizeof(uint) * 8;
 
+        /// <summary>
+        /// Defines group state and operations for <c>Ents</c>.
+        /// </summary>
         public struct Group {
 
+            /// <summary>
+            /// Free used by <c>Ents.Group</c>.
+            /// </summary>
             public uint free;
+            /// <summary>
+            /// Offset into the associated storage or coordinate space.
+            /// </summary>
             public uint offset;
+            /// <summary>
+            /// Whether this value contains no elements.
+            /// </summary>
             public bool IsEmpty => this.free == 0u;
+            /// <summary>
+            /// Number of entries currently tracked by this value.
+            /// </summary>
             public uint Count => ENTITIES_PER_PAGE - (uint)math.countbits(this.free);
 
+            /// <summary>
+            /// Creates <c>Group</c> using the supplied creation arguments.
+            /// </summary>
             [INLINE(256)]
             public static Group Create(ref uint freeCount, uint offset) {
                 JobUtils.Increment(ref freeCount, ENTITIES_PER_PAGE);
@@ -61,6 +106,9 @@ namespace ME.BECS {
                 return group;
             }
 
+            /// <summary>
+            /// Attempts to new and reports whether the operation succeeded.
+            /// </summary>
             [INLINE(256)]
             public bool TryNew(out uint id) {
                 while (true) {
@@ -79,6 +127,9 @@ namespace ME.BECS {
                 }
             }
 
+            /// <summary>
+            /// Deletes the selected entry from the associated storage.
+            /// </summary>
             [INLINE(256)]
             public void Delete(uint id) {
                 var bit = (int)(id - this.offset);
@@ -94,14 +145,35 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Defines groups state and operations for <c>Ents</c>.
+        /// </summary>
         public struct Groups {
 
+            /// <summary>
+            /// Groups used to partition the associated entries.
+            /// </summary>
             public List<Group> groups;
+            /// <summary>
+            /// Free groups used by <c>Ents.Groups</c>.
+            /// </summary>
             public List<uint> freeGroups;
+            /// <summary>
+            /// Free groups has used by <c>Ents.Groups</c>.
+            /// </summary>
             public HashSet<uint> freeGroupsHas;
+            /// <summary>
+            /// Index of this entry within its containing storage.
+            /// </summary>
             public uint index;
+            /// <summary>
+            /// Returns resize lock.
+            /// </summary>
             public ref ReadWriteNativeSpinner GetResizeLock(ushort worldId) => ref LocksCache.GetReadWriteSpinner(worldId, LocksCache.ENT_GROUPS, this.index);
 
+            /// <summary>
+            /// Returns the number of matching entries.
+            /// </summary>
             public uint Count(World world) {
                 var cnt = 0u;
                 for (uint i = 0u; i < this.groups.Count; ++i) {
@@ -111,6 +183,9 @@ namespace ME.BECS {
                 return cnt;
             }
 
+            /// <summary>
+            /// Creates <c>Groups</c> using the supplied creation arguments.
+            /// </summary>
             [INLINE(256)]
             public static Groups Create(uint index, safe_ptr<State> state, uint initGroupsCount) {
                 using (new AllocatorTag(ALLOC_TAGS.ENTITIES)) {
@@ -154,6 +229,9 @@ namespace ME.BECS {
                 }
             }
 
+            /// <summary>
+            /// Creates <c>uint</c> using the supplied creation arguments.
+            /// </summary>
             [INLINE(256)]
             public uint New(safe_ptr<State> state, ushort worldId, JobInfo jobInfo, uint groupId, ref uint nextGroupId, out uint localGroupIndex, out bool reuse) {
                 ref var resizeLock = ref this.GetResizeLock(worldId);
@@ -206,6 +284,9 @@ namespace ME.BECS {
                 
             }
 
+            /// <summary>
+            /// Deletes the selected entry from the associated storage.
+            /// </summary>
             [INLINE(256)]
             public void Delete(safe_ptr<State> state, ushort worldId, uint entId) {
                 this.GetResizeLock(worldId).WriteBegin();
@@ -223,6 +304,9 @@ namespace ME.BECS {
                 }
             }
 
+            /// <summary>
+            /// Returns the amount of reserved storage in bytes.
+            /// </summary>
             public uint GetReservedSizeInBytes(safe_ptr<State> state) {
                 var size = 0u;
                 size += this.groups.GetReservedSizeInBytes();
@@ -233,24 +317,75 @@ namespace ME.BECS {
 
         }
         
+        /// <summary>
+        /// Group by entity type used by <c>Ents</c>.
+        /// </summary>
         public MemArray<Groups> groupByEntityType;
+        /// <summary>
+        /// Generations used by <c>Ents</c>.
+        /// </summary>
         public MemArray<ushort> generations;
+        /// <summary>
+        /// Entity to group used by <c>Ents</c>.
+        /// </summary>
         public MemArray<ushort> entityToGroup;
+        /// <summary>
+        /// Entity to group local used by <c>Ents</c>.
+        /// </summary>
         public MemArray<uint> entityToGroupLocal;
+        /// <summary>
+        /// Versions used by <c>Ents</c>.
+        /// </summary>
         public MemArray<uint> versions;
+        /// <summary>
+        /// Seeds used by <c>Ents</c>.
+        /// </summary>
         public MemArray<uint> seeds;
+        /// <summary>
+        /// Versions group used by <c>Ents</c>.
+        /// </summary>
         public MemArray<ushort> versionsGroup;
+        /// <summary>
+        /// Locks per entity used by <c>Ents</c>.
+        /// </summary>
         public MemArray<LockSpinner> locksPerEntity;
+        /// <summary>
+        /// Whether destroyed behavior or state is selected.
+        /// </summary>
         public List<uint> destroyed;
+        /// <summary>
+        /// Destroyed lock used by <c>Ents</c>.
+        /// </summary>
         public LockSpinner destroyedLock;
+        /// <summary>
+        /// Prewarm lock used by <c>Ents</c>.
+        /// </summary>
         public LockSpinner prewarmLock;
+        /// <summary>
+        /// Alive bits used by <c>Ents</c>.
+        /// </summary>
         public BitArray aliveBits;
 
+        /// <summary>
+        /// Alive count for the associated storage.
+        /// </summary>
         public uint aliveCount;
+        /// <summary>
+        /// Free count for the associated storage.
+        /// </summary>
         public uint freeCount;
+        /// <summary>
+        /// Next group id used to locate the associated entry.
+        /// </summary>
         public uint nextGroupId;
+        /// <summary>
+        /// Resize lock used by <c>Ents</c>.
+        /// </summary>
         public ReadWriteSpinner resizeLock;
 
+        /// <summary>
+        /// Writes collection metadata to the stream without serializing the backing allocator blocks.
+        /// </summary>
         [INLINE(256)]
         public void SerializeHeaders(ref StreamBufferWriter writer) {
             writer.Write(this.generations);
@@ -272,6 +407,9 @@ namespace ME.BECS {
             this.SerializeHeadersFlatQueries(ref writer);
         }
 
+        /// <summary>
+        /// Restores collection metadata from the stream; backing allocator storage is restored separately.
+        /// </summary>
         [INLINE(256)]
         public void DeserializeHeaders(ref StreamBufferReader reader) {
             reader.Read(ref this.generations);
@@ -293,15 +431,33 @@ namespace ME.BECS {
             this.DeserializeHeadersFlatQueries(ref reader);
         }
         
+        /// <summary>
+        /// Number of elements that fit in the currently reserved storage.
+        /// </summary>
         public uint Capacity => this.generations.Length;
+        /// <summary>
+        /// Gets entities count; this implementation returns <c>this.aliveCount</c>.
+        /// </summary>
         public uint EntitiesCount => this.aliveCount;
+        /// <summary>
+        /// Gets free count; this implementation returns <c>this.freeCount</c>.
+        /// </summary>
         public uint FreeCount => this.freeCount;
+        /// <summary>
+        /// Indicates hash.
+        /// </summary>
         public int Hash => Utils.Hash(this.FreeCount, this.EntitiesCount, this.nextGroupId);
 
+        /// <summary>
+        /// Returns entities count.
+        /// </summary>
         public uint GetEntitiesCount<T>(World world) where T : unmanaged, IEntityType {
             return this.groupByEntityType[world.state, EntityTypes<T>.id].Count(world);
         }
 
+        /// <summary>
+        /// Returns the amount of reserved storage in bytes.
+        /// </summary>
         public uint GetReservedSizeInBytes(safe_ptr<State> state) {
             if (this.generations.IsCreated == false) return 0u;
 
@@ -323,26 +479,41 @@ namespace ME.BECS {
             return size;
         }
 
+        /// <summary>
+        /// Runs prewarming begin.
+        /// </summary>
         [INLINE(256)]
         public static void PrewarmBegin(safe_ptr<State> state) {
             state.ptr->entities.prewarmLock.Lock();
         }
 
+        /// <summary>
+        /// Runs prewarming end.
+        /// </summary>
         [INLINE(256)]
         public static void PrewarmEnd(safe_ptr<State> state) {
             state.ptr->entities.prewarmLock.Unlock();
         }
 
+        /// <summary>
+        /// Acquires the synchronization lock before accessing protected state.
+        /// </summary>
         [INLINE(256)]
         public static void Lock(safe_ptr<State> state, in Ent ent) {
             state.ptr->entities.locksPerEntity[state, ent.id].Lock();
         }
 
+        /// <summary>
+        /// Releases the synchronization lock after accessing protected state.
+        /// </summary>
         [INLINE(256)]
         public static void Unlock(safe_ptr<State> state, in Ent ent) {
             state.ptr->entities.locksPerEntity[state, ent.id].Unlock();
         }
 
+        /// <summary>
+        /// Updates cached native access for the requested Burst execution mode.
+        /// </summary>
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool mode) {
             this.generations.BurstMode(in allocator, mode);
@@ -357,6 +528,9 @@ namespace ME.BECS {
             this.BurstModeEntityComponents(in allocator, mode);
         }
 
+        /// <summary>
+        /// Creates <c>Ents</c> using the supplied creation arguments.
+        /// </summary>
         [NotThreadSafe]
         [INLINE(256)]
         public static Ents Create(safe_ptr<State> state, uint groupsCount, uint entitiesCapacity) {
@@ -365,6 +539,9 @@ namespace ME.BECS {
             return ents;
         }
         
+        /// <summary>
+        /// Initializes ents state from the supplied context.
+        /// </summary>
         [NotThreadSafe]
         [INLINE(256)]
         public void Init(safe_ptr<State> state, uint groupsCount, uint entitiesCapacity) {
@@ -383,6 +560,9 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Sets capacity.
+        /// </summary>
         [NotThreadSafe]
         [INLINE(256)]
         public void SetCapacity(safe_ptr<State> state, ushort groupId, uint entitiesCapacity) {
@@ -397,6 +577,9 @@ namespace ME.BECS {
             this.nextGroupId += initGroupsCount;
         }
 
+        /// <summary>
+        /// Ensures free.
+        /// </summary>
         [NotThreadSafe]
         [INLINE(256)]
         public static uint EnsureFree(safe_ptr<State> state, ushort worldId, uint groupId, uint required) {
@@ -433,11 +616,17 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Tests whether the referenced entity or world still matches its registered lifetime.
+        /// </summary>
         [INLINE(256)]
         public static bool IsAlive(safe_ptr<State> state, in Ent ent) {
             return IsAlive(state, ent.id, ent.gen);
         }
         
+        /// <summary>
+        /// Tests whether the referenced entity or world still matches its registered lifetime.
+        /// </summary>
         [INLINE(256)]
         public static bool IsAlive(safe_ptr<State> state, uint entId, ushort gen) {
             if (entId >= state.ptr->entities.generations.Length || gen == 0) return false;
@@ -447,6 +636,9 @@ namespace ME.BECS {
             return result;
         }
 
+        /// <summary>
+        /// Removes the specified entry from ents.
+        /// </summary>
         [INLINE(256)]
         public static void Remove(safe_ptr<State> state, in Ent ent) {
             
@@ -464,6 +656,9 @@ namespace ME.BECS {
             
         }
         
+        /// <summary>
+        /// Applies destroyed.
+        /// </summary>
         [INLINE(256)]
         public static void ApplyDestroyed(safe_ptr<State> state, ushort worldId) {
             
@@ -515,12 +710,18 @@ namespace ME.BECS {
             }
         }
 
+        /// <summary>
+        /// Returns entity group ID.
+        /// </summary>
         [NotThreadSafe]
         [INLINE(256)]
         public static ushort GetEntityGroupId(safe_ptr<State> state, uint entId) {
             return state.ptr->entities.entityToGroup[state, entId];
         }
 
+        /// <summary>
+        /// Creates <c>Ent</c> using the supplied creation arguments.
+        /// </summary>
         [NotThreadSafe]
         [INLINE(256)]
         public static Ent New(safe_ptr<State> state, ushort worldId, ushort groupId, out bool reuse, in JobInfo jobInfo) {
@@ -578,6 +779,9 @@ namespace ME.BECS {
             return new Ent(entId, gen, worldId);
         }
         
+        /// <summary>
+        /// Returns generation.
+        /// </summary>
         [INLINE(256)]
         public static ushort GetGeneration(safe_ptr<State> state, uint id) {
 
@@ -589,6 +793,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns version.
+        /// </summary>
         [INLINE(256)]
         public static uint GetVersion(safe_ptr<State> state, in Ent ent) {
 
@@ -600,6 +807,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns version.
+        /// </summary>
         [INLINE(256)]
         public static ushort GetVersion(safe_ptr<State> state, in Ent ent, uint groupId) {
 
@@ -610,6 +820,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Advances the change version tracked for the supplied entity or component.
+        /// </summary>
         [INLINE(256)]
         public static void UpVersion<T>(safe_ptr<State> state, in Ent ent) where T : unmanaged, IComponent {
 
@@ -617,6 +830,9 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Advances the change version tracked for the supplied entity or component.
+        /// </summary>
         [INLINE(256)]
         public static void UpVersion(safe_ptr<State> state, in Ent ent, uint groupId) {
 
@@ -625,6 +841,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Advances the change version tracked for the supplied entity or component.
+        /// </summary>
         [INLINE(256)]
         public static void UpVersion(safe_ptr<State> state, in Ent ent) {
             
@@ -633,6 +852,9 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Advances the change version for the specified component group.
+        /// </summary>
         [INLINE(256)]
         public static void UpVersionGroup(safe_ptr<State> state, uint id, uint groupId) {
 
@@ -641,11 +863,17 @@ namespace ME.BECS {
 
         }
 
+        /// <summary>
+        /// Returns next seed.
+        /// </summary>
         [INLINE(256)]
         public static uint GetNextSeed(safe_ptr<State> state, in Ent ent) {
             return JobUtils.Increment(ref state.ptr->entities.seeds[in state.ptr->allocator, ent.id]);
         }
 
+        /// <summary>
+        /// Sets seed.
+        /// </summary>
         [INLINE(256)]
         public void SetSeed(safe_ptr<State> state, uint seed) {
 

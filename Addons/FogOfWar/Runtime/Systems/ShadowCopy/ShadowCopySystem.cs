@@ -7,15 +7,30 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Transforms;
     using ME.BECS.Views;
 
+    /// <summary>
+    /// Coordinates shadow copy during the ECS system lifecycle.
+    /// </summary>
     [BURST]
     public partial struct ShadowCopySystem : IUpdate {
 
+        /// <summary>
+        /// Executes create work through the job scheduler.
+        /// </summary>
         [BURST]
         public partial struct CreateJob : IJobForComponents<OwnerComponent, FogOfWarShadowCopyRequiredRuntimeComponent> {
 
+            /// <summary>
+            /// Players system used by <c>ShadowCopySystem.CreateJob</c>.
+            /// </summary>
             public Players.PlayersSystem playersSystem;
+            /// <summary>
+            /// World used by the containing operation.
+            /// </summary>
             public World world;
 
+            /// <summary>
+            /// Processes create using the supplied job inputs.
+            /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref OwnerComponent owner, ref FogOfWarShadowCopyRequiredRuntimeComponent sc) {
                 
                 var origTr = ent.GetAspect<TransformAspect>();
@@ -47,6 +62,9 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        /// <summary>
+        /// Updates shadow copy system using the current inputs and execution context.
+        /// </summary>
         public void OnUpdate(ref SystemContext context) {
 
             var logicWorld = context.world.parent;
