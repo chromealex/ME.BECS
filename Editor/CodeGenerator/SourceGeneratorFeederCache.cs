@@ -60,7 +60,8 @@ namespace ME.BECS.Editor {
             var slot = Names.Hash(feeder.GetType().AssemblyQualifiedName + "\n" + feeder.editorAssembly);
             var path = Path.GetFullPath(Path.Combine(UnityEngine.Application.dataPath,
                 "../Library/ME.BECS.SourceGenerator/CompiledInputs", slot + ".json"));
-            if (!ILAnalysisSession.Rebuild && TryRead(path, key, code, out var cached, out var references)) {
+            if (ILAnalysisSession.Rebuild == false && TryRead(path, key, code, out var cached, out var references) == true &&
+                SourceGeneratorPublicationBridges.CanReuseCached(cached) == true) {
                 // New publications resolve references per owner. Only reuse a
                 // legacy cached list when one exists; explicit callers can compute it lazily.
                 feeder.preparedInputReferences = references.Length != 0 ? references : null;

@@ -38,6 +38,15 @@ namespace ME.BECS.Editor {
             internal bool Editor;
             internal string[] Required;
             internal string Folder => DirectoryName + "/" + this.Name.Substring(Prefix.Length);
+            internal string ShortDefinitionPath => this.Folder + "/Bridge.asmdef";
+            internal string LegacyDefinitionPath => this.Folder + "/" + this.Name + ".asmdef";
+            internal string DefinitionPath {
+                get {
+                    if (File.Exists(this.LegacyDefinitionPath) == true) return this.LegacyDefinitionPath;
+                    if (File.Exists(this.ShortDefinitionPath) == true) return this.ShortDefinitionPath;
+                    return IsLegacyDefinitionPathSafe(this.LegacyDefinitionPath) == true ? this.LegacyDefinitionPath : this.ShortDefinitionPath;
+                }
+            }
         }
 
         private sealed class Planning : IDisposable {
@@ -53,6 +62,68 @@ namespace ME.BECS.Editor {
         private static string[] Sorted(IEnumerable<string> values) => values.Distinct(StringComparer.Ordinal).OrderBy(value => value, StringComparer.Ordinal).ToArray();
         private static string PlanName(IEnumerable<string> required, bool editor) => Prefix + (editor ? "Editor_" : "Runtime_") +
             Names.Hash(Schema + "\n" + string.Join("\n", Sorted(required)));
+        private static bool IsLegacyDefinitionPathSafe(string path) => Path.DirectorySeparatorChar != '\\' || Path.GetFullPath(path).Length < 260;
+
+        private static string[] Owners(string manifest) => manifest.Split('\n')
+            .Where(row => row.IndexOf("-registration-owner\t", StringComparison.Ordinal) > 0).Select(row => row.Split('\t'))
+            .Where(fields => fields.Length == 4 && fields[0].EndsWith("-registration-owner", StringComparison.Ordinal))
+            .Select(fields => CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(fields[3])).Where(IsBridge)
+            .Distinct(StringComparer.Ordinal).OrderBy(name => name, StringComparer.Ordinal).ToArray();
+
+        private static bool IsHash(string value) => value != null && value.Length == 64 &&
+            value.All(character => character >= '0' && character <= '9' || character >= 'A' && character <= 'F');
+
+        private static bool IsName(string value) =>
+            value.StartsWith(Prefix + "Editor_", StringComparison.Ordinal) == true && IsHash(value.Substring((Prefix + "Editor_").Length)) == true ||
+            value.StartsWith(Prefix + "Runtime_", StringComparison.Ordinal) == true && IsHash(value.Substring((Prefix + "Runtime_").Length)) == true;
+
+        private static bool IsReceiptFor(string owner, string content) {
+            if (string.IsNullOrEmpty(content) == true) return false;
+            var receipt = UnityEngine.JsonUtility.FromJson<Receipt>(content);
+            if (receipt == null || receipt.schema != Schema || receipt.name != owner || IsHash(receipt.contentHash) == false ||
+                receipt.required == null || receipt.required.Any(string.IsNullOrEmpty) == true) return false;
+            if (receipt.required.SequenceEqual(Sorted(receipt.required), StringComparer.Ordinal) == false) return false;
+            return PlanName(receipt.required, receipt.editor) == owner;
+        }
+
+        private static bool IsReceiptCurrent(string owner, string receiptContent, string definitionContent) {
+            if (IsReceiptFor(owner, receiptContent) == false || definitionContent == null) return false;
+            return UnityEngine.JsonUtility.FromJson<Receipt>(receiptContent).contentHash == Names.Hash(definitionContent);
+        }
+
+        private static bool IsPublishedReceiptCurrent(string owner, string receiptContent) {
+            var folder = DirectoryName + "/" + owner.Substring(Prefix.Length);
+            var shortDefinition = folder + "/Bridge.asmdef";
+            var legacyDefinition = folder + "/" + owner + ".asmdef";
+            if (File.Exists(shortDefinition) == true && File.Exists(legacyDefinition) == true) return false;
+            var definition = File.Exists(legacyDefinition) == true ? legacyDefinition : shortDefinition;
+            var marker = folder + "/AssemblyMarker.cs";
+            if (File.Exists(marker) == false || File.ReadAllText(marker) != Anchor || File.Exists(definition) == false) return false;
+            return IsReceiptCurrent(owner, receiptContent, File.ReadAllText(definition));
+        }
+
+        internal static bool CanReuseCached(string manifest) => CanReuseCached(manifest, owner => {
+            var path = DirectoryName + "/" + owner.Substring(Prefix.Length) + "/Bridge.becs-owner";
+            return File.Exists(path) == true ? File.ReadAllText(path) : null;
+        }, validatePublication: true);
+
+        internal static bool CanReuseCached(string manifest, Func<string, string> readReceipt) =>
+            CanReuseCached(manifest, readReceipt, validatePublication: false);
+
+        private static bool CanReuseCached(string manifest, Func<string, string> readReceipt, bool validatePublication) {
+            try {
+                foreach (var owner in Owners(manifest)) {
+                    if (IsName(owner) == false) return false;
+                    if (current != null && current.plans.ContainsKey(owner) == true) continue;
+                    var receipt = readReceipt(owner);
+                    if (IsReceiptFor(owner, receipt) == false) return false;
+                    if (validatePublication == true && IsPublishedReceiptCurrent(owner, receipt) == false) return false;
+                }
+                return true;
+            } catch (Exception exception) when ((exception is OperationCanceledException) == false) {
+                return false;
+            }
+        }
 
         internal static string Select(string[] required, bool editor) => GetPlan(required, editor).Name;
 
@@ -170,11 +241,8 @@ namespace ME.BECS.Editor {
         // Capture on the Editor thread: GetPlan/ValidateOwned consult Unity's
         // assembly inventory. The returned file contents contain no Unity objects.
         internal static System.Collections.Generic.KeyValuePair<string, string>[] PrepareUsed(string manifest) {
-            var owners = manifest.Split('\n').Where(row => row.IndexOf("-registration-owner\t", StringComparison.Ordinal) > 0).Select(row => row.Split('\t'))
-                .Where(fields => fields.Length == 4 && fields[0].EndsWith("-registration-owner", StringComparison.Ordinal))
-                .Select(fields => CodeGeneration.SourceGeneratorSystemFragmentFormat.Decode(fields[3])).Where(IsBridge).Distinct(StringComparer.Ordinal);
             var plans = new System.Collections.Generic.List<Plan>();
-            foreach (var owner in owners.OrderBy(name => name, StringComparer.Ordinal)) {
+            foreach (var owner in Owners(manifest)) {
                 if (current == null || !current.plans.TryGetValue(owner, out var plan)) {
                     // A reused feeder did not execute the planner this time. Its
                     // owned receipt retains the requirements, not generated code.
@@ -197,7 +265,7 @@ namespace ME.BECS.Editor {
             }
             foreach (var plan in plans) {
                 Add(plan.Folder + "/AssemblyMarker.cs", Anchor);
-                Add(plan.Folder + "/" + plan.Name + ".asmdef", plan.Content);
+                Add(plan.DefinitionPath, plan.Content);
                 Add(plan.Folder + "/Bridge.becs-owner", UnityEngine.JsonUtility.ToJson(new Receipt {
                     schema = Schema, name = plan.Name, contentHash = Names.Hash(plan.Content), editor = plan.Editor, required = plan.Required,
                 }, true) + "\n");
@@ -206,7 +274,9 @@ namespace ME.BECS.Editor {
         }
 
         private static void ValidateOwned(Plan plan) {
-            var files = new[] { plan.Folder + "/AssemblyMarker.cs", plan.Folder + "/" + plan.Name + ".asmdef", plan.Folder + "/Bridge.becs-owner" };
+            if (File.Exists(plan.ShortDefinitionPath) == true && File.Exists(plan.LegacyDefinitionPath) == true)
+                throw new InvalidOperationException("Publication bridge has duplicate asmdef files; preserving them: " + plan.Folder);
+            var files = new[] { plan.Folder + "/AssemblyMarker.cs", plan.DefinitionPath, plan.Folder + "/Bridge.becs-owner" };
             if (!files.Any(File.Exists)) {
                 if (Directory.Exists(plan.Folder) && Directory.EnumerateFileSystemEntries(plan.Folder).Any())
                     throw new InvalidOperationException("Publication bridge destination is not empty; preserving its contents: " + plan.Folder);
@@ -219,8 +289,11 @@ namespace ME.BECS.Editor {
             if (!files.All(File.Exists) || File.ReadAllText(files[0]) != Anchor)
                 throw new InvalidOperationException("Modified or incomplete publication bridge; preserving existing files: " + plan.Folder);
             var receipt = UnityEngine.JsonUtility.FromJson<Receipt>(File.ReadAllText(files[2]));
-            if (receipt?.schema != Schema || receipt.name != plan.Name || receipt.contentHash != Names.Hash(File.ReadAllText(files[1])))
-                throw new InvalidOperationException("Publication bridge asmdef was modified outside its exporter; preserving it: " + files[1]);
+            var definition = File.ReadAllText(files[1]);
+            if (receipt?.schema != Schema || receipt.name != plan.Name || receipt.editor != plan.Editor || receipt.required == null ||
+                receipt.required.SequenceEqual(plan.Required, StringComparer.Ordinal) == false ||
+                receipt.contentHash != Names.Hash(definition) && definition != plan.Content)
+                throw new InvalidOperationException("Publication bridge files were modified outside their exporter; preserving them: " + plan.Folder);
         }
 
     }

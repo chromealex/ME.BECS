@@ -128,6 +128,61 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void CompiledFeederCacheReanalyzesMissingBridgeReceiptsAndReusesIndependentRows() {
+            var feederType = EditorType("Jobs.JobsEarlyInitCodeGenerator");
+            var feeder = Activator.CreateInstance(feederType);
+            foreach (var field in new[] { "systems", "jobTypes", "entityTypes", "aspects" })
+                feederType.GetField(field).SetValue(feeder, new System.Collections.Generic.List<Type>());
+            var cacheType = EditorType("SourceGeneratorFeederCache");
+            var key = (string)cacheType.GetMethod("SelectionKey", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new[] { feeder });
+            var names = cacheType.Assembly.GetType("ME.BECS.CodeGeneration.SourceGeneratorNames", true);
+            string Hash(string value) => (string)names.GetMethod("Hash", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { value });
+            var slot = Hash(feederType.AssemblyQualifiedName + "\nFalse");
+            var path = System.IO.Path.GetFullPath(System.IO.Path.Combine(UnityEngine.Application.dataPath,
+                "../Library/ME.BECS.SourceGenerator/CompiledInputs", slot + ".json"));
+            var previous = System.IO.File.Exists(path) == true ? System.IO.File.ReadAllBytes(path) : null;
+            var fingerprint = Guid.NewGuid().ToString("N");
+            var recordType = cacheType.GetNestedType("Record", BindingFlags.NonPublic);
+            void Write(string text) {
+                var record = Activator.CreateInstance(recordType, true);
+                recordType.GetField("key").SetValue(record, key);
+                recordType.GetField("code").SetValue(record, fingerprint);
+                recordType.GetField("text").SetValue(record, text);
+                recordType.GetField("references").SetValue(record, Array.Empty<string>());
+                var checksum = cacheType.GetMethod("Checksum", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new[] { record });
+                recordType.GetField("checksum").SetValue(record, checksum);
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
+                System.IO.File.WriteAllText(path, UnityEngine.JsonUtility.ToJson(record));
+            }
+            string Row(string owner) => "system-registration-owner\t0\tdjE=\t" +
+                Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(owner)) + "\n";
+            IDisposable Export() => (IDisposable)Activator.CreateInstance(EditorType("ILAnalysisSession"),
+                BindingFlags.Instance | BindingFlags.NonPublic, null, new object[] { fingerprint, false }, null);
+            string Append() {
+                var manifest = new System.Text.StringBuilder();
+                using (Export()) cacheType.GetMethod("Append", BindingFlags.Static | BindingFlags.NonPublic)
+                    .Invoke(null, new object[] { feeder, manifest });
+                return manifest.ToString();
+            }
+            try {
+                var missingReceipt = Row("ME.BECS.SourceInputs.Bridge.Runtime_" +
+                    Guid.NewGuid().ToString("N").ToUpperInvariant() + Guid.NewGuid().ToString("N").ToUpperInvariant());
+                Write(missingReceipt);
+                Assert.AreNotEqual(missingReceipt, Append(), "A cache entry without its bridge receipt must be reanalyzed.");
+
+                var independent = Row("User.Assembly");
+                Write(independent);
+                Assert.AreEqual(independent, Append(), "A bridge-independent cache entry should be reused verbatim.");
+            } finally {
+                if (previous != null) {
+                    System.IO.File.WriteAllBytes(path, previous);
+                } else if (System.IO.File.Exists(path) == true) {
+                    System.IO.File.Delete(path);
+                }
+            }
+        }
+
+        [Test]
         public void ILInfrastructureDoesNotSuppressUserConstructorsOrGenericSpecializations() {
             Assert.IsTrue(Boundary("IsLeaf", typeof(InvalidOperationException).GetConstructor(new[] { typeof(string) })));
             Assert.IsFalse(Boundary("SkipBody", typeof(UserError).GetConstructor(Type.EmptyTypes)));
