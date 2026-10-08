@@ -585,7 +585,10 @@ namespace ME.BECS {
                 for (var layer = 0; layer < 2; ++layer) {
                     var tree = layer == 0 ? this.GetTree(i).ptr : this.GetStaticTree(i).ptr;
                     if (tree->RaycastAABB(ray, out var hitResult, distance) == true) {
-                        if (ignoreSorting == true) return true;
+                        if (ignoreSorting == true) {
+                            raycastHit = hitResult;
+                            return true;
+                        }
                         heap.Push(new NativeTrees.SpatialRaycastHitMinNode() {
                             data = hitResult,
                             cost = math.distancesq(ray.origin, hitResult.point),

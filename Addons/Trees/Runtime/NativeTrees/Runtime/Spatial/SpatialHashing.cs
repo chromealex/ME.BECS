@@ -460,6 +460,7 @@ namespace NativeTrees {
                     var item = e.Current;
                     if (item.bounds.IntersectsRay(precomputedRay2D, out var point) == true && math.distancesq(precomputedRay2D.origin, point) <= distanceSq) {
                         raycastHit.point = point;
+                        raycastHit.obj = item.obj;
                         return true;
                     }
                 }
