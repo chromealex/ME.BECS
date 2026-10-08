@@ -388,16 +388,28 @@ namespace ME.BECS.Editor {
         }
 
         private static bool TryExportExplicit(bool rebuild) {
-            if (exporting) return false;
-            if (UnityEditor.BuildPipeline.isBuildingPlayer || UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating ||
-                UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode) {
+            if (exporting == true) {
+                if (UnityEngine.Application.isBatchMode == true)
+                    throw new System.InvalidOperationException("Source input export is already running. Complete publication before batch preparation.");
+                return false;
+            }
+            if (UnityEditor.BuildPipeline.isBuildingPlayer == true || UnityEditor.EditorApplication.isCompiling == true || UnityEditor.EditorApplication.isUpdating == true ||
+                UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode == true) {
+                if (UnityEngine.Application.isBatchMode == true)
+                    throw new System.InvalidOperationException("Batch source input preparation requires an idle Editor before the Player build, compilation or import.");
                 UnityEngine.Debug.LogWarning("[ME.BECS] Wait for Player build/compilation/import to finish and leave Play Mode before exporting inputs.");
                 return false;
             }
             exporting = true;
             UnityEditor.SessionState.EraseString(AutomaticAttemptKey);
             UnityEditor.SessionState.SetBool(PendingKey, false);
-            try { return ExportCore(rebuild); }
+            try {
+                var successful = ExportCore(rebuild);
+                if (UnityEngine.Application.isBatchMode == true && successful == false)
+                    throw new System.InvalidOperationException("Batch source input preparation failed. Complete publication and compilation before building.");
+                if (UnityEngine.Application.isBatchMode == true) ILPersistentAnalysis.WaitForPendingSave();
+                return successful;
+            }
             finally { exporting = false; }
         }
 

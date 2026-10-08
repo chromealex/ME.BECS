@@ -684,17 +684,16 @@ namespace ME.BECS.Editor {
 
         private static bool TryRegenerateInputs(bool forced, bool cleanCache, SourceGeneratorInputAnalysis.Result prepared,
             System.Action<PendingPublication> accept = null) {
-            if (exportingInputs) return false;
+            if (exportingInputs == true) return false;
+            // Batch preparation runs before the Player build, in a separate
+            // Editor invocation so Unity can import and compile its publication.
+            if (UnityEditor.BuildPipeline.isBuildingPlayer == true || UnityEditor.EditorApplication.isCompiling == true ||
+                UnityEditor.EditorApplication.isUpdating == true || UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode == true) return false;
             
             // Skip if project creation is in progress
             if (UnityEditor.EditorPrefs.HasKey("ME.BECS.Editor.AwaitPackageImportData") == true) return false;
 
             if (CodeGeneratorMenu.IsEnabledAuto == false && forced == false) return false;
-
-            if (UnityEngine.Application.isBatchMode == true) {
-                Logger.Editor.Warning($"[ ME.BECS ] CodeGen won't run in batchmode. Ensure it was properly generated (or stored in the repo) before the build");
-                return false;
-            }
 
             Logger.Editor.Log($"[ ME.BECS ] Publishing source generator inputs {(forced == true ? "(forced)" : "")}");
 

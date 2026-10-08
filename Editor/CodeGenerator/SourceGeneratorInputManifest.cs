@@ -129,7 +129,12 @@ namespace ME.BECS.Editor {
         // Reconstruct it by analyzing current IL and comparing the complete data,
         // without publishing assets, registering graph references or compiling.
         internal static bool TryAnalyzePublishedInputs(out string reason) {
+            return TryAnalyzePublishedInputs(null, out reason);
+        }
+
+        internal static bool TryAnalyzePublishedInputs(string cachePath, out string reason) {
             reason = "";
+            var stage = "initialize analysis";
             var watch = System.Diagnostics.Stopwatch.StartNew();
             var timings = new StringBuilder();
             void Mark(string stage) {
@@ -137,28 +142,38 @@ namespace ME.BECS.Editor {
                 watch.Restart();
             }
             try {
+                stage = "code fingerprint";
                 var code = SourceGeneratorGraphSnapshot.GetCodeFingerprint();
                 Mark("code fingerprint");
                 using var analysis = new ILAnalysisSession(code, false);
-                using var incremental = new ILPersistentAnalysis(false);
+                using var incremental = new ILPersistentAnalysis(false, ILAnalysisEnvironment.Capture(cachePath));
+                stage = "graph fingerprint";
                 var fingerprint = SourceGeneratorGraphSnapshot.GetCurrent();
                 Mark("graph fingerprint");
+                stage = "compiler snapshot";
                 var compilerSnapshot = SourceGeneratorGraphSnapshot.GetCompilerSnapshot();
                 Mark("compiler snapshot");
                 var content = new string[2];
                 foreach (var editor in new[] { false, true }) {
                     using var lookup = SourceGeneratorBridge.BeginLookupScope();
                     Systems.SystemDependenciesCodeGenerator.UsedObjects used;
-                    if (editor) Systems.SystemDependenciesCodeGenerator.GetUsedObjects(true, out used);
+                    if (editor) {
+                        stage = "Editor used objects (IL)";
+                        Systems.SystemDependenciesCodeGenerator.GetUsedObjects(true, out used);
+                    }
                     else {
+                        stage = "Runtime discovery roots (assets)";
                         var roots = Systems.SystemDependenciesCodeGenerator.CaptureRuntimeDiscovery();
                         Mark("Runtime discovery roots (assets)");
+                        stage = "Runtime used objects (IL)";
                         used = Systems.SystemDependenciesCodeGenerator.AnalyzeRuntimeDiscovery(roots, false);
                     }
                     Mark((editor ? "Editor" : "Runtime") + " used objects (IL)");
                     var index = editor ? 1 : 0;
+                    stage = (editor ? "Editor" : "Runtime") + " serialize";
                     content[index] = Serialize("ME.BECS.Gen." + (editor ? "Editor" : "Runtime"), editor, used);
                     Mark((editor ? "Editor" : "Runtime") + " serialize");
+                    stage = (editor ? "Editor" : "Runtime") + " published input read";
                     var published = File.ReadAllText(SourceGeneratorInputTransport.InputPath(editor));
                     Mark((editor ? "Editor" : "Runtime") + " read published");
                     if (content[index] != published) {
@@ -167,15 +182,20 @@ namespace ME.BECS.Editor {
                         return false;
                     }
                 }
+                stage = "final graph fingerprint";
                 if (fingerprint != SourceGeneratorGraphSnapshot.GetCurrent()) {
                     reason = "Code/assets changed during source input analysis. Retry after imports settle.";
                     return false;
                 }
                 Mark("final graph fingerprint");
+                stage = "analysis receipt commit";
                 SourceGeneratorAnalysisReceipt.Commit(fingerprint, compilerSnapshot, content[0], content[1]);
                 Mark("commit receipt");
                 return true;
-            } catch (Exception exception) { reason = "Cannot analyze published source inputs: " + exception.Message; return false; }
+            } catch (Exception exception) {
+                reason = "Cannot analyze published source inputs during " + stage + ": " + exception;
+                return false;
+            }
             finally { UnityEngine.Debug.Log("[ME.BECS] Build preflight timings:" + timings); }
         }
 

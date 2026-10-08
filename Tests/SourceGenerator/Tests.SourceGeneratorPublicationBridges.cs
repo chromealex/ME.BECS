@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using NUnit.Framework;
 
 namespace ME.BECS.Tests {
@@ -19,9 +20,82 @@ namespace ME.BECS.Tests {
             Planner.GetMethod("CreatePlan", Hidden).Invoke(null, new object[] { required, editor, definitions, new[] { "mscorlib", "UnityEngine.CoreModule", "UnityEditor.CoreModule" } });
         private static string Field(object plan, string name) => (string)plan.GetType().GetField(name, Hidden).GetValue(plan);
         private static Definition Read(object plan) => UnityEngine.JsonUtility.FromJson<Definition>(Field(plan, "Content"));
+        private static string Encode(string value) => Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
+        private static string Row(string owner) => "system-registration-owner\t0\tdjE=\t" + Encode(owner) + "\n";
+        private static bool CanReuse(string manifest, Func<string, string> readReceipt) => (bool)Planner
+            .GetMethod("CanReuseCached", Hidden, null, new[] { typeof(string), typeof(Func<string, string>) }, null)
+            .Invoke(null, new object[] { manifest, readReceipt });
+        private static bool ReceiptIsCurrent(string owner, string receipt, string definition) => (bool)Planner
+            .GetMethod("IsReceiptCurrent", Hidden).Invoke(null, new object[] { owner, receipt, definition });
+        private static string Hash(string value) => (string)Planner.Assembly.GetType("ME.BECS.CodeGeneration.SourceGeneratorNames", true)
+            .GetMethod("Hash", Hidden).Invoke(null, new object[] { value });
+        private static string Receipt(string name, bool editor, string[] required, string hash = null) => UnityEngine.JsonUtility.ToJson(new ReceiptData {
+            schema = "ME.BECS.PublicationBridge.v1", name = name, contentHash = hash ?? new string('A', 64), editor = editor, required = required,
+        });
+        [Serializable] private sealed class ReceiptData {
+            public string schema, name, contentHash;
+            public bool editor;
+            public string[] required;
+        }
         private const string Core = "{\"name\":\"Framework\",\"references\":[]}";
         private const string Generic = "{\"name\":\"Generic\",\"references\":[\"Framework\"]}";
         private const string Argument = "{\"name\":\"Argument\",\"references\":[\"Framework\"]}";
+
+        [Test]
+        public void CachedManifestWithoutPublicationBridgeIsReusable() {
+            Assert.IsTrue(CanReuse(Row("User.Assembly"), _ => null));
+        }
+
+        [Test]
+        public void CachedPublicationBridgeNeedsItsReceipt() {
+            var owner = Field(Plan(false, new[] { "Generic", "Argument" }, Core, Generic, Argument), "Name");
+            Assert.IsFalse(CanReuse(Row(owner), _ => null));
+            Assert.IsFalse(CanReuse(Row("ME.BECS.SourceInputs.Bridge.Runtime_../outside"), _ => throw new AssertionException("Invalid owner must not reach the receipt reader.")));
+        }
+
+        [Test]
+        public void CachedPublicationBridgeRejectsCorruptOrMismatchedReceipt() {
+            var required = new[] { "Argument", "Generic" };
+            var owner = Field(Plan(false, required, Core, Generic, Argument), "Name");
+            Assert.IsFalse(CanReuse(Row(owner), _ => "{"));
+            Assert.IsFalse(CanReuse(Row(owner), _ => Receipt(owner + "_changed", false, required)));
+            Assert.IsFalse(CanReuse(Row(owner), _ => Receipt(owner, true, required)));
+            Assert.IsFalse(CanReuse(Row(owner), _ => Receipt(owner, false, new[] { "Generic" })));
+            Assert.IsFalse(CanReuse(Row(owner), _ => Receipt(owner, false, required.Reverse().ToArray())));
+            Assert.IsFalse(CanReuse(Row(owner), _ => Receipt(owner, false, required, "not-a-hash")));
+        }
+
+        [Test]
+        public void CachedPublicationBridgeAcceptsMatchingReceipt() {
+            var required = new[] { "Argument", "Generic" };
+            var owner = Field(Plan(false, required, Core, Generic, Argument), "Name");
+            Assert.IsTrue(CanReuse(Row(owner), _ => Receipt(owner, false, required)));
+            const string definition = "definition";
+            Assert.IsTrue(ReceiptIsCurrent(owner, Receipt(owner, false, required, Hash(definition)), definition));
+            Assert.IsFalse(ReceiptIsCurrent(owner, Receipt(owner, false, required, Hash(definition + "-stale")), definition));
+        }
+
+        [Test]
+        public void CachedPublicationBridgeUsesActivePlanWithoutReadingReceipt() {
+            var plan = Plan(false, new[] { "Generic", "Argument" }, Core, Generic, Argument);
+            var owner = Field(plan, "Name");
+            using var scope = (IDisposable)Planner.GetMethod("BeginPlanning", Hidden).Invoke(null, null);
+            var current = Planner.GetField("current", Hidden).GetValue(null);
+            var plans = current.GetType().GetField("plans", Hidden).GetValue(current);
+            plans.GetType().GetMethod("Add").Invoke(plans, new object[] { owner, plan });
+            Assert.IsTrue(CanReuse(Row(owner), _ => throw new AssertionException("An active plan must not read its receipt.")));
+        }
+
+        [Test]
+        public void PublicationBridgeUsesLegacyAsmdefUnlessItsWindowsPathIsTooLong() {
+            var plan = Plan(false, new[] { "SyntheticA", "SyntheticB" },
+                "{\"name\":\"SyntheticA\"}", "{\"name\":\"SyntheticB\"}");
+            var shortPath = (string)plan.GetType().GetProperty("ShortDefinitionPath", Hidden).GetValue(plan);
+            var legacyPath = (string)plan.GetType().GetProperty("LegacyDefinitionPath", Hidden).GetValue(plan);
+            var selected = (string)plan.GetType().GetProperty("DefinitionPath", Hidden).GetValue(plan);
+            Assert.AreEqual("Bridge.asmdef", Path.GetFileName(shortPath));
+            Assert.AreEqual(Path.DirectorySeparatorChar == '\\' && Path.GetFullPath(legacyPath).Length >= 260 ? shortPath : legacyPath, selected);
+        }
 
         [TestCase(false)]
         [TestCase(true)]

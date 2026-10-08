@@ -30,8 +30,8 @@ namespace ME.BECS.Editor {
             this.loaded = loaded;
         }
 
-        internal static ILAnalysisEnvironment Capture() => new ILAnalysisEnvironment(
-            System.IO.Path.GetFullPath(System.IO.Path.Combine(UnityEngine.Application.dataPath,
+        internal static ILAnalysisEnvironment Capture(string cachePath = null) => new ILAnalysisEnvironment(
+            System.IO.Path.GetFullPath(cachePath ?? System.IO.Path.Combine(UnityEngine.Application.dataPath,
                 "../Library/ME.BECS.SourceGenerator/IncrementalIL.v2.json")),
             UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString(),
             UnityEditor.Compilation.CompilationPipeline.GetAssemblies(UnityEditor.Compilation.AssembliesType.Editor)
