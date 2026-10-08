@@ -108,7 +108,10 @@ namespace ME.BECS.RemoteDebug {
                     entityReference = true, entityVersion = version, entityId = ent.id, entityWorld = ent.worldId, entityGeneration = ent.gen });
                 return;
             }
-            if (type.IsPrimitive || type.IsEnum || value is string || value is decimal || type.Name == "sfloat" || type.Name == "usec" || type.Name == "bbool" || type.Name.StartsWith("FixedString", StringComparison.Ordinal)) {
+            if (value is bbool boolean) {
+                Add(output, path, type, ((bool)boolean).ToString()); return;
+            }
+            if (type.IsPrimitive || type.IsEnum || value is string || value is decimal || type.Name == "sfloat" || type.Name == "usec" || type.Name.StartsWith("FixedString", StringComparison.Ordinal)) {
                 Add(output, path, type, Convert.ToString(value, CultureInfo.InvariantCulture)); return;
             }
             if (depth >= 6) { Add(output, path, type, "Nested value (depth limit)"); return; }
