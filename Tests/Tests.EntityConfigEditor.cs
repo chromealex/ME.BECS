@@ -10,6 +10,30 @@ namespace ME.BECS.Tests {
         private readonly System.Collections.Generic.List<UnityEngine.Object> objects = new();
         private UnityEditor.Editor editor;
 
+        [Test]
+        public void NestedCollectionsSurviveValidateSaveAndReload() {
+            var path = "Assets/__NestedConfigTest_" + Guid.NewGuid().ToString("N") + ".asset";
+            var config = Tests_EntityConfig.NestedConfig(isStatic: true);
+            try {
+                config.Validate();
+                CollectionAssert.AreEqual(new[] { 1u, 2u, 3u, 4u }, config.collectionsData.items.ConvertAll(item => item.id));
+                AssetDatabase.CreateAsset(config, path);
+                AssetDatabase.SaveAssets();
+                UnityEngine.Resources.UnloadAsset(config);
+                config = AssetDatabase.LoadAssetAtPath<EntityConfig>(path);
+                config.Validate();
+                CollectionAssert.AreEqual(new[] { 1u, 2u, 3u, 4u }, config.collectionsData.items.ConvertAll(item => item.id));
+                Assert.AreEqual(2, config.collectionsData.items[0].array.Count);
+                var row = (Tests_EntityConfig.NestedArrayItem)config.collectionsData.items[0].array[0];
+                Assert.AreEqual(2u, row.units.GetConfigId());
+                Assert.AreEqual(3u, row.modifiers.GetConfigId());
+                Assert.AreEqual(201u, ((Config)config.collectionsData.items[2].array[0]).sourceId);
+            } finally {
+                if (AssetDatabase.LoadAssetAtPath<EntityConfig>(path) != null) AssetDatabase.DeleteAsset(path);
+                else if (config != null) UnityEngine.Object.DestroyImmediate(config);
+            }
+        }
+
         [TearDown]
         public void TearDown() {
             if (this.editor != null) UnityEngine.Object.DestroyImmediate(this.editor);

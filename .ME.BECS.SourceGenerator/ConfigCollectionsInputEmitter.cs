@@ -41,7 +41,8 @@ internal static class ConfigCollectionsInputEmitter {
         // OrderBy is stable: equal collection types retain declaration/metadata order.
         order ??= fields.OrderBy(field => ReflectionName(field.Type), StringComparer.Ordinal).Select(field => field.Name).ToArray();
         if (fields.Length == 0 || fields.Length != order.Length || order.Distinct(StringComparer.Ordinal).Count() != order.Length ||
-            fields.Any(field => !order.Contains(field.Name, StringComparer.Ordinal) || !CanMaterialize(field, compilation))) return null;
+            fields.Any(field => order.Contains(field.Name, StringComparer.Ordinal) == false || CanMaterialize(field, compilation) == false ||
+                CanMaterializeNested(field.Type, compilation, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default)) == false)) return null;
         fields = order.Select(fieldName => fields.Single(field => field.Name == fieldName)).ToArray();
         var name = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         var body = new StringBuilder();
@@ -56,19 +57,92 @@ internal static class ConfigCollectionsInputEmitter {
             .Append("[global::UnityEngine.Scripting.Preserve]\npublic static void Apply_").Append(key)
             .Append("(in global::ME.BECS.UnsafeEntityConfig config, void* componentPtr, in global::ME.BECS.Ent ent) {\n")
             .Append("var component = (").Append(name).Append("*)componentPtr;\n");
-        foreach (var field in fields) {
-            var target = "component->@" + field.Name;
-            var fieldType = field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            body.Append("{\nvar res = config.GetCollectionById(").Append(target).Append(".GetConfigId(), out var data, out var length);\n")
-                .Append("if (").Append(target).Append(".IsCreated) ").Append(target).Append(".Dispose();\n")
-                .Append("if (res) { ").Append(target).Append(" = new ").Append(fieldType).Append("(in ent, data, length); }");
-            if (field.Type.AllInterfaces.Any(static i => i.ToDisplayString() == "ME.BECS.IMemList"))
-                body.Append(" else { ").Append(target).Append(" = new ").Append(fieldType).Append("(in ent, 1u); }");
-            else if (field.Type.AllInterfaces.Any(static i => i.ToDisplayString() == "ME.BECS.IMemArray"))
-                body.Append(" else { ").Append(target).Append(" = ").Append(fieldType).Append(".Empty; }");
-            body.Append("\n}\n");
+        var localIndex = 0;
+        for (var fieldIndex = 0; fieldIndex < fields.Length; ++fieldIndex) {
+            var field = fields[fieldIndex];
+            AppendMaterialize(body, "component->@" + field.Name, (INamedTypeSymbol)field.Type, ref localIndex,
+                "config.GetCollectionSourceId<" + name + ">(" + fieldIndex.ToString(CultureInfo.InvariantCulture) + "u)");
         }
         return body.Append("}\n").ToString();
+    }
+
+    private static IEnumerable<IFieldSymbol> PublicFields(INamedTypeSymbol type) =>
+        type.GetMembers().OfType<IFieldSymbol>().Where(static field => field.IsStatic == false && field.DeclaredAccessibility == Accessibility.Public);
+
+    private static bool IsCollection(ITypeSymbol type) => type.AllInterfaces.Any(static i => i.ToDisplayString() == "ME.BECS.IUnmanagedList");
+
+    private static bool HasNestedCollections(ITypeSymbol type) {
+        if (IsCollection(type) == true) return true;
+        return type is INamedTypeSymbol named && named.TypeKind == TypeKind.Struct &&
+            PublicFields(named).Any(field => HasNestedCollections(field.Type));
+    }
+
+    private static bool CanMaterializeNested(ITypeSymbol type, Compilation compilation, HashSet<ITypeSymbol> visiting) {
+        if (type is not INamedTypeSymbol named || named.TypeKind != TypeKind.Struct) return true;
+        if (visiting.Add(type) == false) return false;
+        var element = IsCollection(type) == true ? named.TypeArguments.FirstOrDefault() : null;
+        var valid = true;
+        if (element != null && HasNestedCollections(element) == true) {
+            valid = named.AllInterfaces.Any(static i => i.ToDisplayString() is "ME.BECS.IMemArray" or "ME.BECS.IMemList") &&
+                named.GetMembers().OfType<IPropertySymbol>().Any(static property => property.IsIndexer && property.ReturnsByRef) &&
+                CanMaterializeNested(element, compilation, visiting);
+        } else if (IsCollection(type) == false) {
+            valid = PublicFields(named).All(field => (IsCollection(field.Type) == false || CanMaterialize(field, compilation)) &&
+                CanMaterializeNested(field.Type, compilation, visiting));
+        }
+        visiting.Remove(type);
+        return valid;
+    }
+
+    private static void AppendElementCollections(StringBuilder body, string target, INamedTypeSymbol type, bool dispose, ref int localIndex) {
+        var element = type.TypeArguments.FirstOrDefault();
+        if (element is not INamedTypeSymbol named || HasNestedCollections(element) == false) return;
+        var index = localIndex++;
+        var length = type.AllInterfaces.Any(static i => i.ToDisplayString() == "ME.BECS.IMemList") == true ? "Count" : "Length";
+        body.Append("for (var index").Append(index).Append(" = 0u; index").Append(index).Append(" < ").Append(target).Append('.').Append(length)
+            .Append("; ++index").Append(index).Append(") {\nref var item").Append(index).Append(" = ref ").Append(target).Append("[index").Append(index).Append("];\n");
+        AppendStructCollections(body, "item" + index, named, dispose, ref localIndex);
+        body.Append("}\n");
+    }
+
+    private static void AppendStructCollections(StringBuilder body, string target, INamedTypeSymbol type, bool dispose, ref int localIndex) {
+        foreach (var field in PublicFields(type)) {
+            if (field.Type is not INamedTypeSymbol named || HasNestedCollections(named) == false) continue;
+            var child = target + ".@" + field.Name;
+            if (IsCollection(named) == true) {
+                if (dispose == true) {
+                    AppendDispose(body, child, named, ref localIndex);
+                } else {
+                    AppendMaterialize(body, child, named, ref localIndex);
+                }
+            } else {
+                AppendStructCollections(body, child, named, dispose, ref localIndex);
+            }
+        }
+    }
+
+    private static void AppendDispose(StringBuilder body, string target, INamedTypeSymbol type, ref int localIndex) {
+        body.Append("if (").Append(target).Append(".IsCreated == true) {\n");
+        AppendElementCollections(body, target, type, dispose: true, ref localIndex);
+        body.Append(target).Append(".Dispose();\n}\n");
+    }
+
+    private static void AppendMaterialize(StringBuilder body, string target, INamedTypeSymbol type, ref int localIndex, string? sourceId = null) {
+        var index = localIndex++;
+        var fieldType = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        body.Append("{\nvar res").Append(index).Append(" = config.GetCollectionById(").Append(sourceId ?? target + ".GetConfigId()").Append(", out var data").Append(index)
+            .Append(", out var length").Append(index).Append(");\n");
+        AppendDispose(body, target, type, ref localIndex);
+        body.Append("if (res").Append(index).Append(" == true) {\n").Append(target).Append(" = new ").Append(fieldType)
+            .Append("(in ent, data").Append(index).Append(", length").Append(index).Append(");\n");
+        AppendElementCollections(body, target, type, dispose: false, ref localIndex);
+        body.Append("}");
+        if (type.AllInterfaces.Any(static i => i.ToDisplayString() == "ME.BECS.IMemList") == true) {
+            body.Append(" else { ").Append(target).Append(" = new ").Append(fieldType).Append("(in ent, 1u); }");
+        } else if (type.AllInterfaces.Any(static i => i.ToDisplayString() == "ME.BECS.IMemArray") == true) {
+            body.Append(" else { ").Append(target).Append(" = ").Append(fieldType).Append(".Empty; }");
+        }
+        body.Append("\n}\n");
     }
 
     internal static void Append(StringBuilder source, IReadOnlyList<string> bodies) {
