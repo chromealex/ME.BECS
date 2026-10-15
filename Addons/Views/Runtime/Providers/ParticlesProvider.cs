@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -54,6 +54,19 @@ namespace ME.BECS.Views {
             /// Particle system used by <c>ParticlesProvider.ParticleSystemInfo</c>.
             /// </summary>
             public ParticleSystem particleSystem;
+            public NativeList<ParticleSystem.Particle> particles;
+            internal ParticleEmitter[] emitters;
+            internal ParticleViewBatch batch;
+        }
+
+        internal sealed class ParticleEmitter {
+            internal ParticleSystem proxy;
+            internal NativeList<ParticleSystem.Particle> particles;
+            internal Vector3 localPosition;
+            internal Quaternion localRotation;
+            internal ParticleSystem burstSystem;
+            internal ParticleSystem.Burst burst;
+            internal NativeList<ParticleSystem.Particle> burstParticles;
         }
 
         /// <summary>
@@ -68,6 +81,11 @@ namespace ME.BECS.Views {
             /// Orientation in the coordinate space used by the containing API.
             /// </summary>
             public quaternion rotation;
+            public Vector3 previousPosition;
+            public Quaternion previousRotation;
+            public uint randomSeed;
+            public bool pendingSpawn;
+            public Vector3 scale;
         }
 
         /// <summary>
@@ -98,6 +116,9 @@ namespace ME.BECS.Views {
         private Dictionary<Ent, int> entityToInstanceIndex;
 
         private Transform particlesRoot;
+        private NativeList<Jobs.InterpolationTempData> interpolationResults;
+        private uint nextParticleSeed;
+        private Camera batchCamera;
 
         /// <summary>
         /// Returns root.
@@ -116,6 +137,8 @@ namespace ME.BECS.Views {
             this.systemForPrefab = DictionaryPool<uint, ParticleSystemInfo>.Get();
             this.entityToPrefabId = DictionaryPool<Ent, uint>.Get();
             this.entityToInstanceIndex = DictionaryPool<Ent, int>.Get();
+            this.interpolationResults = new NativeList<Jobs.InterpolationTempData>(Allocator.Persistent);
+            this.nextParticleSeed = 1u;
 
             this.particlesRoot = new GameObject("[Particles Provider] Root").transform;
             if (Application.isPlaying) GameObject.DontDestroyOnLoad(this.particlesRoot.gameObject);
@@ -132,76 +155,131 @@ namespace ME.BECS.Views {
             }
 
             var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo.ptr->prefabPtr);
-            GameObject objInstance;
             if (prefabInfo.ptr->isLoaded == false) {
                 throw new System.Exception("Prefab was not loaded, but we are trying to instantiate it.");
-            } else {
-                objInstance = new GameObject($"ParticleSystem_{prefabId}");
-                objInstance.transform.SetParent(this.particlesRoot, false);
             }
-
-            var rootParticleSystem = objInstance.AddComponent<ParticleSystem>();
-
-            rootParticleSystem.Pause(withChildren: true);
-            rootParticleSystem.Stop(withChildren: true);
-            rootParticleSystem.useAutoRandomSeed = false;
-            rootParticleSystem.randomSeed = 1u;
-
-            var subEmitters = rootParticleSystem.subEmitters;
-            subEmitters.enabled = true;
-            {
-
-                var main = rootParticleSystem.main;
-                main.loop = false;
-                main.prewarm = true;
-                main.playOnAwake = false;
-                main.duration = 10_000f;
-                main.maxParticles = int.MaxValue;
-                main.startLifetime = 10_000f;
-                main.ringBufferMode = UnityEngine.ParticleSystemRingBufferMode.PauseUntilReplaced;
-                main.simulationSpace = UnityEngine.ParticleSystemSimulationSpace.World;
-                main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
-
-                var emission = rootParticleSystem.emission;
-                emission.enabled = false;
-
-                var shape = rootParticleSystem.shape;
-                shape.enabled = false;
-
-                var renderer = rootParticleSystem.GetComponent<ParticleSystemRenderer>();
-                renderer.enabled = false;
-                renderer.alignment = UnityEngine.ParticleSystemRenderSpace.World;
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                renderer.receiveShadows = false;
-
-            }
+            var rootParticleSystem = CreateEmitterProxy(this.particlesRoot);
+            rootParticleSystem.name = $"ParticleSystem_{prefabId}";
 
             var prefab = (EntityView)handle.Target;
 
+            var batchSettings = prefab.GetComponent<BatchedParticleView>();
+            if (batchSettings != null) {
+                var batch = new ParticleViewBatch(prefab, rootParticleSystem.transform, batchSettings.mode);
+                this.systemForPrefab.Add(prefabId, new ParticleSystemInfo() {
+                    particleSystem = rootParticleSystem,
+                    emitters = Array.Empty<ParticleEmitter>(),
+                    batch = batch,
+                });
+                objects = new ObjectsPerPrefab() {
+                    instances = new NativeList<ParticleInstanceData>((int)this.properties.renderingObjectsCapacity, Allocator.Persistent),
+                    entities = new NativeList<Ent>((int)this.properties.renderingObjectsCapacity, Allocator.Persistent),
+                    isDirty = true,
+                };
+                this.objectsPerPrefab.Add(prefabId, objects);
+                return objects;
+            }
+
             var prefabInstance = GameObject.Instantiate(prefab, Vector3.zero, Quaternion.identity, rootParticleSystem.transform);
             var requiredParticleSystems = prefabInstance.GetComponentsInChildren<ParticleSystem>(includeInactive: false);
+            var referencedSystems = new System.Collections.Generic.HashSet<ParticleSystem>();
+            foreach (var source in requiredParticleSystems) {
+                var sub = source.subEmitters;
+                if (sub.enabled == false) continue;
+                for (int i = 0; i < sub.subEmittersCount; ++i) referencedSystems.Add(sub.GetSubEmitterSystem(i));
+            }
+            var emitters = new System.Collections.Generic.List<ParticleEmitter>();
+            var sourcePoses = new System.Collections.Generic.List<(ParticleSystem source, Vector3 position, Quaternion rotation)>();
+            foreach (var source in requiredParticleSystems) {
+                if (referencedSystems.Contains(source) == true) continue;
+                sourcePoses.Add((source, rootParticleSystem.transform.InverseTransformPoint(source.transform.position),
+                    Quaternion.Inverse(rootParticleSystem.transform.rotation) * source.transform.rotation));
+            }
             foreach (var requiredParticleSystem in requiredParticleSystems) {
 
-                requiredParticleSystem.Pause(withChildren: true);
-                requiredParticleSystem.Stop(withChildren: true);
+                requiredParticleSystem.Stop(withChildren: false, stopBehavior: ParticleSystemStopBehavior.StopEmittingAndClear);
 
                 var main = requiredParticleSystem.main;
                 main.prewarm = false;
                 main.playOnAwake = false;
 
                 main.emitterVelocityMode = ParticleSystemEmitterVelocityMode.Transform;
-                main.simulationSpace = UnityEngine.ParticleSystemSimulationSpace.Local;
+                main.simulationSpace = UnityEngine.ParticleSystemSimulationSpace.World;
 
                 var inheritVelocity = requiredParticleSystem.inheritVelocity;
                 inheritVelocity.enabled = true;
                 inheritVelocity.mode = ParticleSystemInheritVelocityMode.Current;
                 inheritVelocity.curveMultiplier = 1;
 
-                subEmitters.AddSubEmitter(requiredParticleSystem, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing, emitProbability: 1f);
-
             }
 
-            var renderers = prefabInstance.GetComponentsInChildren<Renderer>();
+            foreach (var sourcePose in sourcePoses) {
+                var proxy = emitters.Count == 0 ? rootParticleSystem : CreateEmitterProxy(rootParticleSystem.transform);
+                var emitter = new ParticleEmitter() {
+                    proxy = proxy,
+                    particles = new NativeList<ParticleSystem.Particle>(Allocator.Persistent),
+                    localPosition = sourcePose.position,
+                    localRotation = sourcePose.rotation,
+                };
+                var sourceRenderer = sourcePose.source.GetComponent<ParticleSystemRenderer>();
+                if (sourceRenderer != null && sourceRenderer.renderMode == ParticleSystemRenderMode.Mesh) {
+                    var main = sourcePose.source.main;
+                    if (TryGetInstantBurst(sourcePose.source, out var burst) == true) {
+                        // Emit the authored burst natively, then compose every sampled rotation.
+                        // Native InheritRotation only adds Euler angles and cannot do this.
+                        emitter.burstSystem = sourcePose.source;
+                        emitter.burst = burst;
+                        emitter.burstParticles = new NativeList<ParticleSystem.Particle>(Allocator.Persistent);
+                        var emission = sourcePose.source.emission;
+                        emission.enabled = false;
+                        var inheritVelocity = sourcePose.source.inheritVelocity;
+                        inheritVelocity.enabled = false;
+                        main.stopAction = ParticleSystemStopAction.None;
+                    } else if (main.startRotation3D == false) {
+                        // Local mesh alignment used the emitter transform for all three axes.
+                        // World alignment needs those axes in each inherited particle rotation.
+                        // X/Y curves are inactive authoring data in 1D mode; do not enable them.
+                        main.startRotationX = 0f;
+                        main.startRotationY = 0f;
+                        main.startRotation3D = true;
+                    }
+                    if (emitter.burstSystem == null && main.startRotation3D == true) {
+                        var x = main.startRotationX; var y = main.startRotationY;
+                        if (x.mode == ParticleSystemCurveMode.Constant && y.mode == ParticleSystemCurveMode.Constant &&
+                            (x.constant == 0f && y.constant == 0f || main.flipRotation == 0f && sourcePose.source.shape.enabled == false)) {
+                            // Native inheritance adds Euler components. Keep per-particle Z rotation
+                            // native, and compose the constant XY part in quaternion space first.
+                            emitter.localRotation *= Quaternion.Euler(x.constant * Mathf.Rad2Deg, y.constant * Mathf.Rad2Deg, 0f);
+                            main.startRotationX = 0f; main.startRotationY = 0f;
+                        } else {
+                            Logger.Views.Warning($"ParticlesProvider mesh '{sourcePose.source.name}' needs per-particle XY rotation; keep this effect on GameObjectProvider for exact orientation.");
+                        }
+                    }
+                    sourceRenderer.alignment = ParticleSystemRenderSpace.World;
+                }
+                sourcePose.source.transform.SetParent(proxy.transform, worldPositionStays: true);
+                sourcePose.source.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+                if (emitter.burstSystem == null) {
+                    var subEmitters = proxy.subEmitters;
+                    subEmitters.enabled = true;
+                    subEmitters.AddSubEmitter(sourcePose.source, ParticleSystemSubEmitterType.Birth,
+                        ParticleSystemSubEmitterProperties.InheritRotation, emitProbability: 1f);
+                } else {
+                    emitter.burstSystem.Play(withChildren: false);
+                }
+                proxy.Play(withChildren: false);
+                emitters.Add(emitter);
+            }
+            if (emitters.Count == 0) {
+                rootParticleSystem.Play(withChildren: false);
+                emitters.Add(new ParticleEmitter() {
+                    proxy = rootParticleSystem,
+                    localRotation = Quaternion.identity,
+                    particles = new NativeList<ParticleSystem.Particle>(Allocator.Persistent),
+                });
+            }
+
+            var renderers = rootParticleSystem.GetComponentsInChildren<Renderer>();
             foreach (var renderer in renderers) {
                 if (renderer is not ParticleSystemRenderer) {
                     renderer.enabled = false;
@@ -210,6 +288,8 @@ namespace ME.BECS.Views {
 
             var systemInfo = new ParticleSystemInfo {
                 particleSystem = rootParticleSystem,
+                particles = emitters[0].particles,
+                emitters = emitters.ToArray(),
             };
 
             objects = new ObjectsPerPrefab {
@@ -223,6 +303,85 @@ namespace ME.BECS.Views {
 
             return objects;
 
+        }
+
+        private static ParticleSystem CreateEmitterProxy(Transform parent) {
+            var go = new GameObject("Emitter proxy");
+            go.transform.SetParent(parent, worldPositionStays: false);
+            var proxy = go.AddComponent<ParticleSystem>();
+            proxy.Stop(withChildren: false, stopBehavior: ParticleSystemStopBehavior.StopEmittingAndClear);
+            proxy.useAutoRandomSeed = false; proxy.randomSeed = 1u;
+            var main = proxy.main;
+            main.playOnAwake = false; main.loop = false; main.duration = 10_000f;
+            main.startLifetime = 10_000f; main.startRotation3D = true; main.startSpeed = 0f;
+            main.maxParticles = 1; main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.ringBufferMode = ParticleSystemRingBufferMode.PauseUntilReplaced;
+            main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+            var emission = proxy.emission; emission.enabled = false;
+            var shape = proxy.shape; shape.enabled = false;
+            proxy.GetComponent<ParticleSystemRenderer>().enabled = false;
+            return proxy;
+        }
+
+        private static bool IsZero(ParticleSystem.MinMaxCurve curve) {
+            return curve.mode == ParticleSystemCurveMode.Constant && curve.constant == 0f ||
+                   curve.mode == ParticleSystemCurveMode.TwoConstants && curve.constantMin == 0f && curve.constantMax == 0f;
+        }
+
+        private static bool TryGetInstantBurst(ParticleSystem source, out ParticleSystem.Burst burst) {
+            burst = default;
+            var main = source.main;
+            var emission = source.emission;
+            if (main.loop == true || main.ringBufferMode != ParticleSystemRingBufferMode.Disabled ||
+                IsZero(main.startDelay) == false || emission.enabled == false ||
+                IsZero(emission.rateOverTime) == false || IsZero(emission.rateOverDistance) == false ||
+                emission.burstCount != 1 || source.subEmitters.enabled == true || source.collision.enabled == true ||
+                source.trigger.enabled == true || source.colorBySpeed.enabled == true || source.sizeBySpeed.enabled == true ||
+                source.rotationBySpeed.enabled == true || source.shape.alignToDirection == true ||
+                source.GetComponent<ParticleSystemRenderer>().alignment != ParticleSystemRenderSpace.Local) return false;
+            var rotation = source.rotationOverLifetime;
+            if (rotation.enabled == true && rotation.separateAxes == true &&
+                (IsZero(rotation.x) == false || IsZero(rotation.y) == false)) return false;
+            burst = emission.GetBurst(0);
+            return burst.time == 0f && burst.cycleCount == 1;
+        }
+
+        private static void EmitBurst(ParticleEmitter emitter, in ParticleInstanceData instance) {
+            var source = emitter.burstSystem;
+            var random = um::Random.CreateFromIndex(um::math.hash(new um::uint2(instance.randomSeed, source.randomSeed)));
+            if (random.NextFloat() >= emitter.burst.probability) return;
+            var curve = emitter.burst.count;
+            var count = curve.mode == ParticleSystemCurveMode.TwoConstants
+                ? random.NextInt((int)curve.constantMin, (int)curve.constantMax + 1)
+                : Mathf.RoundToInt(curve.Evaluate(0f, random.NextFloat()));
+            if (count <= 0) return;
+            var rotation = (Quaternion)(um::quaternion)instance.rotation * emitter.localRotation;
+            var position = (Vector3)instance.position + (Quaternion)(um::quaternion)instance.rotation * emitter.localPosition;
+            var sourceTransform = source.transform;
+            sourceTransform.SetPositionAndRotation(position, rotation);
+            var previousTime = source.time;
+            try {
+                source.Play(withChildren: false);
+                // Main-module curves belong to a newly started effect, not the shared clock.
+                source.time = 0f;
+                var previousCount = source.particleCount;
+                source.Emit(count);
+                var emittedCount = source.particleCount - previousCount;
+                if (emittedCount <= 0) return;
+                emitter.burstParticles.Clear();
+                emitter.burstParticles.Resize(emittedCount, NativeArrayOptions.ClearMemory);
+                var particles = emitter.burstParticles.AsArray();
+                emittedCount = source.GetParticles(particles, emittedCount, previousCount);
+                for (int i = 0; i < emittedCount; ++i) {
+                    var particle = particles[i];
+                    particle.rotation3D = Quaternion.Normalize(rotation * Quaternion.Euler(particle.rotation3D)).eulerAngles;
+                    particles[i] = particle;
+                }
+                source.SetParticles(particles, emittedCount, previousCount);
+            } finally {
+                source.time = previousTime;
+                sourceTransform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            }
         }
 
         /// <summary>
@@ -245,7 +404,12 @@ namespace ME.BECS.Views {
                 var pos = item.ent.Read<ME.BECS.Transforms.WorldMatrixComponent>().value.c3.xyz;
                 objects.instances.Add(new ParticleInstanceData() {
                     position = pos,
+                    rotation = item.ent.GetAspect<TransformAspect>().rotation,
+                    randomSeed = this.nextParticleSeed++,
+                    pendingSpawn = true,
+                    scale = Vector3.one,
                 });
+                foreach (var emitter in this.systemForPrefab[prefabId].emitters) emitter.particles.Add(default);
                 objects.isDirty = true;
 
                 this.entityToInstanceIndex.Add(item.ent, objects.entities.Length - 1);
@@ -303,6 +467,14 @@ namespace ME.BECS.Views {
 
             dependsOn.Complete();
 
+            // Read the simulated age before compacting the dense owner/particle arrays.
+            // Birth sub-emitters use that age for delayed bursts and continuous emission.
+            foreach (var system in this.systemForPrefab.Values) {
+                foreach (var emitter in system.emitters) {
+                    if (emitter.particles.Length > 0) emitter.proxy.GetParticles(emitter.particles.AsArray());
+                }
+            }
+
             for (int i = 0; i < data.ptr->toRemoveTemp.Length; i++) {
 
                 var item = data.ptr->toRemoveTemp[i];
@@ -317,8 +489,11 @@ namespace ME.BECS.Views {
 
                 var removeIndex = this.entityToInstanceIndex[entToRemove];
 
+                this.systemForPrefab[prefabId].batch?.RemoveAtSwapBack(removeIndex);
+
                 objects.entities.RemoveAtSwapBack(removeIndex);
                 objects.instances.RemoveAtSwapBack(removeIndex);
+                foreach (var emitter in this.systemForPrefab[prefabId].emitters) emitter.particles.RemoveAtSwapBack(removeIndex);
                 objects.isDirty = true;
 
                 this.entityToPrefabId.Remove(entToRemove);
@@ -337,25 +512,32 @@ namespace ME.BECS.Views {
 
         }
 
-        private float GetInterpolationFactor(safe_ptr<State> beginFrameState, ulong currentTick, double tickTime, double currentTimeSinceStart) {
-
-            if (beginFrameState.ptr == null || beginFrameState.ptr->IsCreated == false) {
-                return 1f;
-            }
-
-            var prevTick = beginFrameState.ptr->tick;
-            var prevTime = prevTick * tickTime;
-            var currentTime = currentTick * tickTime;
-            var val = um::math.unlerp(prevTime, currentTime, currentTimeSinceStart);
-            return (float)um::math.select(0d, um::math.clamp(val, 0d, 1d), prevTick != currentTick);
-
-        }
-
         /// <summary>
         /// Commits the accumulated work to its destination.
         /// </summary>
         public JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn, float dt) {
 
+            // The provider's render count and dense entity list are produced by these jobs.
+            dependsOn.Complete();
+            var interpolate = data.ptr->properties.interpolateState == true &&
+                              data.ptr->beginFrameState.ptr->state.ptr != null &&
+                              data.ptr->beginFrameState.ptr->state.ptr->IsCreated == true;
+            if (interpolate == true) {
+                this.interpolationResults.ResizeUninitialized((int)data.ptr->renderingOnSceneCount);
+                dependsOn = new Jobs.PrepareInterpolationFactorJob() {
+                    data = data,
+                    beginFrameState = data.ptr->beginFrameState.ptr->state,
+                    currentTick = data.ptr->connectedWorld.CurrentTick,
+                    tickTime = data.ptr->beginFrameState.ptr->tickTime,
+                    currentTimeSinceStart = data.ptr->beginFrameState.ptr->timeSinceStart,
+                }.Schedule(dependsOn);
+                dependsOn = new Jobs.JobUpdateTransformsInterpolationNoHierarchyPrepare() {
+                    renderingOnSceneEnts = data.ptr->renderingOnSceneEnts,
+                    beginFrameState = data.ptr->beginFrameState.ptr->state,
+                    data = data,
+                    results = this.interpolationResults.AsArray(),
+                }.Schedule(this.interpolationResults.Length, 32, dependsOn);
+            }
             dependsOn.Complete();
 
             {
@@ -364,53 +546,40 @@ namespace ME.BECS.Views {
                 marker.Begin();
                 // move
 
-                if (data.ptr->properties.interpolateState == true && data.ptr->beginFrameState.ptr->state.ptr != null && data.ptr->beginFrameState.ptr->state.ptr->IsCreated == true) {
-                    var prevTick = data.ptr->beginFrameState.ptr->state.ptr->tick;
-                    if (prevTick == data.ptr->connectedWorld.CurrentTick) {
-                        data.ptr->interpolationFactor = 0f;
-                    }
-                    var prevTime = prevTick * (double)data.ptr->beginFrameState.ptr->tickTime;
-                    var currentTime = data.ptr->connectedWorld.CurrentTick * (double)data.ptr->beginFrameState.ptr->tickTime;
-                    data.ptr->interpolationFactor = (float)um::math.clamp(um::math.unlerp(prevTime, currentTime, data.ptr->beginFrameState.ptr->timeSinceStart), 0d, 1d);
-                }
+                for (int renderIndex = 0; renderIndex < data.ptr->renderingOnSceneCount; ++renderIndex) {
 
-                foreach (var kv in this.entityToPrefabId) {
-
-                    var ent = kv.Key;
-                    var prefabId = kv.Value;
+                    var entityData = data.ptr->renderingOnSceneEnts[renderIndex];
+                    var ent = entityData.element;
+                    var prefabId = this.entityToPrefabId[ent];
                     var objects = this.objectsPerPrefab[prefabId];
                     var instanceIndex = this.entityToInstanceIndex[ent];
 
                     var instance = objects.instances[instanceIndex];
 
                     var tr = ent.GetAspect<TransformAspect>();
-                    if (data.ptr->properties.interpolateState == true && data.ptr->beginFrameState.ptr->state.ptr != null && data.ptr->beginFrameState.ptr->state.ptr->IsCreated == true) {
-
-                        var interpolate = true;
-                        WorldMatrixComponent sourceData;
-                        if (Components.Has<WorldMatrixComponent>(data.ptr->beginFrameState.ptr->state, ent.id, ent.gen, true) == true) {
-                            sourceData = Components.Read<WorldMatrixComponent>(data.ptr->beginFrameState.ptr->state, ent.id, ent.gen);
-                            if (sourceData.isTickCalculated == false) {
-                                interpolate = false;
-                            }
-                        } else {
-                            sourceData = default;
-                            interpolate = false;
+                    var position = (Vector3)MatrixUtils.GetPosition(tr.readWorldMatrix);
+                    var rotation = (Quaternion)(um::quaternion)MatrixUtils.GetRotation(tr.readWorldMatrix);
+                    var scale = (Vector3)MatrixUtils.GetScale(tr.readWorldMatrix);
+                    if (interpolate == true) {
+                        var pose = this.interpolationResults[renderIndex];
+                        position = pose.position;
+                        rotation = pose.rotation;
+                        scale = pose.localScale;
+                        if (data.ptr->properties.interpolateNetwork == true && instance.pendingSpawn == false) {
+                            var factor = entityData.version != entityData.initialVersion && entityData.playerDelayMs != 0ul
+                                ? dt * 1000f / entityData.playerDelayMs : 1f;
+                            position = Vector3.Lerp((Vector3)instance.position, position, factor);
+                            rotation = Quaternion.Lerp((Quaternion)(um::quaternion)instance.rotation, rotation, factor);
                         }
-
-                        var worldMatrix = tr.readWorldMatrix;
-                        var pos = (um::float3)MatrixUtils.GetPosition(worldMatrix);
-                        var rot = (um::quaternion)MatrixUtils.GetRotation(worldMatrix);
-                        var position = interpolate == true ? um::math.lerp(MatrixUtils.GetPosition(sourceData.value), pos, data.ptr->interpolationFactor) : pos;
-                        var rotation = interpolate == true ? Math.FastSlerp((um::quaternion)MatrixUtils.GetRotation(sourceData.value), rot, data.ptr->interpolationFactor) : rot;
-
-                        instance.rotation = rotation;
-                        instance.position = position;
-
-                    } else {
-                        instance.rotation = tr.rotation;
-                        instance.position = tr.GetWorldMatrixPosition();
                     }
+                    // Transform.SetRotation normalizes the GameObject provider's quaternion.
+                    // Euler conversion for particles needs the same unit-quaternion input.
+                    rotation = Quaternion.Normalize(rotation);
+                    instance.previousPosition = instance.pendingSpawn == true ? position : (Vector3)instance.position;
+                    instance.previousRotation = instance.pendingSpawn == true ? rotation : (Quaternion)(um::quaternion)instance.rotation;
+                    instance.position = (um::float3)position;
+                    instance.rotation = (um::quaternion)rotation;
+                    instance.scale = scale;
 
                     objects.instances[instanceIndex] = instance;
 
@@ -432,34 +601,65 @@ namespace ME.BECS.Views {
                 if (objects.isDirty == false) continue;
 
                 var particlesRequired = objects.entities.Length;
-                var particlesHas = ps.particleSystem.particleCount;
-                if (particlesHas < particlesRequired) {
-                    ps.particleSystem.Emit(new ParticleSystem.EmitParams(), particlesRequired - particlesHas);
+                if (ps.batch != null) ps.batch.Commit(objects.instances, objects.entities, dt, this.GetBatchCamera(data.ptr->camera));
+                foreach (var emitter in ps.emitters) {
+                    emitter.particles.ResizeUninitialized(particlesRequired);
+                    var particlesArr = emitter.particles.AsArray();
+                    var retainedCount = particlesRequired;
+
+                    for (int i = 0; i < objects.instances.Length; i++) {
+
+                        var instance = objects.instances[i];
+                        if (instance.pendingSpawn == true && retainedCount == particlesRequired) retainedCount = i;
+                        var particle = particlesArr[i];
+                        if (instance.pendingSpawn == true) {
+                            particle = new ParticleSystem.Particle() {
+                                startSize = 1f,
+                                startLifetime = 10_000f,
+                                remainingLifetime = 10_000f,
+                                randomSeed = instance.randomSeed,
+                                startColor = Color.white,
+                            };
+                        }
+                        var rotation = (Quaternion)(um::quaternion)instance.rotation * emitter.localRotation;
+                        particle.position = (Vector3)instance.position + (Quaternion)(um::quaternion)instance.rotation * emitter.localPosition;
+                        var previousPosition = instance.previousPosition + instance.previousRotation * emitter.localPosition;
+                        particle.velocity = dt > 0f ? (particle.position - previousPosition) / dt : Vector3.zero;
+                        // Match the actual Mesh renderer's ZXY rotation (covered by BakeMesh regression).
+                        particle.rotation3D = rotation.eulerAngles;
+                        particlesArr[i] = particle;
+
+                    }
+
+                    var main = emitter.proxy.main;
+                    if (main.maxParticles < particlesRequired) main.maxParticles = emitter.particles.Capacity;
+                    // Birth sub-emitters must see the final pose on the first emission.
+                    emitter.proxy.SetParticles(particlesArr, retainedCount);
+                    for (int i = retainedCount; i < particlesRequired; ++i) {
+                        var particle = particlesArr[i];
+                        emitter.proxy.Emit(new ParticleSystem.EmitParams() {
+                            position = particle.position,
+                            velocity = particle.velocity,
+                            rotation3D = particle.rotation3D,
+                            startSize = particle.startSize,
+                            startLifetime = particle.startLifetime,
+                            startColor = particle.startColor,
+                            randomSeed = particle.randomSeed,
+                        }, 1);
+                        if (emitter.burstSystem != null) EmitBurst(emitter, objects.instances[i]);
+                    }
                 }
-
-                var particlesArr = new NativeArray<ParticleSystem.Particle>(particlesRequired, Allocator.TempJob);
-                ps.particleSystem.GetParticles(particlesArr);
-
-                for (int i = 0; i < objects.instances.Length; i++) {
-
-                    var particle = particlesArr[i];
-
+                for (int i = 0; i < objects.instances.Length; ++i) {
                     var instance = objects.instances[i];
-                    particle.position = (Vector3)instance.position;
-                    particle.rotation3D = (Vector3)instance.rotation.ToEuler();
-                    particlesArr[i] = particle;
-
+                    instance.pendingSpawn = false;
+                    objects.instances[i] = instance;
                 }
-
-                ps.particleSystem.SetParticles(particlesArr, particlesRequired);
                 objects.isDirty = false;
                 this.objectsPerPrefab[prefabId] = objects;
 
-                particlesArr.Dispose();
-
             }
 
-            {
+            if (data.ptr->loadingRequests.Count > 0) {
 
                 ref var allocator = ref data.ptr->viewsWorld.state.ptr->allocator;
                 var continueLoadingRequests = new Unity.Collections.LowLevel.Unsafe.UnsafeList<uint>(data.ptr->loadingRequests.Count, Constants.ALLOCATOR_TEMPJOB);
@@ -469,6 +669,7 @@ namespace ME.BECS.Views {
                         var assetRef = (AssetOp)handle.Target;
                         if (assetRef.IsLoading() == false) {
                             assetRef.StartLoading();
+                            continueLoadingRequests.Add(prefabId);
                         } else if (assetRef.IsLoaded() == true) {
                             prefabInfo.info.ptr->isLoaded = true;
                             var go = (UnityEngine.GameObject)assetRef.assetReference.Asset;
@@ -476,6 +677,8 @@ namespace ME.BECS.Views {
                             prefabInfo.info.ptr->prefabPtr = GCHandle.ToIntPtr(handle);
                             data.ptr->gcHandles.Add(ref data.ptr->viewsWorld.state.ptr->allocator, handle);
                             this.GetOrCreateSystem(prefabId, prefabInfo.info);
+                        } else {
+                            continueLoadingRequests.Add(prefabId);
                         }
                     }
                 }
@@ -494,6 +697,27 @@ namespace ME.BECS.Views {
         /// <summary>
         /// Releases the resources owned by this particles provider instance.
         /// </summary>
+        private Camera GetBatchCamera(Ent cameraEntity) {
+            if (cameraEntity.IsAlive() == false) return Camera.main;
+            if (this.batchCamera == null) {
+                var go = new GameObject("[Particles Provider] Bake camera");
+                go.transform.SetParent(this.particlesRoot, worldPositionStays: false);
+                this.batchCamera = go.AddComponent<Camera>();
+                this.batchCamera.enabled = false;
+            }
+            var aspect = cameraEntity.GetAspect<CameraAspect>();
+            ref readonly var component = ref aspect.readComponent;
+            var tr = cameraEntity.GetAspect<TransformAspect>();
+            this.batchCamera.transform.SetPositionAndRotation((Vector3)tr.position, (Quaternion)(um::quaternion)tr.rotation);
+            this.batchCamera.nearClipPlane = (float)component.nearClipPlane;
+            this.batchCamera.farClipPlane = (float)component.farClipPlane;
+            this.batchCamera.fieldOfView = (float)component.fieldOfViewVertical * Mathf.Rad2Deg;
+            this.batchCamera.aspect = (float)component.aspect;
+            this.batchCamera.orthographic = component.orthographic == true;
+            this.batchCamera.orthographicSize = (float)component.orthographicSize;
+            return this.batchCamera;
+        }
+
         public void Dispose(safe_ptr<State> state, safe_ptr<ViewsModuleData> data) {
 
             foreach (var kv in this.objectsPerPrefab) {
@@ -505,6 +729,11 @@ namespace ME.BECS.Views {
             foreach (var kv in this.systemForPrefab) {
 
                 var systemInfo = kv.Value;
+                systemInfo.batch?.Dispose();
+                foreach (var emitter in systemInfo.emitters) {
+                    emitter.particles.Dispose();
+                    if (emitter.burstParticles.IsCreated == true) emitter.burstParticles.Dispose();
+                }
 
                 if (systemInfo.particleSystem != null) {
                     GameObject.DestroyImmediate(systemInfo.particleSystem.gameObject);
@@ -515,6 +744,7 @@ namespace ME.BECS.Views {
             this.objectsPerPrefab.Clear();
             this.entityToPrefabId.Clear();
             this.entityToInstanceIndex.Clear();
+            this.interpolationResults.Dispose();
 
             if (this.particlesRoot != null) {
                 GameObject.DestroyImmediate(this.particlesRoot.gameObject);
