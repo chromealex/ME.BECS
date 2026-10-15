@@ -5,21 +5,30 @@ using UnityEngine;
 namespace ME.BECS.Views {
 
     internal sealed class ParticleMeshBatch : IDisposable {
+        private sealed class Output {
+            internal ParticleSystem system;
+            internal NativeList<ParticleSystem.Particle> particles = new NativeList<ParticleSystem.Particle>(Allocator.Persistent);
+        }
         private sealed class MeshNode {
             internal Renderer source;
             internal bool visible;
-            internal ParticleSystem output;
+            internal Mesh mesh;
             internal Mesh ownedMesh;
             internal Material ownedMaterial;
-            internal NativeList<ParticleSystem.Particle> particles;
+            internal int textureProperty;
+            internal Output defaultOutput;
+            internal readonly System.Collections.Generic.Dictionary<Texture, Output> variants = new System.Collections.Generic.Dictionary<Texture, Output>();
         }
         private static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
         private readonly Transform sourceRoot;
         private readonly MeshNode[] nodes;
         private readonly MaterialPropertyBlock block = new MaterialPropertyBlock();
+        private readonly Transform parent;
 
         internal ParticleMeshBatch(GameObject source, Transform parent) {
             this.sourceRoot = source.transform;
+            this.parent = parent;
+            var settings = source.GetComponent<BatchedParticleView>();
             var renderers = source.GetComponentsInChildren<Renderer>(false);
             var inputs = new System.Collections.Generic.List<Renderer>();
             foreach (var renderer in renderers) {
@@ -33,23 +42,7 @@ namespace ME.BECS.Views {
             this.nodes = new MeshNode[inputs.Count];
             for (int i = 0; i < inputs.Count; ++i) {
                 var input = inputs[i];
-                var go = new GameObject(input.name);
-                go.layer = input.gameObject.layer;
-                go.transform.SetParent(parent, false);
-                var ps = go.AddComponent<ParticleSystem>();
-                ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
-                var main = ps.main; main.playOnAwake = false; main.loop = false; main.startSpeed = 0f;
-                main.simulationSpace = ParticleSystemSimulationSpace.World; main.scalingMode = ParticleSystemScalingMode.Local;
-                main.startRotation3D = true; main.startSize3D = true;
-                var emission = ps.emission; emission.enabled = false;
-                var shape = ps.shape; shape.enabled = false;
-                var renderer = ps.GetComponent<ParticleSystemRenderer>();
-                renderer.renderMode = ParticleSystemRenderMode.Mesh; renderer.alignment = ParticleSystemRenderSpace.World;
-                renderer.sharedMaterials = input.sharedMaterials;
-                renderer.shadowCastingMode = input.shadowCastingMode; renderer.receiveShadows = input.receiveShadows;
-                renderer.sortingLayerID = input.sortingLayerID; renderer.sortingOrder = input.sortingOrder;
-                var node = new MeshNode() { source = input, visible = input.enabled, output = ps,
-                    particles = new NativeList<ParticleSystem.Particle>(Allocator.Persistent) };
+                var node = new MeshNode() { source = input, visible = input.enabled };
                 this.nodes[i] = node;
                 if (input is SpriteRenderer spriteRenderer) {
                     var sprite = spriteRenderer.sprite;
@@ -63,16 +56,66 @@ namespace ME.BECS.Views {
                     node.ownedMesh.RecalculateNormals(); node.ownedMesh.RecalculateBounds();
                     node.ownedMaterial = new Material(input.sharedMaterial);
                     node.ownedMaterial.mainTexture = sprite.texture;
-                    renderer.sharedMaterial = node.ownedMaterial; renderer.mesh = node.ownedMesh;
+                    node.mesh = node.ownedMesh;
                 } else {
-                    renderer.mesh = input.GetComponent<MeshFilter>().sharedMesh;
+                    node.mesh = input.GetComponent<MeshFilter>().sharedMesh;
                 }
-                ps.Play(withChildren: false);
-                ps.Simulate(0f, withChildren: false, restart: false, fixedTimeStep: false);
+                node.defaultOutput = this.CreateOutput(node);
+                if (settings == null) continue;
+                foreach (var variants in settings.textureVariants) {
+                    if (variants.renderer != input) continue;
+                    node.textureProperty = Shader.PropertyToID(variants.propertyName);
+                    foreach (var texture in variants.textures) {
+                        if (texture != null) this.GetOrCreateOutput(node, texture);
+                    }
+                }
             }
         }
 
-        internal void Clear() { foreach (var node in this.nodes) node.particles.Clear(); }
+        private Output CreateOutput(MeshNode node, Texture texture = null) {
+            var input = node.source;
+            var go = new GameObject(texture == null ? input.name : input.name + " [" + texture.name + "]");
+            go.layer = input.gameObject.layer;
+            go.transform.SetParent(this.parent, false);
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main; main.playOnAwake = false; main.loop = false; main.startSpeed = 0f;
+            main.simulationSpace = ParticleSystemSimulationSpace.World; main.scalingMode = ParticleSystemScalingMode.Local;
+            main.startRotation3D = true; main.startSize3D = true;
+            var emission = ps.emission; emission.enabled = false;
+            var shape = ps.shape; shape.enabled = false;
+            var renderer = ps.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Mesh; renderer.alignment = ParticleSystemRenderSpace.World;
+            renderer.sharedMaterials = input.sharedMaterials;
+            if (node.ownedMaterial != null) renderer.sharedMaterial = node.ownedMaterial;
+            renderer.mesh = node.mesh;
+            renderer.shadowCastingMode = input.shadowCastingMode; renderer.receiveShadows = input.receiveShadows;
+            renderer.sortingLayerID = input.sortingLayerID; renderer.sortingOrder = input.sortingOrder;
+            renderer.renderingLayerMask = input.renderingLayerMask;
+            if (texture != null) {
+                var properties = new MaterialPropertyBlock();
+                input.GetPropertyBlock(properties);
+                properties.SetTexture(node.textureProperty, texture);
+                renderer.SetPropertyBlock(properties);
+            }
+            ps.Play(withChildren: false);
+            ps.Simulate(0f, withChildren: false, restart: false, fixedTimeStep: false);
+            return new Output { system = ps };
+        }
+
+        private Output GetOrCreateOutput(MeshNode node, Texture texture) {
+            if (node.variants.TryGetValue(texture, out var output) == true) return output;
+            output = this.CreateOutput(node, texture);
+            node.variants.Add(texture, output);
+            return output;
+        }
+
+        internal void Clear() {
+            foreach (var node in this.nodes) {
+                node.defaultOutput.particles.Clear();
+                foreach (var output in node.variants.Values) output.particles.Clear();
+            }
+        }
         internal void Prepare() { foreach (var node in this.nodes) node.source.enabled = node.visible; }
         internal void Hide() { foreach (var node in this.nodes) node.source.enabled = false; }
 
@@ -89,7 +132,12 @@ namespace ME.BECS.Views {
                     color *= new Color(authored.r == 0f ? desired.r : desired.r / authored.r, authored.g == 0f ? desired.g : desired.g / authored.g,
                         authored.b == 0f ? desired.b : desired.b / authored.b, authored.a == 0f ? desired.a : desired.a / authored.a);
                 }
-                node.particles.Add(new ParticleSystem.Particle() {
+                var output = node.defaultOutput;
+                if (node.textureProperty != 0) {
+                    var texture = this.block.GetTexture(node.textureProperty);
+                    if (texture != null) output = this.GetOrCreateOutput(node, texture);
+                }
+                output.particles.Add(new ParticleSystem.Particle() {
                     position = pose.GetColumn(3), rotation3D = pose.rotation.eulerAngles,
                     startSize3D = pose.lossyScale, startColor = color,
                     startLifetime = 10000f, remainingLifetime = 10000f, randomSeed = seed,
@@ -99,16 +147,22 @@ namespace ME.BECS.Views {
 
         internal void Commit() {
             foreach (var node in this.nodes) {
-                var main = node.output.main;
-                if (main.maxParticles < node.particles.Length) main.maxParticles = node.particles.Capacity;
-                node.output.SetParticles(node.particles.AsArray(), node.particles.Length);
-                node.output.Simulate(0f, false, false, false);
+                Commit(node.defaultOutput);
+                foreach (var output in node.variants.Values) Commit(output);
             }
+        }
+
+        private static void Commit(Output output) {
+            var main = output.system.main;
+            if (main.maxParticles < output.particles.Length) main.maxParticles = output.particles.Capacity;
+            output.system.SetParticles(output.particles.AsArray(), output.particles.Length);
+            output.system.Simulate(0f, false, false, false);
         }
 
         public void Dispose() {
             foreach (var node in this.nodes) {
-                node.particles.Dispose();
+                node.defaultOutput.particles.Dispose();
+                foreach (var output in node.variants.Values) output.particles.Dispose();
                 if (node.ownedMesh != null) UnityEngine.Object.DestroyImmediate(node.ownedMesh);
                 if (node.ownedMaterial != null) UnityEngine.Object.DestroyImmediate(node.ownedMaterial);
             }

@@ -22,6 +22,15 @@ namespace ME.BECS.Views {
             public float speed;
         }
         public Orbit[] orbits = System.Array.Empty<Orbit>();
+
+        // Preallocate outputs for owner-specific material textures before the first drop.
+        [System.Serializable]
+        public struct TextureVariants {
+            public Renderer renderer;
+            public string propertyName;
+            public Texture[] textures;
+        }
+        public TextureVariants[] textureVariants = System.Array.Empty<TextureVariants>();
     }
 
 }

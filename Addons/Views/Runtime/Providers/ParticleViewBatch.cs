@@ -14,6 +14,8 @@ namespace ME.BECS.Views {
             internal ParticleSystem.PlaybackState playback;
             internal NativeList<ParticleSystem.Particle> particles = new NativeList<ParticleSystem.Particle>(Allocator.Persistent);
             internal ParticleSystem.Trails trails;
+            internal bool activeSelf;
+            internal bool active;
             public void Dispose() => this.particles.Dispose();
         }
 
@@ -147,6 +149,7 @@ namespace ME.BECS.Views {
                     state.age = 0f;
                     for (int orbit = 0; orbit < this.orbits.Length; ++orbit) state.orbitCenters[orbit] = this.orbits[orbit].transform.position;
                     for (int j = 0; j < this.nodes.Length; ++j) {
+                        this.nodes[j].simulation.gameObject.SetActive(true);
                         this.nodes[j].simulation.Stop(withChildren: false, ParticleSystemStopBehavior.StopEmittingAndClear);
                         this.nodes[j].simulation.randomSeed = Unity.Mathematics.math.hash(new Unity.Mathematics.uint2(instance.randomSeed, (uint)j + 1u)) | 1u;
                     }
@@ -155,17 +158,20 @@ namespace ME.BECS.Views {
                 } else {
                     this.SetPose(instance.previousPosition, instance.previousRotation, state.scale);
                     this.ApplyOrbits(state, state.age);
+                    for (int j = 0; j < this.nodes.Length; ++j) this.nodes[j].simulation.gameObject.SetActive(state.nodes[j].activeSelf);
                     // Clear the previous graph before activating/restoring nodes.
                     // A zero-particle sub-emitter can be stopped even after Simulate.
                     foreach (var node in this.nodes) node.simulation.Clear(withChildren: false);
                     for (int j = 0; j < this.nodes.Length; ++j) {
                         var simulation = this.nodes[j].simulation;
+                        if (simulation.gameObject.activeInHierarchy == false) continue;
                         simulation.Play(withChildren: false);
                         simulation.Pause(withChildren: false);
                     }
                     for (int j = 0; j < this.nodes.Length; ++j) {
                         var snapshot = state.nodes[j];
                         var simulation = this.nodes[j].simulation;
+                        if (simulation.gameObject.activeInHierarchy == false) continue;
                         simulation.SetPlaybackState(snapshot.playback);
                         simulation.SetParticles(snapshot.particles.AsArray(), snapshot.particles.Length);
                         if (this.nodes[j].hasTrails == true) simulation.SetTrails(snapshot.trails);
@@ -178,6 +184,22 @@ namespace ME.BECS.Views {
                 state.age += Mathf.Max(0f, dt);
                 this.ApplyOrbits(state, state.age);
                 if (instance.pendingSpawn == false) this.PrepareModules(state, entities[i], dt, newOwner: false);
+                // A module can toggle a branch for this owner (for example loot's
+                // warning). Its activation history must never come from the last owner.
+                foreach (var node in this.nodes) {
+                    if (node.simulation.gameObject.activeInHierarchy == false) {
+                        node.simulation.Stop(withChildren: false, ParticleSystemStopBehavior.StopEmittingAndClear);
+                    }
+                }
+                if (instance.pendingSpawn == false) {
+                    for (int j = 0; j < this.nodes.Length; ++j) {
+                        var simulation = this.nodes[j].simulation;
+                        if (simulation.gameObject.activeInHierarchy == true && state.nodes[j].active == false) {
+                            simulation.randomSeed = Unity.Mathematics.math.hash(new Unity.Mathematics.uint2(instance.randomSeed, (uint)j + 1u)) | 1u;
+                            simulation.Simulate(0f, withChildren: false, restart: true, fixedTimeStep: false);
+                        }
+                    }
+                }
                 if (dt > 0f) this.Simulate(dt, restart: false);
                 for (int orbit = 0; orbit < this.orbits.Length; ++orbit) state.orbitPositions[orbit] = this.orbits[orbit].transform.localPosition;
                 this.meshes.Append(this.simulationRoot.transform.localToWorldMatrix, instance.randomSeed);
@@ -185,6 +207,8 @@ namespace ME.BECS.Views {
                 for (int j = 0; j < this.nodes.Length; ++j) {
                     var node = this.nodes[j];
                     var snapshot = state.nodes[j];
+                    snapshot.activeSelf = node.simulation.gameObject.activeSelf;
+                    snapshot.active = node.simulation.gameObject.activeInHierarchy;
                     // Unity leaves inactive fields (notably angularVelocity when
                     // Rotation is disabled) untouched. They must be zero before a
                     // round trip, or SetParticles introduces arbitrary motion.
@@ -203,6 +227,7 @@ namespace ME.BECS.Views {
                     node.simulation.SetParticles(snapshot.particles.AsArray(), snapshot.particles.Length);
                 }
                 foreach (var node in this.nodes) {
+                    if (node.simulation.gameObject.activeInHierarchy == false) continue;
                     if (node.hasTrails == true) node.trails.Append(node.simulation, camera);
                     node.geometry.Append(node.simulation, camera);
                 }
@@ -227,7 +252,9 @@ namespace ME.BECS.Views {
         }
 
         private void Simulate(float dt, bool restart) {
-            foreach (var system in this.roots) system.Simulate(dt, withChildren: true, restart: restart, fixedTimeStep: false);
+            foreach (var system in this.roots) {
+                if (system.gameObject.activeInHierarchy == true) system.Simulate(dt, withChildren: true, restart: restart, fixedTimeStep: false);
+            }
         }
 
         private void ApplyOrbits(Owner state, float age) {
