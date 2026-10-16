@@ -13,6 +13,7 @@ internal sealed class InputManifestTypes {
     private CompilerViewSafety? viewSafety;
     private CompilerScheduledJobs? scheduledJobs;
     private readonly System.Threading.CancellationToken cancellation;
+    private readonly Compilation compilation;
     internal CompilerJobCatalogs JobCatalogs => this.jobCatalogs ??= new CompilerJobCatalogs(this.assemblies.Values, this.cancellation);
     internal CompilerJobSafetyCatalog JobSafety => this.jobSafety ??= new CompilerJobSafetyCatalog(this.JobCatalogs);
     internal CompilerSystemDependencies SystemDependencies => this.systemDependencies ??= new CompilerSystemDependencies(this.assemblies.Values, this.cancellation);
@@ -20,6 +21,7 @@ internal sealed class InputManifestTypes {
     internal CompilerScheduledJobs ScheduledJobs => this.scheduledJobs ??= new CompilerScheduledJobs(this.assemblies.Values, this.cancellation);
 
     internal InputManifestTypes(Compilation compilation, System.Threading.CancellationToken cancellation) {
+        this.compilation = compilation;
         this.cancellation = cancellation;
         var pending = new Queue<IAssemblySymbol>();
         pending.Enqueue(compilation.Assembly);
@@ -98,6 +100,40 @@ internal sealed class InputManifestTypes {
             catch (ArgumentException) { gap = "InvalidTypeConstruction"; return null; }
             offset += owner.Arity;
         }
+        // Roslyn Construct does not validate generic constraints. A removed component
+        // interface must take the existing Editor recovery path instead of emitting
+        // uncompilable stale registrations that prevent the next IL publication.
+        if (result != null && this.SatisfiesConstraints(result) == false) {
+            gap = "GenericConstraintChanged";
+            return null;
+        }
         return result;
+    }
+
+    private bool SatisfiesConstraints(INamedTypeSymbol type) {
+        var owners = MethodSummaryType.TypeOwners(type).ToArray();
+        var bindings = new Dictionary<string, MethodSummaryType>(StringComparer.Ordinal);
+        foreach (var owner in owners) {
+            for (var i = 0; i < owner.Arity; ++i)
+                bindings[MethodSummaryType.From(owner.OriginalDefinition.TypeParameters[i]).Identity] = MethodSummaryType.From(owner.TypeArguments[i]);
+        }
+        foreach (var owner in owners) {
+            for (var i = 0; i < owner.Arity; ++i) {
+                var parameter = owner.OriginalDefinition.TypeParameters[i];
+                var argument = owner.TypeArguments[i];
+                if (parameter.HasUnmanagedTypeConstraint == true && argument.IsUnmanagedType == false) return false;
+                if (parameter.HasValueTypeConstraint == true && (argument.IsValueType == false ||
+                    argument.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)) return false;
+                if (parameter.HasReferenceTypeConstraint == true && argument.IsReferenceType == false) return false;
+                if (parameter.HasConstructorConstraint == true && argument.IsValueType == false &&
+                    (argument is not INamedTypeSymbol named || named.IsAbstract == true ||
+                     named.InstanceConstructors.Any(ctor => ctor.DeclaredAccessibility == Accessibility.Public && ctor.Parameters.Length == 0) == false)) return false;
+                foreach (var constraint in parameter.ConstraintTypes) {
+                    var closed = MethodSummaryTypeResolver.Resolve(MethodSummaryType.From(constraint).Substitute(bindings), this.compilation);
+                    if (closed == null || this.compilation.ClassifyCommonConversion(argument, closed).IsImplicit == false) return false;
+                }
+            }
+        }
+        return true;
     }
 }
