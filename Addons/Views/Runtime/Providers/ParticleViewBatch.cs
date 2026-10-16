@@ -195,6 +195,8 @@ namespace ME.BECS.Views {
                     for (int j = 0; j < this.nodes.Length; ++j) {
                         var simulation = this.nodes[j].simulation;
                         if (simulation.gameObject.activeInHierarchy == true && state.nodes[j].active == false) {
+                            // A view module may have called Play while reactivating this node.
+                            simulation.Stop(withChildren: false, ParticleSystemStopBehavior.StopEmittingAndClear);
                             simulation.randomSeed = Unity.Mathematics.math.hash(new Unity.Mathematics.uint2(instance.randomSeed, (uint)j + 1u)) | 1u;
                             simulation.Simulate(0f, withChildren: false, restart: true, fixedTimeStep: false);
                         }
