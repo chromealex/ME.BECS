@@ -142,6 +142,11 @@ namespace ME.BECS.Attack {
         /// </summary>
         public ME.BECS.Views.View muzzleView;
 
+        /// <summary>
+        /// Optional components applied to the muzzle entity before its view is instantiated.
+        /// </summary>
+        public Config muzzleConfig;
+
     }
 
     /// <summary>
