@@ -192,7 +192,7 @@ namespace ME.BECS {
                 // requests can let short-lived effect entities expire before they are rendered.
                 var particlesProperties = this.properties;
                 particlesProperties.spawnLimitPerFrame = 0u;
-                this.viewsParticles = UnsafeViewsModule<EntityView>.Create(PARTICLES_PROVIDER_ID, ref world, new ParticlesProvider(), this.worldProperties.stateProperties.EntitiesCapacity, particlesProperties);
+                this.viewsParticles = UnsafeViewsModule<EntityView>.Create(PARTICLES_PROVIDER_ID, ref world, new ParticlesProvider(residentParticleSystemBudget: 512), this.worldProperties.stateProperties.EntitiesCapacity, particlesProperties);
             }
             this.isActive = true;
 

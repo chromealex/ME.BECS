@@ -122,6 +122,24 @@ namespace ME.BECS.Views {
         private uint nextParticleSeed;
         private Camera batchCamera;
 
+        private readonly uint residentParticleSystemBudget;
+        private readonly uint residentOwnersPerPrefab;
+        private ResidentPool residentPool;
+
+        // Reference state survives provider struct copies made by view infrastructure.
+        private sealed class ResidentPool {
+            internal uint remaining;
+            internal bool loadingRegistry;
+            internal readonly System.Collections.Generic.List<uint> pending = new System.Collections.Generic.List<uint>();
+        }
+
+        /// <summary>Prepares bounded resident simulation graphs while loading prefabs. Zero retains shared simulation only.</summary>
+        public ParticlesProvider(uint residentParticleSystemBudget, uint residentOwnersPerPrefab = 4) {
+            this = default;
+            this.residentParticleSystemBudget = residentParticleSystemBudget;
+            this.residentOwnersPerPrefab = residentOwnersPerPrefab;
+        }
+
         /// <summary>
         /// Returns root.
         /// </summary>
@@ -141,6 +159,9 @@ namespace ME.BECS.Views {
             this.entityToInstanceIndex = DictionaryPool<Ent, int>.Get();
             this.interpolationResults = new NativeList<Jobs.InterpolationTempData>(Allocator.Persistent);
             this.nextParticleSeed = 1u;
+            if (this.residentParticleSystemBudget > 0u && this.residentOwnersPerPrefab > 0u) {
+                this.residentPool = new ResidentPool { remaining = this.residentParticleSystemBudget };
+            }
 
             this.particlesRoot = new GameObject("[Particles Provider] Root").transform;
             if (Application.isPlaying) GameObject.DontDestroyOnLoad(this.particlesRoot.gameObject);
@@ -179,6 +200,10 @@ namespace ME.BECS.Views {
                     isDirty = true,
                 };
                 this.objectsPerPrefab.Add(prefabId, objects);
+                if (this.residentPool != null && batch.ResidentSystemCost > 0u) {
+                    this.residentPool.pending.Add(prefabId);
+                    if (this.residentPool.loadingRegistry == false) this.PrepareResidentPools();
+                }
                 return objects;
             }
 
@@ -675,30 +700,36 @@ namespace ME.BECS.Views {
 
                 ref var allocator = ref data.ptr->viewsWorld.state.ptr->allocator;
                 var continueLoadingRequests = new Unity.Collections.LowLevel.Unsafe.UnsafeList<uint>(data.ptr->loadingRequests.Count, Constants.ALLOCATOR_TEMPJOB);
-                foreach (var prefabId in data.ptr->loadingRequests) {
-                    if (data.ptr->prefabIdToInfo.TryGetValue(in allocator, prefabId, out var prefabInfo) == true) {
-                        var handle = GCHandle.FromIntPtr(prefabInfo.info.ptr->prefabPtr);
-                        var assetRef = (AssetOp)handle.Target;
-                        if (assetRef.IsLoading() == false) {
-                            assetRef.StartLoading();
-                            continueLoadingRequests.Add(prefabId);
-                        } else if (assetRef.IsLoaded() == true) {
-                            prefabInfo.info.ptr->isLoaded = true;
-                            var go = (UnityEngine.GameObject)assetRef.assetReference.Asset;
-                            handle = new HeapReference<EntityView>(go.GetComponent<EntityView>()).handle;
-                            prefabInfo.info.ptr->prefabPtr = GCHandle.ToIntPtr(handle);
-                            data.ptr->gcHandles.Add(ref data.ptr->viewsWorld.state.ptr->allocator, handle);
-                            this.GetOrCreateSystem(prefabId, prefabInfo.info);
-                        } else {
-                            continueLoadingRequests.Add(prefabId);
+                if (this.residentPool != null) this.residentPool.loadingRegistry = true;
+                try {
+                    foreach (var prefabId in data.ptr->loadingRequests) {
+                        if (data.ptr->prefabIdToInfo.TryGetValue(in allocator, prefabId, out var prefabInfo) == true) {
+                            var handle = GCHandle.FromIntPtr(prefabInfo.info.ptr->prefabPtr);
+                            var assetRef = (AssetOp)handle.Target;
+                            if (assetRef.IsLoading() == false) {
+                                assetRef.StartLoading();
+                                continueLoadingRequests.Add(prefabId);
+                            } else if (assetRef.IsLoaded() == true) {
+                                prefabInfo.info.ptr->isLoaded = true;
+                                var go = (UnityEngine.GameObject)assetRef.assetReference.Asset;
+                                handle = new HeapReference<EntityView>(go.GetComponent<EntityView>()).handle;
+                                prefabInfo.info.ptr->prefabPtr = GCHandle.ToIntPtr(handle);
+                                data.ptr->gcHandles.Add(ref data.ptr->viewsWorld.state.ptr->allocator, handle);
+                                this.GetOrCreateSystem(prefabId, prefabInfo.info);
+                            } else {
+                                continueLoadingRequests.Add(prefabId);
+                            }
                         }
                     }
+                    data.ptr->loadingRequests.Clear();
+                    foreach (var prefabId in continueLoadingRequests) {
+                        data.ptr->loadingRequests.Add(prefabId);
+                    }
+                } finally {
+                    if (this.residentPool != null) this.residentPool.loadingRegistry = false;
+                    continueLoadingRequests.Dispose();
                 }
-                data.ptr->loadingRequests.Clear();
-                foreach (var prefabId in continueLoadingRequests) {
-                    data.ptr->loadingRequests.Add(prefabId);
-                }
-                continueLoadingRequests.Dispose();
+                this.PrepareResidentPools();
 
             }
 
@@ -807,13 +838,38 @@ namespace ME.BECS.Views {
         public void Load(safe_ptr<ViewsModuleData> viewsModuleData, ObjectReferenceRegistryData data) {
 
             viewsModuleData.ptr->prefabId = math.max(viewsModuleData.ptr->prefabId, data.GetSourceId());
-            foreach (var item in data.objects) {
-                var objectItem = new ObjectItem(item.data);
-                if (objectItem.IsValid() == true && objectItem.Is<EntityView>() == true) {
-                    this.Register(viewsModuleData, objectItem, item.data.sourceId);
+            if (this.residentPool != null) this.residentPool.loadingRegistry = true;
+            try {
+                foreach (var item in data.objects) {
+                    var objectItem = new ObjectItem(item.data);
+                    if (objectItem.IsValid() == true && objectItem.Is<EntityView>() == true) {
+                        this.Register(viewsModuleData, objectItem, item.data.sourceId);
+                    }
                 }
+            } finally {
+                if (this.residentPool != null) this.residentPool.loadingRegistry = false;
             }
+            this.PrepareResidentPools();
 
+        }
+
+        private void PrepareResidentPools() {
+            var pool = this.residentPool;
+            if (pool == null || pool.pending.Count == 0) return;
+            pool.pending.Sort();
+            for (uint round = 0; round < this.residentOwnersPerPrefab; ++round) {
+                var prepared = false;
+                foreach (var prefabId in pool.pending) {
+                    var batch = this.systemForPrefab[prefabId].batch;
+                    var cost = batch.ResidentSystemCost;
+                    if ((uint)batch.ResidentCount >= this.residentOwnersPerPrefab || cost > pool.remaining) continue;
+                    batch.PrepareResident();
+                    pool.remaining -= cost;
+                    prepared = true;
+                }
+                if (prepared == false) break;
+            }
+            pool.pending.Clear();
         }
 
         /// <summary>

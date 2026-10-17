@@ -5,6 +5,10 @@ using UnityEngine;
 namespace ME.BECS.Views {
 
     internal sealed class ParticleMeshBatch : IDisposable {
+        internal sealed class Sources {
+            internal Transform root;
+            internal Renderer[] renderers;
+        }
         private sealed class Output {
             internal ParticleSystem system;
             internal NativeList<ParticleSystem.Particle> particles = new NativeList<ParticleSystem.Particle>(Allocator.Persistent);
@@ -21,15 +25,12 @@ namespace ME.BECS.Views {
             internal readonly System.Collections.Generic.Dictionary<Texture, Output> variants = new System.Collections.Generic.Dictionary<Texture, Output>();
         }
         private static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
-        private readonly Transform sourceRoot;
+        private readonly Sources sources;
         private readonly MeshNode[] nodes;
         private readonly MaterialPropertyBlock block = new MaterialPropertyBlock();
         private readonly Transform parent;
 
-        internal ParticleMeshBatch(GameObject source, Transform parent) {
-            this.sourceRoot = source.transform;
-            this.parent = parent;
-            var settings = source.GetComponent<BatchedParticleView>();
+        internal static Sources CaptureSources(GameObject source) {
             var renderers = source.GetComponentsInChildren<Renderer>(false);
             var inputs = new System.Collections.Generic.List<Renderer>();
             foreach (var renderer in renderers) {
@@ -40,9 +41,16 @@ namespace ME.BECS.Views {
                 if (renderer is SpriteRenderer sprite && sprite.sprite == null) continue;
                 if (renderer is MeshRenderer || renderer is SpriteRenderer) inputs.Add(renderer);
             }
-            this.nodes = new MeshNode[inputs.Count];
-            for (int i = 0; i < inputs.Count; ++i) {
-                var input = inputs[i];
+            return new Sources { root = source.transform, renderers = inputs.ToArray() };
+        }
+
+        internal ParticleMeshBatch(GameObject source, Transform parent) {
+            this.sources = CaptureSources(source);
+            this.parent = parent;
+            var settings = source.GetComponent<BatchedParticleView>();
+            this.nodes = new MeshNode[this.sources.renderers.Length];
+            for (int i = 0; i < this.nodes.Length; ++i) {
+                var input = this.sources.renderers[i];
                 var node = new MeshNode() { source = input, visible = input.enabled };
                 this.nodes[i] = node;
                 if (input is SpriteRenderer spriteRenderer) {
@@ -117,18 +125,27 @@ namespace ME.BECS.Views {
                 foreach (var output in node.variants.Values) output.particles.Clear();
             }
         }
-        internal void Prepare() { foreach (var node in this.nodes) node.source.enabled = node.visible; }
-        internal void Hide() { foreach (var node in this.nodes) node.source.enabled = false; }
+        internal void Prepare(Sources source = null) {
+            source ??= this.sources;
+            for (int i = 0; i < this.nodes.Length; ++i) source.renderers[i].enabled = this.nodes[i].visible;
+        }
+        internal void Hide(Sources source = null) {
+            source ??= this.sources;
+            foreach (var renderer in source.renderers) renderer.enabled = false;
+        }
 
-        internal void Append(Matrix4x4 ownerMatrix, uint seed) {
-            foreach (var node in this.nodes) {
-                if (node.source.enabled == false) continue;
-                var pose = ownerMatrix * this.sourceRoot.worldToLocalMatrix * node.source.transform.localToWorldMatrix;
-                var color = node.source is SpriteRenderer sprite ? sprite.color : Color.white;
-                this.block.Clear(); node.source.GetPropertyBlock(this.block);
-                if (this.block.HasColor(BaseColor) == true && node.source.sharedMaterial != null && node.source.sharedMaterial.HasColor(BaseColor) == true) {
+        internal void Append(Matrix4x4 ownerMatrix, uint seed, Sources source = null) {
+            source ??= this.sources;
+            for (int i = 0; i < this.nodes.Length; ++i) {
+                var node = this.nodes[i];
+                var input = source.renderers[i];
+                if (input.enabled == false) continue;
+                var pose = ownerMatrix * source.root.worldToLocalMatrix * input.transform.localToWorldMatrix;
+                var color = input is SpriteRenderer sprite ? sprite.color : Color.white;
+                this.block.Clear(); input.GetPropertyBlock(this.block);
+                if (this.block.HasColor(BaseColor) == true && input.sharedMaterial != null && input.sharedMaterial.HasColor(BaseColor) == true) {
                     var desired = this.block.GetColor(BaseColor);
-                    var material = node.source.sharedMaterial;
+                    var material = input.sharedMaterial;
                     var authored = material.HasColor(BaseColor) == true ? material.GetColor(BaseColor) : Color.white;
                     color *= new Color(authored.r == 0f ? desired.r : desired.r / authored.r, authored.g == 0f ? desired.g : desired.g / authored.g,
                         authored.b == 0f ? desired.b : desired.b / authored.b, authored.a == 0f ? desired.a : desired.a / authored.a);

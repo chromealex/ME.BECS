@@ -71,15 +71,19 @@ namespace ME.BECS.Views {
         }
 
         internal void Append(ParticleSystem source, Camera camera) {
+            this.AppendFrom(source, this.sourceRenderer, camera);
+        }
+
+        internal void AppendFrom(ParticleSystem source, ParticleSystemRenderer renderer, Camera camera) {
             if (camera == null || this.visible == false) return;
             if (this.trails == false && source.particleCount == 0) return;
             using (BakeMarker.Auto()) {
                 this.scratch.Clear();
                 const ParticleSystemBakeMeshOptions options = ParticleSystemBakeMeshOptions.BakeRotationAndScale | ParticleSystemBakeMeshOptions.BakePosition;
                 if (this.trails == true) {
-                    this.sourceRenderer.BakeTrailsMesh(this.scratch, camera, options);
+                    renderer.BakeTrailsMesh(this.scratch, camera, options);
                 } else {
-                    this.sourceRenderer.BakeMesh(this.scratch, camera, options);
+                    renderer.BakeMesh(this.scratch, camera, options);
                 }
             }
             if (this.scratch.vertexCount == 0) return;
