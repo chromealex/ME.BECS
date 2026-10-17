@@ -45,6 +45,8 @@ namespace ME.BECS.Views {
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
     #endif
     public unsafe struct ParticlesProvider : IViewProvider<EntityView>, IViewProviderRoot {
+        private static readonly Unity.Profiling.ProfilerMarker CommitMarker = new Unity.Profiling.ProfilerMarker("[Particles Provider] Commit");
+        private static readonly Unity.Profiling.ProfilerMarker MoveMarker = new Unity.Profiling.ProfilerMarker("[Particles Provider] Move transforms");
 
         /// <summary>
         /// Stores particle system info for <c>ParticlesProvider</c>.
@@ -516,6 +518,7 @@ namespace ME.BECS.Views {
         /// Commits the accumulated work to its destination.
         /// </summary>
         public JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn, float dt) {
+            using var commitMarker = CommitMarker.Auto();
 
             // The provider's render count and dense entity list are produced by these jobs.
             dependsOn.Complete();
@@ -542,8 +545,7 @@ namespace ME.BECS.Views {
 
             {
 
-                var marker = new Unity.Profiling.ProfilerMarker("[Particles Provider] Move transforms");
-                marker.Begin();
+                using var marker = MoveMarker.Auto();
                 // move
 
                 for (int renderIndex = 0; renderIndex < data.ptr->renderingOnSceneCount; ++renderIndex) {
@@ -556,10 +558,9 @@ namespace ME.BECS.Views {
 
                     var instance = objects.instances[instanceIndex];
 
-                    var tr = ent.GetAspect<TransformAspect>();
-                    var position = (Vector3)MatrixUtils.GetPosition(tr.readWorldMatrix);
-                    var rotation = (Quaternion)(um::quaternion)MatrixUtils.GetRotation(tr.readWorldMatrix);
-                    var scale = (Vector3)MatrixUtils.GetScale(tr.readWorldMatrix);
+                    Vector3 position;
+                    Quaternion rotation;
+                    Vector3 scale;
                     if (interpolate == true) {
                         var pose = this.interpolationResults[renderIndex];
                         position = pose.position;
@@ -571,6 +572,11 @@ namespace ME.BECS.Views {
                             position = Vector3.Lerp((Vector3)instance.position, position, factor);
                             rotation = Quaternion.Lerp((Quaternion)(um::quaternion)instance.rotation, rotation, factor);
                         }
+                    } else {
+                        var matrix = ent.GetAspect<TransformAspect>().readWorldMatrix;
+                        position = (Vector3)MatrixUtils.GetPosition(matrix);
+                        rotation = (Quaternion)(um::quaternion)MatrixUtils.GetRotation(matrix);
+                        scale = (Vector3)MatrixUtils.GetScale(matrix);
                     }
                     // Transform.SetRotation normalizes the GameObject provider's quaternion.
                     // Euler conversion for particles needs the same unit-quaternion input.
@@ -588,10 +594,10 @@ namespace ME.BECS.Views {
 
                 }
 
-                marker.End();
-
             }
 
+            Camera camera = null;
+            var cameraPrepared = false;
             foreach (var kv in this.systemForPrefab) {
 
                 var prefabId = kv.Key;
@@ -601,7 +607,13 @@ namespace ME.BECS.Views {
                 if (objects.isDirty == false) continue;
 
                 var particlesRequired = objects.entities.Length;
-                if (ps.batch != null) ps.batch.Commit(objects.instances, objects.entities, dt, this.GetBatchCamera(data.ptr->camera));
+                if (ps.batch != null) {
+                    if (cameraPrepared == false) {
+                        camera = this.GetBatchCamera(data.ptr->camera);
+                        cameraPrepared = true;
+                    }
+                    ps.batch.Commit(objects.instances, objects.entities, dt, camera);
+                }
                 foreach (var emitter in ps.emitters) {
                     emitter.particles.ResizeUninitialized(particlesRequired);
                     var particlesArr = emitter.particles.AsArray();

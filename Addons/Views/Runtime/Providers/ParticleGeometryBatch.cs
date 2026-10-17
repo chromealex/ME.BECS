@@ -1,31 +1,36 @@
 using System;
-using System.Collections.Generic;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
+using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace ME.BECS.Views {
 
     // Keep native billboard facing, texture animation and the full transform
     // matrix (including nonuniform scale). A particle TRS cannot represent shear.
+    [Unity.Burst.BurstCompile]
     internal sealed class ParticleGeometryBatch : IDisposable {
         private static readonly int MainTex = Shader.PropertyToID("_MainTex");
+        private static readonly ProfilerMarker BakeMarker = new ProfilerMarker("[Particles Batch] Bake geometry");
+        private static readonly ProfilerMarker MergeMarker = new ProfilerMarker("[Particles Batch] Merge geometry");
+        private static readonly ProfilerMarker CopyStreamsMarker = new ProfilerMarker("[Particles Batch] Copy vertex streams");
+        private static readonly ProfilerMarker RemapIndicesMarker = new ProfilerMarker("[Particles Batch] Remap indices");
+        private static readonly ProfilerMarker UploadMarker = new ProfilerMarker("[Particles Batch] Upload geometry");
+
         private readonly Mesh scratch = new Mesh();
         private readonly Mesh combined = new Mesh();
-        private readonly System.Collections.Generic.List<Vector3> vertices = new System.Collections.Generic.List<Vector3>();
-        private readonly System.Collections.Generic.List<Vector3> normals = new System.Collections.Generic.List<Vector3>();
-        private readonly System.Collections.Generic.List<Vector4> tangents = new System.Collections.Generic.List<Vector4>();
-        private readonly System.Collections.Generic.List<Color32> colors = new System.Collections.Generic.List<Color32>();
-        private readonly System.Collections.Generic.List<int> indices = new System.Collections.Generic.List<int>();
-        private readonly System.Collections.Generic.List<Vector3> sourceVertices = new System.Collections.Generic.List<Vector3>();
-        private readonly System.Collections.Generic.List<Vector3> sourceNormals = new System.Collections.Generic.List<Vector3>();
-        private readonly System.Collections.Generic.List<Vector4> sourceTangents = new System.Collections.Generic.List<Vector4>();
-        private readonly System.Collections.Generic.List<Color32> sourceColors = new System.Collections.Generic.List<Color32>();
-        private readonly System.Collections.Generic.List<int> sourceIndices = new System.Collections.Generic.List<int>();
-        private readonly System.Collections.Generic.List<Vector4>[] uvs = new System.Collections.Generic.List<Vector4>[8];
-        private readonly System.Collections.Generic.List<Vector4>[] sourceUvs = new System.Collections.Generic.List<Vector4>[8];
+        private readonly ParticleSystemRenderer sourceRenderer;
+        private readonly System.Collections.Generic.List<VertexAttributeDescriptor> sourceLayout = new System.Collections.Generic.List<VertexAttributeDescriptor>();
+        private VertexAttributeDescriptor[] layout = Array.Empty<VertexAttributeDescriptor>();
+        private NativeList<byte>[] streams = Array.Empty<NativeList<byte>>();
+        private NativeList<uint> indices = new NativeList<uint>(Allocator.Persistent);
+        private int vertexCount;
         private readonly bool trails;
         private readonly bool visible;
 
         internal ParticleGeometryBatch(Transform parent, ParticleSystemRenderer source, bool trails = false) {
+            this.sourceRenderer = source;
             this.trails = trails;
             this.visible = source.enabled == true && (trails == true || source.renderMode != ParticleSystemRenderMode.None);
             var go = new GameObject((trails == true ? "[Batched trails] " : "[Batched particles] ") + source.name);
@@ -57,55 +62,110 @@ namespace ME.BECS.Views {
             }
             this.combined.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
             this.combined.MarkDynamic();
-            for (int i = 0; i < 8; ++i) {
-                this.uvs[i] = new System.Collections.Generic.List<Vector4>();
-                this.sourceUvs[i] = new System.Collections.Generic.List<Vector4>();
-            }
         }
 
         internal void Clear() {
-            this.vertices.Clear(); this.normals.Clear(); this.tangents.Clear(); this.colors.Clear(); this.indices.Clear();
-            foreach (var uv in this.uvs) uv.Clear();
+            this.vertexCount = 0;
+            this.indices.Clear();
+            foreach (var stream in this.streams) stream.Clear();
         }
 
         internal void Append(ParticleSystem source, Camera camera) {
             if (camera == null || this.visible == false) return;
             if (this.trails == false && source.particleCount == 0) return;
-            var renderer = source.GetComponent<ParticleSystemRenderer>();
-            this.scratch.Clear();
-            const ParticleSystemBakeMeshOptions options = ParticleSystemBakeMeshOptions.BakeRotationAndScale | ParticleSystemBakeMeshOptions.BakePosition;
-            if (this.trails == true) {
-                renderer.BakeTrailsMesh(this.scratch, camera, options);
-            } else {
-                renderer.BakeMesh(this.scratch, camera, options);
+            using (BakeMarker.Auto()) {
+                this.scratch.Clear();
+                const ParticleSystemBakeMeshOptions options = ParticleSystemBakeMeshOptions.BakeRotationAndScale | ParticleSystemBakeMeshOptions.BakePosition;
+                if (this.trails == true) {
+                    this.sourceRenderer.BakeTrailsMesh(this.scratch, camera, options);
+                } else {
+                    this.sourceRenderer.BakeMesh(this.scratch, camera, options);
+                }
             }
             if (this.scratch.vertexCount == 0) return;
-            var offset = this.vertices.Count;
-            this.scratch.GetVertices(this.sourceVertices); this.vertices.AddRange(this.sourceVertices);
-            this.scratch.GetNormals(this.sourceNormals); this.normals.AddRange(this.sourceNormals);
-            this.scratch.GetTangents(this.sourceTangents); this.tangents.AddRange(this.sourceTangents);
-            this.scratch.GetColors(this.sourceColors); this.colors.AddRange(this.sourceColors);
-            this.scratch.GetTriangles(this.sourceIndices, 0);
-            foreach (var index in this.sourceIndices) this.indices.Add(index + offset);
-            for (int channel = 0; channel < 8; ++channel) {
-                this.scratch.GetUVs(channel, this.sourceUvs[channel]);
-                this.uvs[channel].AddRange(this.sourceUvs[channel]);
+            using (MergeMarker.Auto()) {
+                this.UpdateLayout();
+                // Release the snapshot before the next owner's Bake mutates scratch.
+                using var dataArray = Mesh.AcquireReadOnlyMeshData(this.scratch);
+                var data = dataArray[0];
+                using (CopyStreamsMarker.Auto()) {
+                    for (int stream = 0; stream < this.streams.Length; ++stream) {
+                        var bytes = data.GetVertexData<byte>(stream);
+                        this.streams[stream].AddRange(bytes.GetSubArray(0, data.vertexCount * data.GetVertexBufferStride(stream)));
+                    }
+                }
+                var subMesh = data.GetSubMesh(0);
+                using (RemapIndicesMarker.Auto()) {
+                    if (subMesh.indexCount > 0) {
+                        var outputStart = this.indices.Length;
+                        this.indices.ResizeUninitialized(checked(outputStart + subMesh.indexCount));
+                        // Resize first; neither pointer escapes this snapshot or survives another resize.
+                        RemapIndices(data.GetIndexData<byte>(), this.indices.AsArray().GetSubArray(outputStart, subMesh.indexCount),
+                            data.indexFormat, subMesh.indexStart, (uint)(this.vertexCount + subMesh.baseVertex));
+                    }
+                }
+                this.vertexCount += data.vertexCount;
             }
+        }
+
+        private static unsafe void RemapIndices(NativeArray<byte> input, NativeArray<uint> output, IndexFormat format, int indexStart, uint vertexOffset) {
+            if (format != IndexFormat.UInt16 && format != IndexFormat.UInt32) throw new ArgumentOutOfRangeException(nameof(format));
+            var indexSize = format == IndexFormat.UInt16 ? sizeof(ushort) : sizeof(uint);
+            if (input.Length % indexSize != 0) throw new ArgumentException("Index buffer size must match its format.", nameof(input));
+            var sourceCount = input.Length / indexSize;
+            var count = output.Length;
+            // Subtract after checking indexStart so the range check cannot overflow.
+            if (indexStart < 0 || indexStart > sourceCount || count > sourceCount - indexStart) throw new ArgumentOutOfRangeException(nameof(indexStart));
+            if (count == 0) return;
+            RemapIndicesUnsafe(input.GetUnsafeReadOnlyPtr(), (uint*)output.GetUnsafePtr(), format, indexStart, count, vertexOffset);
+        }
+
+        [Unity.Burst.BurstCompile]
+        private static unsafe void RemapIndicesUnsafe(void* input, uint* output, IndexFormat format, int indexStart, int count, uint vertexOffset) {
+            if (format == IndexFormat.UInt16) {
+                var source = (ushort*)input + indexStart;
+                for (int i = 0; i < count; ++i) output[i] = source[i] + vertexOffset;
+            } else {
+                var source = (uint*)input + indexStart;
+                for (int i = 0; i < count; ++i) output[i] = source[i] + vertexOffset;
+            }
+        }
+
+        private void UpdateLayout() {
+            this.scratch.GetVertexAttributes(this.sourceLayout);
+            var changed = this.sourceLayout.Count != this.layout.Length;
+            for (int i = 0; changed == false && i < this.layout.Length; ++i) changed = this.sourceLayout[i] != this.layout[i];
+            if (changed == false) return;
+            // Each batch represents one authored emitter, shared by all its owners.
+            if (this.vertexCount != 0) throw new InvalidOperationException("Particle vertex layout changed between owners of one emitter.");
+            for (int i = 0; i < this.streams.Length; ++i) this.streams[i].Dispose();
+            this.layout = this.sourceLayout.ToArray();
+            this.streams = new NativeList<byte>[this.scratch.vertexBufferCount];
+            for (int i = 0; i < this.streams.Length; ++i) this.streams[i] = new NativeList<byte>(Allocator.Persistent);
         }
 
         internal void Commit() {
-            this.combined.Clear();
-            this.combined.SetVertices(this.vertices);
-            if (this.normals.Count == this.vertices.Count) this.combined.SetNormals(this.normals);
-            if (this.tangents.Count == this.vertices.Count) this.combined.SetTangents(this.tangents);
-            if (this.colors.Count == this.vertices.Count) this.combined.SetColors(this.colors);
-            for (int channel = 0; channel < 8; ++channel) {
-                if (this.uvs[channel].Count == this.vertices.Count) this.combined.SetUVs(channel, this.uvs[channel]);
+            if (this.vertexCount == 0) {
+                if (this.combined.vertexCount != 0) this.combined.Clear();
+                return;
             }
-            this.combined.SetTriangles(this.indices, 0, calculateBounds: true);
+            using (UploadMarker.Auto()) {
+                this.combined.SetVertexBufferParams(this.vertexCount, this.layout);
+                for (int stream = 0; stream < this.streams.Length; ++stream) {
+                    var bytes = this.streams[stream].AsArray();
+                    this.combined.SetVertexBufferData(bytes, 0, 0, bytes.Length, stream);
+                }
+                this.combined.SetIndexBufferParams(this.indices.Length, IndexFormat.UInt32);
+                this.combined.SetIndexBufferData(this.indices.AsArray(), 0, 0, this.indices.Length);
+                this.combined.subMeshCount = 1;
+                this.combined.SetSubMesh(0, new SubMeshDescriptor(0, this.indices.Length, MeshTopology.Triangles));
+                this.combined.RecalculateBounds();
+            }
         }
 
         public void Dispose() {
+            for (int i = 0; i < this.streams.Length; ++i) this.streams[i].Dispose();
+            this.indices.Dispose();
             UnityEngine.Object.DestroyImmediate(this.scratch);
             UnityEngine.Object.DestroyImmediate(this.combined);
         }

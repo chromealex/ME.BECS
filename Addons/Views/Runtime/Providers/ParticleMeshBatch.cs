@@ -8,6 +8,7 @@ namespace ME.BECS.Views {
         private sealed class Output {
             internal ParticleSystem system;
             internal NativeList<ParticleSystem.Particle> particles = new NativeList<ParticleSystem.Particle>(Allocator.Persistent);
+            internal bool hasParticles;
         }
         private sealed class MeshNode {
             internal Renderer source;
@@ -153,10 +154,12 @@ namespace ME.BECS.Views {
         }
 
         private static void Commit(Output output) {
+            if (output.particles.Length == 0 && output.hasParticles == false) return;
             var main = output.system.main;
             if (main.maxParticles < output.particles.Length) main.maxParticles = output.particles.Capacity;
             output.system.SetParticles(output.particles.AsArray(), output.particles.Length);
             output.system.Simulate(0f, false, false, false);
+            output.hasParticles = output.particles.Length > 0;
         }
 
         public void Dispose() {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Unity.Collections;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace ME.BECS.Views {
@@ -9,6 +10,10 @@ namespace ME.BECS.Views {
     // only Unity's public playback/particle/trail state, never a GameObject graph.
     // This preserves authored clocks, local space, collision and nested emitters.
     internal sealed class ParticleViewBatch : IDisposable {
+        private static readonly ProfilerMarker RestoreMarker = new ProfilerMarker("[Particles Batch] Restore owner");
+        private static readonly ProfilerMarker ModulesMarker = new ProfilerMarker("[Particles Batch] Prepare modules");
+        private static readonly ProfilerMarker SimulationMarker = new ProfilerMarker("[Particles Batch] Simulate");
+        private static readonly ProfilerMarker SnapshotMarker = new ProfilerMarker("[Particles Batch] Capture snapshots");
 
         private sealed class Snapshot : IDisposable {
             internal ParticleSystem.PlaybackState playback;
@@ -43,6 +48,7 @@ namespace ME.BECS.Views {
         }
 
         private readonly GameObject simulationRoot;
+        private readonly Transform simulationTransform;
         private readonly Node[] nodes;
         private readonly ParticleSystem[] roots;
         private readonly System.Collections.Generic.List<Owner> owners = new System.Collections.Generic.List<Owner>();
@@ -63,6 +69,7 @@ namespace ME.BECS.Views {
             }
 
             this.simulationRoot = UnityEngine.Object.Instantiate(prefab.gameObject, parent);
+            this.simulationTransform = this.simulationRoot.transform;
             foreach (var source in this.simulationRoot.GetComponentsInChildren<AudioSource>(true)) {
                 source.playOnAwake = false;
                 source.Stop();
@@ -143,43 +150,45 @@ namespace ME.BECS.Views {
                     this.owners.Add(owner);
                 }
                 var state = this.owners[i];
-                for (int orbit = 0; orbit < this.orbits.Length; ++orbit) this.orbits[orbit].transform.localPosition = instance.pendingSpawn == true ? this.orbitLocalPositions[orbit] : state.orbitPositions[orbit];
-                if (instance.pendingSpawn == true) {
-                    this.SetPose((Vector3)instance.position, (Quaternion)(Unity.Mathematics.quaternion)instance.rotation, instance.scale);
-                    state.age = 0f;
-                    for (int orbit = 0; orbit < this.orbits.Length; ++orbit) state.orbitCenters[orbit] = this.orbits[orbit].transform.position;
-                    for (int j = 0; j < this.nodes.Length; ++j) {
-                        this.nodes[j].simulation.gameObject.SetActive(true);
-                        this.nodes[j].simulation.Stop(withChildren: false, ParticleSystemStopBehavior.StopEmittingAndClear);
-                        this.nodes[j].simulation.randomSeed = Unity.Mathematics.math.hash(new Unity.Mathematics.uint2(instance.randomSeed, (uint)j + 1u)) | 1u;
+                using (RestoreMarker.Auto()) {
+                    for (int orbit = 0; orbit < this.orbits.Length; ++orbit) this.orbits[orbit].transform.localPosition = instance.pendingSpawn == true ? this.orbitLocalPositions[orbit] : state.orbitPositions[orbit];
+                    if (instance.pendingSpawn == true) {
+                        this.SetPose((Vector3)instance.position, (Quaternion)(Unity.Mathematics.quaternion)instance.rotation, instance.scale);
+                        state.age = 0f;
+                        for (int orbit = 0; orbit < this.orbits.Length; ++orbit) state.orbitCenters[orbit] = this.orbits[orbit].transform.position;
+                        for (int j = 0; j < this.nodes.Length; ++j) {
+                            this.nodes[j].simulation.gameObject.SetActive(true);
+                            this.nodes[j].simulation.Stop(withChildren: false, ParticleSystemStopBehavior.StopEmittingAndClear);
+                            this.nodes[j].simulation.randomSeed = Unity.Mathematics.math.hash(new Unity.Mathematics.uint2(instance.randomSeed, (uint)j + 1u)) | 1u;
+                        }
+                        this.PrepareModules(state, entities[i], dt, newOwner: true);
+                        this.Simulate(0f, restart: true);
+                    } else {
+                        this.SetPose(instance.previousPosition, instance.previousRotation, state.scale);
+                        this.ApplyOrbits(state, state.age);
+                        for (int j = 0; j < this.nodes.Length; ++j) this.nodes[j].simulation.gameObject.SetActive(state.nodes[j].activeSelf);
+                        // Clear the previous graph before activating/restoring nodes.
+                        // A zero-particle sub-emitter can be stopped even after Simulate.
+                        foreach (var node in this.nodes) node.simulation.Clear(withChildren: false);
+                        for (int j = 0; j < this.nodes.Length; ++j) {
+                            var simulation = this.nodes[j].simulation;
+                            if (simulation.gameObject.activeInHierarchy == false) continue;
+                            simulation.Play(withChildren: false);
+                            simulation.Pause(withChildren: false);
+                        }
+                        for (int j = 0; j < this.nodes.Length; ++j) {
+                            var snapshot = state.nodes[j];
+                            var simulation = this.nodes[j].simulation;
+                            if (simulation.gameObject.activeInHierarchy == false) continue;
+                            simulation.SetPlaybackState(snapshot.playback);
+                            simulation.SetParticles(snapshot.particles.AsArray(), snapshot.particles.Length);
+                            if (this.nodes[j].hasTrails == true) simulation.SetTrails(snapshot.trails);
+                        }
+                        // Prime native transform history before switching owners. Otherwise
+                        // rateOverDistance connects two unrelated entities with a long trail.
+                        if (dt > 0f) this.Simulate(0f, restart: false);
+                        this.SetPose((Vector3)instance.position, (Quaternion)(Unity.Mathematics.quaternion)instance.rotation, instance.scale);
                     }
-                    this.PrepareModules(state, entities[i], dt, newOwner: true);
-                    this.Simulate(0f, restart: true);
-                } else {
-                    this.SetPose(instance.previousPosition, instance.previousRotation, state.scale);
-                    this.ApplyOrbits(state, state.age);
-                    for (int j = 0; j < this.nodes.Length; ++j) this.nodes[j].simulation.gameObject.SetActive(state.nodes[j].activeSelf);
-                    // Clear the previous graph before activating/restoring nodes.
-                    // A zero-particle sub-emitter can be stopped even after Simulate.
-                    foreach (var node in this.nodes) node.simulation.Clear(withChildren: false);
-                    for (int j = 0; j < this.nodes.Length; ++j) {
-                        var simulation = this.nodes[j].simulation;
-                        if (simulation.gameObject.activeInHierarchy == false) continue;
-                        simulation.Play(withChildren: false);
-                        simulation.Pause(withChildren: false);
-                    }
-                    for (int j = 0; j < this.nodes.Length; ++j) {
-                        var snapshot = state.nodes[j];
-                        var simulation = this.nodes[j].simulation;
-                        if (simulation.gameObject.activeInHierarchy == false) continue;
-                        simulation.SetPlaybackState(snapshot.playback);
-                        simulation.SetParticles(snapshot.particles.AsArray(), snapshot.particles.Length);
-                        if (this.nodes[j].hasTrails == true) simulation.SetTrails(snapshot.trails);
-                    }
-                    // Prime native transform history before switching owners. Otherwise
-                    // rateOverDistance connects two unrelated entities with a long trail.
-                    if (dt > 0f) this.Simulate(0f, restart: false);
-                    this.SetPose((Vector3)instance.position, (Quaternion)(Unity.Mathematics.quaternion)instance.rotation, instance.scale);
                 }
                 state.age += Mathf.Max(0f, dt);
                 this.ApplyOrbits(state, state.age);
@@ -204,29 +213,31 @@ namespace ME.BECS.Views {
                 }
                 if (dt > 0f) this.Simulate(dt, restart: false);
                 for (int orbit = 0; orbit < this.orbits.Length; ++orbit) state.orbitPositions[orbit] = this.orbits[orbit].transform.localPosition;
-                this.meshes.Append(this.simulationRoot.transform.localToWorldMatrix, instance.randomSeed);
+                this.meshes.Append(this.simulationTransform.localToWorldMatrix, instance.randomSeed);
                 state.scale = instance.scale;
-                for (int j = 0; j < this.nodes.Length; ++j) {
-                    var node = this.nodes[j];
-                    var snapshot = state.nodes[j];
-                    snapshot.activeSelf = node.simulation.gameObject.activeSelf;
-                    snapshot.active = node.simulation.gameObject.activeInHierarchy;
-                    // Unity leaves inactive fields (notably angularVelocity when
-                    // Rotation is disabled) untouched. They must be zero before a
-                    // round trip, or SetParticles introduces arbitrary motion.
-                    snapshot.particles.Clear();
-                    snapshot.particles.Resize(node.simulation.particleCount, NativeArrayOptions.ClearMemory);
-                    var count = node.simulation.GetParticles(snapshot.particles.AsArray());
-                    snapshot.particles.ResizeUninitialized(count);
-                    if (node.hasTrails == true) {
-                        node.simulation.GetTrails(ref snapshot.trails);
+                using (SnapshotMarker.Auto()) {
+                    for (int j = 0; j < this.nodes.Length; ++j) {
+                        var node = this.nodes[j];
+                        var snapshot = state.nodes[j];
+                        snapshot.activeSelf = node.simulation.gameObject.activeSelf;
+                        snapshot.active = node.simulation.gameObject.activeInHierarchy;
+                        // Unity leaves inactive fields (notably angularVelocity when
+                        // Rotation is disabled) untouched. They must be zero before a
+                        // round trip, or SetParticles introduces arbitrary motion.
+                        snapshot.particles.Clear();
+                        snapshot.particles.Resize(node.simulation.particleCount, NativeArrayOptions.ClearMemory);
+                        var count = node.simulation.GetParticles(snapshot.particles.AsArray());
+                        snapshot.particles.ResizeUninitialized(count);
+                        if (node.hasTrails == true) {
+                            node.simulation.GetTrails(ref snapshot.trails);
+                        }
+                        snapshot.playback = node.simulation.GetPlaybackState();
                     }
-                    snapshot.playback = node.simulation.GetPlaybackState();
-                }
-                for (int j = 0; j < this.nodes.Length; ++j) {
-                    var node = this.nodes[j];
-                    var snapshot = state.nodes[j];
-                    node.simulation.SetParticles(snapshot.particles.AsArray(), snapshot.particles.Length);
+                    for (int j = 0; j < this.nodes.Length; ++j) {
+                        var node = this.nodes[j];
+                        var snapshot = state.nodes[j];
+                        node.simulation.SetParticles(snapshot.particles.AsArray(), snapshot.particles.Length);
+                    }
                 }
                 foreach (var node in this.nodes) {
                     if (node.simulation.gameObject.activeInHierarchy == false) continue;
@@ -243,17 +254,19 @@ namespace ME.BECS.Views {
         }
 
         private void PrepareModules(Owner state, Ent owner, float dt, bool newOwner) {
+            using var marker = ModulesMarker.Auto();
             this.meshes.Prepare();
             var viewData = new ViewData(owner, default);
             foreach (var module in state.modules) module.PrepareBatch(in viewData, dt, newOwner);
         }
 
         private void SetPose(Vector3 position, Quaternion rotation, Vector3 scale) {
-            this.simulationRoot.transform.SetPositionAndRotation(position, rotation);
-            this.simulationRoot.transform.localScale = scale;
+            this.simulationTransform.SetPositionAndRotation(position, rotation);
+            this.simulationTransform.localScale = scale;
         }
 
         private void Simulate(float dt, bool restart) {
+            using var marker = SimulationMarker.Auto();
             foreach (var system in this.roots) {
                 if (system.gameObject.activeInHierarchy == true) system.Simulate(dt, withChildren: true, restart: restart, fixedTimeStep: false);
             }
