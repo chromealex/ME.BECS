@@ -986,6 +986,11 @@ namespace ME.BECS.Views {
         /// Creates <c>UnsafeViewsModule&lt;TEntityView&gt;</c> using the supplied creation arguments.
         /// </summary>
         public static UnsafeViewsModule<TEntityView> Create<T>(uint providerId, ref World connectedWorld, T provider, uint entitiesCapacity, ViewsModuleProperties properties) where T : IViewProvider<TEntityView> {
+            return Create(providerId, ref connectedWorld, provider, entitiesCapacity, properties, loadRegistry: true);
+        }
+
+        /// <summary>Creates a module with optional registry loading for explicitly registered presentation sources.</summary>
+        public static UnsafeViewsModule<TEntityView> Create<T>(uint providerId, ref World connectedWorld, T provider, uint entitiesCapacity, ViewsModuleProperties properties, bool loadRegistry) where T : IViewProvider<TEntityView> {
             
             var viewsWorldProperties = WorldProperties.Default;
             viewsWorldProperties.allocatorProperties.sizeInBytesCapacity = (uint)MemoryAllocator.MIN_ZONE_SIZE; // Use min allocator size
@@ -1006,7 +1011,7 @@ namespace ME.BECS.Views {
             module.data.ptr->connectedWorld = connectedWorld;
             module.data.ptr->viewsWorld = viewsWorld;
             WorldStaticCallbacks.RaiseCallback(ref *module.data.ptr);
-            module.provider.Value.Load(module.data, ObjectReferenceRegistry.data);
+            if (loadRegistry == true) module.provider.Value.Load(module.data, ObjectReferenceRegistry.data);
             Context.Switch(in prevContext);
             return module;
 

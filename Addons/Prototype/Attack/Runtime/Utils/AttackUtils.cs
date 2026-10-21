@@ -239,7 +239,7 @@ namespace ME.BECS.Attack {
         [INLINE(256)]
         public static BulletAspect CreateBullet3D(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in ME.BECS.Views.View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo = default) {
 
-            var bullet = CreateBullet_INTERNAL(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, 200u, in jobInfo);
+            var bullet = CreateBullet_INTERNAL(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, 200u, in jobInfo, attackAspect.readComponentVisual.muzzleConfig);
             var attack = bullet.ent.GetOrCreateAspect<OctreeQueryAspect>();
             attack.query.ignoreSorting = true;
             attack.query.treeMask = targetsMask; // Search for targets in this tree
@@ -255,7 +255,7 @@ namespace ME.BECS.Attack {
         }
 
         [INLINE(256)]
-        private static BulletAspect CreateBullet_INTERNAL(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in ME.BECS.Views.View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo = default) {
+        private static BulletAspect CreateBullet_INTERNAL(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in ME.BECS.Views.View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo, in Config muzzleConfig) {
             
             if (muzzleView.IsValid == true) {
                 var muzzleEnt = Ent.New<AttackMuzzlePointEntityType>(in jobInfo, "MuzzlePoint");
@@ -263,6 +263,7 @@ namespace ME.BECS.Attack {
                 tr.IsStaticLocal = true;
                 tr.position = position;
                 tr.rotation = rotation;
+                if (muzzleConfig.IsValid == true) muzzleConfig.Apply(muzzleEnt);
                 muzzleEnt.InstantiateView(muzzleView);
                 muzzleEnt.Destroy(muzzleLifetimeMs);
             }
@@ -335,7 +336,7 @@ namespace ME.BECS.Attack {
         [INLINE(256)]
         public static BulletAspect CreateBullet(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in ME.BECS.Views.View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo = default) {
 
-            var bullet = CreateBullet_INTERNAL(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, 200u, in jobInfo);
+            var bullet = CreateBullet_INTERNAL(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, 200u, in jobInfo, attackAspect.readComponentVisual.muzzleConfig);
             var attack = bullet.ent.GetOrCreateAspect<QuadTreeQueryAspect>();
             attack.query.ignoreSorting = true;
             attack.query.treeMask = targetsMask; // Search for targets in this tree
@@ -365,7 +366,17 @@ namespace ME.BECS.Attack {
         [INLINE(256)]
         public static BulletAspect CreateBulletSpatial(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in ME.BECS.Views.View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo = default) {
 
-            var bullet = CreateBullet_INTERNAL(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, muzzleLifetimeMs, in jobInfo);
+            return CreateBulletSpatial(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, muzzleLifetimeMs, in jobInfo, attackAspect.readComponentVisual.muzzleConfig);
+
+        }
+
+        /// <summary>
+        /// Creates a spatial bullet with an explicit muzzle configuration, for per-shot overrides.
+        /// </summary>
+        [INLINE(256)]
+        public static BulletAspect CreateBulletSpatial(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in ME.BECS.Views.View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo, in Config muzzleConfig) {
+
+            var bullet = CreateBullet_INTERNAL(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, muzzleLifetimeMs, in jobInfo, in muzzleConfig);
             var attack = bullet.ent.GetOrCreateAspect<SpatialQueryAspect>();
             attack.query.ignoreSorting = true;
             attack.query.treeMask = targetsMask; // Search for targets in this tree

@@ -11,7 +11,8 @@ namespace ME.BECS.Views.Tests {
             public void ApplyState() { _ = default(Ent).Read<ComponentB>(); }
         }
 
-        public sealed class DualPhaseModule : IViewApplyState, IViewApplyStateParallel {
+        // Intentional writes exercise safety analysis, not runtime component tracking.
+        public sealed class DualPhaseModule : IViewApplyState, IViewApplyStateParallel, IViewIgnoreTracker {
             public void ApplyState(in ViewData data) { _ = default(Ent).Read<ComponentA>(); }
             void IViewApplyStateParallel.ApplyStateParallel(in ViewData data) { _ = default(Ent).Get<ComponentB>(); }
         }
@@ -42,9 +43,14 @@ namespace ME.BECS.Views.Tests {
             new private void ApplyState(in ViewData data) { _ = default(Ent).Read<ComponentB>(); }
         }
 
-        public sealed class DualRoleView : EntityView, IViewApplyState {
+        public sealed class DualRoleView : EntityView, IViewApplyState, IViewIgnoreTracker {
             protected internal override void ApplyState(in ViewData data) { _ = default(Ent).Read<ComponentA>(); }
             void IViewApplyState.ApplyState(in ViewData data) { _ = default(Ent).Get<ComponentB>(); }
+        }
+
+        public sealed class TrackingDualRoleView : EntityView, IViewApplyState {
+            protected internal override void ApplyState(in ViewData data) { _ = default(Ent).Read<ComponentA>(); }
+            void IViewApplyState.ApplyState(in ViewData data) { _ = default(Ent).Read<ComponentB>(); }
         }
 
         public sealed class NamedOnlyModule : IViewModule {
@@ -65,12 +71,49 @@ namespace ME.BECS.Views.Tests {
                 .Select(attribute => attribute.Value.Split('\t')).Where(row => row.Length == 3 &&
                     (row[0] == "view-tracker-view" || row[0] == "view-tracker-module"))
                 .Select(row => (kind: row[0], values: System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(row[2])).Split('\n'))).ToArray();
-            var view = inputs.Single(row => row.kind == "view-tracker-view" && row.values[0] == typeof(DualRoleView).AssemblyQualifiedName);
-            var module = inputs.Single(row => row.kind == "view-tracker-module" && row.values[0] == typeof(DualRoleView).AssemblyQualifiedName);
-            CollectionAssert.Contains(view.values, typeof(ComponentA).AssemblyQualifiedName);
-            CollectionAssert.Contains(module.values, typeof(ComponentB).AssemblyQualifiedName);
+            var view = inputs.Single(row => row.kind == "view-tracker-view" && row.values[0] == typeof(TrackingDualRoleView).AssemblyQualifiedName);
+            var module = inputs.Single(row => row.kind == "view-tracker-module" && row.values[0] == typeof(TrackingDualRoleView).AssemblyQualifiedName);
+            CollectionAssert.AreEqual(new[] { typeof(ComponentA).AssemblyQualifiedName }, view.values.Skip(1).Where(value => value.Length != 0).ToArray());
+            CollectionAssert.AreEqual(new[] { typeof(ComponentB).AssemblyQualifiedName }, module.values.Skip(1).Where(value => value.Length != 0).ToArray());
             Assert.IsTrue(typeof(IViewIgnoreTracker).IsAssignableFrom(typeof(PrivateComponentModule)),
                 "Metadata-only private-component fixture must not request runtime tracking.");
+        }
+
+        [TestCase(typeof(DualPhaseModule), "view-tracker-module")]
+        [TestCase(typeof(DualRoleView), "view-tracker-view")]
+        [TestCase(typeof(DualRoleView), "view-tracker-module")]
+        public void BootstrapIgnoresIntentionalWriteFixturesWithoutRemovingTheirRoles(Type owner, string kind) {
+            var input = TrackerMetadata("Editor", "ME.BECS.ViewTrackerInputs.v1")
+                .Single(entry => entry.Kind == kind && entry.Rows[0] == owner.AssemblyQualifiedName);
+            CollectionAssert.AreEqual(new[] { owner.AssemblyQualifiedName, "ignored" }, input.Rows);
+            var selected = TrackerMetadata("Editor", "ME.BECS.ViewTrackerSelection.v1")
+                .Single(entry => entry.Kind == kind && entry.Rows[0] == owner.AssemblyQualifiedName);
+            Assert.IsEmpty(selected.Rows.Skip(1).Where(value => value.Length != 0),
+                "Ignored metadata fixtures must retain each registration role without tracker dependencies.");
+        }
+
+        [Test]
+        public void FreshTrackerExportDoesNotWarnAboutIntentionalWriteFixtures() {
+            var type = Type.GetType("ME.BECS.Editor.Aspects.EntityViewCodeGenerator, ME.BECS.Views.Editor", true);
+            var feeder = Activator.CreateInstance(type);
+            type.GetField("editorAssembly").SetValue(feeder, true);
+            var assemblies = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.EditorUtils", true)
+                .GetMethod("GetAssembliesInfo", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, null);
+            type.GetField("asms").SetValue(feeder, assemblies);
+            var warnings = new System.Collections.Generic.List<string>();
+            UnityEngine.Application.LogCallback onLog = (message, stackTrace, logType) => {
+                if (logType == UnityEngine.LogType.Warning) warnings.Add(message);
+            };
+            UnityEngine.Application.logMessageReceived += onLog;
+            try {
+                type.GetMethod("AppendSourceGeneratorInputs").Invoke(feeder, new object[] { new System.Text.StringBuilder() });
+            } finally {
+                UnityEngine.Application.logMessageReceived -= onLog;
+            }
+            var prefixes = new[] { typeof(DualPhaseModule), typeof(DualRoleView) }
+                .Select(owner => "EntityView " + owner.FullName + " writes to ").ToArray();
+            Assert.That(warnings.Where(message => prefixes.Any(prefix => message.StartsWith(prefix, StringComparison.Ordinal) == true)), Is.Empty,
+                "Metadata-only write fixtures must not produce runtime view safety warnings during export.");
         }
 
         [Test]

@@ -74,6 +74,11 @@ namespace ME.BECS {
                     }
                 }
 
+                foreach (var comp in config.sharedData.components) {
+                    if (comp == null) continue;
+                    foreach (var id in this.GetCollectionIds(comp)) used.Remove(id);
+                }
+
                 if (used.Count > 0) {
                     for (int i = this.items.Count - 1; i >= 0; --i) {
                         var item = this.items[i];
@@ -95,11 +100,17 @@ namespace ME.BECS {
             }
 
             private void GetCollectionIds(object comp, System.Collections.Generic.List<uint> collect) {
+                if (comp == null) return;
                 var fields = comp.GetType().GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
                 foreach (var field in fields) {
                     if (typeof(IUnmanagedList).IsAssignableFrom(field.FieldType) == true) {
-                        collect.Add(((IUnmanagedList)field.GetValue(comp)).GetConfigId());
-                    } else if (field.FieldType.IsPrimitive == false) {
+                        var id = ((IUnmanagedList)field.GetValue(comp)).GetConfigId();
+                        if (collect.Contains(id) == true) continue;
+                        collect.Add(id);
+                        var collection = this.items.Find(item => item.id == id);
+                        if (collection.array == null) continue;
+                        foreach (var item in collection.array) this.GetCollectionIds(item, collect);
+                    } else if (field.FieldType.IsValueType == true && field.FieldType.IsPrimitive == false && field.FieldType.IsEnum == false) {
                         this.GetCollectionIds(field.GetValue(comp), collect);
                     }
                 }

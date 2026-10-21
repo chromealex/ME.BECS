@@ -1,4 +1,5 @@
 using Unity.Jobs;
+using System.Linq;
 
 namespace ME.BECS {
     
@@ -675,6 +676,12 @@ namespace ME.BECS {
 
         private readonly struct CollectionsData {
 
+            private struct SourceId {
+                public uint typeId;
+                public uint fieldIndex;
+                public uint id;
+            }
+
             private struct Collection {
 
                 public uint id;
@@ -690,12 +697,31 @@ namespace ME.BECS {
 
             private readonly safe_ptr<Collection> items;
             private readonly uint length;
+            private readonly safe_ptr<SourceId> sourceIds;
+            private readonly uint sourceCount;
 
-            public CollectionsData(EntityConfig.CollectionsData data) {
+            public CollectionsData(EntityConfig owner) {
+                var data = owner.collectionsData;
                 if (data.items == null || data.items.Count == 0) {
                     this = default;
                     return;
                 }
+
+                var sources = new System.Collections.Generic.List<SourceId>();
+                foreach (var component in owner.data.components.Cast<object>().Concat(owner.staticData.components).Concat(owner.sharedData.components)) {
+                    if (component == null) continue;
+                    var fields = component.GetType().GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+                        .Where(field => typeof(IUnmanagedList).IsAssignableFrom(field.FieldType) == true)
+                        .OrderBy(field => field.FieldType.FullName, System.StringComparer.Ordinal).ToArray();
+                    if (fields.Length == 0) continue;
+                    StaticTypesLoadedManaged.typeToId.TryGetValue(component.GetType(), out var typeId);
+                    for (var fieldIndex = 0u; fieldIndex < fields.Length; ++fieldIndex) {
+                        sources.Add(new SourceId { typeId = typeId, fieldIndex = fieldIndex, id = ((IUnmanagedList)fields[fieldIndex].GetValue(component)).GetConfigId() });
+                    }
+                }
+                this.sourceCount = (uint)sources.Count;
+                this.sourceIds = _makeArray<SourceId>(this.sourceCount);
+                for (var i = 0u; i < this.sourceCount; ++i) this.sourceIds[i] = sources[(int)i];
 
                 this.length = (uint)data.items.Count;
                 this.items = _makeArray<Collection>(this.length);
@@ -735,11 +761,20 @@ namespace ME.BECS {
                 return false;
             }
 
+            public uint GetSourceId(uint typeId, uint fieldIndex) {
+                for (var i = 0u; i < this.sourceCount; ++i) {
+                    var source = this.sourceIds[i];
+                    if (source.typeId == typeId && source.fieldIndex == fieldIndex) return source.id;
+                }
+                return 0u;
+            }
+
             public void Dispose() {
                 for (uint i = 0u; i < this.length; ++i) {
                     this.items[i].Dispose();
                 }
                 _free(this.items);
+                _free(this.sourceIds);
             }
 
         }
@@ -895,7 +930,7 @@ namespace ME.BECS {
             this.data = new Data(ref staticDataEnt.World.state.ptr->allocator, config.data.components, config.maskable == true ? config.data.masks : null);
             this.dataShared = new SharedData(config.sharedData.components);
             this.aspects = new Aspect(config.aspects);
-            this.collectionsData = new CollectionsData(config.collectionsData);
+            this.collectionsData = new CollectionsData(config);
             
             this.baseConfig = default;
             if (config.baseConfig is not null) {
@@ -915,6 +950,11 @@ namespace ME.BECS {
         public bool GetCollectionById(uint id, out safe_ptr<byte> data, out uint length) {
             return this.collectionsData.GetById(id, out data, out length);
         }
+
+        /// <summary>Returns an immutable authoring ID, independently of a materialized collection's length.</summary>
+        [INLINE(256)]
+        public uint GetCollectionSourceId<T>(uint fieldIndex) where T : unmanaged, IComponentBase =>
+            this.collectionsData.GetSourceId(StaticTypes<T>.typeId, fieldIndex);
 
         /// <summary>
         /// Attempts to read and reports whether the operation succeeded.

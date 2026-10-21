@@ -150,7 +150,7 @@ internal static class GraphInputEmitter {
     }
 
     internal static void AppendDeltas(StringBuilder source, IReadOnlyList<(string Key, INamedTypeSymbol Type, IFieldSymbol[] Fields)> deltaJobs) {
-                source.Append("namespace ME.BECS.SourceGenerated { internal static unsafe class GenericJobDeltaInputs {\n");
+                source.Append("namespace ME.BECS.SourceGenerated { [global::Unity.Burst.BurstCompile] internal static unsafe class GenericJobDeltaInputs {\n");
                 foreach (var job in deltaJobs) {
                     var name = job.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                     source.Append("public static void Register_").Append(job.Key).Append("() => global::ME.BECS.JobInject<").Append(name)

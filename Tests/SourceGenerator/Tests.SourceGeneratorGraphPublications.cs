@@ -32,6 +32,50 @@ namespace ME.BECS.Tests {
             throw new InvalidOperationException("No publication owner for graph " + graphId);
         }
 
+        private static MethodInfo[] DeltaPatches() => Documents().Select(doc => Field<string>(doc, "Owner"))
+            .Distinct(StringComparer.Ordinal).Select(Assembly.Load)
+            .Select(owner => owner.GetType("ME.BECS.SourceGenerated.GenericJobDeltaInputs", false))
+            .Where(static type => type != null).SelectMany(type => type.GetMethods(Static))
+            .Where(static method => method.Name.StartsWith("Patch_", StringComparison.Ordinal) && method.Name.Length == 70)
+            .ToArray();
+
+        [Test]
+        public void DeltaPatchCallbacksAreDiscoveredAsBurstEntryPoints() {
+            var patches = DeltaPatches();
+            Assert.IsNotEmpty(patches);
+            foreach (var patch in patches) {
+                Assert.IsFalse(patch.ContainsGenericParameters, patch.ToString());
+                Assert.IsTrue(patch.IsDefined(typeof(Unity.Burst.BurstCompileAttribute), false), patch.ToString());
+                Assert.IsTrue(patch.DeclaringType.IsDefined(typeof(Unity.Burst.BurstCompileAttribute), false), patch.DeclaringType.FullName);
+                Assert.AreEqual(typeof(JobPatchInjectDelegate.PatchDelegate), patch.GetCustomAttributesData()
+                    .Single(static attribute => attribute.AttributeType == typeof(AOT.MonoPInvokeCallbackAttribute)).ConstructorArguments[0].Value);
+            }
+            // Use the installed Burst discovery implementation, rather than duplicating its attribute filter.
+            var reflection = typeof(Unity.Burst.BurstCompiler).Assembly.GetType("Unity.Burst.Editor.BurstReflection", true);
+            var find = reflection.GetMethod("FindExecuteMethods", Static);
+            var found = find.Invoke(null, new object[] { patches.Select(static patch => patch.DeclaringType.Assembly).Distinct().ToList(),
+                Enum.ToObject(find.GetParameters()[1].ParameterType, 0) });
+            var targets = ((System.Collections.IEnumerable)found.GetType().GetField("CompileTargets").GetValue(found)).Cast<object>();
+            var methods = targets.Select(target => (MethodInfo)target.GetType().GetField("Method").GetValue(target)).ToArray();
+            foreach (var patch in patches) CollectionAssert.Contains(methods, patch, patch.ToString());
+        }
+
+        [Test]
+        public void PublishedDeltaPatchCompilesToBurstFunctionPointer() {
+            var patches = DeltaPatches();
+            Assert.IsNotEmpty(patches);
+            Assert.IsTrue(Unity.Burst.BurstCompiler.IsEnabled, "This regression requires enabled Burst compilation.");
+            var previous = Unity.Burst.BurstCompiler.Options.EnableBurstCompileSynchronously;
+            try {
+                Unity.Burst.BurstCompiler.Options.EnableBurstCompileSynchronously = true;
+                var callback = (JobPatchInjectDelegate.PatchDelegate)patches[0].CreateDelegate(typeof(JobPatchInjectDelegate.PatchDelegate));
+                Assert.IsTrue(Unity.Burst.BurstCompiler.CompileFunctionPointer(callback).IsCreated);
+                UnityEngine.TestTools.LogAssert.NoUnexpectedReceived();
+            } finally {
+                Unity.Burst.BurstCompiler.Options.EnableBurstCompileSynchronously = previous;
+            }
+        }
+
         [Test]
         public void GraphCallbacksAndStorageLiveOutsideTheAggregateInOriginalSlots() {
             var rows = Rows();

@@ -1,10 +1,99 @@
 using NUnit.Framework;
 
+[assembly: ME.BECS.CodeGeneratorInclude(typeof(ME.BECS.Tests.Tests_EntityConfig.TestNestedArrayComponent))]
+[assembly: ME.BECS.CodeGeneratorInclude(typeof(ME.BECS.Tests.Tests_EntityConfig.TestNestedArrayStatic))]
+
 namespace ME.BECS.Tests {
     
     using static Cuts;
 
     public class Tests_EntityConfig {
+
+        [System.Serializable]
+        public struct NestedArrayItem {
+            public MemArrayAuto<Config> units;
+            public MemArrayAuto<Config> modifiers;
+        }
+
+        public struct TestNestedArrayComponent : IConfigComponent {
+            public MemArrayAuto<NestedArrayItem> assignments;
+        }
+
+        public struct TestNestedArrayStatic : IConfigComponentStatic {
+            public MemArrayAuto<NestedArrayItem> assignments;
+        }
+
+        public static EntityConfig NestedConfig(bool isStatic) {
+            var config = UnityEngine.ScriptableObject.CreateInstance<EntityConfig>();
+            var rows = new MemArrayAuto<NestedArrayItem> { data = new MemArrayAutoData { Length = 1u } };
+            if (isStatic == true) {
+                config.staticData.components = new IConfigComponentStatic[] { new TestNestedArrayStatic { assignments = rows } };
+            } else {
+                config.data.components = new IConfigComponent[] { new TestNestedArrayComponent { assignments = rows } };
+            }
+            config.collectionsData.items = new System.Collections.Generic.List<EntityConfig.CollectionsData.Collection> {
+                new() { id = 1u, array = new System.Collections.Generic.List<object> {
+                    new NestedArrayItem { units = new MemArrayAuto<Config> { data = new MemArrayAutoData { Length = 2u } }, modifiers = new MemArrayAuto<Config> { data = new MemArrayAutoData { Length = 3u } } },
+                    new NestedArrayItem { units = new MemArrayAuto<Config> { data = new MemArrayAutoData { Length = 4u } } },
+                } },
+                new() { id = 2u, array = new System.Collections.Generic.List<object> { new Config { sourceId = 101u }, new Config { sourceId = 102u } } },
+                new() { id = 3u, array = new System.Collections.Generic.List<object> { new Config { sourceId = 201u } } },
+                new() { id = 4u, array = new System.Collections.Generic.List<object>() },
+                new() { id = 5u, array = new System.Collections.Generic.List<object> { new Config { sourceId = 999u } } },
+            };
+            config.collectionsData.nextId = 5u;
+            return config;
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public unsafe void NestedArraysMaterializeInTheOwningWorld(bool isStatic) {
+            var config = NestedConfig(isStatic);
+            try {
+                config.Validate();
+                ObjectReferenceRegistry.AddRuntimeObject(config);
+                using var world = World.Create();
+                var ent = Ent.New(world);
+                config.Apply(ent);
+                var rows = isStatic == true ? config.AsUnsafeConfig().ReadStatic<TestNestedArrayStatic>().assignments : ent.Read<TestNestedArrayComponent>().assignments;
+                Assert.AreEqual(2u, rows.Length);
+                Assert.AreEqual(2u, rows[0u].units.Length);
+                Assert.AreEqual(101u, rows[0u].units[0u].sourceId);
+                Assert.AreEqual(102u, rows[0u].units[1u].sourceId);
+                Assert.AreEqual(201u, rows[0u].modifiers[0u].sourceId);
+                Assert.AreEqual(0u, rows[1u].units.Length);
+                Assert.AreEqual(0u, rows[1u].modifiers.Length);
+                if (isStatic == false) {
+                    Assert.AreEqual(world.id, rows.data.ent.worldId);
+                    Assert.AreEqual(world.id, rows[0u].units.data.ent.worldId);
+                    Assert.AreEqual(world.id, rows[0u].modifiers.data.ent.worldId);
+                } else {
+                    Assert.AreEqual(rows.data.ent.worldId, rows[0u].units.data.ent.worldId);
+                    Assert.AreEqual(rows.data.ent.worldId, rows[0u].modifiers.data.ent.worldId);
+                }
+                var holder = isStatic == true ? config.AsUnsafeConfig().staticData.staticDataEnt : ent;
+                var native = config.AsUnsafeConfig();
+                var used = holder.World.state.ptr->allocator.GetUsedSize();
+                for (var repeat = 0; repeat < 3; ++repeat) {
+                    if (isStatic == true) {
+                        var component = native.ReadStatic<TestNestedArrayStatic>();
+                        var pointer = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.AddressOf(ref component);
+                        WorldStaticCallbacks.RaiseConfigComponentCallback<TestNestedArrayStatic>(in native, pointer, in holder);
+                        Batches.Set(in holder, StaticTypes<TestNestedArrayStatic>.typeId, pointer, holder.World.state);
+                        rows = component.assignments;
+                    } else {
+                        ref var component = ref holder.Get<TestNestedArrayComponent>();
+                        WorldStaticCallbacks.RaiseConfigComponentCallback<TestNestedArrayComponent>(in native,
+                            Unity.Collections.LowLevel.Unsafe.UnsafeUtility.AddressOf(ref component), in holder);
+                        rows = component.assignments;
+                    }
+                    Assert.AreEqual(2u, rows.Length);
+                    Assert.AreEqual(102u, rows[0u].units[1u].sourceId);
+                    Assert.AreEqual(201u, rows[0u].modifiers[0u].sourceId);
+                    Assert.AreEqual(used, holder.World.state.ptr->allocator.GetUsedSize(), "Repeated materialization must release its previous tree.");
+                }
+            } finally { UnityEngine.Object.DestroyImmediate(config); }
+        }
 
         [UnityEngine.TestTools.UnitySetUpAttribute]
         public System.Collections.IEnumerator SetUp() {
