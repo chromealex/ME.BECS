@@ -56,6 +56,12 @@ namespace ME.BECS.Attack {
         /// </summary>
         [Tooltip("Fire time in animation between 0 and fireTime")]
         public tfloat attackTime;
+
+        /// <summary>
+        /// Completes the fire phase after a shot even when its target changes or disappears.
+        /// </summary>
+        [Tooltip("Finish Fire Time after a shot before allowing the next cycle")]
+        public bbool finishFireTimeAfterShot;
         
         /// <summary>
         /// Rate time in the time units used by the containing API.

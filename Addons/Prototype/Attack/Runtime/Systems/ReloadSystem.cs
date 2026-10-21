@@ -37,7 +37,8 @@ namespace ME.BECS.Attack {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect) {
 
                 aspect.componentRuntimeReload.reloadTimer += this.dt;
-                if (aspect.readComponentRuntimeReload.reloadTimer >= aspect.readComponent.reloadTime) {
+                var reloadComplete = aspect.readComponentRuntimeReload.reloadTimer >= aspect.readComponent.reloadTime;
+                if (reloadComplete == true && aspect.readComponent.finishFireTimeAfterShot == false) {
 
                     aspect.IsReloaded = true;
 
@@ -47,8 +48,14 @@ namespace ME.BECS.Attack {
                     // Finish fire timer
                     aspect.componentRuntimeFire.fireTimer += this.dt;
                     if (aspect.readComponentRuntimeFire.fireTimer >= aspect.readComponent.fireTime) {
-                        aspect.CanFire = false;
+                        aspect.CancelFire();
                     }
+                }
+
+                // Keep the weapon in this job until both reload and post-shot recovery finish.
+                if (reloadComplete == true && aspect.readComponent.finishFireTimeAfterShot == true &&
+                    (aspect.IsFireUsed() == false || aspect.readComponentRuntimeFire.fireTimer <= 0f)) {
+                    aspect.IsReloaded = true;
                 }
 
             }

@@ -288,12 +288,31 @@ namespace ME.BECS.Attack {
             set {
                 if (value == true) {
                     this.ent.Set(new CanFireComponent());
-                } else {
-                    this.componentRuntimeFire.fireTimer = 0f;
+                } else if (this.readComponent.finishFireTimeAfterShot == true &&
+                           (this.IsFireUsed() == true || this.readComponentRuntimeFire.fireRateCount > 0u) &&
+                           this.readComponentRuntimeFire.fireTimer > 0f &&
+                           this.readComponentRuntimeFire.fireTimer < this.readComponent.fireTime) {
                     this.ent.Remove<CanFireComponent>();
-                    this.ent.SetTag<FireUsedComponent>(false);
+                    if (this.IsFireUsed() == false) {
+                        // A target change ends the remaining burst without emitting another shot event.
+                        this.componentRuntimeFire.fireRateCount = 0u;
+                        this.ent.SetTag<FireUsedComponent>(true);
+                        this.IsReloaded = false;
+                    }
+                } else {
+                    this.CancelFire();
                 }
             }
+        }
+
+        /// <summary>
+        /// Cancels the current fire phase, including recovery after a completed shot.
+        /// </summary>
+        [INLINE(256)]
+        public readonly void CancelFire() {
+            this.componentRuntimeFire.fireTimer = 0f;
+            this.ent.Remove<CanFireComponent>();
+            this.ent.SetTag<FireUsedComponent>(false);
         }
 
         /// <summary>
