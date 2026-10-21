@@ -27,6 +27,7 @@ namespace ME.BECS.Editor.Jobs {
             typeof(IJobParallelForAspectsBase), typeof(IJobForAspectsBase), typeof(IJobForAspectsComponentsBase),
             typeof(IJobParallelForAspectsComponentsBase),
         };
+        internal static IEnumerable<System.Type> DiscoveryContracts => EarlyInitContracts.Distinct();
         private readonly SourceGeneratorJobEarlyInit sourceEarlyInit = new SourceGeneratorJobEarlyInit();
         private readonly SourceGeneratorJobSafety sourceSafety = new SourceGeneratorJobSafety();
         private readonly System.Collections.Generic.Dictionary<System.Type, uint> selectedWeights = new System.Collections.Generic.Dictionary<System.Type, uint>();

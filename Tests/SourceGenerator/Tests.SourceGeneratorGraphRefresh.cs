@@ -9,6 +9,66 @@ namespace ME.BECS.Tests {
     public class Tests_SourceGeneratorGraphRefresh {
         private static Type Snapshot => Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.SourceGeneratorGraphSnapshot", true);
 
+        private sealed class UnrelatedUiType { public void Render() { } }
+        private struct UiOwnedComponent : IComponent { public int value; }
+        private struct UiOwnedJob : Unity.Jobs.IJob { public void Execute() { } }
+        private interface IPlainMarker { }
+        private struct UiOwnedGenericJob<T> : Unity.Jobs.IJob where T : struct, IPlainMarker { public void Execute() { } }
+        private sealed class UiOwnedCallback {
+            [CodeGeneratorIgnore]
+            public void Callback() { }
+        }
+
+        [TestCase(typeof(UnrelatedUiType), false)]
+        [TestCase(typeof(UiOwnedComponent), true)]
+        [TestCase(typeof(UiOwnedJob), true)]
+        [TestCase(typeof(UiOwnedCallback), true)]
+        public void InputOwnersUseContractsRatherThanUiAssemblyNames(Type type, bool expected) {
+            var identity = Snapshot.Assembly.GetType("ME.BECS.Editor.SourceGeneratorCodeIdentity", true);
+            Assert.AreEqual(expected, identity.GetMethod("IsInputType", BindingFlags.Static | BindingFlags.NonPublic)
+                .Invoke(null, new object[] { type }));
+        }
+
+        [Test]
+        public void GenericJobInputBoundaryRetainsNonComponentMarkerConstraints() {
+            var identity = Snapshot.Assembly.GetType("ME.BECS.Editor.SourceGeneratorCodeIdentity", true);
+            CollectionAssert.AreEqual(new[] { typeof(IPlainMarker) }, (Type[])identity
+                .GetMethod("GenericJobConstraints", BindingFlags.Static | BindingFlags.NonPublic)
+                .Invoke(null, new object[] { new[] { typeof(UiOwnedGenericJob<>), typeof(UnrelatedUiType) } }));
+        }
+
+        [Test]
+        public void AssemblyLevelIncludesAreInputOwnersWithoutComponentTypes() {
+            var assembly = System.Reflection.Emit.AssemblyBuilder.DefineDynamicAssembly(
+                new AssemblyName("InputBoundaryFixture_" + Guid.NewGuid().ToString("N")), System.Reflection.Emit.AssemblyBuilderAccess.Run);
+            assembly.DefineDynamicModule("Main").DefineType("PlainUi", TypeAttributes.Public).CreateType();
+            assembly.SetCustomAttribute(new System.Reflection.Emit.CustomAttributeBuilder(
+                typeof(CodeGeneratorInclude).GetConstructor(new[] { typeof(Type) }), new object[] { typeof(TestComponent) }));
+            var identity = Snapshot.Assembly.GetType("ME.BECS.Editor.SourceGeneratorCodeIdentity", true);
+            Assert.IsTrue((bool)identity.GetMethod("IsInputOwner", BindingFlags.Static | BindingFlags.NonPublic)
+                .Invoke(null, new object[] { assembly }));
+        }
+
+        [Test]
+        public void InputBoundaryKeepsHelpersButNotReverseUiReferences() {
+            var identity = Snapshot.Assembly.GetType("ME.BECS.Editor.SourceGeneratorCodeIdentity", true);
+            var method = identity.GetMethod("InputDependencyClosure", BindingFlags.Static | BindingFlags.NonPublic);
+            var graph = new[] {
+                new KeyValuePair<string, string[]>("Gameplay", new[] { "Helper", "BECS" }),
+                new KeyValuePair<string, string[]>("Helper", new[] { "Shared" }),
+                new KeyValuePair<string, string[]>("Shared", new[] { "Helper" }),
+                new KeyValuePair<string, string[]>("BECS", Array.Empty<string>()),
+                new KeyValuePair<string, string[]>("UI", new[] { "Gameplay", "BECS" }),
+            };
+            foreach (var order in new[] { graph, graph.Reverse().ToArray() }) {
+                CollectionAssert.AreEquivalent(new[] { "Gameplay", "Helper", "Shared", "BECS" },
+                    (System.Collections.IEnumerable)method.Invoke(null, new object[] { order, new[] { "Gameplay" } }));
+                CollectionAssert.AreEquivalent(graph.Select(pair => pair.Key),
+                    (System.Collections.IEnumerable)method.Invoke(null, new object[] { order, new[] { "Gameplay", "UI" } }),
+                    "Adding the first contract to UI must include it even without a reference from gameplay.");
+            }
+        }
+
         [Test]
         public void LazyLibraryLoadingDoesNotChangeTheScriptInputInventory() {
             var identity = Snapshot.Assembly.GetType("ME.BECS.Editor.SourceGeneratorCodeIdentity", true);

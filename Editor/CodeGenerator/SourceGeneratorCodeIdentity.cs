@@ -11,6 +11,95 @@ namespace ME.BECS.Editor {
     internal static class SourceGeneratorCodeIdentity {
         private static readonly Dictionary<Assembly, string> contents = new Dictionary<Assembly, string>();
         private static readonly Dictionary<string, string> libraryContents = new Dictionary<string, string>(StringComparer.Ordinal);
+        private static readonly Dictionary<Assembly, bool> inputOwners = new Dictionary<Assembly, bool>();
+        private static Type[] genericJobConstraints;
+
+        // Referencing BECS does not make a UI assembly an analysis root. Follow
+        // references FROM contract owners to their helpers, never in reverse.
+        // Re-evaluate owners after every domain reload so adding the first job,
+        // component, view or attributed callback to an assembly is observed.
+        internal static HashSet<string> InputAssemblies(UnityEditor.Compilation.Assembly[] scripts, Assembly[] loaded) {
+            var byName = loaded.Where(assembly => assembly.IsDynamic == false)
+                .GroupBy(assembly => assembly.GetName().Name)
+                .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.Ordinal);
+            var roots = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var script in scripts) {
+                if (IsConsumer(script.name) == true) continue;
+                if (byName.TryGetValue(script.name, out var assemblies) == false || assemblies.Length != 1 ||
+                    IsInputOwner(assemblies[0]) == true) roots.Add(script.name);
+            }
+            // Generic job specialization searches the whole domain for marker
+            // implementations, including assemblies which reference the job owner.
+            genericJobConstraints ??= GenericJobConstraints(Jobs.JobsEarlyInitCodeGenerator.DiscoveryContracts
+                .SelectMany(contract => UnityEditor.TypeCache.GetTypesDerivedFrom(contract).Cast<Type>()));
+            foreach (var constraint in genericJobConstraints) {
+                if (constraint.ContainsGenericParameters == true) return new HashSet<string>(scripts.Select(script => script.name), StringComparer.Ordinal);
+                foreach (var candidate in UnityEditor.TypeCache.GetTypesDerivedFrom(constraint)) {
+                    if (candidate.IsValueType == true && candidate.ContainsGenericParameters == false) roots.Add(candidate.Assembly.GetName().Name);
+                }
+            }
+            return InputDependencyClosure(scripts.Select(script => new KeyValuePair<string, string[]>(script.name,
+                script.assemblyReferences.Select(reference => reference.name).ToArray())), roots);
+        }
+
+        private static bool IsInputOwner(Assembly assembly) {
+            if (inputOwners.TryGetValue(assembly, out var owner) == true) return owner;
+            // Framework implementation, including discovery extensions, remains
+            // conservative. This is an inclusion rule, never a UI-name exclusion.
+            var name = assembly.GetName().Name;
+            owner = name == "ME.BECS" || name.StartsWith("ME.BECS.", StringComparison.Ordinal);
+            try {
+                var types = assembly.GetTypes();
+                if (owner == false) {
+                    owner = assembly.GetCustomAttributesData().Any(attribute => IsInputAttribute(attribute.AttributeType)) ||
+                            types.Any(IsInputType);
+                }
+            } catch (Exception) { owner = true; } // Incomplete metadata must invalidate, not silently exclude.
+            inputOwners[assembly] = owner;
+            return owner;
+        }
+
+        internal static Type[] GenericJobConstraints(IEnumerable<Type> types) => types
+            .Where(type => type.IsGenericTypeDefinition == true)
+            .Select(EditorUtils.GetFirstInterfaceConstraintType).Where(constraint => constraint != null).Distinct().ToArray();
+
+        internal static bool IsInputType(Type type) {
+            const BindingFlags declared = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static |
+                                          BindingFlags.Instance | BindingFlags.DeclaredOnly;
+            for (var parent = type.BaseType; parent != null; parent = parent.BaseType)
+                if (IsInputContract(parent) == true) return true;
+            if (type.GetInterfaces().Any(IsInputContract) == true) return true;
+            if (HasInputAttribute(type) == true) return true;
+            return type.GetMembers(declared).Any(HasInputAttribute);
+        }
+
+        private static bool HasInputAttribute(MemberInfo member) => member.GetCustomAttributesData()
+            .Any(attribute => IsInputAttribute(attribute.AttributeType));
+
+        private static bool IsInputAttribute(Type type) {
+            for (; type != null; type = type.BaseType)
+                if (IsInputContract(type) == true) return true;
+            return false;
+        }
+
+        private static bool IsInputContract(Type type) {
+            var ns = type.Namespace ?? "";
+            return ns == "ME.BECS" || ns.StartsWith("ME.BECS.", StringComparison.Ordinal) ||
+                   ns == "Unity.Jobs" || ns.StartsWith("Unity.Jobs.", StringComparison.Ordinal);
+        }
+
+        internal static HashSet<string> InputDependencyClosure(IEnumerable<KeyValuePair<string, string[]>> references,
+            IEnumerable<string> roots) {
+            var graph = references.ToDictionary(pair => pair.Key, pair => pair.Value ?? Array.Empty<string>(), StringComparer.Ordinal);
+            var selected = new HashSet<string>(StringComparer.Ordinal);
+            var queue = new Queue<string>(roots);
+            while (queue.Count > 0) {
+                var name = queue.Dequeue();
+                if (graph.TryGetValue(name, out var dependencies) == false || selected.Add(name) == false) continue;
+                foreach (var dependency in dependencies) queue.Enqueue(dependency);
+            }
+            return selected;
+        }
 
         // AppDomain is not a compilation input inventory: e.g. System.Buffers
         // first loads during Play Mode. Use compiler references, including DLLs

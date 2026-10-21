@@ -38,15 +38,18 @@ namespace ME.BECS.Editor {
 
         private static string ComputeCodeFingerprint() {
             var scriptAssemblies = UnityEditor.Compilation.CompilationPipeline.GetAssemblies(UnityEditor.Compilation.AssembliesType.Editor);
+            var domainAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+            var inputAssemblies = SourceGeneratorCodeIdentity.InputAssemblies(scriptAssemblies, domainAssemblies);
             var byName = scriptAssemblies.ToDictionary(script => script.name, StringComparer.Ordinal);
             var dependants = SourceGeneratorCodeIdentity.ConsumerDependants(scriptAssemblies);
-            var loaded = SourceGeneratorCodeIdentity.LoadedScripts(AppDomain.CurrentDomain.GetAssemblies(),
+            var loaded = SourceGeneratorCodeIdentity.LoadedScripts(domainAssemblies,
                     new HashSet<string>(byName.Keys, StringComparer.Ordinal))
                 .GroupBy(assembly => assembly.GetName().Name).ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.Ordinal);
             var scripts = new List<string>(SourceGeneratorCodeIdentity.Libraries(scriptAssemblies));
             foreach (var script in scriptAssemblies) {
                 // Including consumers makes each input compilation invalidate itself.
                 if (SourceGeneratorCodeIdentity.IsConsumer(script.name)) continue;
+                if (inputAssemblies.Contains(script.name) == false) continue;
                 scripts.Add(script.name + "\tdefines\t" + string.Join(";", script.defines.OrderBy(value => value, StringComparer.Ordinal)));
                 if (!loaded.TryGetValue(script.name, out var assemblies)) {
                     scripts.Add(script.name + "\tunloaded");
@@ -57,7 +60,7 @@ namespace ME.BECS.Editor {
                 scripts.Add(assembly.FullName + "\t" + SourceGeneratorCodeIdentity.Stamp(assembly, script, dependants));
             }
             TraceCodeInputs(scripts);
-            return Combine("ME.BECS.ILInputs.v3",
+            return Combine("ME.BECS.ILInputs.v4",
                 UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString(), scripts);
         }
 
