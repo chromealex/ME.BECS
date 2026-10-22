@@ -140,6 +140,7 @@ namespace ME.BECS.Editor {
             try {
                 var fingerprint = Fingerprint();
                 UnityEditor.SessionState.SetString(AutomaticAttemptKey, fingerprint);
+                UnityEngine.Debug.Log("[ME.BECS] Source inputs export requested explicitly; rebuild=" + rebuild);
                 StartBackground(fingerprint, rebuild, completed);
                 return true;
             } catch (System.Exception exception) {
@@ -210,7 +211,10 @@ namespace ME.BECS.Editor {
                 if (!CanPublishAnalysis(backgroundVersion, requestVersion, discardBackground, result.fingerprint, fingerprint, busy)) {
                     if (!discardBackground) changedDuringAnalysis = true;
                     status = UnityEditor.Progress.Status.Canceled;
-                    UnityEngine.Debug.Log("[ME.BECS] Background IL analysis was cancelled or superseded; no inputs were published.");
+                    UnityEngine.Debug.Log("[ME.BECS] Background IL analysis was cancelled or superseded; no inputs were published." +
+                        "\ndiscarded=" + discardBackground + "; editorBusy=" + busy +
+                        "; capturedRequest=" + backgroundVersion + "; currentRequest=" + requestVersion +
+                        "; capturedFingerprint=" + result.fingerprint + "; currentFingerprint=" + fingerprint);
                     return;
                 }
                 publishing = true;
@@ -453,6 +457,7 @@ namespace ME.BECS.Editor {
         public static void Request() {
             unchecked { ++requestVersion; }
             if (IsAnalyzing) {
+                UnityEngine.Debug.Log("[ME.BECS] Input refresh request interrupted active IL analysis. Caller is in this message's stack trace.");
                 discardBackground = changedDuringAnalysis = true;
                 background.Cancel();
             }
@@ -490,7 +495,9 @@ namespace ME.BECS.Editor {
             try {
                 var fingerprint = Fingerprint();
                 var recovery = SourceGeneratorGraphSnapshot.HasRecoveryInputs() || !SourceGeneratorAnalysisReceipt.IsCurrent(fingerprint);
-                if (!UnityEditor.SessionState.GetBool(FailedKey, false) && SourceGeneratorGraphSnapshot.IsCompiledCurrent(fingerprint, out _)) {
+                var failed = UnityEditor.SessionState.GetBool(FailedKey, false);
+                var reason = "Previous export did not complete successfully.";
+                if (failed == false && SourceGeneratorGraphSnapshot.IsCompiledCurrent(fingerprint, out reason)) {
                     UnityEditor.SessionState.EraseString(AutomaticAttemptKey);
                     UnityEditor.SessionState.SetString(FingerprintKey, fingerprint);
                     return;
@@ -503,6 +510,10 @@ namespace ME.BECS.Editor {
                 if (!ShouldExportAutomatically(fingerprint, UnityEditor.SessionState.GetString(FingerprintKey, ""),
                         UnityEditor.SessionState.GetString(AutomaticAttemptKey, ""), UnityEditor.SessionState.GetBool(FailedKey, false), recovery)) return;
                 UnityEditor.SessionState.SetString(AutomaticAttemptKey, fingerprint);
+                UnityEngine.Debug.Log("[ME.BECS] Automatic source inputs export: " + reason +
+                    "\nfailed=" + failed + "; recoveryOrStaleAnalysis=" + recovery +
+                    "; fingerprintChanged=" + (fingerprint != UnityEditor.SessionState.GetString(FingerprintKey, "")) +
+                    "; fingerprint=" + fingerprint);
                 StartBackground(fingerprint, false, null);
             } catch (System.Exception exception) {
                 MarkExportStarted();

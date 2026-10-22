@@ -5,6 +5,23 @@ using NUnit.Framework;
 
 namespace ME.BECS.Tests {
     public partial class Tests_SourceGeneratorContracts {
+        internal struct GeneratedSerializableComponent : IComponent { public int value; }
+        [Serializable]
+        internal struct ExplicitSerializableComponent : IComponent { public int value; }
+
+        [Test]
+        public void ComponentSerializationAttributesAreGeneratedOnlyWhenNeeded() {
+            if (typeof(UnityEngine.Object).Assembly.GetType("UnityEngine.MakeSerializableAttribute") == null) {
+                Assert.Ignore("This Unity version does not provide MakeSerializableAttribute.");
+            }
+            var types = typeof(GeneratedSerializableComponent).Assembly.GetCustomAttributesData()
+                .Where(attribute => attribute.AttributeType.FullName == "UnityEngine.MakeSerializableAttribute")
+                .Select(attribute => (Type)attribute.ConstructorArguments[0].Value).ToArray();
+            Assert.AreEqual(0, types.Count(type => type == typeof(GeneratedSerializableComponent)),
+                "MakeSerializable rejects value types in its constructor during Unity domain reload.");
+            Assert.AreEqual(0, types.Count(type => type == typeof(ExplicitSerializableComponent)));
+        }
+
         [Test]
         public void DirectAccessReportRejectsMalformedOrConflictingSummaryRows() {
             var validate = Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.SourceGeneratorScheduledJobsValidation", true)

@@ -77,7 +77,18 @@ namespace ME.BECS.Editor {
             out string compilerSnapshot, out string reason) {
             compilerSnapshot = null;
             reason = "Current code/assets have no completed source input analysis. Regenerate inputs in the Editor.";
-            if (!TryParse(text, out var fields) || string.IsNullOrEmpty(fingerprint) || fields[1] != fingerprint) return false;
+            if (string.IsNullOrEmpty(text) == true) {
+                reason = "Source input analysis receipt is missing.";
+                return false;
+            }
+            if (TryParse(text, out var fields) == false) {
+                reason = "Source input analysis receipt is malformed or has an invalid checksum.";
+                return false;
+            }
+            if (string.IsNullOrEmpty(fingerprint) == true || fields[1] != fingerprint) {
+                reason = "Source input analysis fingerprint changed: recorded=" + fields[1] + "; current=" + fingerprint;
+                return false;
+            }
             for (var index = 0; index < Consumers.Length; ++index) {
                 var matches = inputs.Where(pair => pair.Key == Consumers[index]).ToArray();
                 if (matches.Length != 1 || matches[0].Value != fields[index + 3]) {
