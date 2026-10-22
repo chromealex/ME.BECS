@@ -1,15 +1,15 @@
 {
   "name": "com.me.becs",
-  "version": "2025.11.27",
+  "version": "2026.10.22",
   "subVersion": "rc1",
   "displayName": "ME.BECS",
   "description": "ME.BECS Core Package.",
   "unity": "6000.0",
   "license": "MIT",
   "dependencies": {
-    "com.unity.collections": "2.5.2",
+    "com.unity.collections": "2.10.3",
     "com.unity.ui": "2.0.0",
-    "com.unity.burst": "1.8.19",
+    "com.unity.burst": "1.8.31",
     "com.unity.mathematics": "1.3.2",
     "com.unity.profiling.core": "1.0.2"
   },

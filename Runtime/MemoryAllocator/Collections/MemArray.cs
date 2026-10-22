@@ -427,8 +427,7 @@ namespace ME.BECS {
 
             E.IS_CREATED(this);
             if (this.IsInlined == true) {
-                ref var r = ref Unsafe.AsRef(in this);
-                var ptr = (byte*)Unsafe.AsPointer(ref r.data);
+                var ptr = (byte*)UnsafeUtilityExtensions.AddressOf(in this.data);
                 return (safe_ptr)ptr;
             }
 
@@ -444,8 +443,7 @@ namespace ME.BECS {
 
             E.IS_CREATED(this);
             if (this.IsInlined == true) {
-                ref var r = ref Unsafe.AsRef(in this);
-                var ptr = (byte*)Unsafe.AsPointer(ref r.data);
+                var ptr = (byte*)UnsafeUtilityExtensions.AddressOf(in this.data);
                 return (safe_ptr)ptr + index;
             }
             
@@ -461,8 +459,7 @@ namespace ME.BECS {
 
             E.IS_CREATED(this);
             if (this.IsInlined == true) {
-                ref var r = ref Unsafe.AsRef(in this);
-                var ptr = (byte*)Unsafe.AsPointer(ref r.data);
+                var ptr = (byte*)UnsafeUtilityExtensions.AddressOf(in this.data);
                 return (safe_ptr)ptr + index;
             }
             
@@ -478,8 +475,7 @@ namespace ME.BECS {
 
             E.IS_CREATED(this);
             if (this.IsInlined == true) {
-                ref var r = ref Unsafe.AsRef(in this);
-                var ptr = (byte*)Unsafe.AsPointer(ref r.data);
+                var ptr = (byte*)UnsafeUtilityExtensions.AddressOf(in this.data);
                 return (safe_ptr)ptr;
             }
             

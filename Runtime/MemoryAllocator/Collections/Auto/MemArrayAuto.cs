@@ -15,6 +15,7 @@ namespace ME.BECS {
     #endif
     #endif
     using Unity.Jobs;
+    using Unity.Collections.LowLevel.Unsafe;
     using static Cuts;
     using System.Runtime.InteropServices;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
@@ -391,8 +392,7 @@ namespace ME.BECS {
         public readonly safe_ptr GetUnsafePtr() {
 
             if (this.IsInlined == true) {
-                ref var r = ref Unsafe.AsRef(in this);
-                var ptr = (byte*)Unsafe.AsPointer(ref r.data);
+                var ptr = (byte*)UnsafeUtilityExtensions.AddressOf(in this.data);
                 return (safe_ptr)ptr;
             }
 
@@ -407,8 +407,7 @@ namespace ME.BECS {
         public readonly safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
 
             if (this.IsInlined == true) {
-                ref var r = ref Unsafe.AsRef(in this);
-                var ptr = (byte*)Unsafe.AsPointer(ref r.data);
+                var ptr = (byte*)UnsafeUtilityExtensions.AddressOf(in this.data);
                 return (safe_ptr)ptr;
             }
 
@@ -423,8 +422,7 @@ namespace ME.BECS {
         public readonly safe_ptr GetUnsafePtrCached(in MemoryAllocator allocator) {
 
             if (this.IsInlined == true) {
-                ref var r = ref Unsafe.AsRef(in this);
-                var ptr = (byte*)Unsafe.AsPointer(ref r.data);
+                var ptr = (byte*)UnsafeUtilityExtensions.AddressOf(in this.data);
                 return (safe_ptr)ptr;
             }
 
