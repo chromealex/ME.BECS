@@ -10,6 +10,14 @@ namespace ME.BECS.Tests {
         private static Type Snapshot => Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.SourceGeneratorGraphSnapshot", true);
 
         private sealed class UnrelatedUiType { public void Render() { } }
+        private sealed class InspectorOnlyUiType {
+            [ME.BECS.Extensions.SubclassSelector.SubclassSelector]
+            public object parameter;
+        }
+        private struct InspectorDecoratedComponent : IComponent {
+            [ME.BECS.Extensions.SubclassSelector.SubclassSelector]
+            public int value;
+        }
         private struct UiOwnedComponent : IComponent { public int value; }
         private struct UiOwnedJob : Unity.Jobs.IJob { public void Execute() { } }
         private interface IPlainMarker { }
@@ -20,6 +28,8 @@ namespace ME.BECS.Tests {
         }
 
         [TestCase(typeof(UnrelatedUiType), false)]
+        [TestCase(typeof(InspectorOnlyUiType), false)]
+        [TestCase(typeof(InspectorDecoratedComponent), true)]
         [TestCase(typeof(UiOwnedComponent), true)]
         [TestCase(typeof(UiOwnedJob), true)]
         [TestCase(typeof(UiOwnedCallback), true)]

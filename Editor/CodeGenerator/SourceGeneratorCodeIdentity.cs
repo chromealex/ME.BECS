@@ -77,6 +77,11 @@ namespace ME.BECS.Editor {
             .Any(attribute => IsInputAttribute(attribute.AttributeType));
 
         private static bool IsInputAttribute(Type type) {
+            // SubclassSelector is an Inspector-only field drawer, not a codegen
+            // contract. UI assemblies use it without owning any ECS inputs.
+            if (type == typeof(ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute)) {
+                return false;
+            }
             for (; type != null; type = type.BaseType)
                 if (IsInputContract(type) == true) return true;
             return false;
