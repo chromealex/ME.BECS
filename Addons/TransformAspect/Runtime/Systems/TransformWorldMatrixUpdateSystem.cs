@@ -13,6 +13,7 @@ namespace ME.BECS.Transforms {
     /// <summary>
     /// Coordinates transform world matrix update during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [UnityEngine.Tooltip("Update all entities with TransformAspect (LocalPosition and LocalRotation components are required).")]
     [BURST]
     public partial struct TransformWorldMatrixUpdateSystem : IAwake, IStart, IUpdate, IDestroy {

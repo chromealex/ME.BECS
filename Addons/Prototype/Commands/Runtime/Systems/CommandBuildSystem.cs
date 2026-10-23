@@ -9,6 +9,7 @@ namespace ME.BECS.Commands {
     /// <summary>
     /// Coordinates command build during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public partial struct CommandBuildSystem : IUpdate {

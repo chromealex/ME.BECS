@@ -21,6 +21,7 @@ namespace ME.BECS.Bullets {
     /// <summary>
     /// Coordinates fly3 d during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("Bullet fly system")]
     public partial struct Fly3DSystem : IUpdate {

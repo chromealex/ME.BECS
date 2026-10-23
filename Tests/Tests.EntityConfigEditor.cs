@@ -18,7 +18,7 @@ namespace ME.BECS.Tests {
                 config.Validate();
                 CollectionAssert.AreEqual(new[] { 1u, 2u, 3u, 4u }, config.collectionsData.items.ConvertAll(item => item.id));
                 AssetDatabase.CreateAsset(config, path);
-                AssetDatabase.SaveAssets();
+                AssetDatabase.SaveAssetIfDirty(config);
                 UnityEngine.Resources.UnloadAsset(config);
                 config = AssetDatabase.LoadAssetAtPath<EntityConfig>(path);
                 config.Validate();

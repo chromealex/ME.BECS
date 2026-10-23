@@ -10,6 +10,7 @@ namespace ME.BECS.Commands {
     /// <summary>
     /// Coordinates command move attack during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public partial struct CommandMoveAttackSystem : IUpdate {

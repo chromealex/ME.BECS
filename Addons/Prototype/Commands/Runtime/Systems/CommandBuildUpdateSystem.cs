@@ -21,6 +21,7 @@ namespace ME.BECS.Commands {
     /// <summary>
     /// Coordinates command build update during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem), typeof(CommandBuildSystem))]
     public partial struct CommandBuildUpdateSystem : IUpdate {

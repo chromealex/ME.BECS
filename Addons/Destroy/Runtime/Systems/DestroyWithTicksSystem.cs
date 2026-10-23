@@ -8,6 +8,7 @@ namespace ME.BECS {
     /// <summary>
     /// Coordinates destroy with ticks during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [UnityEngine.Tooltip("Update entities with ticks component (ent.Destroy(ulong ticks) API).")]
     [BURST]
     public partial struct DestroyWithTicksSystem : IUpdate {

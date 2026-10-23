@@ -3,6 +3,7 @@ namespace ME.BECS.Perks {
     /// <summary>
     /// Defines immutable configuration data for perks config.
     /// </summary>
+    [System.Serializable]
     public struct PerksConfig : IConfigComponentStatic {
 
         /// <summary>

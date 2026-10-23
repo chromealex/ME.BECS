@@ -16,6 +16,7 @@ namespace ME.BECS.Attack {
     /// <summary>
     /// Coordinates reload during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("Reload system")]
     public partial struct ReloadSystem : IUpdate {

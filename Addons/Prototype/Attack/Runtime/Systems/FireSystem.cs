@@ -16,6 +16,7 @@ namespace ME.BECS.Attack {
     /// <summary>
     /// Coordinates fire during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("Fire system")]
     public partial struct FireSystem : IUpdate {

@@ -7,6 +7,7 @@ namespace ME.BECS.Perks {
     /// <summary>
     /// Provides typed access to the entity components used for perk.
     /// </summary>
+    [System.Serializable]
     public partial struct PerkAspect : IAspect {
         
         /// <summary>

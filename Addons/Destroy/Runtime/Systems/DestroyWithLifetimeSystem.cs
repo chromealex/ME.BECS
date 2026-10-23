@@ -16,6 +16,7 @@ namespace ME.BECS {
     /// <summary>
     /// Coordinates destroy with lifetime during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [UnityEngine.Tooltip("Update entities with lifetime component (ent.Destroy(float lifetime) API).")]
     [BURST]
     public partial struct DestroyWithLifetimeSystem : IUpdate {

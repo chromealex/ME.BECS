@@ -20,6 +20,7 @@ namespace ME.BECS.Pathfinding {
     /// <summary>
     /// Coordinates build graph during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [UnityEngine.Tooltip("Schedule building a pathfinding graph.")]
     public unsafe partial struct BuildGraphSystem : IAwake, IDestroy {
 

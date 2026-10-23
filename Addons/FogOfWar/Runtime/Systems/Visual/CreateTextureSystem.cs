@@ -18,6 +18,7 @@ namespace ME.BECS.FogOfWar {
     /// <summary>
     /// Coordinates create texture during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     public partial struct CreateTextureSystem : IAwake, IDestroy {
 
         /// <summary>

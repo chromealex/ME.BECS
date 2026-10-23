@@ -138,6 +138,7 @@ namespace ME.BECS {
     /// <summary>
     /// Coordinates quad tree query during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [RequiredDependencies(typeof(QuadTreeInsertSystem))]
     public partial struct QuadTreeQuerySystem : IUpdate {

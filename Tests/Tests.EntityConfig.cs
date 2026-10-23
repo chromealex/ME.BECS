@@ -15,10 +15,12 @@ namespace ME.BECS.Tests {
             public MemArrayAuto<Config> modifiers;
         }
 
+        [System.Serializable]
         public struct TestNestedArrayComponent : IConfigComponent {
             public MemArrayAuto<NestedArrayItem> assignments;
         }
 
+        [System.Serializable]
         public struct TestNestedArrayStatic : IConfigComponentStatic {
             public MemArrayAuto<NestedArrayItem> assignments;
         }

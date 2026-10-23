@@ -9,6 +9,7 @@ namespace ME.BECS.FogOfWar {
     /// <summary>
     /// Coordinates update during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [RequiredDependencies(typeof(CreateSystem))]
     public partial struct UpdateSystem : IUpdate {

@@ -77,6 +77,7 @@ namespace ME.BECS.Views {
     /// <summary>
     /// Defines immutable configuration data for instantiate view.
     /// </summary>
+    [System.Serializable]
     [EditorComment("Instantiate view on scene automatically from view source")]
     [ComponentGroup(typeof(ViewsComponentGroup))]
     public struct InstantiateViewComponent : IConfigComponentStatic, IConfigInitialize {

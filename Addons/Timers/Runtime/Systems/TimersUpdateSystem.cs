@@ -14,6 +14,7 @@ namespace ME.BECS.Timers {
     /// <summary>
     /// Coordinates timers update during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [SystemGenericParallelMode]
     public partial struct TimersUpdateSystem<T> : IUpdate where T : unmanaged, ITimer {
@@ -53,6 +54,7 @@ namespace ME.BECS.Timers {
     /// <summary>
     /// Coordinates timers ms update during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [SystemGenericParallelMode]
     public partial struct TimersMsUpdateSystem<T> : IUpdate where T : unmanaged, ITimerMs {
@@ -93,6 +95,7 @@ namespace ME.BECS.Timers {
     /// <summary>
     /// Coordinates timers auto destroy update during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [SystemGenericParallelMode]
     public partial struct TimersAutoDestroyUpdateSystem<T> : IUpdate where T : unmanaged, ITimerAutoDestroy {
@@ -132,6 +135,7 @@ namespace ME.BECS.Timers {
     /// <summary>
     /// Coordinates timers ms auto destroy update during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [SystemGenericParallelMode]
     public partial struct TimersMsAutoDestroyUpdateSystem<T> : IUpdate where T : unmanaged, ITimerMsAutoDestroy {

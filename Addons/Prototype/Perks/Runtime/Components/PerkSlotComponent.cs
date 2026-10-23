@@ -24,6 +24,7 @@ namespace ME.BECS.Perks {
     /// <summary>
     /// Defines configuration-backed entity data for perk slot.
     /// </summary>
+    [System.Serializable]
     public struct PerkSlotComponent : IConfigComponent {
 
         /// <summary>

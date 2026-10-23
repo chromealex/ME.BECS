@@ -10,6 +10,7 @@ namespace ME.BECS.Bullets {
     /// <summary>
     /// Coordinates destroy during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("Bullets hit target")]
     [RequiredDependencies(typeof(QuadTreeQuerySystem))]

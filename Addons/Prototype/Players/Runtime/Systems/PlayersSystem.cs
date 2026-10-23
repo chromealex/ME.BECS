@@ -12,6 +12,7 @@ namespace ME.BECS.Players {
     /// <summary>
     /// Coordinates players during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("Initialize default players")]
     public partial struct PlayersSystem : IAwake {

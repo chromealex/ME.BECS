@@ -13,6 +13,7 @@ namespace ME.BECS.FogOfWar {
     /// <summary>
     /// Coordinates update texture during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [RequiredDependencies(typeof(CreateTextureSystem))]
     public unsafe partial struct UpdateTextureSystem : IUpdate {
 

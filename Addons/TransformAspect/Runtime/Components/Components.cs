@@ -124,6 +124,7 @@ namespace ME.BECS.Transforms {
     /// <summary>
     /// Defines configuration-backed entity data for local rotation.
     /// </summary>
+    [System.Serializable]
     [EditorComment("Current local rotation")]
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct LocalRotationComponent : IConfigComponent {
@@ -142,6 +143,7 @@ namespace ME.BECS.Transforms {
     /// <summary>
     /// Defines configuration-backed entity data for local position.
     /// </summary>
+    [System.Serializable]
     [EditorComment("Current local position")]
     [ComponentGroup(typeof(TransformComponentGroup))]
     [LAYOUT(LayoutKind.Explicit, Size = sizeof(float) * 4)]
@@ -158,6 +160,7 @@ namespace ME.BECS.Transforms {
     /// <summary>
     /// Defines configuration-backed entity data for local scale.
     /// </summary>
+    [System.Serializable]
     [EditorComment("Current local scale")]
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct LocalScaleComponent : IConfigComponent {

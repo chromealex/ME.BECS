@@ -16,6 +16,7 @@ namespace ME.BECS.FogOfWar {
     /// <summary>
     /// Coordinates draw gizmos during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     public partial struct DrawGizmosSystem : IDrawGizmos {
 

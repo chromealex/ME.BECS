@@ -14,6 +14,7 @@ namespace ME.BECS.Pathfinding {
     /// <summary>
     /// Coordinates draw gizmos graph during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [UnityEngine.Tooltip("Draw graph in gizmos.")]
     public partial struct DrawGizmosGraphSystem : IUpdate, IDrawGizmos {
 

@@ -24,6 +24,7 @@ namespace ME.BECS.FogOfWar {
     /// <summary>
     /// Coordinates create during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public partial struct CreateSystem : IAwake, IUpdate {

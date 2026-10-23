@@ -21,6 +21,7 @@ namespace ME.BECS.Transforms {
     /// <summary>
     /// Provides typed access to the entity components used for transform.
     /// </summary>
+    [System.Serializable]
     [EditorComment("Give access to the transform methods")]
     public partial struct TransformAspect : IAspect {
         

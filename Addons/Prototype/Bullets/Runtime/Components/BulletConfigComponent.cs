@@ -25,12 +25,14 @@ namespace ME.BECS.Bullets {
     /// <summary>
     /// Defines configuration-backed entity data for is bullet custom fly.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(BulletComponentGroup))]
     public struct IsBulletCustomFlyComponent : IConfigComponent {}
     
     /// <summary>
     /// Defines configuration-backed entity data for bullet config.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(BulletComponentGroup))]
     public struct BulletConfigComponent : IConfigComponent {
 
@@ -66,6 +68,7 @@ namespace ME.BECS.Bullets {
     /// <summary>
     /// Defines immutable configuration data for bullet effect on destroy.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(BulletComponentGroup))]
     public struct BulletEffectOnDestroy : IConfigComponentStatic {
 
@@ -96,6 +99,7 @@ namespace ME.BECS.Bullets {
     /// <summary>
     /// Defines immutable configuration data for bullet view point.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(BulletComponentGroup))]
     public struct BulletViewPoint : IConfigComponentStatic {
 

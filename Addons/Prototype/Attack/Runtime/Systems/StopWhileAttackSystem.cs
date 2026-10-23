@@ -22,6 +22,7 @@ namespace ME.BECS.Attack {
     /// <summary>
     /// Coordinates stop while attack during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("Stop unit while attacking")]
     public partial struct StopWhileAttackSystem : IUpdate {

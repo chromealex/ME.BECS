@@ -7,6 +7,7 @@ namespace ME.BECS.Views {
     /// <summary>
     /// Updates view presentation for reset trails module.
     /// </summary>
+    [System.Serializable]
     public class ResetTrailsModule : IViewInitialize, IViewOnValidate, IViewEnableFromPool, IViewApplyState {
 
         /// <summary>

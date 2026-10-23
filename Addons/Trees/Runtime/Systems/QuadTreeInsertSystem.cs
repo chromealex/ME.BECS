@@ -161,6 +161,7 @@ namespace ME.BECS {
     /// <summary>
     /// Coordinates quad tree insert during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     public unsafe partial struct QuadTreeInsertSystem : IAwake, IUpdate, IDestroy, IDrawGizmos {
         
