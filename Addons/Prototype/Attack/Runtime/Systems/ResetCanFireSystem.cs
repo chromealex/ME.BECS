@@ -8,6 +8,7 @@ namespace ME.BECS.Attack {
     /// <summary>
     /// Coordinates reset can fire during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("Reset Can Fire system")]
     public partial struct ResetCanFireSystem : IUpdate {

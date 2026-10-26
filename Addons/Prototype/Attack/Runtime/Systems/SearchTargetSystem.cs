@@ -16,6 +16,7 @@ namespace ME.BECS.Attack {
     /// <summary>
     /// Coordinates search target during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("Search Target system")]
     [RequiredDependencies(typeof(QuadTreeQuerySystem))]

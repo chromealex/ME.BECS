@@ -194,7 +194,12 @@ namespace ME.BECS.Editor {
             this.deltaLabel = new Label(); this.deltaLabel.AddToClassList("delta"); controls.Add(this.deltaLabel);
             var timelineRow = new VisualElement(); timelineRow.AddToClassList("timeline-row"); scroll.Add(timelineRow);
             var labels = new VisualElement(); labels.AddToClassList("track-labels"); timelineRow.Add(labels);
-            foreach (var text in new[] { "", "States", "Local", "Remote", "Rewind" }) labels.Add(new Label(text));
+            var labelSpacer = new Label();
+            labelSpacer.AddToClassList("track-label-spacer");
+            labels.Add(labelSpacer);
+            foreach (var text in new[] { "States", "Local", "Remote", "Rewind" }) {
+                labels.Add(new Label(text));
+            }
             this.timeline = new VisualElement(); this.timeline.AddToClassList("timeline"); timelineRow.Add(this.timeline);
             var axis = new VisualElement(); axis.AddToClassList("axis"); this.timeline.Add(axis);
             this.minLabel = new Label(); axis.Add(this.minLabel);

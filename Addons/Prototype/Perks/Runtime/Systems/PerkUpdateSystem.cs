@@ -15,6 +15,7 @@ namespace ME.BECS.Perks {
     /// <summary>
     /// Coordinates perk initialize during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     public partial struct PerkInitializeSystem<T> : IUpdate where T : unmanaged, IPerkInitializeComponent {
 
@@ -46,6 +47,7 @@ namespace ME.BECS.Perks {
     /// <summary>
     /// Coordinates perk update parallel during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [SystemGenericParallelMode]
     public partial struct PerkUpdateParallelSystem<T> : IUpdate where T : unmanaged, IPerkParallelComponent {
@@ -83,6 +85,7 @@ namespace ME.BECS.Perks {
     /// <summary>
     /// Coordinates perk update during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     public partial struct PerkUpdateSystem<T> : IUpdate, IGenericWithout<IPerkParallelComponent> where T : unmanaged, IPerkComponent {
 

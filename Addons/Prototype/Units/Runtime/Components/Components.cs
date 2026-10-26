@@ -48,6 +48,7 @@ namespace ME.BECS.Units {
     /// <summary>
     /// Defines immutable configuration data for unit placements data.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitPlacementsDataComponent : IConfigComponentStatic {
 
@@ -86,6 +87,7 @@ namespace ME.BECS.Units {
     /// <summary>
     /// Defines configuration-backed entity data for nav agent.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct NavAgentComponent : IConfigComponent {
         
@@ -236,6 +238,7 @@ namespace ME.BECS.Units {
     /// <summary>
     /// Defines configuration-backed entity data for unit health.
     /// </summary>
+    [System.Serializable]
     [EditorComment("Current unit health")]
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitHealthComponent : IConfigComponent {
@@ -260,6 +263,7 @@ namespace ME.BECS.Units {
     /// <summary>
     /// Defines immutable configuration data for unit effect on hit.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitEffectOnHitComponent : IConfigComponentStatic {
  
@@ -273,6 +277,7 @@ namespace ME.BECS.Units {
     /// <summary>
     /// Defines immutable configuration data for unit effect on destroy.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitEffectOnDestroyComponent : IConfigComponentStatic {
  
@@ -286,6 +291,7 @@ namespace ME.BECS.Units {
     /// <summary>
     /// Defines immutable configuration data for unit effect on spawn.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitEffectOnSpawnComponent : IConfigComponentStatic {
  
@@ -399,6 +405,7 @@ namespace ME.BECS.Units {
     /// <summary>
     /// Defines configuration-backed entity data for unit invincibility.
     /// </summary>
+    [System.Serializable]
     [EditorComment("Is unit invincible or not")]
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitInvincibility : IConfigComponent {

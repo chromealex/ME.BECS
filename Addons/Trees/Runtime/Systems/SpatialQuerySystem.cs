@@ -31,6 +31,7 @@ namespace ME.BECS {
     /// <summary>
     /// Defines configuration-backed entity data for spatial query.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(SpatialComponentGroup))]
     public struct SpatialQuery : IConfigComponent {
 
@@ -97,6 +98,7 @@ namespace ME.BECS {
     /// <summary>
     /// Provides typed access to the entity components used for spatial query.
     /// </summary>
+    [System.Serializable]
     [EditorComment("Filter all entities which suitable for this query")]
     public partial struct SpatialQueryAspect : IAspect {
 
@@ -138,6 +140,7 @@ namespace ME.BECS {
     /// <summary>
     /// Coordinates spatial query during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [RequiredDependencies(typeof(SpatialInsertSystem))]
     public partial struct SpatialQuerySystem : IUpdate {

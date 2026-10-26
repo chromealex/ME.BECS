@@ -137,6 +137,7 @@ namespace ME.BECS {
     /// <summary>
     /// Coordinates octree query during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [RequiredDependencies(typeof(OctreeInsertSystem))]
     public partial struct OctreeQuerySystem : IUpdate {

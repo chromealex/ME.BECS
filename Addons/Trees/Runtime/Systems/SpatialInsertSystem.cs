@@ -84,6 +84,7 @@ namespace ME.BECS {
     /// <summary>
     /// Provides typed access to the entity components used for spatial.
     /// </summary>
+    [System.Serializable]
     [EditorComment("Used by SpatialInsertSystem to filter entities by treeIndex")]
     public partial struct SpatialAspect : IAspect {
         
@@ -162,6 +163,7 @@ namespace ME.BECS {
     /// <summary>
     /// Coordinates spatial insert during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     public unsafe partial struct SpatialInsertSystem : IAwake, IUpdate, IDestroy, IDrawGizmos {
         

@@ -89,6 +89,7 @@ namespace ME.BECS.Perks {
     /// <summary>
     /// Defines immutable configuration data for activate passive perks.
     /// </summary>
+    [System.Serializable]
     public struct ActivatePassivePerksComponent : IConfigComponentStatic, IConfigInitialize {
 
         /// <summary>

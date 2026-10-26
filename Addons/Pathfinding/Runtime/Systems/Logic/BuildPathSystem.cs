@@ -16,6 +16,7 @@ namespace ME.BECS.Pathfinding {
     /// <summary>
     /// Coordinates build path during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("Schedule building a path.")]
     [RequiredDependencies(typeof(BuildGraphSystem))]

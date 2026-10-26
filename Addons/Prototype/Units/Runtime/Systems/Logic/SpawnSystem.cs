@@ -9,6 +9,7 @@ namespace ME.BECS.Units {
     /// <summary>
     /// Coordinates spawn during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("Unit spawn effect system")]
     public partial struct SpawnSystem : IUpdate {

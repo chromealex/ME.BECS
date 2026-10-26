@@ -9,6 +9,7 @@ namespace ME.BECS.Units {
     /// <summary>
     /// Coordinates hit during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("Apply damage from DamageTookComponent")]
     public partial struct HitSystem : IUpdate {

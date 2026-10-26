@@ -9,6 +9,7 @@ namespace ME.BECS.FogOfWar {
     /// <summary>
     /// Coordinates shadow copy update during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [RequiredDependencies(typeof(ShadowCopySystem))]
     public partial struct ShadowCopyUpdateSystem : IUpdate {

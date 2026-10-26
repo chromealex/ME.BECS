@@ -41,6 +41,7 @@ namespace ME.BECS {
     /// <summary>
     /// Defines configuration-backed entity data for destroy with lifetime ms.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(DestroyComponentGroup))]
     public struct DestroyWithLifetimeMs : IConfigComponent {
 
@@ -54,6 +55,7 @@ namespace ME.BECS {
     /// <summary>
     /// Defines configuration-backed entity data for destroy with lifetime.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(DestroyComponentGroup))]
     public struct DestroyWithLifetime : IConfigComponent {
 

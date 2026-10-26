@@ -198,6 +198,7 @@ namespace ME.BECS {
     /// <summary>
     /// Coordinates octree insert during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     public unsafe partial struct OctreeInsertSystem : IAwake, IUpdate, IDestroy, IDrawGizmos {
         

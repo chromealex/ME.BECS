@@ -23,6 +23,7 @@ namespace ME.BECS.Pathfinding {
     /// <summary>
     /// Coordinates update graph during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("Schedule update a pathfinding graph.")]
     [RequiredDependencies(typeof(BuildGraphSystem))]

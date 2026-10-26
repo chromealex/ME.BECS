@@ -16,6 +16,7 @@ namespace ME.BECS.Attack {
     /// <summary>
     /// Coordinates can fire during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("Can Fire system")]
     [RequiredDependencies(typeof(ReloadSystem))]

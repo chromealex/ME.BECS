@@ -24,6 +24,7 @@ namespace ME.BECS.Units {
     /// <summary>
     /// Coordinates rvo during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("RVO behaviour for units.")]
     public partial struct RVOSystem : IUpdate, IDrawGizmos {

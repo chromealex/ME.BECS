@@ -9,6 +9,7 @@ namespace ME.BECS.Units {
     /// <summary>
     /// Coordinates destroy during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("Destroy units with health <= 0")]
     public partial struct DestroySystem : IUpdate {

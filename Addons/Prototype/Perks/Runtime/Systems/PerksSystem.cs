@@ -41,6 +41,7 @@ namespace ME.BECS.Perks {
     /// <summary>
     /// Coordinates perks during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     public partial struct PerksSystem : IUpdate {
 

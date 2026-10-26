@@ -8,6 +8,7 @@ namespace ME.BECS.Network {
     /// <summary>
     /// Implements network transport using local.
     /// </summary>
+    [System.Serializable]
     public partial class LocalTransport : INetworkTransport {
 
         /// <summary>

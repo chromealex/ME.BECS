@@ -22,6 +22,7 @@ namespace ME.BECS.FogOfWar {
     /// <summary>
     /// Coordinates move to attacker during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("Move unit if it was damaged and is not attacking and without hold")]
     [RequiredDependencies(typeof(BuildGraphSystem))]

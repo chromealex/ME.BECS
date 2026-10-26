@@ -23,6 +23,7 @@ namespace ME.BECS.Attack {
     /// <summary>
     /// Defines configuration-backed entity data for attack.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(AttackComponentGroup))]
     public struct AttackComponent : IConfigComponent, IConfigInitialize {
 
@@ -86,6 +87,7 @@ namespace ME.BECS.Attack {
     /// <summary>
     /// Defines configuration-backed entity data for attack bullet distribution.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(AttackComponentGroup))]
     public struct AttackBulletDistributionComponent : IConfigComponent {
 
@@ -136,6 +138,7 @@ namespace ME.BECS.Attack {
     /// <summary>
     /// Defines configuration-backed entity data for attack visual.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(AttackComponentGroup))]
     public struct AttackVisualComponent : IConfigComponent {
 
@@ -222,6 +225,7 @@ namespace ME.BECS.Attack {
     /// <summary>
     /// Defines configuration-backed entity data for attack sector.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(AttackComponentGroup))]
     public struct AttackSectorComponent : IConfigComponent {
 
@@ -235,6 +239,7 @@ namespace ME.BECS.Attack {
     /// <summary>
     /// Defines configuration-backed entity data for can fire while moves tag.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(AttackComponentGroup))]
     public struct CanFireWhileMovesTag : IConfigComponent {}
 
@@ -295,6 +300,7 @@ namespace ME.BECS.Attack {
     /// <summary>
     /// Defines configuration-backed entity data for rotate attack sensor.
     /// </summary>
+    [System.Serializable]
     [ComponentGroup(typeof(AttackComponentGroup))]
     public struct RotateAttackSensorComponent : IConfigComponent {
 

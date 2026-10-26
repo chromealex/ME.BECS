@@ -21,6 +21,7 @@ namespace ME.BECS.UnitsHealthBars {
     /// <summary>
     /// Coordinates draw health bars during the ECS system lifecycle.
     /// </summary>
+    [System.Serializable]
     [BURST]
     [UnityEngine.Tooltip("Drawing health bars via GL API")]
     public partial struct DrawHealthBarsSystem : IAwake, IUpdate, IDestroy {
