@@ -221,8 +221,8 @@ namespace ME.BECS {
                 var bHi = b.Hi128;
                 var cmpLo = Unity.Burst.Intrinsics.Arm.Neon.vceqq_u32(aLo, bLo);
                 var cmpHi = Unity.Burst.Intrinsics.Arm.Neon.vceqq_u32(aHi, bHi);
-                ulong maskLo = Unity.Burst.Intrinsics.Arm.Neon.vmaxvq_u32(cmpLo);
-                ulong maskHi = Unity.Burst.Intrinsics.Arm.Neon.vmaxvq_u32(cmpHi);
+                ulong maskLo = Unity.Burst.Intrinsics.Arm.Neon.vminvq_u32(cmpLo);
+                ulong maskHi = Unity.Burst.Intrinsics.Arm.Neon.vminvq_u32(cmpHi);
                 return maskLo == uint.MaxValue && maskHi == uint.MaxValue;
             }
 

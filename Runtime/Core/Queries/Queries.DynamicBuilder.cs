@@ -1242,6 +1242,8 @@ namespace ME.BECS {
         private safe_ptr<CommandBuffer> commandBuffer;
         private safe_ptr<QueryData> queryData;
         private JobHandle builderDependsOn;
+        private FlatQueries.QueryCompose compose;
+        private Allocator allocator;
         internal readonly bool isCreated;
 
         /// <summary>
@@ -1252,6 +1254,8 @@ namespace ME.BECS {
             this.commandBuffer = queryBuilder.commandBuffer;
             this.queryData = queryBuilder.queryData;
             this.builderDependsOn = queryBuilder.builderDependsOn;
+            this.compose = queryBuilder.compose;
+            this.allocator = queryBuilder.allocator;
             this.isCreated = queryBuilder.isCreated;
         }
         
@@ -1262,10 +1266,11 @@ namespace ME.BECS {
         public void Dispose() {
             E.IS_CREATED(this);
             this.builderDependsOn.Complete();
+            this.compose.Dispose();
             this.queryData.ptr->Dispose();
-            _free(ref this.queryData);
+            _free(this.queryData, this.allocator);
             this.commandBuffer.ptr->Dispose();
-            _free(ref this.commandBuffer);
+            _free(this.commandBuffer, this.allocator);
             this = default;
         }
 

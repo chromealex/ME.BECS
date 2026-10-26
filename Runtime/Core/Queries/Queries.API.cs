@@ -114,20 +114,27 @@ namespace ME.BECS {
         public static QueryBuilder Query(in QueryContext queryContext, JobHandle dependsOn = default, bool withInactive = false) {
 
             var allocator = WorldsTempAllocator.allocatorTemp.Get(queryContext.worldId).Allocator.ToAllocator;
+            var builder = API.CreateQuery(in queryContext, dependsOn, new FlatQueries.QueryCompose().Initialize(allocator));
+            if (withInactive == false) {
+                builder.Without<IsInactive>();
+            }
+            return builder;
+        }
+
+        internal static QueryBuilder CreateQuery(in QueryContext queryContext, JobHandle dependsOn, FlatQueries.QueryCompose compose, bool borrowCompose = false) {
+            var allocator = WorldsTempAllocator.allocatorTemp.Get(queryContext.worldId).Allocator.ToAllocator;
             var builder = new QueryBuilder {
                 queryData = _makeDefault(new QueryData(), allocator),
                 commandBuffer = _makeDefault(new CommandBuffer {
                     state = queryContext.state,
                     worldId = queryContext.worldId,
                 }, allocator),
-                compose = new FlatQueries.QueryCompose().Initialize(allocator),
+                compose = borrowCompose == true ? compose.Borrow(allocator) : compose,
                 isCreated = true,
                 allocator = allocator,
                 scheduleMode = Unity.Jobs.LowLevel.Unsafe.ScheduleMode.Single,
                 builderDependsOn = dependsOn,
             };
-            if (withInactive == false) builder.Without<IsInactive>();
-            
             return builder;
             
         }
