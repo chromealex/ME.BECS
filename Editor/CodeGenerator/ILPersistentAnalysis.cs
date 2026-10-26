@@ -21,6 +21,12 @@ namespace ME.BECS.Editor {
             public string implementation;
             public Dependency[] dependencies;
             public string payload;
+            // Declaration scope: assemblies the analysis observed (its bodies, key
+            // types, TypeCache results). Their reference closure is hashed into scope.
+            public string[] roots;
+            public string scope;
+            // TypeCache.GetTypesDerivedFrom queries: "constraint\tresult hash".
+            public string[] queries;
         }
         [Serializable] private sealed class AssemblyRecord {
             public string name;
@@ -43,6 +49,9 @@ namespace ME.BECS.Editor {
             public string implementation;
             public int[] dependencies;
             public string payload;
+            public string[] roots;
+            public string scope;
+            public string[] queries;
         }
         [Serializable] private sealed class Envelope { public string data; public string checksum; }
         // v4: integrity checksum is FNV-1a/64 over UTF-16 code units. SHA-256 of the
@@ -91,8 +100,11 @@ namespace ME.BECS.Editor {
 
         [ThreadStatic] private static ILPersistentAnalysis current;
         // v3 audits empty user attribute constructors independently of assembly MVID.
-        // Reindex unchanged DLLs too; otherwise v2 stamps persist until their next rebuild.
-        private const int DeclarationFormat = 3;
+        // v4 skips compiler artifacts and stamps executable metadata by reachable code.
+        // Reindex unchanged DLLs too; otherwise old stamps persist until their next rebuild.
+        private const int DeclarationFormat = 4;
+        // v3 records carry their own declaration scope and type queries.
+        private const int DatabaseVersion = 3;
         private readonly ILPersistentAnalysis previous;
         private readonly Dictionary<string, Record> records = new Dictionary<string, Record>(StringComparer.Ordinal);
         private readonly Dictionary<string, AssemblyRecord> assemblies = new Dictionary<string, AssemblyRecord>(StringComparer.Ordinal);
@@ -111,6 +123,12 @@ namespace ME.BECS.Editor {
         private readonly ILAnalysisEnvironment environment;
         private string context;
         private string previousContext;
+        // Built with the context: per-assembly semantic declarations and the script
+        // reference graph (generated consumers excluded). Read-only once built.
+        private Dictionary<string, string> declarationsByName;
+        private Dictionary<string, string[]> referencesByName;
+        private readonly Dictionary<string, string> scopeHashes = new Dictionary<string, string>(StringComparer.Ordinal);
+        private readonly Dictionary<string, bool> currentQueries = new Dictionary<string, bool>(StringComparer.Ordinal);
         private string scheduledImplementation;
         private bool dirty;
         private bool loaded;
@@ -160,6 +178,8 @@ namespace ME.BECS.Editor {
         internal Func<ILPersistentAnalysis> PrepareWorker() {
             this.EnsureLoaded();
             var capturedContext = this.Context();
+            var declarationsByName = this.declarationsByName;
+            var referencesByName = this.referencesByName;
             var records = this.records.ToArray();
             var assemblies = this.assemblies.ToArray();
             var versions = this.dependencyVersions.ToArray();
@@ -170,6 +190,7 @@ namespace ME.BECS.Editor {
                 var worker = new ILPersistentAnalysis(rebuild, environment) {
                     persist = false, loaded = true, context = capturedContext,
                     previousContext = capturedContext, scheduledImplementation = scheduled,
+                    declarationsByName = declarationsByName, referencesByName = referencesByName,
                 };
                 foreach (var pair in records) worker.records.Add(pair.Key, pair.Value);
                 foreach (var pair in assemblies) worker.assemblies.Add(pair.Key, pair.Value);
@@ -258,12 +279,15 @@ namespace ME.BECS.Editor {
             var implementation = ImplementationStamp(kind, scope.scheduledImplementation);
             scope.records.TryGetValue(key, out var record);
             var miss = scope.rebuild ? "rebuild" : record == null ? "missing" : record.context != context ? "context" :
-                record.implementation != implementation ? "implementation" : "dependencies";
-            if (!scope.rebuild && record != null && record.context == context && record.implementation == implementation) {
+                record.implementation != implementation ? "implementation" : !scope.ScopeIsCurrent(record) ? "declarations" :
+                !scope.QueriesAreCurrent(record.queries) ? "type-queries" : "dependencies";
+            if (miss == "dependencies") {
                 try {
                     if (scope.Validate(record)) {
                         var result = decode(UnityEngine.JsonUtility.FromJson<TData>(record.payload));
                         foreach (var dependency in record.dependencies) ILDependencyCapture.Observe(scope.validatedMethods[dependency]);
+                        // An enclosing summary inherits this scope exactly as if it had analyzed it.
+                        ILDependencyCapture.ObserveRecorded(record.queries, record.roots);
                         scope.Count(kind, true);
                         return result;
                     }
@@ -279,9 +303,14 @@ namespace ME.BECS.Editor {
             using var capture = new ILDependencyCapture();
             var computed = analyze(); // Exceptions/cancellation must not be cached or swallowed.
             try {
-                var dependencies = capture.Methods.Select(scope.GetDependency).OrderBy(item => item.method.Key, StringComparer.Ordinal).ToArray();
+                var methods = capture.Methods;
+                var dependencies = methods.Select(scope.GetDependency).OrderBy(item => item.method.Key, StringComparer.Ordinal).ToArray();
+                var queries = capture.Queries;
+                if (queries.Any(query => query.StartsWith(ILDependencyCapture.OpenQuery, StringComparison.Ordinal)))
+                    throw new NotSupportedException("Open TypeCache constraint has no persistent identity.");
+                var roots = Roots(key, methods, capture.Assemblies);
                 scope.records[key] = new Record { key = key, context = context, implementation = implementation, dependencies = dependencies,
-                    payload = UnityEngine.JsonUtility.ToJson(encode(computed)) };
+                    payload = UnityEngine.JsonUtility.ToJson(encode(computed)), roots = roots, scope = scope.ScopeHash(roots), queries = queries };
                 scope.valid[key] = true;
                 scope.changedRecords.Add(key);
                 scope.dirty = true;
@@ -291,6 +320,74 @@ namespace ME.BECS.Editor {
                 scope.valid.Remove(key);
             }
             return computed;
+        }
+
+        private static readonly System.Text.RegularExpressions.Regex IdentityAssembly =
+            new System.Text.RegularExpressions.Regex(@",\s*([^,\[\]\s]+),\s*Version=", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        // Assemblies named by a summary key (root types, closed generic arguments).
+        internal static IEnumerable<string> IdentityAssemblies(string identity) {
+            if (string.IsNullOrEmpty(identity)) yield break;
+            foreach (System.Text.RegularExpressions.Match match in IdentityAssembly.Matches(identity)) yield return match.Groups[1].Value;
+        }
+
+        private static string[] Roots(string key, IEnumerable<MethodBase> methods, IEnumerable<string> assemblies) {
+            var roots = new HashSet<string>(assemblies, StringComparer.Ordinal);
+            foreach (var method in methods) roots.Add(method.Module.Assembly.GetName().Name);
+            roots.UnionWith(IdentityAssemblies(key));
+            var result = roots.ToArray();
+            Array.Sort(result, StringComparer.Ordinal);
+            return result;
+        }
+
+        // Declarations visible to an analysis: its root assemblies and everything
+        // they reference (compile-time visibility). Downstream assemblies are only
+        // visible through recorded TypeCache queries, which add their own roots.
+        // Libraries, the analyzer, defines and generated-consumer dependants are
+        // part of the shared context. Assemblies without declarations are skipped.
+        internal static string[] Closure(IEnumerable<string> roots, IReadOnlyDictionary<string, string[]> references, ICollection<string> declared) {
+            var selected = new HashSet<string>(StringComparer.Ordinal);
+            var queue = new Queue<string>(roots);
+            while (queue.Count > 0) {
+                var name = queue.Dequeue();
+                if (!selected.Add(name)) continue;
+                if (references.TryGetValue(name, out var next)) foreach (var reference in next) queue.Enqueue(reference);
+            }
+            var result = selected.Where(declared.Contains).ToArray();
+            Array.Sort(result, StringComparer.Ordinal);
+            return result;
+        }
+
+        private string ScopeHash(string[] roots) {
+            if (roots == null) return null;
+            var key = string.Join("\n", roots);
+            if (this.scopeHashes.TryGetValue(key, out var hash)) return hash;
+            var closure = Closure(roots, this.referencesByName, this.declarationsByName.Keys);
+            hash = Names.Hash("scope-v1\n" + string.Join("\n", closure.Select(name => name + ":" + this.declarationsByName[name])));
+            this.scopeHashes.Add(key, hash);
+            return hash;
+        }
+
+        private bool ScopeIsCurrent(Record record) => record.roots != null && !string.IsNullOrEmpty(record.scope) && record.scope == this.ScopeHash(record.roots);
+
+        private bool QueriesAreCurrent(string[] queries) {
+            if (queries == null) return true;
+            foreach (var query in queries) {
+                if (!this.currentQueries.TryGetValue(query, out var unchanged)) {
+                    unchanged = false;
+                    var separator = query.LastIndexOf('\t');
+                    if (separator > 0 && !query.StartsWith(ILDependencyCapture.OpenQuery, StringComparison.Ordinal)) {
+                        var constraint = Type.GetType(query.Substring(0, separator), false);
+                        if (constraint != null) {
+                            var types = ILAnalysisSession.ReadMetadata(() => UnityEditor.TypeCache.GetTypesDerivedFrom(constraint).ToArray());
+                            unchanged = ILDependencyCapture.QueryResult(types) == query.Substring(separator + 1);
+                        }
+                    }
+                    this.currentQueries.Add(query, unchanged);
+                }
+                if (!unchanged) return false;
+            }
+            return true;
         }
 
         internal static string MethodIdentity(MethodBase method) => method?.DeclaringType?.AssemblyQualifiedName == null || method.ContainsGenericParameters
@@ -377,12 +474,26 @@ namespace ME.BECS.Editor {
             var scripts = new HashSet<string>(scriptAssemblies.Select(assembly => assembly.name), StringComparer.Ordinal);
             var dependants = SourceGeneratorCodeIdentity.FindConsumerDependants(scriptAssemblies
                 .Select(assembly => new KeyValuePair<string, string[]>(assembly.name, assembly.references)));
-            var parts = new List<string> { "IL-analysis-v4", this.environment.target };
+            // Shared context: everything a summary cannot attribute to its own scope.
+            // Script declarations are NOT part of it; each summary hashes only the
+            // declarations of the assemblies it can see (see Closure/ScopeHash).
+            // Generated consumers (ME.BECS.Gen.*, publication bridges) are produced
+            // from the analysis and must not invalidate it by being regenerated.
+            var parts = new List<string> { "IL-analysis-v5", this.environment.target };
             var changedDeclarations = new List<string>();
             var librariesStarted = watch.ElapsedMilliseconds;
             parts.AddRange(SourceGeneratorCodeIdentity.Libraries(scriptAssemblies.SelectMany(assembly => assembly.libraries), scripts));
             var librariesMs = watch.ElapsedMilliseconds - librariesStarted;
-            foreach (var script in scriptAssemblies) parts.Add(script.name + ":" + string.Join(";", script.defines.OrderBy(value => value, StringComparer.Ordinal)));
+            var references = new Dictionary<string, string[]>(StringComparer.Ordinal);
+            foreach (var script in scriptAssemblies) {
+                if (SourceGeneratorCodeIdentity.IsConsumer(script.name)) continue;
+                var visible = (script.references ?? Array.Empty<string>()).Where(name => !SourceGeneratorCodeIdentity.IsConsumer(name))
+                    .Distinct(StringComparer.Ordinal).OrderBy(value => value, StringComparer.Ordinal).ToArray();
+                references[script.name] = visible;
+                parts.Add(script.name + ":" + string.Join(";", script.defines.OrderBy(value => value, StringComparer.Ordinal)));
+                parts.Add("references:" + script.name + ":" + string.Join(";", visible));
+            }
+            var declarationsByName = new Dictionary<string, string>(StringComparer.Ordinal);
             var loaded = SourceGeneratorCodeIdentity.LoadedScripts(this.environment.loaded, scripts)
                 .OrderBy(assembly => assembly.FullName, StringComparer.Ordinal).ToArray();
             var changed = loaded.Where(assembly => assembly != typeof(ILPersistentAnalysis).Assembly &&
@@ -436,13 +547,20 @@ namespace ME.BECS.Editor {
                     this.assemblies[assembly.FullName] = stamp;
                     this.dirty = true;
                 }
-                parts.Add(assembly.FullName + ":" + stamp.declarations);
+                // Inventory only; the declarations belong to the summaries' scopes.
+                parts.Add("assembly:" + assembly.FullName);
+                declarationsByName[assembly.GetName().Name] = stamp.declarations;
             }
             parts.Sort(StringComparer.Ordinal);
+            this.declarationsByName = declarationsByName;
+            this.referencesByName = references;
+            this.scopeHashes.Clear();
             this.context = Names.Hash(string.Join("\n", parts));
             if (this.previousContext != null && this.previousContext != this.context)
-                UnityEngine.Debug.Log("[ME.BECS] Incremental IL context changed. Changed declaration assemblies: " +
-                    (changedDeclarations.Count == 0 ? "none (analyzer, references, defines or inventory changed)" : string.Join(", ", changedDeclarations)) + ".");
+                UnityEngine.Debug.Log("[ME.BECS] Incremental IL shared context changed (analyzer, libraries, references, defines or assembly inventory); all summaries are re-analyzed.");
+            if (changedDeclarations.Count != 0)
+                UnityEngine.Debug.Log("[ME.BECS] Incremental IL declarations changed: " + string.Join(", ", changedDeclarations) +
+                    ". Only summaries that can see these assemblies are re-analyzed.");
             UnityEngine.Debug.Log("[ME.BECS] Incremental IL declaration index: " + watch.ElapsedMilliseconds + " ms. Method bodies are validated separately.");
             UnityEngine.Debug.Log("[ME.BECS] Incremental IL index breakdown: libraries=" + librariesMs +
                 " ms; declarations=" + declarationsMs + " ms (reindexed=" + changed.Length + "/" + loaded.Length +
@@ -504,14 +622,15 @@ namespace ME.BECS.Editor {
                     }
                     dependencies[i] = index;
                 }
-                packed.Add(new CompactRecord { key = record.key, implementation = record.implementation, payload = record.payload, dependencies = dependencies });
+                packed.Add(new CompactRecord { key = record.key, implementation = record.implementation, payload = record.payload, dependencies = dependencies,
+                    roots = record.roots, scope = record.scope, queries = record.queries });
             }
-            return new Database { version = 2, context = context, methods = methods.ToArray(), records = packed.ToArray(),
+            return new Database { version = DatabaseVersion, context = context, methods = methods.ToArray(), records = packed.ToArray(),
                 assemblies = assemblies.OrderBy(assembly => assembly.name, StringComparer.Ordinal).ToArray() };
         }
 
         private static Record[] Unpack(Database data) {
-            if (data?.version != 2 || string.IsNullOrEmpty(data.context) || data.methods == null || data.records == null || data.assemblies == null)
+            if (data?.version != DatabaseVersion || string.IsNullOrEmpty(data.context) || data.methods == null || data.records == null || data.assemblies == null)
                 throw new FormatException("Invalid incremental IL cache header.");
             foreach (var dependency in data.methods) {
                 if (dependency?.method == null || string.IsNullOrEmpty(dependency.method.owner) || string.IsNullOrEmpty(dependency.method.signature) ||
@@ -526,7 +645,9 @@ namespace ME.BECS.Editor {
                     if ((uint)index >= (uint)data.methods.Length) throw new FormatException("Invalid cached IL method index.");
                     dependencies[i] = data.methods[index];
                 }
-                return new Record { key = record.key, context = data.context, implementation = record.implementation, payload = record.payload, dependencies = dependencies };
+                // Missing scope data is a cache miss ("declarations"), never a load failure.
+                return new Record { key = record.key, context = data.context, implementation = record.implementation, payload = record.payload, dependencies = dependencies,
+                    roots = record.roots, scope = record.scope, queries = record.queries };
             }).ToArray();
         }
 

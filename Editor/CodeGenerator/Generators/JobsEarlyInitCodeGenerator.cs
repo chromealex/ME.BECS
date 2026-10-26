@@ -919,6 +919,8 @@ namespace ME.BECS.Editor.Jobs {
                                     foreach (var constraint in constraints) {
                                         if (constraint == typeof(System.ValueType)) continue;
                                         var constTypes = ILAnalysisSession.ReadMetadata(() => UnityEditor.TypeCache.GetTypesDerivedFrom(constraint).ToArray());
+                                        // A cached safety summary is valid only for this inventory.
+                                        ILDependencyCapture.ObserveQuery(constraint, constTypes);
                                         foreach (var constType in constTypes) {
                                             uniqueTypes.Add(new TypeInfo() {
                                                 type = constType,

@@ -12,6 +12,7 @@ namespace ME.BECS.Editor {
     internal sealed class SourceGeneratorInputAnalysis : IDisposable {
         internal sealed class Result {
             internal string fingerprint, codeFingerprint;
+            internal string runtimeFingerprint, reusableRuntime;
             internal Discovery.UsedObjects runtime, editor;
             internal ILAnalysisSession.Snapshot memo;
             internal ILPersistentAnalysis.Snapshot persistent;
@@ -52,6 +53,8 @@ namespace ME.BECS.Editor {
             this.mainThread = new ILMainThreadMetadata(this.cancellation.Token);
             var codeFingerprint = SourceGeneratorGraphSnapshot.GetCodeFingerprint();
             var runtime = Discovery.CaptureRuntimeDiscovery();
+            var runtimeFingerprint = SourceGeneratorGraphSnapshot.RuntimeAnalysisFingerprint(runtime);
+            var reusableRuntime = SourceGeneratorGraphSnapshot.ReadReusableRuntime(runtimeFingerprint, rebuild);
             Discovery.GetUsedObjects(true, out var editor);
             var assemblies = EditorUtils.GetAssembliesInfo().Select(assembly => new AssemblyInfo {
                 name = assembly.name, isEditor = assembly.isEditor,
@@ -67,7 +70,8 @@ namespace ME.BECS.Editor {
             var environment = ILAnalysisEnvironment.Capture();
             if (fingerprint != SourceGeneratorGraphSnapshot.GetCurrent())
                 throw new InvalidOperationException("Input assets changed while capturing the IL analysis snapshot. Retry export.");
-            this.task = System.Threading.Tasks.Task.Run(() => this.Analyze(fingerprint, codeFingerprint, runtime, editor, assemblies, systems, environment, rebuild));
+            this.task = System.Threading.Tasks.Task.Run(() => this.Analyze(fingerprint, codeFingerprint, runtime, editor, assemblies, systems, environment, rebuild,
+                runtimeFingerprint, reusableRuntime));
         }
 
         private void Stage(string name, float value) {
@@ -99,7 +103,8 @@ namespace ME.BECS.Editor {
         }
 
         private Result Analyze(string fingerprint, string codeFingerprint, Discovery.RuntimeDiscoveryInputs roots,
-            Discovery.UsedObjects editor, List<AssemblyInfo> assemblies, List<Type> systems, ILAnalysisEnvironment environment, bool rebuild) {
+            Discovery.UsedObjects editor, List<AssemblyInfo> assemblies, List<Type> systems, ILAnalysisEnvironment environment, bool rebuild,
+            string runtimeFingerprint, string reusableRuntime) {
             using var lookup = SourceGeneratorBridge.BeginLookupScope();
             using var analysis = new ILAnalysisSession(this.cancellation.Token, this.Report, this.mainThread.Read);
             using var persistent = new ILPersistentAnalysis(rebuild, environment);
@@ -123,11 +128,17 @@ namespace ME.BECS.Editor {
                 }
             });
             try {
-                this.Stage("Discover Runtime types (IL)", 0.02f);
-                var runtime = Discovery.AnalyzeRuntimeDiscoveryWithProgress(roots, false,
-                    (done, total) => this.ReportUnits(done, total, 0.02f, 0.35f));
+                var runtime = default(Discovery.UsedObjects);
+                if (reusableRuntime == null) {
+                    this.Stage("Discover Runtime types (IL)", 0.02f);
+                    runtime = Discovery.AnalyzeRuntimeDiscoveryWithProgress(roots, false,
+                        (done, total) => this.ReportUnits(done, total, 0.02f, 0.35f));
+                } else {
+                    UnityEngine.Debug.Log("[ME.BECS] Runtime source inputs unchanged: reusing successful publication; skipping Runtime discovery and job analysis.");
+                }
                 var preparedJobs = new HashSet<Type>();
                 foreach (var profile in new[] { false, true }) {
+                    if (profile == false && reusableRuntime != null) { continue; }
                     var used = profile ? editor : runtime;
                     this.Stage((profile ? "Editor" : "Runtime") + " job safety, entities and weights (IL)", profile ? 0.6f : 0.35f);
                     new Jobs.JobsEarlyInitCodeGenerator {
@@ -148,6 +159,7 @@ namespace ME.BECS.Editor {
                 this.Stage("Hand over IL summaries", 0.98f);
                 persistent.DeferPersistence();
                 return new Result { fingerprint = fingerprint, codeFingerprint = codeFingerprint, runtime = runtime, editor = editor,
+                    runtimeFingerprint = runtimeFingerprint, reusableRuntime = reusableRuntime,
                     memo = analysis.Detach(), persistent = persistent.CaptureSnapshot(), rebuild = rebuild };
             } catch {
                 this.cancellation.Cancel();

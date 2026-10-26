@@ -474,8 +474,14 @@ namespace ME.BECS.Editor {
                     } else if (PreservesMode.Contains(method.Name)) {
                         returns = frame.Read(receiver); handled = true;
                     }
-                } else if (method.IsStatic && method.Name == "Query" && method.ReturnType == typeof(QueryBuilder) &&
-                    (method.DeclaringType == typeof(API) || method.DeclaringType == typeof(APIExt))) {
+                } else if (method.IsStatic == false && method.Name == "Query" && method.ReturnType == typeof(QueryBuilder) &&
+                    method.DeclaringType.IsGenericType == true && method.DeclaringType.GetGenericTypeDefinition() == typeof(PreparedQuery<>)) {
+                    // This is only a mode fact. The dependency/synchronization
+                    // analyzers still traverse the user definition's cold path.
+                    returns = Value.Normal; handled = true;
+                } else if (method.IsStatic == true && method.ReturnType == typeof(QueryBuilder) &&
+                    (method.Name == "Query" && (method.DeclaringType == typeof(API) || method.DeclaringType == typeof(APIExt)) ||
+                     method.Name == "CreateQuery" && method.DeclaringType == typeof(API))) {
                     returns = Value.Normal; handled = true;
                 }
             }

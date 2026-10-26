@@ -24,6 +24,8 @@ namespace ME.BECS.Editor {
         private sealed class Entry {
             internal object result;
             internal MethodBase[] dependencies;
+            internal string[] queries;
+            internal string[] assemblies;
         }
 
         internal ILAnalysisSession() {
@@ -147,11 +149,12 @@ namespace ME.BECS.Editor {
             if (session.values.TryGetValue(key, out var value)) {
                 var cached = (Entry)value;
                 ILDependencyCapture.Observe(cached.dependencies);
+                ILDependencyCapture.ObserveRecorded(cached.queries, cached.assemblies);
                 return (T)cached.result;
             }
             using var capture = new ILDependencyCapture();
             var result = create();
-            session.values.Add(key, new Entry { result = result, dependencies = capture.Methods });
+            session.values.Add(key, new Entry { result = result, dependencies = capture.Methods, queries = capture.Queries, assemblies = capture.Assemblies });
             return result;
         }
 

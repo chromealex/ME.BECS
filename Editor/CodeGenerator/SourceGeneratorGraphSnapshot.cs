@@ -36,7 +36,9 @@ namespace ME.BECS.Editor {
         internal static string GetCodeFingerprint() =>
             ILAnalysisSession.Get((typeof(SourceGeneratorGraphSnapshot), "code-fingerprint"), ComputeCodeFingerprint);
 
-        private static string ComputeCodeFingerprint() {
+        private static string ComputeCodeFingerprint() => ComputeCodeFingerprint(null);
+
+        private static string ComputeCodeFingerprint(ISet<string> excluded) {
             var scriptAssemblies = UnityEditor.Compilation.CompilationPipeline.GetAssemblies(UnityEditor.Compilation.AssembliesType.Editor);
             var domainAssemblies = AppDomain.CurrentDomain.GetAssemblies();
             var inputAssemblies = SourceGeneratorCodeIdentity.InputAssemblies(scriptAssemblies, domainAssemblies);
@@ -50,6 +52,7 @@ namespace ME.BECS.Editor {
                 // Including consumers makes each input compilation invalidate itself.
                 if (SourceGeneratorCodeIdentity.IsConsumer(script.name)) continue;
                 if (inputAssemblies.Contains(script.name) == false) continue;
+                if (excluded != null && excluded.Contains(script.name) == true) { continue; }
                 scripts.Add(script.name + "\tdefines\t" + string.Join(";", script.defines.OrderBy(value => value, StringComparer.Ordinal)));
                 if (!loaded.TryGetValue(script.name, out var assemblies)) {
                     scripts.Add(script.name + "\tunloaded");
@@ -57,11 +60,71 @@ namespace ME.BECS.Editor {
                 }
                 if (assemblies.Length != 1) throw new InvalidOperationException("Ambiguous loaded script assembly: " + script.name);
                 var assembly = assemblies[0];
-                scripts.Add(assembly.FullName + "\t" + SourceGeneratorCodeIdentity.Stamp(assembly, script, dependants));
+                scripts.Add(assembly.FullName + "\t" + SourceGeneratorCodeIdentity.ContentStamp(assembly, script, dependants));
             }
-            TraceCodeInputs(scripts);
-            return Combine("ME.BECS.ILInputs.v4",
+            if (excluded == null) { TraceCodeInputs(scripts); }
+            return Combine("ME.BECS.ILInputs.v5",
                 UnityEditor.EditorUserBuildSettings.activeBuildTarget.ToString(), scripts);
+        }
+
+        // Session-only evidence: a restart/full analysis always establishes a new
+        // baseline. Never reuse a manifest based only on its existence on disk.
+        private const string RuntimeReuseKey = "ME.BECS.RuntimeAnalysis.v1";
+
+        internal static string RuntimeAnalysisFingerprint(Systems.SystemDependenciesCodeGenerator.RuntimeDiscoveryInputs roots) {
+            var scripts = UnityEditor.Compilation.CompilationPipeline.GetAssemblies(UnityEditor.Compilation.AssembliesType.Editor);
+            var protectedTypes = roots.includes.Concat(roots.modules).Concat(roots.systems).Concat(roots.components).Concat(roots.aspects)
+                .Concat(UnityEditor.TypeCache.GetTypesDerivedFrom<CustomCodeGenerator>()).ToList();
+            // Closed generic runtime jobs may use marker types from Editor tests.
+            // Keep candidate owners even though the constructed job itself belongs
+            // to a runtime assembly. Open constraints are conservatively a full miss.
+            var contracts = Jobs.JobsEarlyInitCodeGenerator.DiscoveryContracts
+                .SelectMany(contract => UnityEditor.TypeCache.GetTypesDerivedFrom(contract).Cast<Type>())
+                .Concat(UnityEditor.TypeCache.GetTypesDerivedFrom<ISystem>());
+            foreach (var constraint in SourceGeneratorCodeIdentity.GenericJobConstraints(contracts)) {
+                if (constraint.ContainsGenericParameters == true) { return null; }
+                protectedTypes.AddRange(UnityEditor.TypeCache.GetTypesDerivedFrom(constraint));
+            }
+            var retained = new HashSet<string>(protectedTypes.Select(type => type.Assembly.GetName().Name), StringComparer.Ordinal);
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
+                if (assembly.GetCustomAttributes(typeof(CodeGeneratorInclude), false).Length != 0) {
+                    retained.Add(assembly.GetName().Name);
+                }
+            }
+            var tests = scripts.Where(script => (script.flags & UnityEditor.Compilation.AssemblyFlags.EditorAssembly) != 0 &&
+                script.compiledAssemblyReferences.Any(path => System.IO.Path.GetFileName(path) == "nunit.framework.dll"))
+                .Select(script => script.name).ToArray();
+            var excluded = RuntimeIndependentTests(scripts.Select(script => new KeyValuePair<string, string[]>(script.name,
+                script.assemblyReferences.Select(reference => reference.name).ToArray())), tests, retained);
+            return Combine(GetCompilerSnapshot(), "runtime-analysis-v1", new[] { ComputeCodeFingerprint(excluded) });
+        }
+
+        internal static HashSet<string> RuntimeIndependentTests(IEnumerable<KeyValuePair<string, string[]>> references,
+            IEnumerable<string> testAssemblies, IEnumerable<string> runtimeOwners) {
+            var graph = references.ToArray();
+            var tests = new HashSet<string>(testAssemblies, StringComparer.Ordinal);
+            var retained = SourceGeneratorCodeIdentity.InputDependencyClosure(graph,
+                graph.Select(pair => pair.Key).Where(name => tests.Contains(name) == false).Concat(runtimeOwners));
+            tests.ExceptWith(retained);
+            return tests;
+        }
+
+        internal static string ReadReusableRuntime(string fingerprint, bool rebuild) {
+            if (rebuild == true || string.IsNullOrEmpty(fingerprint) == true) { return null; }
+            var evidence = UnityEditor.SessionState.GetString(RuntimeReuseKey, "");
+            if (evidence.StartsWith(fingerprint + "\n", StringComparison.Ordinal) == false) { return null; }
+            var path = SourceGeneratorInputTransport.InputPath(false);
+            if (System.IO.File.Exists(path) == false) { return null; }
+            var content = System.IO.File.ReadAllText(path);
+            return RuntimeEvidence(fingerprint, content) == evidence ? content : null;
+        }
+
+        internal static string RuntimeEvidence(string fingerprint, string content) =>
+            fingerprint + "\n" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(content);
+
+        internal static void CommitRuntimeAnalysis(string fingerprint, string content) {
+            if (string.IsNullOrEmpty(fingerprint) == true) { return; }
+            UnityEditor.SessionState.SetString(RuntimeReuseKey, RuntimeEvidence(fingerprint, content));
         }
 
         private static void TraceCodeInputs(IEnumerable<string> scripts) {

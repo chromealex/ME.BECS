@@ -735,6 +735,25 @@ namespace ME.BECS.Editor {
                     this.Store(state, args[0], Combined(typeof(SystemContext), values), method, site); return true;
                 }
             }
+            // Filter construction only reads type/aspect metadata and owns native
+            // lists. It neither accesses component values nor completes jobs. Keep
+            // the user definition transparent, but do not expand allocator internals.
+            if (owner == typeof(FlatQueries.QueryCompose) && method.IsStatic == false &&
+                (method.Name == "Initialize" && method.ReturnType == typeof(FlatQueries.QueryCompose) &&
+                    parameters.Length == 1 && parameters[0].ParameterType == typeof(Unity.Collections.Allocator) ||
+                 method.Name == "Deduplicate" && parameters.Length == 0 && method.ReturnType == typeof(void) ||
+                 method.IsGenericMethod == true && parameters.Length == 0 && method.ReturnType == typeof(void) &&
+                    (method.Name == "With" || method.Name == "Without" || method.Name == "WithAny" || method.Name == "WithAspect"))) {
+                return true;
+            }
+            // The leaf factory has no user callback. Keep PreparedQuery<T>.Query
+            // transparent so cold-path definition side effects are still analyzed.
+            if (owner == typeof(API) && method.IsStatic == true && method.Name == "CreateQuery" && method.ReturnType == typeof(QueryBuilder) &&
+                parameters.Length == 4 && Element(parameters[0].ParameterType) == typeof(QueryContext) &&
+                parameters[1].ParameterType == typeof(JobHandle) && parameters[2].ParameterType == typeof(FlatQueries.QueryCompose) &&
+                parameters[3].ParameterType == typeof(bool)) {
+                returned = Combined(typeof(QueryBuilder), new[] { state.Read(args[1]) }); return true;
+            }
             if ((owner == typeof(API) || owner == typeof(APIExt)) && method.IsStatic && method.Name == "Query" && method.ReturnType == typeof(QueryBuilder) &&
                 parameters.Any(parameter => Element(parameter.ParameterType) == typeof(SystemContext)) &&
                 parameters.All(parameter => Element(parameter.ParameterType) == typeof(SystemContext) || parameter.ParameterType == typeof(JobHandle) || parameter.ParameterType == typeof(bool) ||

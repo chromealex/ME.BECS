@@ -861,6 +861,7 @@ namespace ME.BECS.Editor.Systems {
                 foreach (var constraint in constraints) {
                     if (constraint == typeof(System.ValueType)) continue;
                     var constTypes = UnityEditor.TypeCache.GetTypesDerivedFrom(constraint);
+                    ILDependencyCapture.ObserveQuery(constraint, constTypes);
                     foreach (var t in constTypes) {
                         if (t.IsValueType == false) continue;
                         if (without.Any(x => x.IsAssignableFrom(t)) == true) continue;
@@ -1038,6 +1039,8 @@ namespace ME.BECS.Editor.Systems {
                 foreach (var constraint in constraints) {
                     if (constraint == typeof(System.ValueType)) continue;
                     var constTypes = UnityEditor.TypeCache.GetTypesDerivedFrom(constraint);
+                    // A cached discovery summary is valid only for this inventory.
+                    ILDependencyCapture.ObserveQuery(constraint, constTypes);
                     foreach (var constType in constTypes) {
                         AddToLookup(constType, types, components, jobTypes, entityTypes, aspects);
                     }

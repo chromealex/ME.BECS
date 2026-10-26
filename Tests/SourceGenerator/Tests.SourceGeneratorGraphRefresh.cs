@@ -94,6 +94,40 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void RuntimeReuseExcludesOnlyIndependentEditorTests() {
+            var select = Snapshot.GetMethod("RuntimeIndependentTests", BindingFlags.Static | BindingFlags.NonPublic);
+            var graph = new[] {
+                new KeyValuePair<string, string[]>("Gameplay", new[] { "HelperTests" }),
+                new KeyValuePair<string, string[]>("HelperTests", Array.Empty<string>()),
+                new KeyValuePair<string, string[]>("IndependentTests", new[] { "Gameplay" }),
+                new KeyValuePair<string, string[]>("RuntimeContributorTests", new[] { "ContributorHelperTests" }),
+                new KeyValuePair<string, string[]>("ContributorHelperTests", Array.Empty<string>()),
+            };
+            var tests = graph.Skip(1).Select(pair => pair.Key).ToArray();
+            foreach (var order in new[] { graph, graph.Reverse().ToArray() }) {
+                CollectionAssert.AreEquivalent(new[] { "IndependentTests" },
+                    (System.Collections.IEnumerable)select.Invoke(null, new object[] { order, tests, new[] { "RuntimeContributorTests" } }),
+                    "Runtime roots (includes, modules, feeders, generic candidates) and forward dependencies must remain.");
+                CollectionAssert.AreEquivalent(Array.Empty<string>(),
+                    (System.Collections.IEnumerable)select.Invoke(null, new object[] { order, tests,
+                        new[] { "RuntimeContributorTests", "IndependentTests" } }),
+                    "Adding a runtime contribution must immediately invalidate the formerly independent test assembly.");
+            }
+        }
+
+        [Test]
+        public void RuntimeReuseEvidenceIncludesBothInputIdentityAndExactManifest() {
+            var evidence = Snapshot.GetMethod("RuntimeEvidence", BindingFlags.Static | BindingFlags.NonPublic);
+            var original = evidence.Invoke(null, new object[] { "inputs-a", "manifest-a" });
+            Assert.AreEqual(original, evidence.Invoke(null, new object[] { "inputs-a", "manifest-a" }));
+            Assert.AreNotEqual(original, evidence.Invoke(null, new object[] { "inputs-b", "manifest-a" }));
+            Assert.AreNotEqual(original, evidence.Invoke(null, new object[] { "inputs-a", "manifest-b" }));
+            var read = Snapshot.GetMethod("ReadReusableRuntime", BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.IsNull(read.Invoke(null, new object[] { null, false }));
+            Assert.IsNull(read.Invoke(null, new object[] { "inputs-a", true }), "Full Analysis must never reuse the Runtime profile.");
+        }
+
+        [Test]
         public void LibraryInputsIncludeUnloadedReferencesButNotScriptsOrGeneratedConsumers() {
             var identity = Snapshot.Assembly.GetType("ME.BECS.Editor.SourceGeneratorCodeIdentity", true);
             var select = identity.GetMethod("LibraryPaths", BindingFlags.Static | BindingFlags.NonPublic);

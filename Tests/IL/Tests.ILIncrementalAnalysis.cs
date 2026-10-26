@@ -41,13 +41,66 @@ namespace ME.BECS.Tests {
             Assert.AreEqual(before, after, "Unrelated method-body changes only change the assembly MVID, not these constructors.");
         }
 
-        [TestCase(typeof(SafetyCheckAttribute))]
-        [TestCase(typeof(RefRW<TestComponent>))]
-        public void ExecutableUserMetadataRetainsConservativeInvalidation(Type type) {
+        [Test]
+        public void ExecutableUserMetadataIsStampedByItsReachableCode() {
             var stamp = EditorType("ILContentFingerprint").GetMethod("ExecutableMetadataStamp", HiddenStatic);
-            var before = (string)stamp.Invoke(null, new object[] { type, Guid.Empty });
-            var after = (string)stamp.Invoke(null, new object[] { type, Guid.NewGuid() });
-            StringAssert.StartsWith("assembly:", before);
+            var before = (string)stamp.Invoke(null, new object[] { typeof(SafetyCheckAttribute), Guid.Empty });
+            var after = (string)stamp.Invoke(null, new object[] { typeof(SafetyCheckAttribute), Guid.NewGuid() });
+            StringAssert.StartsWith("closure:", before, "A storing constructor and auto-property accessors are statically bound.");
+            Assert.AreEqual(before, after, "An unrelated body edit changes only the assembly MVID, not the code reflection executes.");
+        }
+
+        [TestCase(1, 1, true)]
+        [TestCase(1, 2, false)]
+        public void ExecutableMetadataStampFollowsReachableHelperBodies(int first, int second, bool equal) {
+            string Stamp(int value) {
+                // Same assembly identity for both fixtures: only the helper body differs.
+                var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("BECS.ClosureProbe"), AssemblyBuilderAccess.Run);
+                var module = assembly.DefineDynamicModule("main");
+                var helperType = module.DefineType("Helper", TypeAttributes.Public | TypeAttributes.Sealed | TypeAttributes.Abstract);
+                var helper = helperType.DefineMethod("Value", MethodAttributes.Public | MethodAttributes.Static, typeof(int), Type.EmptyTypes);
+                var body = helper.GetILGenerator();
+                body.Emit(OpCodes.Ldc_I4, value);
+                body.Emit(OpCodes.Ret);
+                var type = module.DefineType("ProbeAttribute", TypeAttributes.Public, typeof(Attribute));
+                var field = type.DefineField("State", typeof(int), FieldAttributes.Public);
+                var constructor = type.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, Type.EmptyTypes);
+                var il = constructor.GetILGenerator();
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Call, typeof(Attribute).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null));
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Call, helper);
+                il.Emit(OpCodes.Stfld, field);
+                il.Emit(OpCodes.Ret);
+                helperType.CreateType();
+                var created = type.CreateType();
+                return (string)EditorType("ILContentFingerprint").GetMethod("ExecutableMetadataStamp", HiddenStatic)
+                    .Invoke(null, new object[] { created, Guid.NewGuid() });
+            }
+            var a = Stamp(first);
+            var b = Stamp(second);
+            StringAssert.StartsWith("closure:", a);
+            Assert.AreEqual(equal, a == b, "Reflection executes the helper, so its body is part of the stamp.");
+        }
+
+        [Test]
+        public void ExecutableMetadataKeepsTheMvidForUnboundVirtualDispatch() {
+            var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("BECS.VirtualProbe." + Guid.NewGuid().ToString("N")), AssemblyBuilderAccess.Run);
+            var type = assembly.DefineDynamicModule("main").DefineType("ProbeAttribute", TypeAttributes.Public, typeof(Attribute));
+            var hook = type.DefineMethod("Hook", MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.NewSlot, typeof(void), Type.EmptyTypes);
+            hook.GetILGenerator().Emit(OpCodes.Ret);
+            var constructor = type.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, Type.EmptyTypes);
+            var il = constructor.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Call, typeof(Attribute).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null));
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Callvirt, hook);
+            il.Emit(OpCodes.Ret);
+            var created = type.CreateType();
+            var stamp = EditorType("ILContentFingerprint").GetMethod("ExecutableMetadataStamp", HiddenStatic);
+            var before = (string)stamp.Invoke(null, new object[] { created, Guid.Empty });
+            var after = (string)stamp.Invoke(null, new object[] { created, Guid.NewGuid() });
+            StringAssert.StartsWith("assembly:", before, "A subclass may override the hook; its code cannot be bound statically.");
             Assert.AreNotEqual(before, after);
         }
 
@@ -106,8 +159,10 @@ namespace ME.BECS.Tests {
             var stamp = EditorType("ILContentFingerprint").GetMethod("ExecutableMetadataStamp", HiddenStatic);
             var before = (string)stamp.Invoke(null, new object[] { created, Guid.Empty });
             var after = (string)stamp.Invoke(null, new object[] { created, Guid.NewGuid() });
-            StringAssert.StartsWith(expected ? "empty-attribute:" : "assembly:", before);
-            Assert.AreEqual(expected, before == after);
+            // Non-empty markers are stamped by their reachable code (constructor,
+            // accessors, type initializer and the helpers they call), not the MVID.
+            StringAssert.StartsWith(expected ? "empty-attribute:" : "closure:", before);
+            Assert.AreEqual(before, after);
         }
         private sealed class Constructed {
             public Constructed() { default(Ent).Get<Test1Component>(); }
@@ -320,6 +375,13 @@ namespace ME.BECS.Tests {
                     this.Record("stale", "previous", this.Dependency(Method(nameof(Two)), "stale")));
                 return this.cache.GetMethod("Pack", HiddenStatic).Invoke(null, new object[] { records, this.Items("AssemblyRecord"), "current" });
             }
+            internal object CreateScoped() {
+                var record = this.Record("scoped", "current", this.Dependency(Method(nameof(One)), "body"));
+                record.GetType().GetField("roots").SetValue(record, new[] { "ME.BECS", "ME.BECS.Tests" });
+                record.GetType().GetField("scope").SetValue(record, "scope-hash");
+                record.GetType().GetField("queries").SetValue(record, new[] { "constraint\tresult" });
+                return this.cache.GetMethod("Pack", HiddenStatic).Invoke(null, new object[] { this.Items("Record", record), this.Items("AssemblyRecord"), "current" });
+            }
             internal Array Unpack(object data) => (Array)this.cache.GetMethod("Unpack", HiddenStatic).Invoke(null, new[] { data });
             internal void AssertPackingDoesNotMutateDependencies() {
                 var method = Method(nameof(One));
@@ -410,6 +472,106 @@ namespace ME.BECS.Tests {
                     CollectionAssert.Contains(dependencies, helper);
                 }
             }
+        }
+
+        private static int WithCompilerArtifacts() {
+            Func<int> cached = () => One();
+            return Local() + cached();
+            int Local() => Two();
+        }
+
+        private struct ArtifactProbe : System.Collections.Generic.IEnumerable<int> {
+            System.Collections.Generic.IEnumerator<int> System.Collections.Generic.IEnumerable<int>.GetEnumerator() { yield return 1; }
+            System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => ((System.Collections.Generic.IEnumerable<int>)this).GetEnumerator();
+        }
+
+        [Test]
+        public void CompilerArtifactsAreNotSemanticDeclarations() {
+            var fingerprint = EditorType("ILContentFingerprint");
+            var isType = fingerprint.GetMethod("IsCompilerArtifact", HiddenStatic, null, new[] { typeof(Type) }, null);
+            var isMethod = fingerprint.GetMethod("IsCompilerArtifact", HiddenStatic, null, new[] { typeof(MethodBase) }, null);
+            var artifacts = typeof(Tests_ILIncrementalAnalysis).GetNestedTypes(BindingFlags.NonPublic).Where(type => type.Name.StartsWith("<")).ToArray();
+            Assert.IsNotEmpty(artifacts, "The fixture compiles closures and lambda caches.");
+            foreach (var type in artifacts) Assert.IsTrue((bool)isType.Invoke(null, new object[] { type }), type.Name);
+            Assert.IsFalse((bool)isType.Invoke(null, new object[] { typeof(ArtifactProbe) }));
+            Assert.IsFalse((bool)isType.Invoke(null, new object[] { typeof(TestComponent) }));
+            var local = typeof(Tests_ILIncrementalAnalysis).GetMethods(HiddenStatic).Single(method => method.Name.StartsWith("<" + nameof(WithCompilerArtifacts) + ">g__Local"));
+            Assert.IsTrue((bool)isMethod.Invoke(null, new object[] { local }));
+            var explicitImplementation = typeof(ArtifactProbe).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
+                .First(method => method.Name.Contains("IEnumerable<System.Int32>.GetEnumerator"));
+            Assert.IsFalse((bool)isMethod.Invoke(null, new object[] { explicitImplementation }), "Explicit generic interface implementations are user declarations.");
+        }
+
+        [Test]
+        public void SummaryScopeFollowsReferencesButNotDependants() {
+            var closure = EditorType("ILPersistentAnalysis").GetMethod("Closure", HiddenStatic);
+            var references = new System.Collections.Generic.Dictionary<string, string[]> {
+                { "Game", new[] { "Core", "Plugin" } }, { "Core", new[] { "Collections" } },
+                { "Tests", new[] { "Core" } }, { "Collections", Array.Empty<string>() },
+            };
+            // Plugin is precompiled: covered by the shared library context, no declarations.
+            var declared = new System.Collections.Generic.HashSet<string> { "Game", "Core", "Tests", "Collections" };
+            CollectionAssert.AreEqual(new[] { "Collections", "Core", "Game" }, (string[])closure.Invoke(null, new object[] { new[] { "Game" }, references, declared }));
+            CollectionAssert.AreEqual(new[] { "Collections", "Core" }, (string[])closure.Invoke(null, new object[] { new[] { "Core" }, references, declared }),
+                "Editing a test assembly that references Core must not invalidate summaries rooted in Core.");
+        }
+
+        [Test]
+        public void SummaryKeysNameTheAssembliesOfTheirClosedTypes() {
+            var reference = EditorType("ILContentFingerprint").GetNestedType("MethodReference", BindingFlags.NonPublic);
+            var method = typeof(GenericOwner<TestComponent>).GetMethod("Echo").MakeGenericMethod(typeof(string));
+            var key = (string)reference.GetProperty("Key", BindingFlags.Instance | BindingFlags.NonPublic)
+                .GetValue(reference.GetMethod("From", HiddenStatic).Invoke(null, new object[] { method }));
+            var names = ((System.Collections.Generic.IEnumerable<string>)EditorType("ILPersistentAnalysis").GetMethod("IdentityAssemblies", HiddenStatic)
+                .Invoke(null, new object[] { "safety\n" + key })).ToArray();
+            CollectionAssert.Contains(names, typeof(TestComponent).Assembly.GetName().Name);
+            CollectionAssert.Contains(names, typeof(string).Assembly.GetName().Name);
+        }
+
+        [Test]
+        public void TypeQueriesAndVisibleAssembliesPropagateThroughMemoHits() {
+            var sessionType = EditorType("ILAnalysisSession");
+            var captureType = EditorType("ILDependencyCapture");
+            var observe = captureType.GetMethod("ObserveQuery", HiddenStatic);
+            var memo = sessionType.GetMethod("Get", HiddenStatic).MakeGenericMethod(typeof(int));
+            string[] Read(object capture, string name) => (string[])captureType.GetProperty(name, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(capture);
+            var key = new object();
+            Func<int> analyze = () => {
+                observe.Invoke(null, new object[] { typeof(IComponentBase), new[] { typeof(TestComponent) } });
+                return 1;
+            };
+            using ((IDisposable)Activator.CreateInstance(sessionType, true)) {
+                using (var first = (IDisposable)Activator.CreateInstance(captureType, true)) {
+                    memo.Invoke(null, new object[] { key, analyze });
+                    Assert.AreEqual(1, Read(first, "Queries").Length);
+                    CollectionAssert.IsSubsetOf(new[] { typeof(IComponentBase).Assembly.GetName().Name, typeof(TestComponent).Assembly.GetName().Name },
+                        Read(first, "Assemblies"));
+                }
+                using (var second = (IDisposable)Activator.CreateInstance(captureType, true)) {
+                    Func<int> mustNotRun = () => throw new InvalidOperationException("Expected a memo hit.");
+                    memo.Invoke(null, new object[] { key, mustNotRun });
+                    Assert.AreEqual(1, Read(second, "Queries").Length, "A memo hit replays the inventory query of the original analysis.");
+                    CollectionAssert.Contains(Read(second, "Assemblies"), typeof(TestComponent).Assembly.GetName().Name);
+                }
+            }
+        }
+
+        [Test]
+        public void CompactCachePreservesSummaryScopes() {
+            var fixture = new CacheFormat();
+            var restored = fixture.Unpack(fixture.RoundTrip(fixture.CreateScoped())).GetValue(0);
+            CollectionAssert.AreEqual(new[] { "ME.BECS", "ME.BECS.Tests" }, (string[])CacheFormat.Field(restored, "roots"));
+            Assert.AreEqual("scope-hash", CacheFormat.Field(restored, "scope"));
+            CollectionAssert.AreEqual(new[] { "constraint\tresult" }, (string[])CacheFormat.Field(restored, "queries"));
+        }
+
+        [Test]
+        public void PreviousCacheVersionIsRebuiltNotReused() {
+            var fixture = new CacheFormat();
+            var packed = fixture.CreatePacked();
+            packed.GetType().GetField("version").SetValue(packed, 2);
+            var exception = Assert.Throws<TargetInvocationException>(() => fixture.Unpack(fixture.RoundTrip(packed)));
+            Assert.IsInstanceOf<FormatException>(exception.InnerException);
         }
 
         [Test]

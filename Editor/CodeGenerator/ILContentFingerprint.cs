@@ -18,9 +18,93 @@ namespace ME.BECS.Editor {
         // simple storage constructors must not turn every body edit into a global
         // declaration change. Name/CompilerGenerated alone is NOT sufficient:
         // audit every constructor instruction before using a local content stamp.
+        // Anything else is identified by the code reflection can actually execute:
+        // its constructors, property accessors and type initializers plus every
+        // user method they reach. Only an unresolvable dispatch keeps the MVID.
         internal static string ExecutableMetadataStamp(Type type, Guid mvid) =>
             TryCompilerMetadata(type, out var content) ? "compiler:" + content :
-            TryEmptyAttribute(type, out content) ? "empty-attribute:" + content : "assembly:" + mvid.ToString("D");
+            TryEmptyAttribute(type, out content) ? "empty-attribute:" + content :
+            TryExecutableClosure(type, out content) ? "closure:" + content : "assembly:" + mvid.ToString("D");
+
+        internal const int ExecutableClosureLimit = 4096;
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> reportedMvidStamps =
+            new System.Collections.Concurrent.ConcurrentDictionary<string, byte>(StringComparer.Ordinal);
+
+        // Reflection over attributes and IRefOp runs constructors, property
+        // accessors and static initializers. Hash those bodies and, transitively,
+        // every user-code method, constructor and type initializer they can reach.
+        // Framework/precompiled code is a leaf: it is covered by the library
+        // boundary of the cache context. A non-final virtual or interface call into
+        // user code cannot be bound statically and keeps the conservative MVID.
+        internal static bool TryExecutableClosure(Type type, out string content) {
+            content = null;
+            if (type == null) return false;
+            try {
+                var queue = new Queue<MethodBase>();
+                for (var owner = type; owner != null && IsUserCode(owner.Assembly); owner = owner.BaseType) {
+                    foreach (var constructor in owner.GetConstructors(Declared)) queue.Enqueue(constructor);
+                    if (owner.TypeInitializer != null) queue.Enqueue(owner.TypeInitializer);
+                    foreach (var property in owner.GetProperties(Declared))
+                        foreach (var accessor in property.GetAccessors(true)) queue.Enqueue(accessor);
+                }
+                var seen = new HashSet<string>(StringComparer.Ordinal);
+                var rows = new List<string>();
+                while (queue.Count > 0) {
+                    var method = queue.Dequeue();
+                    var member = Member(method);
+                    if (!seen.Add(member)) continue;
+                    if (seen.Count > ExecutableClosureLimit) return false;
+                    rows.Add(member + "\t" + Body(method));
+                    if (method.GetMethodBody() == null) continue;
+                    foreach (var instruction in method.GetInstructions()) {
+                        switch (instruction.Operand) {
+                            case MethodBase target:
+                                if (target.DeclaringType == null || !IsUserCode(target.Module.Assembly)) break;
+                                if ((instruction.OpCode == OpCodes.Callvirt || instruction.OpCode == OpCodes.Ldvirtftn) && target.IsVirtual && !target.IsFinal &&
+                                    !target.DeclaringType.IsSealed && !target.DeclaringType.IsValueType) return false;
+                                queue.Enqueue(target);
+                                if (target.DeclaringType.TypeInitializer != null) queue.Enqueue(target.DeclaringType.TypeInitializer);
+                                break;
+                            case FieldInfo field:
+                                if (field.DeclaringType != null && IsUserCode(field.Module.Assembly) && field.DeclaringType.TypeInitializer != null)
+                                    queue.Enqueue(field.DeclaringType.TypeInitializer);
+                                break;
+                            case byte[] _:
+                                return false; // calli: an unbound inline signature
+                        }
+                    }
+                }
+                rows.Sort(StringComparer.Ordinal);
+                content = Names.Hash(string.Join("\n", rows));
+                return true;
+            } catch (Exception exception) when (!(exception is OperationCanceledException)) {
+                content = null;
+                return false;
+            }
+        }
+
+        // Compiled project code (Library/ScriptAssemblies) and in-memory assemblies.
+        // Everything else is framework, Unity or a precompiled plugin.
+        internal static bool IsUserCode(Assembly assembly) {
+            if (assembly == null) return false;
+            if (assembly.IsDynamic) return true;
+            string location;
+            try { location = assembly.Location; } catch (NotSupportedException) { return true; }
+            if (string.IsNullOrEmpty(location)) return true;
+            return location.Replace('\\', '/').IndexOf("/Library/ScriptAssemblies/", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        // Compiler artifacts (closures, iterator/async state machines, lambda caches,
+        // local functions, <PrivateImplementationDetails>) are renamed by ordinary
+        // body edits. Their code is reached through the bodies that use them, whose
+        // fingerprints already change, so they are not declarations of the assembly.
+        internal static bool IsCompilerArtifact(Type type) {
+            for (var owner = type; owner != null; owner = owner.DeclaringType)
+                if (owner.Name.StartsWith("<", StringComparison.Ordinal)) return !SourceGeneratorCodeIdentity.IsInputType(type);
+            return false;
+        }
+
+        internal static bool IsCompilerArtifact(MethodBase method) => method.Name.StartsWith("<", StringComparison.Ordinal);
 
         // An empty marker cannot observe helpers or mutable state. Audit actual
         // IL rather than trusting the attribute's name, visibility or provenance.
@@ -219,6 +303,8 @@ namespace ME.BECS.Editor {
         // Declaration changes are intentionally a wider invalidation boundary.
         // This includes new generic implementations, layouts and access attributes;
         // a method-body-only edit does not invalidate unrelated root summaries.
+        // This semantic form skips compiler artifacts (see IsCompilerArtifact) and
+        // identifies executable metadata by its reachable code, not the MVID.
         internal static string Declarations(Assembly assembly) => DeclarationsCore(assembly, true);
 
         internal static string AssemblyContent(Assembly assembly) {
@@ -246,35 +332,68 @@ namespace ME.BECS.Editor {
                 var declarations = DeclarationsCore(assembly, false);
                 if (declarations.StartsWith("opaque:", StringComparison.Ordinal)) throw new NotSupportedException("Analyzer declaration metadata is unavailable.");
                 var shared = new StringBuilder(declarations).Append('\n').Append(bodies.shared);
-                foreach (var resource in assembly.GetManifestResourceNames().OrderBy(value => value, StringComparer.Ordinal)) {
-                    using var stream = assembly.GetManifestResourceStream(resource);
-                    using var sha = System.Security.Cryptography.SHA256.Create();
-                    shared.Append("\nresource:").Append(resource).Append('\t').Append(Convert.ToBase64String(sha.ComputeHash(stream)));
-                }
-                foreach (var field in types.SelectMany(type => type.GetFields(Declared))
-                             .Where(field => (field.Attributes & FieldAttributes.HasFieldRVA) != 0).OrderBy(Member, StringComparer.Ordinal)) {
-                    // InitializeArray copies RVA metadata into a new byte array;
-                    // it does not read a static field or execute its initializer.
-                    // Unknown layouts fall back to the conservative MVID below.
-                    var size = field.FieldType.StructLayoutAttribute?.Size ?? 0;
-                    if (size == 0) {
-                        var type = field.FieldType;
-                        size = type == typeof(byte) || type == typeof(sbyte) ? 1 :
-                            type == typeof(short) || type == typeof(ushort) || type == typeof(char) ? 2 :
-                            type == typeof(int) || type == typeof(uint) || type == typeof(float) ? 4 :
-                            type == typeof(long) || type == typeof(ulong) || type == typeof(double) ? 8 : 0;
-                    }
-                    if (size <= 0 || size > 16 * 1024 * 1024) throw new NotSupportedException("Unknown analyzer RVA layout: " + field);
-                    var bytes = new byte[size];
-                    System.Runtime.CompilerServices.RuntimeHelpers.InitializeArray(bytes, field.FieldHandle);
-                    shared.Append("\nrva:").Append(Member(field)).Append('\t').Append(Convert.ToBase64String(bytes));
-                }
+                AppendResources(shared, assembly);
+                AppendFieldData(shared, types);
                 return (Names.Hash(shared.ToString()), bodies.isolated);
             } catch (Exception exception) when (!(exception is OperationCanceledException)) {
                 // Unsupported metadata must reduce reuse, never omit code/data.
                 UnityEngine.Debug.LogWarning("[ME.BECS] Incremental IL analyzer fingerprint uses conservative assembly invalidation: " + exception.Message);
                 var opaque = "opaque:" + assembly.ManifestModule.ModuleVersionId;
                 return (opaque, opaque);
+            }
+        }
+
+        // Compiled-content identity of a loaded script assembly: declarations, IL
+        // bodies, resources, field RVA data, references and assembly attributes.
+        // Unlike the MVID it survives a recompilation that produced the same code
+        // (a rebuilt reference, a comment or formatting edit). Throws when some
+        // metadata cannot be read; callers must then fall back to the MVID.
+        internal static string LoadedContent(Assembly assembly) {
+            var declarations = DeclarationsCore(assembly, false);
+            if (declarations.StartsWith("opaque:", StringComparison.Ordinal)) throw new NotSupportedException("Declaration metadata is unavailable.");
+            var types = assembly.GetTypes();
+            var text = new StringBuilder(declarations);
+            foreach (var type in types.OrderBy(TypeName, StringComparer.Ordinal)) {
+                foreach (var method in Methods(type).OrderBy(Signature, StringComparer.Ordinal)) {
+                    text.Append('\n').Append(Member(method)).Append('\t').Append(Body(method));
+                }
+            }
+            AppendResources(text, assembly);
+            AppendFieldData(text, types);
+            foreach (var reference in assembly.GetReferencedAssemblies().Select(reference => reference.FullName).OrderBy(value => value, StringComparer.Ordinal))
+                text.Append("\nreference:").Append(reference);
+            text.Append("\nassembly-attributes:\n");
+            Attributes(text, assembly.GetCustomAttributesData());
+            return Names.Hash(text.ToString());
+        }
+
+        private static void AppendResources(StringBuilder text, Assembly assembly) {
+            foreach (var resource in assembly.GetManifestResourceNames().OrderBy(value => value, StringComparer.Ordinal)) {
+                using var stream = assembly.GetManifestResourceStream(resource);
+                using var sha = System.Security.Cryptography.SHA256.Create();
+                text.Append("\nresource:").Append(resource).Append('\t').Append(Convert.ToBase64String(sha.ComputeHash(stream)));
+            }
+        }
+
+        // Static initializer data (array literals, UTF-8 spans) lives in RVA
+        // metadata, not in MethodBody. Unknown layouts throw; callers fall back.
+        private static void AppendFieldData(StringBuilder text, IEnumerable<Type> types) {
+            foreach (var field in types.SelectMany(type => type.GetFields(Declared))
+                         .Where(field => (field.Attributes & FieldAttributes.HasFieldRVA) != 0).OrderBy(Member, StringComparer.Ordinal)) {
+                // InitializeArray copies RVA metadata into a new byte array;
+                // it does not read a static field or execute its initializer.
+                var size = field.FieldType.StructLayoutAttribute?.Size ?? 0;
+                if (size == 0) {
+                    var type = field.FieldType;
+                    size = type == typeof(byte) || type == typeof(sbyte) ? 1 :
+                        type == typeof(short) || type == typeof(ushort) || type == typeof(char) ? 2 :
+                        type == typeof(int) || type == typeof(uint) || type == typeof(float) ? 4 :
+                        type == typeof(long) || type == typeof(ulong) || type == typeof(double) ? 8 : 0;
+                }
+                if (size <= 0 || size > 16 * 1024 * 1024) throw new NotSupportedException("Unknown analyzer RVA layout: " + field);
+                var bytes = new byte[size];
+                System.Runtime.CompilerServices.RuntimeHelpers.InitializeArray(bytes, field.FieldHandle);
+                text.Append("\nrva:").Append(Member(field)).Append('\t').Append(Convert.ToBase64String(bytes));
             }
         }
 
@@ -305,6 +424,7 @@ namespace ME.BECS.Editor {
                     text.Append("metadata:").Append(attribute.Key).Append(':').Append(attribute.Value).Append('\n');
                 foreach (var type in assembly.GetTypes().OrderBy(TypeName, StringComparer.Ordinal)) {
                     ILAnalysisSession.Checkpoint();
+                    if (includeExecutableMetadataVersion && IsCompilerArtifact(type)) continue;
                     text.Append(TypeName(type)).Append('|').Append((int)type.Attributes).Append('|').Append(TypeName(type.BaseType)).Append('\n');
                     if (type.StructLayoutAttribute is var layout && layout != null)
                         text.Append("layout:").Append(layout.Value).Append('|').Append(layout.Size).Append('|').Append(layout.Pack).Append('|').Append(layout.CharSet).Append('\n');
@@ -320,6 +440,7 @@ namespace ME.BECS.Editor {
                     }
                     foreach (var method in Methods(type).OrderBy(Signature, StringComparer.Ordinal)) {
                         CodeGeneratorTimings.Work(method);
+                        if (includeExecutableMetadataVersion && IsCompilerArtifact(method)) continue;
                         text.Append(Signature(method)).Append('|').Append((int)method.Attributes).Append('|').Append((int)method.GetMethodImplementationFlags()).Append('\n');
                         Attributes(text, method.GetCustomAttributesData());
                         if (method is MethodInfo genericMethod) Generics(text, genericMethod.GetGenericArguments());
@@ -338,8 +459,13 @@ namespace ME.BECS.Editor {
                     }
                     // Attributes and IRefOp may execute user-defined getters/ctors
                     // during reflection analysis. They need a conservative boundary.
-                    if (includeExecutableMetadataVersion && (typeof(Attribute).IsAssignableFrom(type) || typeof(IRefOp).IsAssignableFrom(type)))
-                        text.Append("executable-metadata:").Append(ExecutableMetadataStamp(type, assembly.ManifestModule.ModuleVersionId)).Append('\n');
+                    if (includeExecutableMetadataVersion && (typeof(Attribute).IsAssignableFrom(type) || typeof(IRefOp).IsAssignableFrom(type))) {
+                        var executable = ExecutableMetadataStamp(type, assembly.ManifestModule.ModuleVersionId);
+                        if (executable.StartsWith("assembly:", StringComparison.Ordinal) && reportedMvidStamps.TryAdd(TypeName(type), 0))
+                            UnityEngine.Debug.Log("[ME.BECS] Executable metadata " + type.FullName + " cannot be bound statically; any rebuild of " +
+                                assembly.GetName().Name + " invalidates the summaries that can see it.");
+                        text.Append("executable-metadata:").Append(executable).Append('\n');
+                    }
                 }
                 return Names.Hash(text.ToString());
             } catch (Exception exception) when (!(exception is OperationCanceledException)) {

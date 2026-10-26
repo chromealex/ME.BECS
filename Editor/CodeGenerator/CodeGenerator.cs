@@ -566,6 +566,7 @@ namespace ME.BECS.Editor {
         internal sealed class PendingPublication {
             internal scg.KeyValuePair<string, string>[] files;
             internal string codeFingerprint, graphSnapshot, compilerSnapshot, runtimeContent, editorContent;
+            internal string runtimeFingerprint;
 
             internal void Complete(bool written) {
                 var success = false;
@@ -575,6 +576,7 @@ namespace ME.BECS.Editor {
                         this.graphSnapshot != SourceGeneratorGraphSnapshot.GetCurrent())
                         throw new System.InvalidOperationException("Inputs changed during background publication. Retry input generation.");
                     SourceGeneratorAnalysisReceipt.Commit(this.graphSnapshot, this.compilerSnapshot, this.runtimeContent, this.editorContent);
+                    SourceGeneratorGraphSnapshot.CommitRuntimeAnalysis(this.runtimeFingerprint, this.runtimeContent);
                     LastExportedGraphSnapshot = this.graphSnapshot;
                     success = true;
                 } finally { FinishExport(success); }
@@ -611,6 +613,15 @@ namespace ME.BECS.Editor {
                 var files = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.Ordinal);
                 var contents = new string[2];
                 foreach (var editor in new[] { false, true }) {
+                    if (editor == false && prepared.reusableRuntime != null) {
+                        var reused = new SourceGeneratorInputManifest.StepResult<scg.KeyValuePair<string, string>[]>();
+                        var transport = SourceGeneratorInputTransport.PrepareSteps(reused, false, prepared.reusableRuntime);
+                        try { while (transport.MoveNext()) { yield return null; } }
+                        finally { (transport as System.IDisposable)?.Dispose(); }
+                        foreach (var file in reused.value) { files[file.Key] = file.Value; }
+                        contents[0] = prepared.reusableRuntime;
+                        continue;
+                    }
                     var built = new SourceGeneratorInputManifest.StepResult<string>();
                     var build = BuildSteps(built, editor, editor ? prepared.editor : prepared.runtime, files);
                     try { while (build.MoveNext()) yield return null; }
@@ -623,6 +634,7 @@ namespace ME.BECS.Editor {
                     throw new System.InvalidOperationException("Input assets or loaded script assemblies changed while preparing publication; no planned inputs were written. Retry input generation.");
                 }
                 accept(new PendingPublication { files = files.ToArray(), codeFingerprint = codeFingerprint,
+                    runtimeFingerprint = prepared.runtimeFingerprint,
                     graphSnapshot = graphSnapshot, compilerSnapshot = compilerSnapshot,
                     runtimeContent = contents[0], editorContent = contents[1] });
                 deferred = true;
@@ -719,7 +731,12 @@ namespace ME.BECS.Editor {
                 void PreparePublication(bool editor, string content) {
                     foreach (var file in SourceGeneratorInputTransport.Prepare(editor, content, out _)) files[file.Key] = file.Value;
                 }
-                if (!Build(out runtimeContent, prepared: prepared?.runtime, publication: PreparePublication)) return false;
+                if (prepared?.reusableRuntime != null) {
+                    runtimeContent = prepared.reusableRuntime;
+                    PreparePublication(false, runtimeContent);
+                } else if (Build(out runtimeContent, prepared: prepared?.runtime, publication: PreparePublication) == false) {
+                    return false;
+                }
                 if (!Build(out editorContent, editorAssembly: true, prepared: prepared?.editor, publication: PreparePublication)) return false;
                 if (codeFingerprint != SourceGeneratorGraphSnapshot.GetCodeFingerprint() ||
                     graphSnapshot != SourceGeneratorGraphSnapshot.GetCurrent()) {
@@ -727,6 +744,7 @@ namespace ME.BECS.Editor {
                 }
                 if (accept != null) {
                     accept(new PendingPublication { files = files.ToArray(), codeFingerprint = codeFingerprint,
+                        runtimeFingerprint = prepared?.runtimeFingerprint,
                         graphSnapshot = graphSnapshot, compilerSnapshot = compilerSnapshot,
                         runtimeContent = runtimeContent, editorContent = editorContent });
                     deferred = true;
@@ -743,6 +761,7 @@ namespace ME.BECS.Editor {
                     throw new System.InvalidOperationException("Input assets or loaded script assemblies changed during Runtime/Editor publication. Retry input generation.");
                 }
                 SourceGeneratorAnalysisReceipt.Commit(graphSnapshot, compilerSnapshot, runtimeContent, editorContent);
+                SourceGeneratorGraphSnapshot.CommitRuntimeAnalysis(prepared?.runtimeFingerprint, runtimeContent);
                 LastExportedGraphSnapshot = graphSnapshot;
                 exported = true;
                 return true;

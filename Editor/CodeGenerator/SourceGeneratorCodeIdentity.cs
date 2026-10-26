@@ -162,6 +162,91 @@ namespace ME.BECS.Editor {
         internal static bool IsConsumer(string name) => name.StartsWith("ME.BECS.Gen.", StringComparison.Ordinal) ||
             SourceGeneratorPublicationBridges.IsBridge(name);
 
+        // Freshness identity used by the source-input fingerprint. Consumer
+        // dependants keep their source-aware Stamp; every other input assembly is
+        // identified by its compiled content instead of its MVID, so a rebuild
+        // which produced the same code (e.g. test assemblies recompiled because a
+        // referenced assembly changed, or a comment-only edit) does not restart IL
+        // analysis and input publication. The content is a pure function of the
+        // binary, so it is memoized by MVID in Library across domain reloads.
+        private const string ContentCacheFormat = "ME.BECS.CodeContentStamps.v1";
+        private const string ContentCachePath = "Library/ME.BECS/CodeContentStamps.txt";
+        private const int ContentCacheLimit = 1024;
+        private static readonly Dictionary<Assembly, string> contentStamps = new Dictionary<Assembly, string>();
+        private static Dictionary<string, string> contentCache;
+        private static readonly List<string> contentCacheOrder = new List<string>();
+
+        internal static string ContentStamp(Assembly assembly, UnityEditor.Compilation.Assembly script, ISet<string> dependants) {
+            if (dependants.Contains(assembly.GetName().Name)) return Stamp(assembly, script, dependants);
+            var mvid = assembly.ManifestModule.ModuleVersionId.ToString("D");
+            lock (contentStamps) {
+                if (contentStamps.TryGetValue(assembly, out var known)) return known;
+                LoadContentCache();
+                if (contentCache.TryGetValue(mvid, out known)) {
+                    contentStamps[assembly] = known;
+                    return known;
+                }
+            }
+            string stamp;
+            try {
+                stamp = "content:" + ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(ContentCacheFormat + "\n" + ILContentFingerprint.LoadedContent(assembly));
+            } catch (Exception exception) when (!(exception is OperationCanceledException)) {
+                // Unreadable metadata must invalidate conservatively, never be skipped.
+                UnityEngine.Debug.LogWarning("[ME.BECS] Source input identity of " + assembly.GetName().Name + " falls back to its MVID: " + exception.Message);
+                stamp = mvid;
+                lock (contentStamps) contentStamps[assembly] = stamp;
+                return stamp;
+            }
+            lock (contentStamps) {
+                contentStamps[assembly] = stamp;
+                StoreContentCache(mvid, stamp);
+            }
+            return stamp;
+        }
+
+        private static void LoadContentCache() {
+            if (contentCache != null) return;
+            contentCache = new Dictionary<string, string>(StringComparer.Ordinal);
+            contentCacheOrder.Clear();
+            try {
+                if (!System.IO.File.Exists(ContentCachePath)) return;
+                var lines = System.IO.File.ReadAllLines(ContentCachePath);
+                if (lines.Length == 0 || lines[0] != ContentCacheFormat) return;
+                var length = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(string.Empty).Length + "content:".Length;
+                foreach (var line in lines.Skip(1)) {
+                    var fields = line.Split('\t');
+                    // A torn or foreign row is ignored; the assembly is simply re-hashed.
+                    if (fields.Length != 2 || !Guid.TryParse(fields[0], out _) || fields[1].Length != length ||
+                        !fields[1].StartsWith("content:", StringComparison.Ordinal) || contentCache.ContainsKey(fields[0])) continue;
+                    contentCache.Add(fields[0], fields[1]);
+                    contentCacheOrder.Add(fields[0]);
+                }
+            } catch (Exception) {
+                contentCache.Clear();
+                contentCacheOrder.Clear();
+            }
+        }
+
+        private static void StoreContentCache(string mvid, string stamp) {
+            if (contentCache.ContainsKey(mvid)) return;
+            contentCache.Add(mvid, stamp);
+            contentCacheOrder.Add(mvid);
+            while (contentCacheOrder.Count > ContentCacheLimit) {
+                contentCache.Remove(contentCacheOrder[0]);
+                contentCacheOrder.RemoveAt(0);
+            }
+            try {
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(ContentCachePath));
+                var temporary = ContentCachePath + ".tmp";
+                System.IO.File.WriteAllLines(temporary, new[] { ContentCacheFormat }.Concat(contentCacheOrder.Select(key => key + "\t" + contentCache[key])));
+                if (System.IO.File.Exists(ContentCachePath)) System.IO.File.Delete(ContentCachePath);
+                System.IO.File.Move(temporary, ContentCachePath);
+            } catch (Exception exception) {
+                // The memo is an optimization only: losing it costs a re-hash.
+                UnityEngine.Debug.LogWarning("[ME.BECS] Cannot store source input identity cache: " + exception.Message);
+            }
+        }
+
         internal static string Stamp(Assembly assembly, UnityEditor.Compilation.Assembly script, ISet<string> dependants) =>
             Stamp(assembly, script.sourceFiles, dependants);
 
