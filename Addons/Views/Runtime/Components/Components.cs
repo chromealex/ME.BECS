@@ -33,6 +33,13 @@ namespace ME.BECS.Views {
 
     }
 
+    /// <summary>Initial root pose captured before movement, for the first rendered interpolation interval.</summary>
+    [ComponentGroup(typeof(ViewsComponentGroup))]
+    public struct ViewSpawnPoseComponent : IComponent {
+        public float4x4 worldMatrix;
+        public ulong tick;
+    }
+
     /// <summary>
     /// Stores per-entity state for view custom ID.
     /// </summary>
@@ -86,6 +93,9 @@ namespace ME.BECS.Views {
         /// Presentation instance associated with the logic entity.
         /// </summary>
         public View view;
+
+        /// <summary>The spawner captures ViewSpawnPoseComponent after setting the final root pose.</summary>
+        public bbool interpolateFromSpawn;
         
         /// <summary>
         /// Initializes instantiate view component state from the supplied context.
