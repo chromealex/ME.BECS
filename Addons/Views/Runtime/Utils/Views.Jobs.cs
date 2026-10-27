@@ -443,6 +443,34 @@ namespace ME.BECS.Views {
             }
         }
 
+        // A newly spawned root has no matrix in the frame snapshot. Its authored birth pose
+        // supplies that first sample only while the snapshot predates its creation tick.
+        private static bool TryGetInterpolationSource(in Ent ent, safe_ptr<State> beginFrameState, float frameFactor,
+                                                     out WorldMatrixComponent source, out float factor) {
+            factor = frameFactor;
+            if (Components.Has<WorldMatrixComponent>(beginFrameState, ent.id, ent.gen, true) == true) {
+                source = Components.Read<WorldMatrixComponent>(beginFrameState, ent.id, ent.gen);
+                return source.isTickCalculated == true;
+            }
+            source = default;
+            if (ent.Has<ParentComponent>() == true || ent.TryRead(out ViewSpawnPoseComponent spawn) == false) {
+                return false;
+            }
+            var beginTick = beginFrameState.ptr->tick;
+            var currentTick = ent.World.CurrentTick;
+            if (spawn.tick <= beginTick || spawn.tick > currentTick) {
+                return false;
+            }
+            // Fixed-update increments the tick before firing. With several ticks in one
+            // render frame, birth can be later than the beginning of that frame.
+            var birthOffset = spawn.tick - beginTick - 1ul;
+            var frameTicks = currentTick - beginTick;
+            factor = um::math.saturate(((float)frameTicks * frameFactor - (float)birthOffset) / (float)(frameTicks - birthOffset));
+            source.value = spawn.worldMatrix;
+            source.isTickCalculated = true;
+            return true;
+        }
+
         /// <summary>
         /// Executes job update transforms interpolation prepare work through the job scheduler.
         /// </summary>
@@ -476,20 +504,8 @@ namespace ME.BECS.Views {
                 var entityData = this.renderingOnSceneEnts[index];
                 var tr = entityData.element.GetAspect<TransformAspect>();
                 
-                var interpolate = true;
-                WorldMatrixComponent sourceData;
-                if (Components.Has<WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen, true) == true) {
-                    sourceData = Components.Read<WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen);
-                    if (sourceData.isTickCalculated == false) {
-                        interpolate = false;
-                    }
-                } else {
-                    sourceData = default;
-                    interpolate = false;
-                }
-
-                float factor = 1f;
-                if (interpolate == true) factor = this.data.ptr->interpolationFactor;
+                var interpolate = TryGetInterpolationSource(entityData.element, this.beginFrameState,
+                    this.data.ptr->interpolationFactor, out var sourceData, out var factor);
                 
                 if (entityData.element.Has<ParentComponent>() == true) {
 
@@ -568,20 +584,8 @@ namespace ME.BECS.Views {
                 var entityData = this.renderingOnSceneEnts[index];
                 var tr = entityData.element.GetAspect<TransformAspect>();
                 
-                var interpolate = true;
-                WorldMatrixComponent sourceData;
-                if (Components.Has<WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen, true) == true) {
-                    sourceData = Components.Read<WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen);
-                    if (sourceData.isTickCalculated == false) {
-                        interpolate = false;
-                    }
-                } else {
-                    sourceData = default;
-                    interpolate = false;
-                }
-
-                float factor = 0f;
-                if (interpolate == true) factor = this.data.ptr->interpolationFactor;
+                var interpolate = TryGetInterpolationSource(entityData.element, this.beginFrameState,
+                    this.data.ptr->interpolationFactor, out var sourceData, out var factor);
                 
                 var worldMatrix = tr.readWorldMatrix;
                 var pos = (um::float3)MatrixUtils.GetPosition(worldMatrix);
