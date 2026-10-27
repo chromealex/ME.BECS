@@ -1,3 +1,8 @@
+#if FIXED_POINT
+using ME.BECS.FixedPoint;
+#else
+using Unity.Mathematics;
+#endif
 
 namespace ME.BECS.Units {
     
@@ -24,7 +29,10 @@ namespace ME.BECS.Units {
             /// Processes the job inputs for <c>SpawnSystem</c>.
             /// </summary>
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit) {
-                EffectUtils.CreateEffect(in jobInfo, tr.position, tr.rotation, unit.ent.ReadStatic<UnitEffectOnSpawnComponent>().effect, unit.readOwner.GetAspect<ME.BECS.Players.PlayerAspect>());
+                var spawn = unit.ent.ReadStatic<UnitEffectOnSpawnComponent>();
+                var rotation = tr.rotation;
+                var position = tr.position + math.mul(rotation, spawn.localOffset);
+                EffectUtils.CreateEffect(in jobInfo, position, rotation, spawn.effect, unit.readOwner.GetAspect<ME.BECS.Players.PlayerAspect>());
             }
 
         }

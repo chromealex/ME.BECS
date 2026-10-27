@@ -300,6 +300,12 @@ namespace ME.BECS.Units {
         /// </summary>
         public ME.BECS.Effects.EffectConfig effect;
 
+        /// <summary>
+        /// Offset in unit-local directions, in world units. Negative Z is behind the unit.
+        /// Applied once at effect creation without following subsequent unit movement.
+        /// </summary>
+        public float3 localOffset;
+
     }
 
     /// <summary>
