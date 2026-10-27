@@ -9,14 +9,15 @@ namespace ME.BECS.Editor {
     /// </summary>
     public static class ObjectReferenceValidate {
 
-        static ObjectReferenceValidate() {
-            EditorApplication.delayCall += () => Validate();
+        [InitializeOnLoadMethod]
+        private static void ScheduleValidation() {
+            EditorApplication.delayCall -= Validate;
+            EditorApplication.delayCall += Validate;
         }
 
         /// <summary>
         /// Checks the supplied state against the constraints required by this API.
         /// </summary>
-        [InitializeOnLoadMethod]
         [MenuItem("ME.BECS/Resources/Validate", priority = 100)]
         public static void Validate() {
             if (ObjectReferenceRegistry.data == null) {
@@ -52,9 +53,19 @@ namespace ME.BECS.Editor {
                 ObjectReferenceRegistry.LoadForced();
             }
 
-            var isDirty = false;
+            if (ObjectReferenceRegistry.data == null) {
+                return;
+            }
+            if (offset < 0 || count < 0) {
+                throw new System.ArgumentOutOfRangeException(offset < 0 ? nameof(offset) : nameof(count));
+            }
             var items = ObjectReferenceRegistry.data.objects;
-            for (int i = offset; i < (count < items.Length ? offset + count : items.Length); ++i) {
+            var end = offset >= items.Length ? items.Length : offset + System.Math.Min(count, items.Length - offset);
+            var settings = AddressableAssetSettingsDefaultObject.Settings;
+            for (int i = offset; i < end; ++i) {
+                if (items[i] == null) {
+                    continue;
+                }
                 var item = items[i].data;
                 var asset = item.source != null ? item.source : item.sourceReference?.editorAsset;
                 var type = string.IsNullOrEmpty(item.sourceType) == true ? null : System.Type.GetType(item.sourceType);
@@ -62,6 +73,7 @@ namespace ME.BECS.Editor {
                     type = item.source.GetType();
                 }
                 if (asset != null) {
+                    var customDataBefore = item.customData == null ? null : UnityEngine.JsonUtility.ToJson(item.customData);
                     if (type != null) {
                         var t = asset.GetType();
                         if (t.IsAssignableFrom(type) == false) {
@@ -72,42 +84,58 @@ namespace ME.BECS.Editor {
                             }
                         }
                     }
-                    if (IsAssetAddressable(asset) == false) {
+                    if (IsAssetAddressable(asset, settings) == false) {
                         item.source = asset;
-                        item.sourceReference = new UnityEngine.AddressableAssets.AssetReference();
-                    } else if (item.source != null || item.sourceReference.editorAsset is UnityEngine.Component) {
+                        // Preserve an already empty reference: AssetReference uses
+                        // reference equality, so replacing it dirties unchanged assets.
+                        if (item.sourceReference == null || string.IsNullOrEmpty(item.sourceReference.AssetGUID) == false) {
+                            item.sourceReference = new UnityEngine.AddressableAssets.AssetReference();
+                        }
+                    } else if (item.source != null || item.sourceReference?.editorAsset is UnityEngine.Component) {
                         var src = item.source != null ? item.source : item.sourceReference?.editorAsset;
-                        if (src != null && string.IsNullOrEmpty(item.sourceType) == true) item.sourceType = src.GetType().AssemblyQualifiedName;
-                        item.sourceReference = new UnityEngine.AddressableAssets.AssetReference(AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(item.source)));//CreateAssetForType(AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(item.source)), type);
+                        if (src != null && string.IsNullOrEmpty(item.sourceType) == true) {
+                            item.sourceType = src.GetType().AssemblyQualifiedName;
+                        }
+                        var guid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(asset));
+                        if (item.sourceReference == null || item.sourceReference.AssetGUID != guid) {
+                            item.sourceReference = new UnityEngine.AddressableAssets.AssetReference(guid);
+                        }
                         item.source = null;
                     }
 
                     {
                         var src = item.source != null ? item.source : item.sourceReference?.editorAsset;
                         if (src != null) {
-                            if (string.IsNullOrEmpty(item.sourceType) == true) item.sourceType = src.GetType().AssemblyQualifiedName;
+                            if (string.IsNullOrEmpty(item.sourceType) == true) {
+                                item.sourceType = src.GetType().AssemblyQualifiedName;
+                            }
                         } else {
                             item.customData = null;
                             item.sourceType = default;
                         }
 
-                        if (item.customData == null) item.customData = CreateCustomData(src);
+                        if (item.customData == null) {
+                            item.customData = CreateCustomData(src);
+                        }
                         if (item.customData != null && item.customData.IsValid(src) == true) {
                             item.customData.Validate(src);
                         }
                     }
                     item.isGameObject = asset is UnityEngine.Component || asset is UnityEngine.GameObject;
-                }
-
-                if (isDirty == true || items[i].data.Equals(item) == false) {
-                    items[i].data = item;
-                    if (items[i] != null) EditorUtility.SetDirty(items[i]);
-                    isDirty = true;
+                    // Custom data may be a mutable class or a boxed struct shared
+                    // with the original ItemInfo. Equals cannot detect in-place edits.
+                    var customDataAfter = item.customData == null ? null : UnityEngine.JsonUtility.ToJson(item.customData);
+                    if (items[i].data.Equals(item) == false || items[i].data.isGameObject != item.isGameObject ||
+                        customDataBefore != customDataAfter) {
+                        items[i].data = item;
+                        EditorUtility.SetDirty(items[i]);
+                    }
                 }
             }
 
-            if (isDirty == true) {
-                ObjectReferenceRegistry.data.objects = items;
+            // Updating entries does not change registry membership. Only the old
+            // embedded representation needs migration and a directory rescan.
+            if (ObjectReferenceRegistry.data.items.Length != 0) {
                 EditorUtility.SetDirty(ObjectReferenceRegistry.data);
                 ObjectReferenceRegistry.data.Validate();
             }
@@ -135,11 +163,13 @@ namespace ME.BECS.Editor {
             return null;
         }
         
-        private static bool IsAssetAddressable(UnityEngine.Object obj) {
+        private static bool IsAssetAddressable(UnityEngine.Object obj, AddressableAssetSettings settings) {
+            if (settings == null || obj == null) {
+                return false;
+            }
             if (obj is UnityEngine.Component comp) {
                 obj = comp.gameObject;
             }
-            var settings = AddressableAssetSettingsDefaultObject.Settings;
             var entry = settings.FindAssetEntry(AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(obj)), true);
             return entry != null;
         }
