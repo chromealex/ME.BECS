@@ -15,6 +15,35 @@ namespace ME.BECS.Editor {
         private HashSet<MethodBase> methods;
         private HashSet<string> queries;
         private HashSet<string> assemblies;
+        private HashSet<Type> types;
+        internal Type[] Types => this.types?.ToArray() ?? Array.Empty<Type>();
+        // Open parameters/constructed types have no resolvable AQN. Persist their
+        // declaring definition and arguments instead; never silently lose them.
+        internal static string[] PersistentTypes(IEnumerable<Type> types) {
+            var visited = new HashSet<Type>();
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            void Add(Type type) {
+                if (type == null || visited.Add(type) == false) { return; }
+                if (type.HasElementType == true) {
+                    Add(type.GetElementType());
+                } else if (type.IsGenericParameter == true) {
+                    Add(type.DeclaringType);
+                    foreach (var constraint in type.GetGenericParameterConstraints()) { Add(constraint); }
+                } else {
+                    if (type.IsGenericType == true && type.IsGenericTypeDefinition == false) {
+                        Add(type.GetGenericTypeDefinition());
+                        foreach (var argument in type.GetGenericArguments()) { Add(argument); }
+                    }
+                    if (type.AssemblyQualifiedName != null && (type.ContainsGenericParameters == false || type.IsGenericTypeDefinition == true)) {
+                        names.Add(type.AssemblyQualifiedName);
+                    } else if (type.ContainsGenericParameters == false) {
+                        throw new NotSupportedException("Type dependency has no persistent identity: " + type);
+                    }
+                }
+            }
+            foreach (var type in types) { Add(type); }
+            return Sorted(names);
+        }
         internal MethodBase[] Methods {
             get {
                 if (this.methods == null || this.methods.Count == 0) return Array.Empty<MethodBase>();
@@ -38,11 +67,53 @@ namespace ME.BECS.Editor {
         internal ILDependencyCapture() { this.previous = current; current = this; }
         internal static void Observe(MethodBase method) {
             if (current == null || method == null) return;
-            (current.methods ??= new HashSet<MethodBase>()).Add(method);
+            if ((current.methods ??= new HashSet<MethodBase>()).Add(method) == true) {
+                ObserveDeclaration(method);
+            }
+        }
+
+        internal static void ObserveType(Type type) {
+            if (current == null || type == null) { return; }
+            (current.types ??= new HashSet<Type>()).Add(type);
+        }
+
+        // An operand names a declaration, not necessarily an executed body.
+        // Keep method-body traversal owned by the individual IL analyzers.
+        internal static void ObserveDeclaration(MemberInfo member) {
+            if (current == null || member == null) { return; }
+            ObserveType(member.DeclaringType);
+            if (member is Type type) {
+                ObserveType(type);
+            } else if (member is FieldInfo field) {
+                ObserveType(field.FieldType);
+            } else if (member is MethodBase method) {
+                void Parameter(ParameterInfo parameter) {
+                    ObserveType(parameter.ParameterType);
+                    foreach (var modifier in parameter.GetRequiredCustomModifiers()) { ObserveType(modifier); }
+                    foreach (var modifier in parameter.GetOptionalCustomModifiers()) { ObserveType(modifier); }
+                }
+                foreach (var parameter in method.GetParameters()) { Parameter(parameter); }
+                if (method is MethodInfo info) {
+                    Parameter(info.ReturnParameter);
+                    foreach (var argument in info.GetGenericArguments()) { ObserveType(argument); }
+                }
+            }
         }
         internal static void Observe(IEnumerable<MethodBase> methods) {
             if (current == null || methods == null) return;
             foreach (var method in methods) Observe(method);
+        }
+
+        // A completed capture already contains the signature dependencies of
+        // these methods. Replay both sets without reflecting every signature
+        // again at each enclosing memo hit.
+        internal static void Replay(MethodBase[] methods, string[] queries, string[] assemblies, Type[] types) {
+            if (current == null) { return; }
+            if (methods.Length != 0) {
+                if (current.methods == null) { current.methods = new HashSet<MethodBase>(methods); }
+                else { current.methods.UnionWith(methods); }
+            }
+            ObserveRecorded(queries, assemblies, types);
         }
 
         // Records a TypeCache.GetTypesDerivedFrom(constraint) result. The summary is
@@ -53,7 +124,11 @@ namespace ME.BECS.Editor {
             var types = results?.Where(type => type != null).ToArray() ?? Array.Empty<Type>();
             (current.queries ??= new HashSet<string>(StringComparer.Ordinal)).Add(QueryKey(constraint) + "\t" + QueryResult(types));
             ObserveAssembly(constraint.Assembly);
-            foreach (var type in types) ObserveAssembly(type.Assembly);
+            ObserveType(constraint);
+            foreach (var type in types) {
+                ObserveAssembly(type.Assembly);
+                ObserveType(type);
+            }
         }
 
         internal static void ObserveAssembly(Assembly assembly) {
@@ -62,8 +137,9 @@ namespace ME.BECS.Editor {
         }
 
         // Replays recorded queries/assemblies of a memo or persisted hit.
-        internal static void ObserveRecorded(IEnumerable<string> queries, IEnumerable<string> assemblies) {
+        internal static void ObserveRecorded(IEnumerable<string> queries, IEnumerable<string> assemblies, IEnumerable<Type> types = null) {
             if (current == null) return;
+            if (types != null) { foreach (var type in types) { ObserveType(type); } }
             if (queries != null) foreach (var query in queries) (current.queries ??= new HashSet<string>(StringComparer.Ordinal)).Add(query);
             if (assemblies != null) foreach (var name in assemblies) (current.assemblies ??= new HashSet<string>(StringComparer.Ordinal)).Add(name);
         }
@@ -81,6 +157,10 @@ namespace ME.BECS.Editor {
         public void Dispose() {
             current = this.previous;
             if (current == null) return;
+            if (this.types != null && this.types.Count != 0) {
+                if (current.types == null) { current.types = new HashSet<Type>(this.types); }
+                else { current.types.UnionWith(this.types); }
+            }
             // Propagate all dependencies without an interface enumerator and a
             // thread-static lookup for every method. Do not share mutable sets.
             if (this.methods != null && this.methods.Count != 0) {

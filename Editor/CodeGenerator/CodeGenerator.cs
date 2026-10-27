@@ -577,6 +577,7 @@ namespace ME.BECS.Editor {
                         throw new System.InvalidOperationException("Inputs changed during background publication. Retry input generation.");
                     SourceGeneratorAnalysisReceipt.Commit(this.graphSnapshot, this.compilerSnapshot, this.runtimeContent, this.editorContent);
                     SourceGeneratorGraphSnapshot.CommitRuntimeAnalysis(this.runtimeFingerprint, this.runtimeContent);
+                    SourceGeneratorGraphSnapshot.CommitEditorAnalysis(this.graphSnapshot, this.editorContent);
                     LastExportedGraphSnapshot = this.graphSnapshot;
                     success = true;
                 } finally { FinishExport(success); }
@@ -613,13 +614,15 @@ namespace ME.BECS.Editor {
                 var files = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.Ordinal);
                 var contents = new string[2];
                 foreach (var editor in new[] { false, true }) {
-                    if (editor == false && prepared.reusableRuntime != null) {
+                    var reusable = editor ? prepared.reusableEditor : prepared.reusableRuntime;
+                    if (reusable != null) {
+                        UnityEngine.Debug.Log("[ME.BECS] Reusing successful " + (editor ? "Editor" : "Runtime") + " input manifest; validating publication transport.");
                         var reused = new SourceGeneratorInputManifest.StepResult<scg.KeyValuePair<string, string>[]>();
-                        var transport = SourceGeneratorInputTransport.PrepareSteps(reused, false, prepared.reusableRuntime);
+                        var transport = SourceGeneratorInputTransport.PrepareSteps(reused, editor, reusable);
                         try { while (transport.MoveNext()) { yield return null; } }
                         finally { (transport as System.IDisposable)?.Dispose(); }
                         foreach (var file in reused.value) { files[file.Key] = file.Value; }
-                        contents[0] = prepared.reusableRuntime;
+                        contents[editor ? 1 : 0] = reusable;
                         continue;
                     }
                     var built = new SourceGeneratorInputManifest.StepResult<string>();
@@ -737,7 +740,12 @@ namespace ME.BECS.Editor {
                 } else if (Build(out runtimeContent, prepared: prepared?.runtime, publication: PreparePublication) == false) {
                     return false;
                 }
-                if (!Build(out editorContent, editorAssembly: true, prepared: prepared?.editor, publication: PreparePublication)) return false;
+                if (prepared?.reusableEditor != null) {
+                    editorContent = prepared.reusableEditor;
+                    PreparePublication(true, editorContent);
+                } else if (Build(out editorContent, editorAssembly: true, prepared: prepared?.editor, publication: PreparePublication) == false) {
+                    return false;
+                }
                 if (codeFingerprint != SourceGeneratorGraphSnapshot.GetCodeFingerprint() ||
                     graphSnapshot != SourceGeneratorGraphSnapshot.GetCurrent()) {
                     throw new System.InvalidOperationException("Input assets or loaded script assemblies changed while preparing publication; no planned inputs were written. Retry input generation.");
@@ -762,6 +770,7 @@ namespace ME.BECS.Editor {
                 }
                 SourceGeneratorAnalysisReceipt.Commit(graphSnapshot, compilerSnapshot, runtimeContent, editorContent);
                 SourceGeneratorGraphSnapshot.CommitRuntimeAnalysis(prepared?.runtimeFingerprint, runtimeContent);
+                SourceGeneratorGraphSnapshot.CommitEditorAnalysis(graphSnapshot, editorContent);
                 LastExportedGraphSnapshot = graphSnapshot;
                 exported = true;
                 return true;

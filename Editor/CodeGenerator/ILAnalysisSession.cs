@@ -26,6 +26,7 @@ namespace ME.BECS.Editor {
             internal MethodBase[] dependencies;
             internal string[] queries;
             internal string[] assemblies;
+            internal Type[] types;
         }
 
         internal ILAnalysisSession() {
@@ -146,23 +147,46 @@ namespace ME.BECS.Editor {
             var session = current;
             if (session == null) return create();
             if (session.values == null) throw new InvalidOperationException("IL memo has already been transferred.");
-            if (session.values.TryGetValue(key, out var value)) {
-                var cached = (Entry)value;
-                ILDependencyCapture.Observe(cached.dependencies);
-                ILDependencyCapture.ObserveRecorded(cached.queries, cached.assemblies);
-                return (T)cached.result;
-            }
+            if (TryGet<T>(key, out var value) == true) { return value; }
             using var capture = new ILDependencyCapture();
             var result = create();
-            session.values.Add(key, new Entry { result = result, dependencies = capture.Methods, queries = capture.Queries, assemblies = capture.Assemblies });
+            session.values.Add(key, new Entry { result = result, dependencies = capture.Methods, queries = capture.Queries, assemblies = capture.Assemblies, types = capture.Types });
             return result;
+        }
+
+        // Probe an already completed subgraph without starting a recursive
+        // computation. Replay is identical to Get, including metadata bodies.
+        internal static bool TryGet<T>(object key, out T result) {
+            var session = current;
+            if (session?.values != null && session.values.TryGetValue(key, out var value) == true) {
+                var cached = (Entry)value;
+                ILDependencyCapture.Replay(cached.dependencies, cached.queries, cached.assemblies, cached.types);
+                result = (T)cached.result;
+                return true;
+            }
+            result = default;
+            return false;
         }
 
         // Readers must not mutate Instruction/branch objects. Analyses that need
         // their own work list copy the array and store flow facts separately.
         internal static Instruction[] Instructions(MethodBase method) {
             ILDependencyCapture.Observe(method);
-            return Get((typeof(Instruction), method), () => method.GetInstructions().ToArray());
+            return Get((typeof(Instruction), method), () => {
+                var instructions = method.GetInstructions().ToArray();
+                foreach (var instruction in instructions) {
+                    if (instruction.Operand is MemberInfo member) { ILDependencyCapture.ObserveDeclaration(member); }
+                    else if (instruction.Operand is byte[] signature) { ILInlineSignature.CaptureTypes(method, signature); }
+                }
+                var body = method.GetMethodBody();
+                if (body != null) {
+                    foreach (var local in body.LocalVariables) { ILDependencyCapture.ObserveType(local.LocalType); }
+                    foreach (var clause in body.ExceptionHandlingClauses) {
+                        if (clause.Flags == ExceptionHandlingClauseOptions.Clause) { ILDependencyCapture.ObserveType(clause.CatchType); }
+                    }
+                }
+                return instructions;
+            });
         }
 
         public void Dispose() {

@@ -70,6 +70,7 @@ namespace ME.BECS.Editor {
         // Session-only evidence: a restart/full analysis always establishes a new
         // baseline. Never reuse a manifest based only on its existence on disk.
         private const string RuntimeReuseKey = "ME.BECS.RuntimeAnalysis.v1";
+        private const string EditorReuseKey = "ME.BECS.EditorAnalysis.v1";
 
         internal static string RuntimeAnalysisFingerprint(Systems.SystemDependenciesCodeGenerator.RuntimeDiscoveryInputs roots) {
             var scripts = UnityEditor.Compilation.CompilationPipeline.GetAssemblies(UnityEditor.Compilation.AssembliesType.Editor);
@@ -109,14 +110,20 @@ namespace ME.BECS.Editor {
             return tests;
         }
 
-        internal static string ReadReusableRuntime(string fingerprint, bool rebuild) {
+        internal static string ReadReusableRuntime(string fingerprint, bool rebuild) => ReadReusableProfile(fingerprint, rebuild, false);
+
+        // Editor retains the complete input fingerprint; no test assemblies are excluded.
+        internal static string ReadReusableEditor(string fingerprint, bool rebuild) => ReadReusableProfile(fingerprint, rebuild, true);
+
+        private static string ReadReusableProfile(string fingerprint, bool rebuild, bool editor) {
             if (rebuild == true || string.IsNullOrEmpty(fingerprint) == true) { return null; }
-            var evidence = UnityEditor.SessionState.GetString(RuntimeReuseKey, "");
+            var evidence = UnityEditor.SessionState.GetString(editor ? EditorReuseKey : RuntimeReuseKey, "");
             if (evidence.StartsWith(fingerprint + "\n", StringComparison.Ordinal) == false) { return null; }
-            var path = SourceGeneratorInputTransport.InputPath(false);
+            var path = SourceGeneratorInputTransport.InputPath(editor);
             if (System.IO.File.Exists(path) == false) { return null; }
             var content = System.IO.File.ReadAllText(path);
-            return RuntimeEvidence(fingerprint, content) == evidence ? content : null;
+            return RuntimeEvidence(fingerprint, content) == evidence &&
+                SourceGeneratorPublicationBridges.CanReuseCached(content) == true ? content : null;
         }
 
         internal static string RuntimeEvidence(string fingerprint, string content) =>
@@ -125,6 +132,11 @@ namespace ME.BECS.Editor {
         internal static void CommitRuntimeAnalysis(string fingerprint, string content) {
             if (string.IsNullOrEmpty(fingerprint) == true) { return; }
             UnityEditor.SessionState.SetString(RuntimeReuseKey, RuntimeEvidence(fingerprint, content));
+        }
+
+        internal static void CommitEditorAnalysis(string fingerprint, string content) {
+            if (string.IsNullOrEmpty(fingerprint) == true) { return; }
+            UnityEditor.SessionState.SetString(EditorReuseKey, RuntimeEvidence(fingerprint, content));
         }
 
         private static void TraceCodeInputs(IEnumerable<string> scripts) {

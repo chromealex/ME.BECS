@@ -169,7 +169,7 @@ namespace ME.BECS.Editor {
         // referenced assembly changed, or a comment-only edit) does not restart IL
         // analysis and input publication. The content is a pure function of the
         // binary, so it is memoized by MVID in Library across domain reloads.
-        private const string ContentCacheFormat = "ME.BECS.CodeContentStamps.v1";
+        private const string ContentCacheFormat = "ME.BECS.CodeContentStamps.v3";
         private const string ContentCachePath = "Library/ME.BECS/CodeContentStamps.txt";
         private const int ContentCacheLimit = 1024;
         private static readonly Dictionary<Assembly, string> contentStamps = new Dictionary<Assembly, string>();

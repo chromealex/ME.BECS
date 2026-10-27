@@ -127,6 +127,33 @@ namespace ME.BECS.Tests {
             Assert.IsNull(read.Invoke(null, new object[] { "inputs-a", true }), "Full Analysis must never reuse the Runtime profile.");
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ProfileReuseRequiresSuccessfulEvidenceAndExactPublishedContent(bool editor) {
+            const BindingFlags hidden = BindingFlags.Static | BindingFlags.NonPublic;
+            var profile = editor ? "Editor" : "Runtime";
+            var key = "ME.BECS." + profile + "Analysis.v1";
+            var previous = UnityEditor.SessionState.GetString(key, "");
+            var transport = Snapshot.Assembly.GetType("ME.BECS.Editor.SourceGeneratorInputTransport", true);
+            var path = (string)transport.GetMethod("InputPath", hidden).Invoke(null, new object[] { editor });
+            Assert.IsTrue(System.IO.File.Exists(path), "Publish project inputs before running this integration check.");
+            var content = System.IO.File.ReadAllText(path);
+            var read = Snapshot.GetMethod("ReadReusable" + profile, hidden);
+            var commit = Snapshot.GetMethod("Commit" + profile + "Analysis", hidden);
+            var fingerprint = Guid.NewGuid().ToString("N");
+            try {
+                Assert.IsNull(read.Invoke(null, new object[] { fingerprint, false }), "A file alone is not successful publication evidence.");
+                commit.Invoke(null, new object[] { fingerprint, content });
+                Assert.AreEqual(content, read.Invoke(null, new object[] { fingerprint, false }));
+                Assert.IsNull(read.Invoke(null, new object[] { fingerprint + "changed", false }));
+                Assert.IsNull(read.Invoke(null, new object[] { fingerprint, true }), "Full Analysis must bypass reuse.");
+                commit.Invoke(null, new object[] { fingerprint, content + "changed" });
+                Assert.IsNull(read.Invoke(null, new object[] { fingerprint, false }), "Changed content must invalidate successful publication evidence.");
+            } finally {
+                UnityEditor.SessionState.SetString(key, previous);
+            }
+        }
+
         [Test]
         public void LibraryInputsIncludeUnloadedReferencesButNotScriptsOrGeneratedConsumers() {
             var identity = Snapshot.Assembly.GetType("ME.BECS.Editor.SourceGeneratorCodeIdentity", true);

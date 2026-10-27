@@ -39,6 +39,7 @@ namespace ME.BECS.Editor {
         internal static bool TryExecutableClosure(Type type, out string content) {
             content = null;
             if (type == null) return false;
+            using var declarations = new ILDependencyCapture();
             try {
                 var queue = new Queue<MethodBase>();
                 for (var owner = type; owner != null && IsUserCode(owner.Assembly); owner = owner.BaseType) {
@@ -56,7 +57,10 @@ namespace ME.BECS.Editor {
                     if (seen.Count > ExecutableClosureLimit) return false;
                     rows.Add(member + "\t" + Body(method));
                     if (method.GetMethodBody() == null) continue;
-                    foreach (var instruction in method.GetInstructions()) {
+                    // The executable metadata result can depend on declarations
+                    // named only in its body (sizeof, ldtoken, field accesses).
+                    // Preserve those dependencies as well as its body hash.
+                    foreach (var instruction in ILAnalysisSession.Instructions(method)) {
                         switch (instruction.Operand) {
                             case MethodBase target:
                                 if (target.DeclaringType == null || !IsUserCode(target.Module.Assembly)) break;
@@ -80,6 +84,13 @@ namespace ME.BECS.Editor {
             } catch (Exception exception) when (!(exception is OperationCanceledException)) {
                 content = null;
                 return false;
+            } finally {
+                // A complete closure's bodies are already in the executable
+                // type stamp, including open generic definitions. Keep only its
+                // declarations in the job capture. An incomplete closure has no
+                // such stamp: retain known bodies for conservative validation
+                // (open bodies then correctly prevent persistence).
+                if (content != null) { declarations.Discard(static _ => true); }
             }
         }
 
@@ -287,10 +298,13 @@ namespace ME.BECS.Editor {
                 else if (operand is Instruction[] branches) value = "targets:" + string.Join(",", branches.Select(branch => branch.Offset));
                 else if (operand is ParameterInfo parameter) value = "parameter:" + parameter.Position;
                 else if (operand is LocalVariableInfo local) value = "local:" + local.LocalIndex;
-                else if (operand is byte[]) {
-                    // Inline signatures may contain unresolved compressed tokens.
-                    // Do not pretend their raw bytes are a semantic identity.
-                    value = method.Module.ModuleVersionId + ":" + Convert.ToBase64String((byte[])operand);
+                else if (operand is byte[] signature) {
+                    // Burst DirectCall wrappers contain calli even for ordinary
+                    // jobs. A resolvable signature must not invalidate the whole
+                    // assembly on a comment-only rebuild.
+                    if (ILInlineSignature.TryNormalize(method, signature, out value) == false) {
+                        value = method.Module.ModuleVersionId + ":" + Convert.ToBase64String(signature);
+                    }
                 } else if (operand is float single) value = BitConverter.ToInt32(BitConverter.GetBytes(single), 0).ToString(CultureInfo.InvariantCulture);
                 else if (operand is double number) value = BitConverter.DoubleToInt64Bits(number).ToString(CultureInfo.InvariantCulture);
                 else if (operand == null || operand is string || operand is IConvertible) value = Convert.ToString(operand, CultureInfo.InvariantCulture) ?? "";
@@ -425,47 +439,7 @@ namespace ME.BECS.Editor {
                 foreach (var type in assembly.GetTypes().OrderBy(TypeName, StringComparer.Ordinal)) {
                     ILAnalysisSession.Checkpoint();
                     if (includeExecutableMetadataVersion && IsCompilerArtifact(type)) continue;
-                    text.Append(TypeName(type)).Append('|').Append((int)type.Attributes).Append('|').Append(TypeName(type.BaseType)).Append('\n');
-                    if (type.StructLayoutAttribute is var layout && layout != null)
-                        text.Append("layout:").Append(layout.Value).Append('|').Append(layout.Size).Append('|').Append(layout.Pack).Append('|').Append(layout.CharSet).Append('\n');
-                    foreach (var contract in type.GetInterfaces().Select(TypeName).OrderBy(value => value, StringComparer.Ordinal)) text.Append("interface:").Append(contract).Append('\n');
-                    Attributes(text, type.GetCustomAttributesData());
-                    Generics(text, type.GetGenericArguments());
-                    foreach (var field in type.GetFields(Declared).OrderBy(field => field.Name, StringComparer.Ordinal)) {
-                        text.Append(Member(field)).Append('|').Append((int)field.Attributes).Append('\n');
-                        text.Append(string.Join(";", field.GetRequiredCustomModifiers().Select(TypeName))).Append('|')
-                            .Append(string.Join(";", field.GetOptionalCustomModifiers().Select(TypeName))).Append('\n');
-                        if (field.IsLiteral) text.Append("constant:").Append(Value(field.GetRawConstantValue())).Append('\n');
-                        Attributes(text, field.GetCustomAttributesData());
-                    }
-                    foreach (var method in Methods(type).OrderBy(Signature, StringComparer.Ordinal)) {
-                        CodeGeneratorTimings.Work(method);
-                        if (includeExecutableMetadataVersion && IsCompilerArtifact(method)) continue;
-                        text.Append(Signature(method)).Append('|').Append((int)method.Attributes).Append('|').Append((int)method.GetMethodImplementationFlags()).Append('\n');
-                        Attributes(text, method.GetCustomAttributesData());
-                        if (method is MethodInfo genericMethod) Generics(text, genericMethod.GetGenericArguments());
-                        foreach (var parameter in method.GetParameters().Concat(method is MethodInfo info ? new[] { info.ReturnParameter } : Array.Empty<ParameterInfo>())) {
-                            text.Append(Parameter(parameter)).Append('|').Append((int)parameter.Attributes).Append('|').Append(Value(parameter.RawDefaultValue)).Append('\n');
-                            Attributes(text, parameter.GetCustomAttributesData());
-                        }
-                    }
-                    foreach (var property in type.GetProperties(Declared).OrderBy(property => property.Name, StringComparer.Ordinal)) {
-                        text.Append("property:").Append(property.Name).Append('|').Append(TypeName(property.PropertyType)).Append('\n');
-                        Attributes(text, property.GetCustomAttributesData());
-                    }
-                    foreach (var item in type.GetEvents(Declared).OrderBy(item => item.Name, StringComparer.Ordinal)) {
-                        text.Append("event:").Append(item.Name).Append('|').Append(TypeName(item.EventHandlerType)).Append('\n');
-                        Attributes(text, item.GetCustomAttributesData());
-                    }
-                    // Attributes and IRefOp may execute user-defined getters/ctors
-                    // during reflection analysis. They need a conservative boundary.
-                    if (includeExecutableMetadataVersion && (typeof(Attribute).IsAssignableFrom(type) || typeof(IRefOp).IsAssignableFrom(type))) {
-                        var executable = ExecutableMetadataStamp(type, assembly.ManifestModule.ModuleVersionId);
-                        if (executable.StartsWith("assembly:", StringComparison.Ordinal) && reportedMvidStamps.TryAdd(TypeName(type), 0))
-                            UnityEngine.Debug.Log("[ME.BECS] Executable metadata " + type.FullName + " cannot be bound statically; any rebuild of " +
-                                assembly.GetName().Name + " invalidates the summaries that can see it.");
-                        text.Append("executable-metadata:").Append(executable).Append('\n');
-                    }
+                    AppendTypeDeclaration(text, type, includeExecutableMetadataVersion);
                 }
                 return Names.Hash(text.ToString());
             } catch (Exception exception) when (!(exception is OperationCanceledException)) {
@@ -474,11 +448,79 @@ namespace ME.BECS.Editor {
             }
         }
 
+
+        // A single declaration excludes sibling types and ordinary method bodies.
+        // Body dependencies remain separately versioned by the IL cache.
+        internal static string TypeDeclaration(Type type) {
+            if (type == null) { throw new ArgumentNullException(nameof(type)); }
+            try {
+                var text = new StringBuilder();
+                AppendTypeDeclaration(text, type, true);
+                // Sequential layout follows declaration order, not field names.
+                // Tokens determine relative order only: unrelated metadata can renumber them.
+                foreach (var field in type.GetFields(Declared).Where(field => field.IsStatic == false).OrderBy(field => field.MetadataToken)) {
+                    text.Append("field-order:").Append(field.Name).Append('\n');
+                }
+                return Names.Hash(text.ToString());
+            } catch (Exception exception) when (exception is OperationCanceledException == false) {
+                return "opaque:" + type.Assembly.ManifestModule.ModuleVersionId;
+            }
+        }
+
+        private static void AppendTypeDeclaration(StringBuilder text, Type type, bool includeExecutableMetadataVersion) {
+            var assembly = type.Assembly;
+            text.Append(TypeName(type)).Append('|').Append((int)type.Attributes).Append('|').Append(TypeName(type.BaseType)).Append('\n');
+            if (type.StructLayoutAttribute is var layout && layout != null)
+                text.Append("layout:").Append(layout.Value).Append('|').Append(layout.Size).Append('|').Append(layout.Pack).Append('|').Append(layout.CharSet).Append('\n');
+            foreach (var contract in type.GetInterfaces().Select(TypeName).OrderBy(value => value, StringComparer.Ordinal)) text.Append("interface:").Append(contract).Append('\n');
+            Attributes(text, type.GetCustomAttributesData());
+            Generics(text, type.GetGenericArguments());
+            foreach (var field in type.GetFields(Declared).OrderBy(field => field.Name, StringComparer.Ordinal)) {
+                text.Append(Member(field)).Append('|').Append((int)field.Attributes).Append('\n');
+                text.Append(string.Join(";", field.GetRequiredCustomModifiers().Select(TypeName))).Append('|')
+                    .Append(string.Join(";", field.GetOptionalCustomModifiers().Select(TypeName))).Append('\n');
+                if (field.IsLiteral) text.Append("constant:").Append(Value(field.GetRawConstantValue())).Append('\n');
+                Attributes(text, field.GetCustomAttributesData());
+            }
+            foreach (var method in Methods(type).OrderBy(Signature, StringComparer.Ordinal)) {
+                CodeGeneratorTimings.Work(method);
+                if (includeExecutableMetadataVersion && IsCompilerArtifact(method)) continue;
+                text.Append(Signature(method)).Append('|').Append((int)method.Attributes).Append('|').Append((int)method.GetMethodImplementationFlags()).Append('\n');
+                Attributes(text, method.GetCustomAttributesData());
+                if (method is MethodInfo genericMethod) Generics(text, genericMethod.GetGenericArguments());
+                foreach (var parameter in method.GetParameters().Concat(method is MethodInfo info ? new[] { info.ReturnParameter } : Array.Empty<ParameterInfo>())) {
+                    text.Append(Parameter(parameter)).Append('|').Append((int)parameter.Attributes).Append('|').Append(Value(parameter.RawDefaultValue)).Append('\n');
+                    Attributes(text, parameter.GetCustomAttributesData());
+                }
+            }
+            foreach (var property in type.GetProperties(Declared).OrderBy(property => property.Name, StringComparer.Ordinal)) {
+                text.Append("property:").Append(property.Name).Append('|').Append(TypeName(property.PropertyType)).Append('\n');
+                Attributes(text, property.GetCustomAttributesData());
+            }
+            foreach (var item in type.GetEvents(Declared).OrderBy(item => item.Name, StringComparer.Ordinal)) {
+                text.Append("event:").Append(item.Name).Append('|').Append(TypeName(item.EventHandlerType)).Append('\n');
+                Attributes(text, item.GetCustomAttributesData());
+            }
+            // Attributes and IRefOp may execute user-defined getters/ctors
+            // during reflection analysis. They need a conservative boundary.
+            if (includeExecutableMetadataVersion && (typeof(Attribute).IsAssignableFrom(type) || typeof(IRefOp).IsAssignableFrom(type))) {
+                var executable = ExecutableMetadataStamp(type, assembly.ManifestModule.ModuleVersionId);
+                if (executable.StartsWith("assembly:", StringComparison.Ordinal) && reportedMvidStamps.TryAdd(TypeName(type), 0))
+                    UnityEngine.Debug.Log("[ME.BECS] Executable metadata " + type.FullName + " cannot be bound statically; any rebuild of " +
+                        assembly.GetName().Name + " invalidates the summaries that can see it.");
+                text.Append("executable-metadata:").Append(executable).Append('\n');
+            }
+        }
+
         private static void Generics(StringBuilder text, IEnumerable<Type> parameters) {
             foreach (var parameter in parameters.Where(type => type.IsGenericParameter)) {
                 text.Append("generic:").Append(TypeName(parameter)).Append('|').Append((int)parameter.GenericParameterAttributes).Append('\n');
                 foreach (var constraint in parameter.GetGenericParameterConstraints().Select(TypeName).OrderBy(value => value, StringComparer.Ordinal)) text.Append(constraint).Append('\n');
-                Attributes(text, parameter.GetCustomAttributesData());
+                if (parameter.Assembly.IsDynamic == true) {
+                    Attributes(text, parameter.GetCustomAttributesData());
+                } else {
+                    text.Append(ILGenericParameterMetadata.Attributes(parameter)).Append('\n');
+                }
             }
         }
 

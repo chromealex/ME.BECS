@@ -26,7 +26,14 @@ namespace ME.BECS.Extensions.GraphProcessor
 		{
 			BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
-			foreach (var type in AppDomain.CurrentDomain.GetAllTypes())
+            // Editor already indexes derived types. Scanning every loaded assembly
+            // here blocks domain reload when graph assets restore their ports.
+#if UNITY_EDITOR
+            var nodeTypes = UnityEditor.TypeCache.GetTypesDerivedFrom<BaseNode>();
+#else
+            var nodeTypes = AppDomain.CurrentDomain.GetAllTypes();
+#endif
+			foreach (var type in nodeTypes)
 			{
 				if (type.IsAbstract || type.ContainsGenericParameters)
 					continue ;

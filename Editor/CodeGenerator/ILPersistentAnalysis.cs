@@ -27,6 +27,8 @@ namespace ME.BECS.Editor {
             public string scope;
             // TypeCache.GetTypesDerivedFrom queries: "constraint\tresult hash".
             public string[] queries;
+            public string[] types;
+            public string typeScope;
         }
         [Serializable] private sealed class AssemblyRecord {
             public string name;
@@ -40,7 +42,9 @@ namespace ME.BECS.Editor {
             public string context;
             public AssemblyRecord[] assemblies;
             public Dependency[] methods;
+            public string[] types;
             public CompactRecord[] records;
+            public ILTypeDeclarationCache.Entry[] typeDeclarations;
         }
         [Serializable] private sealed class CompactRecord {
             public string key;
@@ -52,6 +56,9 @@ namespace ME.BECS.Editor {
             public string[] roots;
             public string scope;
             public string[] queries;
+            public int[] types;
+            public bool hasTypeCapture;
+            public string typeScope;
         }
         [Serializable] private sealed class Envelope { public string data; public string checksum; }
         // v4: integrity checksum is FNV-1a/64 over UTF-16 code units. SHA-256 of the
@@ -102,7 +109,7 @@ namespace ME.BECS.Editor {
         // v3 audits empty user attribute constructors independently of assembly MVID.
         // v4 skips compiler artifacts and stamps executable metadata by reachable code.
         // Reindex unchanged DLLs too; otherwise old stamps persist until their next rebuild.
-        private const int DeclarationFormat = 4;
+        private const int DeclarationFormat = 5;
         // v3 records carry their own declaration scope and type queries.
         private const int DatabaseVersion = 3;
         private readonly ILPersistentAnalysis previous;
@@ -128,6 +135,7 @@ namespace ME.BECS.Editor {
         private Dictionary<string, string> declarationsByName;
         private Dictionary<string, string[]> referencesByName;
         private readonly Dictionary<string, string> scopeHashes = new Dictionary<string, string>(StringComparer.Ordinal);
+        private readonly ILTypeDeclarationCache typeDeclarations = new ILTypeDeclarationCache();
         private readonly Dictionary<string, bool> currentQueries = new Dictionary<string, bool>(StringComparer.Ordinal);
         private string scheduledImplementation;
         private bool dirty;
@@ -183,6 +191,7 @@ namespace ME.BECS.Editor {
             var records = this.records.ToArray();
             var assemblies = this.assemblies.ToArray();
             var versions = this.dependencyVersions.ToArray();
+            var typeDeclarations = this.typeDeclarations.Export();
             var environment = this.environment;
             var rebuild = this.rebuild;
             var scheduled = this.scheduledImplementation;
@@ -195,6 +204,7 @@ namespace ME.BECS.Editor {
                 foreach (var pair in records) worker.records.Add(pair.Key, pair.Value);
                 foreach (var pair in assemblies) worker.assemblies.Add(pair.Key, pair.Value);
                 foreach (var pair in versions) worker.dependencyVersions.Add(pair.Key, pair.Value);
+                worker.typeDeclarations.Import(typeDeclarations);
                 return worker;
             };
         }
@@ -217,6 +227,7 @@ namespace ME.BECS.Editor {
             foreach (var pair in worker.dependencyVersions)
                 if (!this.dependencyVersions.ContainsKey(pair.Key)) this.dependencyVersions.Add(pair.Key, pair.Value);
             foreach (var pair in worker.validatedMethods) this.validatedMethods[pair.Key] = pair.Value;
+            this.typeDeclarations.Import(worker.typeDeclarations.Export());
             foreach (var pair in worker.statistics) {
                 this.statistics.TryGetValue(pair.Key, out var count);
                 this.statistics[pair.Key] = (count.hits + pair.Value.hits, count.misses + pair.Value.misses);
@@ -238,6 +249,7 @@ namespace ME.BECS.Editor {
                 foreach (var pair in source.records) this.records.Add(pair.Key, pair.Value);
                 foreach (var pair in source.assemblies) this.assemblies.Add(pair.Key, pair.Value);
                 foreach (var pair in source.dependencyVersions) this.dependencyVersions.Add(pair.Key, pair.Value);
+                this.typeDeclarations.Import(source.typeDeclarations.Export());
                 this.loaded = source.loaded;
                 this.previousContext = source.context ?? source.previousContext;
                 // Same AppDomain and (checked by the caller) the same compiled code:
@@ -280,14 +292,14 @@ namespace ME.BECS.Editor {
             scope.records.TryGetValue(key, out var record);
             var miss = scope.rebuild ? "rebuild" : record == null ? "missing" : record.context != context ? "context" :
                 record.implementation != implementation ? "implementation" : !scope.ScopeIsCurrent(record) ? "declarations" :
-                !scope.QueriesAreCurrent(record.queries) ? "type-queries" : "dependencies";
+                !scope.QueriesAreCurrent(record.queries) ? "type-queries" : record.types == null ? "type-capture" : "dependencies";
             if (miss == "dependencies") {
                 try {
                     if (scope.Validate(record)) {
                         var result = decode(UnityEngine.JsonUtility.FromJson<TData>(record.payload));
                         foreach (var dependency in record.dependencies) ILDependencyCapture.Observe(scope.validatedMethods[dependency]);
                         // An enclosing summary inherits this scope exactly as if it had analyzed it.
-                        ILDependencyCapture.ObserveRecorded(record.queries, record.roots);
+                        ILDependencyCapture.ObserveRecorded(record.queries, record.roots, record.types.Select(ILSummaryData.Resolve));
                         scope.Count(kind, true);
                         return result;
                     }
@@ -301,8 +313,25 @@ namespace ME.BECS.Editor {
             scope.missReasons.TryGetValue(reasonKey, out var misses);
             scope.missReasons[reasonKey] = misses + 1;
             using var capture = new ILDependencyCapture();
+            var rootName = identity.Split('\n')[0];
+            var rootType = Type.GetType(rootName, false);
+            ILDependencyCapture.ObserveType(rootType);
             var computed = analyze(); // Exceptions/cancellation must not be cached or swallowed.
             try {
+                string typeScope = null;
+                var types = ILDependencyCapture.PersistentTypes(capture.Types);
+                if (rootType != null) {
+                    try {
+                        types = ILTypeDependencyGraph.Closure(capture.Types).Select(type => type.AssemblyQualifiedName).ToArray();
+                        typeScope = scope.TypeScope(types);
+                    } catch (NotSupportedException) {
+                        // An unresolved executable metadata dispatch needs the
+                        // existing assembly boundary. Never save a partial graph.
+                        types = ILDependencyCapture.PersistentTypes(capture.Types);
+                    }
+                }
+                // Graph construction can discover metadata getter/helper bodies.
+                // Capture them only after the declaration closure is complete.
                 var methods = capture.Methods;
                 var dependencies = methods.Select(scope.GetDependency).OrderBy(item => item.method.Key, StringComparer.Ordinal).ToArray();
                 var queries = capture.Queries;
@@ -310,7 +339,8 @@ namespace ME.BECS.Editor {
                     throw new NotSupportedException("Open TypeCache constraint has no persistent identity.");
                 var roots = Roots(key, methods, capture.Assemblies);
                 scope.records[key] = new Record { key = key, context = context, implementation = implementation, dependencies = dependencies,
-                    payload = UnityEngine.JsonUtility.ToJson(encode(computed)), roots = roots, scope = scope.ScopeHash(roots), queries = queries };
+                    payload = UnityEngine.JsonUtility.ToJson(encode(computed)), roots = roots, scope = scope.ScopeHash(roots), queries = queries,
+                    types = types, typeScope = typeScope };
                 scope.valid[key] = true;
                 scope.changedRecords.Add(key);
                 scope.dirty = true;
@@ -368,7 +398,44 @@ namespace ME.BECS.Editor {
             return hash;
         }
 
-        private bool ScopeIsCurrent(Record record) => record.roots != null && !string.IsNullOrEmpty(record.scope) && record.scope == this.ScopeHash(record.roots);
+        private bool ScopeIsCurrent(Record record) {
+            if (string.IsNullOrEmpty(record.typeScope) == false) {
+                try { return record.types != null && record.typeScope == this.TypeScope(record.types); }
+                catch (Exception exception) when (exception is OperationCanceledException == false) { return false; }
+            }
+            return record.roots != null && string.IsNullOrEmpty(record.scope) == false && record.scope == this.ScopeHash(record.roots);
+        }
+
+        private string TypeScope(string[] types) {
+            var text = new StringBuilder("type-scope-v1\n");
+            foreach (var name in types) {
+                var type = ILAnalysisSession.Get((typeof(ILTypeDeclarationCache), name), () => ILSummaryData.Resolve(name));
+                text.Append(name).Append('\t').Append(this.typeDeclarations.Get(type)).Append('\n');
+            }
+            return Names.Hash(text.ToString());
+        }
+
+        // Reverse provenance index for loaded cache consumers. This is not a
+        // validity check: missing maps/old records must never justify reuse.
+        internal Dictionary<string, string[]> ConsumersBySourceFile() {
+            this.EnsureLoaded();
+            var consumers = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+            foreach (var record in this.records.Values) {
+                foreach (var identity in record.types ?? Array.Empty<string>()) {
+                    var type = Type.GetType(identity, false);
+                    if (type == null) { continue; }
+                    foreach (var path in ILSourceTypeMap.Files(type)) {
+                        if (consumers.TryGetValue(path, out var keys) == false) {
+                            keys = new HashSet<string>(StringComparer.Ordinal);
+                            consumers.Add(path, keys);
+                        }
+                        keys.Add(record.key);
+                    }
+                }
+            }
+            return consumers.OrderBy(pair => pair.Key, StringComparer.Ordinal).ToDictionary(pair => pair.Key,
+                pair => pair.Value.OrderBy(key => key, StringComparer.Ordinal).ToArray(), StringComparer.Ordinal);
+        }
 
         private bool QueriesAreCurrent(string[] queries) {
             if (queries == null) return true;
@@ -588,6 +655,7 @@ namespace ME.BECS.Editor {
                 this.previousContext = data.context;
                 foreach (var record in restored) this.records.Add(record.key, record);
                 foreach (var assembly in data.assemblies) this.assemblies.Add(assembly.name, assembly);
+                this.typeDeclarations.Import(data.typeDeclarations);
                 foreach (var dependency in data.methods) this.dependencyVersions.Add((dependency.method.Key, dependency.body), dependency);
                 UnityEngine.Debug.Log("[ME.BECS] Incremental IL cache loaded: " + restored.Length + " summaries, " + data.methods.Length +
                     " method versions, " + watch.ElapsedMilliseconds + " ms.");
@@ -606,6 +674,8 @@ namespace ME.BECS.Editor {
             var methods = new List<Dependency>();
             var indices = new Dictionary<(string method, string body), int>();
             var packed = new List<CompactRecord>();
+            var types = new List<string>();
+            var typeIndices = new Dictionary<string, int>(StringComparer.Ordinal);
             foreach (var record in records.Where(record => record.context == context).OrderBy(record => record.key, StringComparer.Ordinal)) {
                 var dependencies = new int[record.dependencies.Length];
                 for (var i = 0; i < dependencies.Length; ++i) {
@@ -622,11 +692,24 @@ namespace ME.BECS.Editor {
                     }
                     dependencies[i] = index;
                 }
+                int[] capturedTypes = null;
+                if (record.types != null) {
+                    capturedTypes = new int[record.types.Length];
+                    for (var i = 0; i < capturedTypes.Length; ++i) {
+                        var name = record.types[i];
+                        if (typeIndices.TryGetValue(name, out var index) == false) {
+                            index = types.Count;
+                            types.Add(name);
+                            typeIndices.Add(name, index);
+                        }
+                        capturedTypes[i] = index;
+                    }
+                }
                 packed.Add(new CompactRecord { key = record.key, implementation = record.implementation, payload = record.payload, dependencies = dependencies,
-                    roots = record.roots, scope = record.scope, queries = record.queries });
+                    roots = record.roots, scope = record.scope, queries = record.queries, types = capturedTypes, hasTypeCapture = record.types != null, typeScope = record.typeScope });
             }
             return new Database { version = DatabaseVersion, context = context, methods = methods.ToArray(), records = packed.ToArray(),
-                assemblies = assemblies.OrderBy(assembly => assembly.name, StringComparer.Ordinal).ToArray() };
+                assemblies = assemblies.OrderBy(assembly => assembly.name, StringComparer.Ordinal).ToArray(), types = types.ToArray() };
         }
 
         private static Record[] Unpack(Database data) {
@@ -646,8 +729,22 @@ namespace ME.BECS.Editor {
                     dependencies[i] = data.methods[index];
                 }
                 // Missing scope data is a cache miss ("declarations"), never a load failure.
+                string[] capturedTypes = null;
+                if (record.hasTypeCapture == true) {
+                    if (record.types == null || data.types == null) {
+                        throw new FormatException("Missing cached IL type table.");
+                    }
+                    capturedTypes = new string[record.types.Length];
+                    for (var i = 0; i < capturedTypes.Length; ++i) {
+                        var index = record.types[i];
+                        if ((uint)index >= (uint)data.types.Length || string.IsNullOrEmpty(data.types[index]) == true) {
+                            throw new FormatException("Invalid cached IL type index.");
+                        }
+                        capturedTypes[i] = data.types[index];
+                    }
+                }
                 return new Record { key = record.key, context = data.context, implementation = record.implementation, payload = record.payload, dependencies = dependencies,
-                    roots = record.roots, scope = record.scope, queries = record.queries };
+                    roots = record.roots, scope = record.scope, queries = record.queries, types = capturedTypes, typeScope = record.typeScope };
             }).ToArray();
         }
 
@@ -698,20 +795,24 @@ namespace ME.BECS.Editor {
             var records = this.records.Values.ToArray();
             var assemblies = this.assemblies.Values.ToArray();
             var validated = new Dictionary<Dependency, MethodBase>(this.validatedMethods);
+            var typeDeclarations = this.typeDeclarations.Export();
             var context = this.context;
             var path = this.path;
-            lock (saveGate) pendingSave = pendingSave.ContinueWith(_ => Write(path, records, assemblies, context, validated),
+            lock (saveGate) pendingSave = pendingSave.ContinueWith(_ => Write(path, records, assemblies, context, validated, typeDeclarations),
                 System.Threading.CancellationToken.None, System.Threading.Tasks.TaskContinuationOptions.None,
                 System.Threading.Tasks.TaskScheduler.Default);
         }
 
-        private static void Write(string path, Record[] records, AssemblyRecord[] assemblies, string context, Dictionary<Dependency, MethodBase> validated) {
+        private static void Write(string path, Record[] records, AssemblyRecord[] assemblies, string context, Dictionary<Dependency, MethodBase> validated,
+            ILTypeDeclarationCache.Entry[] typeDeclarations) {
             var temporary = path + ".tmp";
             var saveWatch = System.Diagnostics.Stopwatch.StartNew();
             try {
                 // Drop obsolete declaration universes; changed bodies replace their
                 // own keys. No stale summary is combined with a new type inventory.
                 var database = PackWithVersions(records, assemblies, context, validated);
+                var usedTypes = new HashSet<string>(database.types, StringComparer.Ordinal);
+                database.typeDeclarations = typeDeclarations.Where(entry => usedTypes.Contains(entry.name)).ToArray();
                 var packedAt = saveWatch.ElapsedMilliseconds;
                 var data = UnityEngine.JsonUtility.ToJson(database);
                 var serializedAt = saveWatch.ElapsedMilliseconds;

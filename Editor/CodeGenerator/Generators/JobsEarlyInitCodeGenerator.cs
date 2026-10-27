@@ -29,12 +29,11 @@ namespace ME.BECS.Editor.Jobs {
         };
         internal static IEnumerable<System.Type> DiscoveryContracts => EarlyInitContracts.Distinct();
         private readonly SourceGeneratorJobEarlyInit sourceEarlyInit = new SourceGeneratorJobEarlyInit();
-        private readonly SourceGeneratorJobSafety sourceSafety = new SourceGeneratorJobSafety();
         private readonly System.Collections.Generic.Dictionary<System.Type, uint> selectedWeights = new System.Collections.Generic.Dictionary<System.Type, uint>();
 
         private uint SelectWeight(System.Type jobType) {
             if (this.selectedWeights.TryGetValue(jobType, out var weight)) return weight;
-            weight = ILJobWeights.Analyze(jobType);
+            weight = GetJobInputs(jobType).weight;
             this.selectedWeights.Add(jobType, weight);
             return weight;
         }
@@ -166,22 +165,19 @@ namespace ME.BECS.Editor.Jobs {
             return initialization;
         }
 
-        // Export asks for the same contract's jobs up to three times (EarlyInit
-        // phases, debug/weight loop, preparation); expanding generic jobs is costly.
-        private readonly System.Collections.Generic.Dictionary<System.Type, System.Collections.Generic.List<System.Type>> earlyInitJobs =
-            new System.Collections.Generic.Dictionary<System.Type, System.Collections.Generic.List<System.Type>>();
-        private System.Collections.Generic.List<System.Type> earlyInitJobsSource;
-
+        // The worker memo is transferred into publication. Cache by the actual
+        // ordered selection, not exporter/list identity: publication creates new
+        // feeders, and callers may change the contents of an existing job list.
         private System.Collections.Generic.List<System.Type> SelectEarlyInitJobs(System.Type contract) {
-            if (!ReferenceEquals(this.earlyInitJobsSource, this.jobTypes)) { this.earlyInitJobs.Clear(); this.earlyInitJobsSource = this.jobTypes; }
-            if (this.earlyInitJobs.TryGetValue(contract, out var cached)) return new System.Collections.Generic.List<System.Type>(cached);
             var jobs = this.GetTypesDerivedFrom(contract).OrderBy(type => type.FullName).ToList();
-            jobs = ILAnalysisSession.ReadMetadata(() => {
-                CodeGenerator.PatchSystemsList(jobs);
-                return jobs;
-            });
-            this.earlyInitJobs[contract] = jobs;
-            return new System.Collections.Generic.List<System.Type>(jobs);
+            var selection = string.Join("\n", jobs.Select(type => type.AssemblyQualifiedName));
+            var cached = ILAnalysisSession.Get((typeof(JobsEarlyInitCodeGenerator), contract, selection), () =>
+                ILAnalysisSession.ReadMetadata(() => {
+                    CodeGenerator.PatchSystemsList(jobs);
+                    return jobs.ToArray();
+                }));
+            // Callers can filter/reorder their result without changing the memo.
+            return new System.Collections.Generic.List<System.Type>(cached);
         }
 
         // Populate only the IL memo for exactly the production debug/weight jobs.
@@ -203,9 +199,7 @@ namespace ME.BECS.Editor.Jobs {
             this.analysisProgress?.Invoke(0, selected.Count);
             foreach (var job in selected) {
                 ILAnalysisSession.Checkpoint();
-                GetJobTypesInfo(job);
-                ILJobEntityCounts.TryGetExportPayload(job, out _, out _);
-                ILJobWeights.Analyze(job);
+                GetJobInputs(job);
                 this.analysisProgress?.Invoke(++completed, selected.Count);
             }
         }
@@ -401,6 +395,42 @@ namespace ME.BECS.Editor.Jobs {
             public bool sourceSafety;
         }
 
+        // One production record per closed job, shared by both profiles. It holds
+        // no registration ordinals or assembly-selection decisions. Persistent
+        // analysis captures the union of the three analyzers' body/declaration/
+        // TypeCache dependencies; a hit replays that union to enclosing records.
+        private sealed class JobInputs {
+            internal TypeInfo[] safety;
+            internal string entityPayload;
+            internal bool entityCovered;
+            internal uint weight;
+        }
+
+        [System.Serializable]
+        private sealed class JobInputsData {
+            public ILSummaryData.Accesses safety;
+            public string entityPayload;
+            public bool entityCovered;
+            public uint weight;
+        }
+
+        private static JobInputs GetJobInputs(System.Type job) =>
+            ILAnalysisSession.Get((typeof(JobInputs), job), () =>
+                ILPersistentAnalysis.Get("job-inputs", job.AssemblyQualifiedName, () => {
+                    var safety = GetJobTypesInfo(job);
+                    UpdateDeps(safety);
+                    var covered = ILJobEntityCounts.TryGetExportPayload(job, out var payload, out _);
+                    return new JobInputs { safety = safety.ToArray(), entityPayload = payload,
+                        entityCovered = covered, weight = ILJobWeights.Analyze(job) };
+                }, value => new JobInputsData { safety = ILSummaryData.Encode(value.safety), entityPayload = value.entityPayload,
+                    entityCovered = value.entityCovered, weight = value.weight }, data => {
+                    if (data == null || data.entityCovered == true && data.entityPayload == null) {
+                        throw new System.FormatException("Invalid cached job inputs.");
+                    }
+                    return new JobInputs { safety = ILSummaryData.Decode(data.safety).ToArray(), entityPayload = data.entityPayload,
+                        entityCovered = data.entityCovered, weight = data.weight };
+                }));
+
         /// <summary>
         /// Adds this feature's registration inputs to the source-generator export.
         /// </summary>
@@ -499,8 +529,9 @@ namespace ME.BECS.Editor.Jobs {
             // Compiled IL owns the production reservation for ordinary and closed
             // generic jobs alike. Source catalogs remain diagnostic-only, even if
             // their metadata is complete, stale, duplicated or unavailable.
-            covered = ILJobEntityCounts.TryGetExportPayload(job, out var payload, out _);
-            return covered ? payload : this.GetEntityFallbackPayload(job);
+            var inputs = GetJobInputs(job);
+            covered = inputs.entityCovered;
+            return covered ? inputs.entityPayload : this.GetEntityFallbackPayload(job);
         }
 
         private string GetEntityFallbackPayload(System.Type job) {
@@ -539,12 +570,12 @@ namespace ME.BECS.Editor.Jobs {
             var arguments = workInterface?.GenericTypeArguments ?? System.Type.EmptyTypes;
             var components = arguments.Where(type => componentContract != null && componentContract.IsAssignableFrom(type) && this.IsValidTypeForAssembly(type)).ToArray();
             var aspects = arguments.Where(type => aspectContract != null && aspectContract.IsAssignableFrom(type) && this.IsValidTypeForAssembly(type)).ToArray();
-            var safety = this.sourceSafety.SelectForExport(job, out var sourceSafety);
+            var safety = new System.Collections.Generic.HashSet<TypeInfo>(GetJobInputs(job).safety);
             UpdateDeps(safety);
             return new DebugWrapperPlan {
                 job = job, contract = contract, workInterface = workInterface,
                 components = components, aspects = aspects,
-                sourceSafety = sourceSafety,
+                sourceSafety = false,
                 hasTypedArguments = workInterface != null && components.Length + aspects.Length == arguments.Length,
                 safety = safety.OrderBy(item => item.type.FullName, System.StringComparer.Ordinal)
                     .ThenBy(item => item.type.Assembly.FullName, System.StringComparer.Ordinal).ToArray(),

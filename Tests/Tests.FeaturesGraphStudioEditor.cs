@@ -41,6 +41,34 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void EditorCustomPortDiscoveryRetainsEveryLoadedNodeContract() {
+            var flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+            var expected = AppDomain.CurrentDomain.GetAllTypes().Where(type =>
+                type.IsAbstract == false && type.ContainsGenericParameters == false && type.IsSubclassOf(typeof(BaseNode))).ToArray();
+            var indexed = TypeCache.GetTypesDerivedFrom<BaseNode>().Where(type =>
+                type.IsAbstract == false && type.ContainsGenericParameters == false && type.IsSubclassOf(typeof(BaseNode))).ToArray();
+            CollectionAssert.AreEquivalent(expected, indexed);
+            var contracts = 0;
+            foreach (var type in expected) {
+                foreach (var method in type.GetMethods(flags)) {
+                    var input = method.GetCustomAttribute<CustomPortInputAttribute>();
+                    var output = method.GetCustomAttribute<CustomPortOutputAttribute>();
+                    if (input == null && output == null) {
+                        continue;
+                    }
+                    var fieldName = input == null ? output.fieldName : input.fieldName;
+                    var customType = input == null ? output.outputType : input.inputType;
+                    var fieldType = type.GetField(fieldName, flags).FieldType;
+                    Assert.IsNotNull(CustomPortIO.GetCustomPortMethod(type, fieldName), type.FullName + "." + fieldName);
+                    Assert.IsTrue(CustomPortIO.IsAssignable(customType, fieldType));
+                    Assert.IsTrue(CustomPortIO.IsAssignable(fieldType, customType));
+                    ++contracts;
+                }
+            }
+            Assert.Greater(contracts, 0, "The fixture must exercise real custom port contracts.");
+        }
+
+        [Test]
         public void InsertAfterRewiresEverySuccessorAndPreservesOtherBranches() {
             var start = this.graph.GetStartNode(0); var end = this.graph.GetEndNode();
             var a = this.System(); var b = this.System(); var c = this.System();

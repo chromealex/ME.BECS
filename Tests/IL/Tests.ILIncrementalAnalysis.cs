@@ -6,7 +6,8 @@ using NUnit.Framework;
 
 namespace ME.BECS.Tests {
     // Metadata-only checks, no worlds/bootstrap or disk-cache writes.
-    public class Tests_ILIncrementalAnalysis {
+    public partial class Tests_ILIncrementalAnalysis {
+        private partial class SourceMapProbe<T> { }
         private const BindingFlags HiddenStatic = BindingFlags.NonPublic | BindingFlags.Static;
         private static Type EditorType(string name) => Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor." + name, true);
         private static MethodInfo Method(string name) => typeof(Tests_ILIncrementalAnalysis).GetMethod(name, HiddenStatic);
@@ -15,6 +16,91 @@ namespace ME.BECS.Tests {
         private static int Two() { return 2; }
         private static int CallOne() { return One(); }
         private static int CallOther() { return AlsoOne(); }
+
+        private sealed class DeclarationProbeType : TypeDelegator {
+            internal DeclarationProbeType(Type type) : base(type) { }
+            public override System.Collections.Generic.IList<CustomAttributeData> GetCustomAttributesData() => this.typeImpl.GetCustomAttributesData();
+            public override Type[] GetGenericArguments() => this.typeImpl.GetGenericArguments();
+            // Unity Mono returns uninitialized Size/Pack for Reflection.Emit
+            // types even with explicit values. Supply exactly the emitted layout;
+            // all other declarations still come from the real generated metadata.
+            public override System.Runtime.InteropServices.StructLayoutAttribute StructLayoutAttribute =>
+                new System.Runtime.InteropServices.StructLayoutAttribute(System.Runtime.InteropServices.LayoutKind.Sequential) { Size = 16, Pack = 8 };
+        }
+
+        private static Type DeclarationProbe(bool changeSibling = false, bool reverseFields = false, int bodyValue = 1, bool addField = false) {
+            var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("BECS.TypeDeclarationProbe"), AssemblyBuilderAccess.Run);
+            var module = assembly.DefineDynamicModule("main");
+            var sibling = module.DefineType("Sibling", TypeAttributes.Public);
+            sibling.DefineField(changeSibling ? "Changed" : "Original", typeof(int), FieldAttributes.Public);
+            sibling.CreateType();
+            var type = module.DefineType("Component", TypeAttributes.Public | TypeAttributes.SequentialLayout | TypeAttributes.Sealed,
+                typeof(ValueType), PackingSize.Size8, 16);
+            foreach (var name in reverseFields ? new[] { "B", "A" } : new[] { "A", "B" }) {
+                type.DefineField(name, typeof(int), FieldAttributes.Public);
+            }
+            if (addField == true) { type.DefineField("C", typeof(int), FieldAttributes.Public); }
+            var method = type.DefineMethod("Value", MethodAttributes.Public | MethodAttributes.Static, typeof(int), Type.EmptyTypes);
+            method.GetILGenerator().Emit(OpCodes.Ldc_I4, bodyValue);
+            method.GetILGenerator().Emit(OpCodes.Ret);
+            return new DeclarationProbeType(type.CreateType());
+        }
+
+        [Test]
+        public void TypeDeclarationIgnoresSiblingDeclarationsAndOrdinaryBodies() {
+            var stamp = EditorType("ILContentFingerprint").GetMethod("TypeDeclaration", HiddenStatic);
+            var original = stamp.Invoke(null, new object[] { DeclarationProbe() });
+            StringAssert.DoesNotStartWith("opaque:", (string)original);
+            Assert.AreEqual(original, stamp.Invoke(null, new object[] { DeclarationProbe(changeSibling: true) }));
+            Assert.AreEqual(original, stamp.Invoke(null, new object[] { DeclarationProbe(bodyValue: 2) }));
+        }
+
+        [Test]
+        public void TypeDeclarationTracksFieldsAndPhysicalOrder() {
+            var stamp = EditorType("ILContentFingerprint").GetMethod("TypeDeclaration", HiddenStatic);
+            var original = stamp.Invoke(null, new object[] { DeclarationProbe() });
+            Assert.AreNotEqual(original, stamp.Invoke(null, new object[] { DeclarationProbe(reverseFields: true) }));
+            Assert.AreNotEqual(original, stamp.Invoke(null, new object[] { DeclarationProbe(addField: true) }));
+        }
+
+        [Test]
+        public void TypeDependenciesSurviveNestedCaptureAndMemoHits() {
+            var sessionType = EditorType("ILAnalysisSession");
+            var captureType = EditorType("ILDependencyCapture");
+            var observe = captureType.GetMethod("ObserveType", HiddenStatic);
+            var memo = sessionType.GetMethod("Get", HiddenStatic).MakeGenericMethod(typeof(int));
+            var read = captureType.GetProperty("Types", BindingFlags.NonPublic | BindingFlags.Instance);
+            var key = new object();
+            using ((IDisposable)Activator.CreateInstance(sessionType, true)) {
+                foreach (var warm in new[] { false, true }) {
+                    using var outer = (IDisposable)Activator.CreateInstance(captureType, true);
+                    using (var inner = (IDisposable)Activator.CreateInstance(captureType, true)) {
+                        Func<int> create = () => {
+                            Assert.IsFalse(warm, "Expected a memo hit.");
+                            observe.Invoke(null, new object[] { typeof(TestComponent) });
+                            return 1;
+                        };
+                        memo.Invoke(null, new object[] { key, create });
+                        CollectionAssert.Contains((Type[])read.GetValue(inner), typeof(TestComponent));
+                    }
+                    CollectionAssert.Contains((Type[])read.GetValue(outer), typeof(TestComponent));
+                }
+            }
+        }
+
+        [Test]
+        public void TypeDependenciesNormalizeOpenAndElementTypes() {
+            var normalize = EditorType("ILDependencyCapture").GetMethod("PersistentTypes", HiddenStatic);
+            var definition = typeof(System.Collections.Generic.List<>);
+            var parameter = definition.GetGenericArguments()[0];
+            var names = (string[])normalize.Invoke(null, new object[] { new[] {
+                parameter, typeof(TestComponent).MakeByRefType(), typeof(TestComponent[]), definition,
+            } });
+            CollectionAssert.Contains(names, definition.AssemblyQualifiedName);
+            CollectionAssert.Contains(names, typeof(TestComponent).AssemblyQualifiedName);
+            Assert.AreEqual(names.Length, names.Distinct(StringComparer.Ordinal).Count());
+            foreach (var name in names) { Assert.IsNotNull(Type.GetType(name, false)); }
+        }
 
         [Test]
         public void SharedMethodReferencePublishesOneKeyAcrossWorkers() {
@@ -380,9 +466,28 @@ namespace ME.BECS.Tests {
                 record.GetType().GetField("roots").SetValue(record, new[] { "ME.BECS", "ME.BECS.Tests" });
                 record.GetType().GetField("scope").SetValue(record, "scope-hash");
                 record.GetType().GetField("queries").SetValue(record, new[] { "constraint\tresult" });
+                record.GetType().GetField("types").SetValue(record, new[] { typeof(TestComponent).AssemblyQualifiedName });
+                record.GetType().GetField("typeScope").SetValue(record, "type-scope-hash");
                 return this.cache.GetMethod("Pack", HiddenStatic).Invoke(null, new object[] { this.Items("Record", record), this.Items("AssemblyRecord"), "current" });
             }
             internal Array Unpack(object data) => (Array)this.cache.GetMethod("Unpack", HiddenStatic).Invoke(null, new[] { data });
+            internal void AssertPreciseScopeDoesNotDependOnSiblingAssemblyScope() {
+                using var scope = (IDisposable)Activator.CreateInstance(this.cache, BindingFlags.Instance | BindingFlags.NonPublic,
+                    null, new object[] { false }, null);
+                var types = new[] { typeof(TestComponent).AssemblyQualifiedName };
+                var hash = this.cache.GetMethod("TypeScope", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(scope, new object[] { types });
+                var record = this.Record("probe", "current");
+                record.GetType().GetField("types").SetValue(record, types);
+                record.GetType().GetField("typeScope").SetValue(record, hash);
+                record.GetType().GetField("scope").SetValue(record, "unrelated-assembly-declarations-changed");
+                var valid = this.cache.GetMethod("ScopeIsCurrent", BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.AreEqual(true, valid.Invoke(scope, new[] { record }), "Precise type scopes do not use broad assembly declarations.");
+                record.GetType().GetField("typeScope").SetValue(record, "changed-type-declaration");
+                Assert.AreEqual(false, valid.Invoke(scope, new[] { record }));
+                record.GetType().GetField("typeScope").SetValue(record, hash);
+                record.GetType().GetField("types").SetValue(record, new[] { "Removed.Component, RemovedAssembly" });
+                Assert.AreEqual(false, valid.Invoke(scope, new[] { record }), "Missing types must invalidate, not silently disappear.");
+            }
             internal void AssertPackingDoesNotMutateDependencies() {
                 var method = Method(nameof(One));
                 var verified = this.Dependency(method, "verified");
@@ -406,6 +511,35 @@ namespace ME.BECS.Tests {
 
         [Test]
         public void CompactCacheRefreshesOnlySerializedValidatedVersion() => new CacheFormat().AssertPackingDoesNotMutateDependencies();
+
+        [Test]
+        public void CompactCacheRoundTripsTypesAndDistinguishesUncapturedRecords() {
+            var fixture = new CacheFormat();
+            var packed = fixture.CreateScoped();
+            CollectionAssert.AreEqual(new[] { typeof(TestComponent).AssemblyQualifiedName }, (string[])CacheFormat.Field(packed, "types"));
+            var restored = fixture.Unpack(fixture.RoundTrip(packed));
+            Assert.AreEqual("type-scope-hash", CacheFormat.Field(restored.GetValue(0), "typeScope"));
+            CollectionAssert.AreEqual(new[] { typeof(TestComponent).AssemblyQualifiedName },
+                (string[])CacheFormat.Field(restored.GetValue(0), "types"));
+            foreach (var record in fixture.Unpack(fixture.RoundTrip(fixture.CreatePacked()))) {
+                Assert.IsNull(CacheFormat.Field(record, "types"), "Uncaptured is not an empty dependency set.");
+            }
+        }
+
+        [Test]
+        public void PreciseDeclarationScopeIgnoresSiblingAssemblyChangesButRejectsStaleOrMissingTypes() =>
+            new CacheFormat().AssertPreciseScopeDoesNotDependOnSiblingAssemblyScope();
+
+        [TestCase(-1)]
+        [TestCase(1)]
+        public void CompactCacheRejectsInvalidTypeIndices(int invalidIndex) {
+            var fixture = new CacheFormat();
+            var packed = fixture.CreateScoped();
+            var record = ((Array)CacheFormat.Field(packed, "records")).GetValue(0);
+            record.GetType().GetField("types").SetValue(record, new[] { invalidIndex });
+            var exception = Assert.Throws<TargetInvocationException>(() => fixture.Unpack(fixture.RoundTrip(packed)));
+            Assert.IsInstanceOf<FormatException>(exception.InnerException);
+        }
 
         [Test]
         public void CompactCacheSharesMethodsButKeepsOldBodiesAndGenericVariantsSeparate() {
@@ -470,6 +604,17 @@ namespace ME.BECS.Tests {
                     memo.Invoke(null, new object[] { key, mustNotRun });
                     var dependencies = (MethodBase[])captureType.GetProperty("Methods", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(capture);
                     CollectionAssert.Contains(dependencies, helper);
+                    var types = (Type[])captureType.GetProperty("Types", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(capture);
+                    CollectionAssert.Contains(types, helper.DeclaringType);
+                    CollectionAssert.Contains(types, typeof(int));
+                }
+                using (var capture = (IDisposable)Activator.CreateInstance(captureType, true)) {
+                    var arguments = new object[] { key, 0 };
+                    var probe = sessionType.GetMethod("TryGet", HiddenStatic).MakeGenericMethod(typeof(int));
+                    Assert.IsTrue((bool)probe.Invoke(null, arguments));
+                    Assert.AreEqual(1, arguments[1]);
+                    CollectionAssert.Contains((MethodBase[])captureType.GetProperty("Methods", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(capture), helper);
+                    CollectionAssert.Contains((Type[])captureType.GetProperty("Types", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(capture), typeof(int));
                 }
             }
         }

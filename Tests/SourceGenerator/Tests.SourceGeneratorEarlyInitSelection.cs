@@ -8,6 +8,117 @@ namespace ME.BECS.Tests {
         private static object EarlyInitSourceReader() => Activator.CreateInstance(
             Assembly.Load("ME.BECS.Editor").GetType("ME.BECS.Editor.SourceGeneratorJobEarlyInit", true), true);
 
+        [Test]
+        public void CombinedJobInputsPersistAcrossSessionsWithDependencyReplay() {
+            const BindingFlags hidden = BindingFlags.Static | BindingFlags.NonPublic;
+            const BindingFlags instance = BindingFlags.Instance | BindingFlags.NonPublic;
+            var assembly = Assembly.Load("ME.BECS.Editor");
+            var session = assembly.GetType("ME.BECS.Editor.ILAnalysisSession", true);
+            var persistent = assembly.GetType("ME.BECS.Editor.ILPersistentAnalysis", true);
+            var captureType = assembly.GetType("ME.BECS.Editor.ILDependencyCapture", true);
+            var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "becs-job-inputs-" + Guid.NewGuid().ToString("N") + ".json");
+            var environment = assembly.GetType("ME.BECS.Editor.ILAnalysisEnvironment", true)
+                .GetMethod("Capture", hidden).Invoke(null, new object[] { path });
+            var get = assembly.GetType("ME.BECS.Editor.Jobs.JobsEarlyInitCodeGenerator", true).GetMethod("GetJobInputs", hidden);
+            var wait = persistent.GetMethod("WaitForPendingSave", hidden);
+            MethodBase[] dependencies = null;
+            try {
+                foreach (var warm in new[] { false, true }) {
+                    using (var memo = (IDisposable)Activator.CreateInstance(session, true))
+                    using (var cache = (IDisposable)Activator.CreateInstance(persistent, instance, null, new[] { (object)false, environment }, null))
+                    using (var capture = (IDisposable)Activator.CreateInstance(captureType, true)) {
+                        get.Invoke(null, new object[] { typeof(NativeBoolSizeJob) });
+                        var statistics = (System.Collections.Generic.Dictionary<string, (int hits, int misses)>)persistent
+                            .GetField("statistics", instance).GetValue(cache);
+                        Assert.AreEqual(warm ? (1, 0) : (0, 1), statistics["job-inputs"]);
+                        var observed = (MethodBase[])captureType.GetProperty("Methods", instance).GetValue(capture);
+                        if (warm == true) {
+                            CollectionAssert.AreEquivalent(dependencies, observed, "A persisted hit must replay the nested analyzers' dependencies.");
+                            Assert.AreEqual(1, statistics.Count, "A warm combined hit must not reload the individual analyzer records.");
+                        } else {
+                            Assert.IsNotEmpty(observed);
+                            dependencies = observed;
+                        }
+                    }
+                    wait.Invoke(null, null);
+                    Assert.IsTrue(System.IO.File.Exists(path));
+                }
+            } finally {
+                wait.Invoke(null, null);
+                if (System.IO.File.Exists(path) == true) { System.IO.File.Delete(path); }
+            }
+        }
+
+        [TestCase(typeof(DebugNoArgumentsJob))]
+        [TestCase(typeof(NativeBoolSizeJob))]
+        [TestCase(typeof(GenericAotSystem<AotMarker>.UnannotatedSafetyJob))]
+        public void CombinedJobInputsMatchIndependentAnalyzers(Type job) {
+            const BindingFlags hidden = BindingFlags.Static | BindingFlags.NonPublic;
+            var assembly = Assembly.Load("ME.BECS.Editor");
+            var sessionType = assembly.GetType("ME.BECS.Editor.ILAnalysisSession", true);
+            var generator = assembly.GetType("ME.BECS.Editor.Jobs.JobsEarlyInitCodeGenerator", true);
+            object safety, weight;
+            bool covered;
+            var entityArgs = new object[] { job, null, null };
+            using ((IDisposable)Activator.CreateInstance(sessionType, true)) {
+                safety = generator.GetMethod("GetJobTypesInfo").Invoke(null, new object[] { job, null });
+                covered = (bool)assembly.GetType("ME.BECS.Editor.Jobs.ILJobEntityCounts", true)
+                    .GetMethod("TryGetExportPayload", hidden).Invoke(null, entityArgs);
+                weight = assembly.GetType("ME.BECS.Editor.Jobs.ILJobWeights", true)
+                    .GetMethod("Analyze", hidden).Invoke(null, new object[] { job, null });
+            }
+            using ((IDisposable)Activator.CreateInstance(sessionType, true)) {
+                var get = generator.GetMethod("GetJobInputs", hidden);
+                var actual = get.Invoke(null, new object[] { job });
+                object Field(string name) => actual.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(actual);
+                CollectionAssert.AreEquivalent((System.Collections.IEnumerable)safety, (System.Collections.IEnumerable)Field("safety"));
+                Assert.AreEqual(covered, Field("entityCovered"));
+                Assert.AreEqual(entityArgs[1], Field("entityPayload"));
+                Assert.AreEqual(weight, Field("weight"));
+                Assert.AreSame(actual, get.Invoke(null, new object[] { job }), "All export consumers must share one job snapshot.");
+            }
+        }
+
+        [Test]
+        public void EarlyInitSelectionMemoSurvivesPublicationHandoffAndKeepsDuplicates() {
+            var assembly = Assembly.Load("ME.BECS.Editor");
+            var sessionType = assembly.GetType("ME.BECS.Editor.ILAnalysisSession", true);
+            var feederType = assembly.GetType("ME.BECS.Editor.Jobs.JobsEarlyInitCodeGenerator", true);
+            var select = feederType.GetMethod("SelectEarlyInitJobs", BindingFlags.Instance | BindingFlags.NonPublic);
+            var reads = 0;
+            Func<Func<object>, object> metadata = read => { ++reads; return read(); };
+            var worker = (IDisposable)Activator.CreateInstance(sessionType, BindingFlags.Instance | BindingFlags.NonPublic, null,
+                new object[] { System.Threading.CancellationToken.None, null, metadata }, null);
+            System.Collections.Generic.List<Type> Select(System.Collections.Generic.List<Type> jobs, object feeder = null) {
+                feeder ??= Activator.CreateInstance(feederType);
+                feederType.GetField("jobTypes").SetValue(feeder, jobs);
+                return (System.Collections.Generic.List<Type>)select.Invoke(feeder, new object[] { typeof(ME.BECS.Jobs.IJobForComponents) });
+            }
+            object snapshot;
+            var job = typeof(DebugNoArgumentsJob);
+            try {
+                var first = Select(new System.Collections.Generic.List<Type> { job, job });
+                CollectionAssert.AreEqual(new[] { job, job }, first);
+                first.Clear();
+                CollectionAssert.AreEqual(new[] { job, job }, Select(new System.Collections.Generic.List<Type> { job, job }));
+                Assert.AreEqual(1, reads, "A different exporter and list must reuse the same selection.");
+                snapshot = sessionType.GetMethod("Detach", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(worker, null);
+            } finally { worker.Dispose(); }
+
+            using var publication = (IDisposable)Activator.CreateInstance(sessionType, BindingFlags.Instance | BindingFlags.NonPublic, null,
+                new object[] { "early-init-selection-test", false, snapshot }, null);
+            var values = (System.Collections.IDictionary)sessionType.GetField("values", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(publication);
+            var count = values.Count;
+            CollectionAssert.AreEqual(new[] { job, job }, Select(new System.Collections.Generic.List<Type> { job, job }));
+            Assert.AreEqual(count, values.Count, "Publication must find the transferred selection entry.");
+            var mutable = new System.Collections.Generic.List<Type> { job, job };
+            var feederInstance = Activator.CreateInstance(feederType);
+            Select(mutable, feederInstance);
+            mutable.RemoveAt(0);
+            CollectionAssert.AreEqual(new[] { job }, Select(mutable, feederInstance), "In-place list changes must change the cache key.");
+            Assert.Greater(values.Count, count);
+        }
+
         private static bool ReadEarlyInitMethods(object reader, Type job,
             out System.Collections.Generic.KeyValuePair<int, MethodInfo>[] methods, out string reason) {
             var args = new object[] { job, null, null };
