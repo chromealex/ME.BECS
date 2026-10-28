@@ -55,6 +55,26 @@ namespace ME.BECS {
             return true;
         }
 
+        #if UNITY_EDITOR
+        private T LoadEditorAsset<T>() where T : UnityEngine.Object {
+            var subObjectName = this.sourceReference.SubObjectName;
+            if (string.IsNullOrEmpty(subObjectName) == false) {
+                var path = UnityEditor.AssetDatabase.GUIDToAssetPath(this.sourceReference.AssetGUID);
+                foreach (var asset in UnityEditor.AssetDatabase.LoadAllAssetRepresentationsAtPath(path)) {
+                    if (asset is T result && string.Equals(asset.name, subObjectName, System.StringComparison.Ordinal) == true) {
+                        return result;
+                    }
+                }
+                return null;
+            }
+            var mainAsset = this.sourceReference.editorAsset;
+            if (this.isGameObject == true && mainAsset is UnityEngine.GameObject gameObject) {
+                return gameObject.GetComponent<T>();
+            }
+            return mainAsset as T;
+        }
+        #endif
+
         /// <summary>
         /// Loads the registered data required by this operation.
         /// </summary>
@@ -66,11 +86,7 @@ namespace ME.BECS {
             if (this.sourceReference == null || string.IsNullOrEmpty(this.sourceReference.AssetGUID) == true) return null;
             #if UNITY_EDITOR
             if (UnityEditor.EditorApplication.isPlaying == false) {
-                var obj = this.sourceReference.editorAsset;
-                if (this.isGameObject == true && obj is UnityEngine.GameObject goEditor) {
-                    return goEditor.GetComponent<T>();
-                }
-                return obj as T;
+                return this.LoadEditorAsset<T>();
             }
             #endif
             if (this.isGameObject == true) {
@@ -106,11 +122,7 @@ namespace ME.BECS {
             if (this.sourceReference == null || string.IsNullOrEmpty(this.sourceReference.AssetGUID) == true) return null;
             #if UNITY_EDITOR
             if (UnityEditor.EditorApplication.isPlaying == false) {
-                var obj = this.sourceReference.editorAsset;
-                if (this.isGameObject == true && obj is UnityEngine.GameObject goEditor) {
-                    return goEditor.GetComponent<T>();
-                }
-                return obj as T;
+                return this.LoadEditorAsset<T>();
             }
             #endif
             if (this.isGameObject == true) {

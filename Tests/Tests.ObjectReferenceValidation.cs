@@ -108,5 +108,48 @@ namespace ME.BECS.Tests {
             Assert.IsFalse(EditorUtility.IsDirty(this.second));
             Assert.DoesNotThrow(() => this.Run(int.MaxValue, int.MaxValue));
         }
+
+        [Test]
+        public async System.Threading.Tasks.Task SerializedSpriteSubobjectResolvesInEditorSyncAndAsync() {
+            var path = "Assets/Editor/ObjectReferenceValidation-" + Guid.NewGuid().ToString("N") + ".asset";
+            var texture = new Texture2D(2, 2) { name = "Subobject texture" };
+            var roundTrip = ScriptableObject.CreateInstance<ObjectReferenceRegistryItem>();
+            try {
+                AssetDatabase.CreateAsset(texture, path);
+                var firstSprite = Sprite.Create(texture, new Rect(0f, 0f, 2f, 2f), Vector2.one * .5f);
+                firstSprite.name = "First sprite";
+                var selectedSprite = Sprite.Create(texture, new Rect(0f, 0f, 2f, 2f), Vector2.one * .5f);
+                selectedSprite.name = "Selected sprite";
+                AssetDatabase.AddObjectToAsset(firstSprite, texture);
+                AssetDatabase.AddObjectToAsset(selectedSprite, texture);
+                AssetDatabase.SaveAssetIfDirty(texture);
+
+                // The real field is inline AssetReference, so test its serialized base type.
+                var field = typeof(ItemInfo).GetField("sourceReference");
+                var reference = Activator.CreateInstance(field.FieldType, new object[] { AssetDatabase.AssetPathToGUID(path) });
+                var subObject = field.FieldType.GetProperty("SubObjectName");
+                subObject.SetValue(reference, selectedSprite.name);
+                object data = new ItemInfo { sourceId = 30u, sourceType = typeof(Sprite).AssemblyQualifiedName };
+                field.SetValue(data, reference);
+                this.second.data = (ItemInfo)data;
+                EditorJsonUtility.FromJsonOverwrite(EditorJsonUtility.ToJson(this.second), roundTrip);
+
+                var item = new ObjectItem(roundTrip.data);
+                Assert.AreSame(selectedSprite, item.Load<Sprite>());
+                Assert.AreSame(selectedSprite, item.Load<UnityEngine.Object>());
+                Assert.AreSame(selectedSprite, await item.LoadAsync<Sprite>());
+                Assert.AreEqual(30u, roundTrip.data.sourceId);
+
+                var restored = field.GetValue(roundTrip.data);
+                subObject.SetValue(restored, "Missing sprite");
+                Assert.IsNull(item.Load<Sprite>());
+                Assert.IsNull(await item.LoadAsync<Sprite>());
+                subObject.SetValue(restored, string.Empty);
+                Assert.AreEqual(AssetDatabase.LoadAssetAtPath<Texture2D>(path), item.Load<Texture2D>());
+            } finally {
+                AssetDatabase.DeleteAsset(path);
+                UnityEngine.Object.DestroyImmediate(roundTrip);
+            }
+        }
     }
 }
