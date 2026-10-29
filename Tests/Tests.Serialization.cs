@@ -47,6 +47,43 @@ namespace ME.BECS.Tests {
 
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void EmptyPointerTransfersDoNotAccessStorageOrMoveCursor(bool hasHeader) {
+            var writer = new StreamBufferWriter(hasHeader == true ? 1u : 0u);
+            StreamBufferReader reader = default;
+            try {
+                if (hasHeader == true) {
+                    writer.Write((byte)42);
+                }
+                var position = writer.Position;
+                writer.Write((byte*)null, 0u);
+                writer.Write<int>((int*)null, 0u);
+                Assert.AreEqual(position, writer.Position);
+                Assert.AreEqual(position, writer.Length);
+
+                reader = new StreamBufferReader(writer.ToArray());
+                if (hasHeader == true) {
+                    byte header = default;
+                    reader.Read(ref header);
+                    Assert.AreEqual(42, header);
+                }
+                byte* bytes = null;
+                int* values = null;
+                reader.Read(ref bytes, 0u);
+                reader.Read(ref values, 0u);
+                Assert.AreEqual(position, reader.Position);
+
+                var sentinel = 123;
+                Assert.Throws<System.Exception>(() => reader.Read(ref sentinel));
+                Assert.AreEqual(123, sentinel);
+                Assert.AreEqual(position, reader.Position);
+            } finally {
+                reader.Dispose();
+                writer.Dispose();
+            }
+        }
+
         [Test]
         public void SerializeWorldCreateEntById() {
 

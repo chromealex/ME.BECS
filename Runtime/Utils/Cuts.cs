@@ -795,6 +795,10 @@ namespace ME.BECS {
         [INLINE(256)][IgnoreProfiler]
         public static void _free(safe_ptr obj) {
 
+            if (obj.ptr == null) {
+                return;
+            }
+
             LeakDetector.Free(obj, ALLOCATOR);
             LeakDetector.UntrackCount(obj.ptr, ALLOCATOR);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj.ptr);
@@ -806,6 +810,10 @@ namespace ME.BECS {
         /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static void _free<T>(safe_ptr<T> obj) where T : unmanaged {
+
+            if (obj.ptr == null) {
+                return;
+            }
 
             LeakDetector.Free(obj, ALLOCATOR);
             LeakDetector.UntrackCount(obj.ptr, ALLOCATOR);
@@ -819,6 +827,10 @@ namespace ME.BECS {
         [INLINE(256)][IgnoreProfiler]
         public static void _free<T>(ref safe_ptr<T> obj) where T : unmanaged {
 
+            if (obj.ptr == null) {
+                return;
+            }
+
             LeakDetector.Free(obj, ALLOCATOR);
             LeakDetector.UntrackCount(obj.ptr, ALLOCATOR);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj.ptr);
@@ -831,7 +843,11 @@ namespace ME.BECS {
         /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static void _free(ref safe_ptr obj) {
-            
+
+            if (obj.ptr == null) {
+                return;
+            }
+
             LeakDetector.Free(obj, ALLOCATOR);
             LeakDetector.UntrackCount(obj.ptr, ALLOCATOR);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj.ptr);
@@ -907,7 +923,10 @@ namespace ME.BECS {
         /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static void _free<T>(safe_ptr<T> obj, Unity.Collections.Allocator allocator) where T : unmanaged {
-            
+            if (obj.ptr == null) {
+                return;
+            }
+
             if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
                 LeakDetector.Free(obj, allocator);
                 LeakDetector.UntrackCount(obj.ptr, allocator);
@@ -925,7 +944,10 @@ namespace ME.BECS {
         /// </summary>
         [INLINE(256)][IgnoreProfiler]
         public static void _free(safe_ptr obj, Unity.Collections.Allocator allocator) {
-            
+            if (obj.ptr == null) {
+                return;
+            }
+
             if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
                 LeakDetector.Free(obj, allocator);
                 LeakDetector.UntrackCount(obj.ptr, allocator);

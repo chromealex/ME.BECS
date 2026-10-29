@@ -74,7 +74,7 @@ namespace ME.BECS.Tests {
                 .Where(method => !method.IsSpecialName && method.DeclaringType != typeof(Logger.Core))
                 .Select(method => method.DeclaringType.Name + "." + method.Name).ToArray();
             CollectionAssert.AreEqual(new[] {
-                "LeakDetector.ClearAllocated", "StaticTypes.Dispose", "Worlds.Initialize", "SystemsStatic.Initialize",
+                "StaticTypes.Dispose", "Worlds.Initialize", "SystemsStatic.Initialize",
                 "Action.Invoke", "GlobalEvents.Initialize", "CustomModules.InvokeResetPass", "Action.Invoke",
                 "EntityConfigRegistry.Initialize", "EntityConfigsRegistry.Initialize", "CustomModules.InvokeFirstPass", "CustomModules.InvokeSecondPass",
             }, calls);

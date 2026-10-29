@@ -9,6 +9,95 @@ namespace ME.BECS.Tests {
 
     public class Tests_EntityConfig {
 
+        [TestCase(0)] // A whole collection has the wrong, same-sized type.
+        [TestCase(1)] // The second element has the wrong type.
+        [TestCase(2)] // A serialized reference is null.
+        [TestCase(3)] // Invalid base data must fail before root allocations.
+        [TestCase(4)] // A nested collection has the wrong type.
+        [TestCase(5)] // Even unused collections are packed into native memory.
+        [TestCase(6)] // Two fields reference one ID with different element types.
+        public unsafe void InvalidCollectionTypesFailBeforeNativeAllocation(int failure) {
+            var source = UnityEngine.ScriptableObject.CreateInstance<EntityConfig>();
+            source.name = "InvalidCollectionRegression";
+            source.staticData.components = new IConfigComponentStatic[] {
+                new TestArrayComponentStatic { arr = new MemArrayAuto<TestArrayComponentStatic.Test> { data = new MemArrayAutoData { Length = 1u } } },
+            };
+            source.collectionsData.items = new System.Collections.Generic.List<EntityConfig.CollectionsData.Collection> {
+                new() { id = 1u, array = new System.Collections.Generic.List<object> { new TestArrayComponent.Test { data = 7 } } },
+            };
+            var config = source;
+            switch (failure) {
+                case 1: source.collectionsData.items[0].array.Insert(0, new TestArrayComponentStatic.Test { data = 5 }); break;
+                case 2: source.collectionsData.items[0].array[0] = null; break;
+                case 3:
+                    config = UnityEngine.ScriptableObject.CreateInstance<EntityConfig>();
+                    config.baseConfig = source;
+                    break;
+                case 4:
+                    source.staticData.components = new IConfigComponentStatic[] {
+                        new TestNestedArrayStatic { assignments = new MemArrayAuto<NestedArrayItem> { data = new MemArrayAutoData { Length = 1u } } },
+                    };
+                    source.collectionsData.items[0].array[0] = new NestedArrayItem {
+                        units = new MemArrayAuto<Config> { data = new MemArrayAutoData { Length = 2u } },
+                    };
+                    source.collectionsData.items.Add(new() { id = 2u, array = new System.Collections.Generic.List<object> { 123 } });
+                    break;
+                case 5: source.staticData.components = System.Array.Empty<IConfigComponentStatic>();
+                    source.collectionsData.items[0].array.Add(new TestArrayComponentStatic.Test { data = 5 }); break;
+                case 6:
+                    source.data.components = new IConfigComponent[] {
+                        new TestArrayComponent { arr = new MemArrayAuto<TestArrayComponent.Test> { data = new MemArrayAutoData { Length = 1u } } },
+                    };
+                    break;
+            }
+            try {
+                using var world = World.Create();
+                var ent = Ent.New(world);
+                var used = world.state.ptr->allocator.GetUsedSize();
+#if LEAK_DETECTION_COUNTER
+                var allocations = LeakDetectorData.counter.Data.Get((int)Unity.Collections.Allocator.Domain);
+#endif
+                var error = Assert.Throws<System.ArgumentException>(() => new UnsafeEntityConfig(config, id: 123u, staticDataEnt: ent));
+                Assert.That(error.Message, Does.Contain(source.name).And.Contain("collection").And.Contain("element").And.Contain("expected").And.Contain("actual"));
+                Assert.AreEqual(used, world.state.ptr->allocator.GetUsedSize());
+#if LEAK_DETECTION_COUNTER
+                Assert.AreEqual(allocations, LeakDetectorData.counter.Data.Get((int)Unity.Collections.Allocator.Domain));
+#endif
+            } finally {
+                if (config != source) {
+                    UnityEngine.Object.DestroyImmediate(config);
+                }
+                UnityEngine.Object.DestroyImmediate(source);
+            }
+        }
+
+        [Test]
+        public void InvalidCollectionRegistrationReleasesLockAndSyncPreservesPreviousData() {
+            var config = UnityEngine.ScriptableObject.CreateInstance<EntityConfig>();
+            config.name = "RegistryCollectionRegression";
+            config.staticData.components = new IConfigComponentStatic[] {
+                new TestArrayComponentStatic { arr = new MemArrayAuto<TestArrayComponentStatic.Test> { data = new MemArrayAutoData { Length = 1u } } },
+            };
+            config.collectionsData.items = new System.Collections.Generic.List<EntityConfig.CollectionsData.Collection> {
+                new() { id = 1u, array = new System.Collections.Generic.List<object> { new TestArrayComponent.Test { data = 7 } } },
+            };
+            ObjectReferenceRegistry.AddRuntimeObject(config);
+            try {
+                Assert.Throws<System.ArgumentException>(() => EntityConfigRegistry.Register(config, out _));
+                config.collectionsData.items[0].array[0] = new TestArrayComponentStatic.Test { data = 42 };
+                var id = EntityConfigRegistry.Register(config, out var native);
+                Assert.Greater(id, 0u);
+                Assert.AreEqual(42, native.ReadStatic<TestArrayComponentStatic>().arr[0u].data);
+                config.collectionsData.items[0].array[0] = new TestArrayComponent.Test { data = 7 };
+                Assert.Throws<System.ArgumentException>(() => EntityConfigRegistry.Sync(config));
+                Assert.AreEqual(42, native.ReadStatic<TestArrayComponentStatic>().arr[0u].data);
+                Assert.AreEqual(id, EntityConfigRegistry.Register(config, out var previous));
+                Assert.AreEqual(42, previous.ReadStatic<TestArrayComponentStatic>().arr[0u].data);
+            } finally {
+                UnityEngine.Object.DestroyImmediate(config);
+            }
+        }
+
         [System.Serializable]
         public struct NestedArrayItem {
             public MemArrayAuto<Config> units;
@@ -323,10 +412,10 @@ namespace ME.BECS.Tests {
             config.collectionsData.items.Add(new EntityConfig.CollectionsData.Collection() {
                 id = 1u,
                 array = new System.Collections.Generic.List<object>() {
-                    new TestArrayComponent.Test() { data = 1 },
-                    new TestArrayComponent.Test() { data = 2 },
-                    new TestArrayComponent.Test() { data = 3 },
-                    new TestArrayComponent.Test() { data = 4 },
+                    new TestArrayComponentStatic.Test() { data = 1 },
+                    new TestArrayComponentStatic.Test() { data = 2 },
+                    new TestArrayComponentStatic.Test() { data = 3 },
+                    new TestArrayComponentStatic.Test() { data = 4 },
                 },
             });
             ObjectReferenceRegistry.AddRuntimeObject(config);
@@ -363,10 +452,10 @@ namespace ME.BECS.Tests {
             config.collectionsData.items.Add(new EntityConfig.CollectionsData.Collection() {
                 id = 1u,
                 array = new System.Collections.Generic.List<object>() {
-                    new TestArrayComponent.Test() { data = 1 },
-                    new TestArrayComponent.Test() { data = 2 },
-                    new TestArrayComponent.Test() { data = 3 },
-                    new TestArrayComponent.Test() { data = 4 },
+                    new TestArrayComponentShared.Test() { data = 1 },
+                    new TestArrayComponentShared.Test() { data = 2 },
+                    new TestArrayComponentShared.Test() { data = 3 },
+                    new TestArrayComponentShared.Test() { data = 4 },
                 },
             });
             ObjectReferenceRegistry.AddRuntimeObject(config);
@@ -420,10 +509,10 @@ namespace ME.BECS.Tests {
             config.collectionsData.items.Add(new EntityConfig.CollectionsData.Collection() {
                 id = 1u,
                 array = new System.Collections.Generic.List<object>() {
-                    new TestArrayComponent.Test() { data = 1 },
-                    new TestArrayComponent.Test() { data = 2 },
-                    new TestArrayComponent.Test() { data = 3 },
-                    new TestArrayComponent.Test() { data = 4 },
+                    new TestListComponent.Test() { data = 1 },
+                    new TestListComponent.Test() { data = 2 },
+                    new TestListComponent.Test() { data = 3 },
+                    new TestListComponent.Test() { data = 4 },
                 },
             });
             ObjectReferenceRegistry.AddRuntimeObject(config);

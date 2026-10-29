@@ -131,8 +131,10 @@ namespace ME.BECS {
         /// </summary>
         public unsafe void Dispose() {
             #if LEAK_DETECTION || LEAK_DETECTION_ALLOCATOR
-            if (Get().parent.ptr != null) {
-                tags.Data.Get(JobUtils.ThreadIndex) = *Get().parent.ptr;
+            var parent = Get().parent;
+            if (parent.ptr != null) {
+                tags.Data.Get(JobUtils.ThreadIndex) = *parent.ptr;
+                _free(parent);
             } else {
                 tags.Data.Get(JobUtils.ThreadIndex) = default;
             }
@@ -240,6 +242,8 @@ namespace ME.BECS {
             public Item(void* ptr, void* hiPtr, MemPtr memPtr, Unity.Collections.Allocator allocator = Unity.Collections.Allocator.None, bool withStackTrace = true, AllocatorTagData tag = default) {
                 this = default;
                 this.memPtr = memPtr;
+                // Allocation records outlive tag scopes; keep only independent leaf attribution.
+                tag.parent = default;
                 this.tag = tag;
                 this.ptr = (System.IntPtr)ptr;
                 this.hiPtr = (System.IntPtr)hiPtr;

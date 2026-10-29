@@ -369,7 +369,8 @@ namespace ME.BECS {
             if (registerMethods == null) throw new System.ArgumentNullException(nameof(registerMethods));
 
             if (!editor) Logger.Core.Log("[ ME.BECS ] Loading...");
-            LeakDetector.ClearAllocated();
+            // Bootstrap can repeat while global/native allocations remain alive.
+            // Keep their tracking until their owners free them.
             if (editor) StaticTypes.Dispose();
             Worlds.Initialize();
             SystemsStatic.Initialize();

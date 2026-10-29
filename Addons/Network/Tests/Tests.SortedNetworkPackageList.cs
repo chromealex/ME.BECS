@@ -190,6 +190,39 @@ namespace ME.BECS.Network.Tests {
             }
             public void Deserialize(ref StreamBufferReader reader) { }
         }
+
+        [TestCase(0u, EventsBehaviour.SendToNetworkOnly)]
+        [TestCase(0u, EventsBehaviour.StoreLocalAndSendToNetwork)]
+        [TestCase(4u, EventsBehaviour.SendToNetworkOnly)]
+        [TestCase(4u, EventsBehaviour.StoreLocalAndSendToNetwork)]
+        public void EventPayloadRoundTripsThroughNetworkPackage(uint count, EventsBehaviour behaviour) {
+            using var world = World.Create();
+            var data = CreateData(world);
+            var transport = new Transport { EventsBehaviour = behaviour };
+            StreamBufferReader reader = default;
+            NetworkPackage package = default;
+            try {
+                UnsafeNetworkModule.AddEvent(transport, data, 7u, 3, new Payload { count = count }, 0UL);
+                Assert.AreEqual(1, transport.sent);
+                Assert.AreEqual(18u + count * sizeof(uint), (uint)transport.last.Length);
+                reader = new StreamBufferReader(transport.last);
+                package = NetworkPackage.Create(ref reader);
+                Assert.AreEqual(7u, package.playerId);
+                Assert.AreEqual(3, package.methodId);
+                Assert.AreEqual(count * sizeof(uint), package.dataSize);
+                Assert.AreEqual(reader.Length, reader.Position);
+                for (var i = 0u; i < count; ++i) {
+                    Assert.AreEqual(i, ((uint*)package.data)[i]);
+                }
+                var storedCount = data.ptr->eventsStorage.GetEvents().Count;
+                Assert.AreEqual(behaviour == EventsBehaviour.SendToNetworkOnly ? 0u : 1u, storedCount);
+            } finally {
+                _free((safe_ptr)package.data);
+                reader.Dispose();
+                DisposeData(data);
+            }
+        }
+
         private sealed class Transport : INetworkTransport {
             public TransportStatus Status { get; set; } = TransportStatus.Connected;
             public EventsBehaviour EventsBehaviour { get; set; }

@@ -21,6 +21,121 @@ namespace ME.BECS.Tests {
             yield return null;
         }
 
+#if LEAK_DETECTION && LEAK_DETECTION_COUNTER
+        [Unity.Burst.BurstCompile(CompileSynchronously = true)]
+        private struct NestedAllocatorTagsJob : IJob {
+            public void Execute() {
+                for (var i = 0; i < 32; ++i) {
+                    using (var root = new AllocatorTag(ALLOC_TAGS.COMPONENTS, 1u)) {
+                        using (var child = new AllocatorTag(ALLOC_TAGS.COLLECTIONS, 2u)) {
+                            using (var leaf = new AllocatorTag(ALLOC_TAGS.ENTITIES, 3u)) { }
+                        }
+                    }
+                }
+            }
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void NestedAllocatorTagsReleaseTheirParentAllocations(bool burst) {
+            AllocatorTag.tags.Data.Resize(JobUtils.ThreadsCount);
+            var job = new NestedAllocatorTagsJob();
+            if (burst == true) {
+                Assert.AreEqual(true, Unity.Burst.BurstCompiler.Options.EnableBurstCompilation);
+                job.Schedule().Complete();
+            } else {
+                job.Execute();
+            }
+            var before = LeakDetectorData.counter.Data.Get((int)ALLOCATOR);
+            if (burst == true) {
+                job.Schedule().Complete();
+            } else {
+                job.Execute();
+            }
+            Assert.AreEqual(before, LeakDetectorData.counter.Data.Get((int)ALLOCATOR));
+        }
+
+        [Test]
+        public unsafe void NestedAllocatorTagsRestoreScopesAndKeepIndependentAllocationSnapshots() {
+            var previous = AllocatorTag.Get();
+            var allocation = default(MemPtr);
+            try {
+                using (var root = new AllocatorTag(ALLOC_TAGS.COMPONENTS, 1u)) {
+                    using (var child = new AllocatorTag(ALLOC_TAGS.COLLECTIONS, 2u)) {
+                        using (var leaf = new AllocatorTag(ALLOC_TAGS.ENTITIES, 3u)) {
+                            allocation = this.allocator.Alloc(16u);
+                        }
+                        Assert.AreEqual(ALLOC_TAGS.COLLECTIONS.tag, AllocatorTag.Get().tagInfo.tag);
+                        Assert.AreEqual(2u, AllocatorTag.Get().componentId);
+                    }
+                    Assert.AreEqual(ALLOC_TAGS.COMPONENTS.tag, AllocatorTag.Get().tagInfo.tag);
+                    Assert.AreEqual(1u, AllocatorTag.Get().componentId);
+                }
+                Assert.AreEqual(previous.tagInfo.tag, AllocatorTag.Get().tagInfo.tag);
+                Assert.AreEqual(previous.componentId, AllocatorTag.Get().componentId);
+                var snapshot = LeakDetector.Find(this.allocator.GetUnsafePtr(allocation));
+                Assert.AreEqual(ALLOC_TAGS.ENTITIES.tag, snapshot.tag.tagInfo.tag);
+                Assert.AreEqual(3u, snapshot.tag.componentId);
+                Assert.AreEqual(System.IntPtr.Zero, (System.IntPtr)snapshot.tag.parent.ptr);
+            } finally {
+                if (allocation != default) {
+                    this.allocator.Free(allocation);
+                }
+            }
+        }
+
+        [Test]
+        public unsafe void NullFreeDoesNotReportDoubleFreeOrChangeAllocationCounter() {
+            var allocation = _make(16u, align: 16, allocator: Unity.Collections.Allocator.Persistent);
+            var domainAllocation = _make(16u);
+            try {
+                var before = LeakDetectorData.counter.Data.Get((int)Unity.Collections.Allocator.Persistent);
+                var domainBefore = LeakDetectorData.counter.Data.Get((int)ALLOCATOR);
+                _free(default(safe_ptr), Unity.Collections.Allocator.Persistent);
+                _free(default(safe_ptr<int>), Unity.Collections.Allocator.Persistent);
+                _free(default(safe_ptr));
+                _free(default(safe_ptr<int>));
+                safe_ptr untyped = default;
+                safe_ptr<int> typed = default;
+                _free(ref untyped);
+                _free(ref typed);
+                Assert.AreEqual(System.IntPtr.Zero, (System.IntPtr)untyped.ptr);
+                Assert.AreEqual(System.IntPtr.Zero, (System.IntPtr)typed.ptr);
+                Assert.AreEqual(before, LeakDetectorData.counter.Data.Get((int)Unity.Collections.Allocator.Persistent));
+                Assert.AreEqual(domainBefore, LeakDetectorData.counter.Data.Get((int)ALLOCATOR));
+            } finally {
+                _free(allocation, Unity.Collections.Allocator.Persistent);
+                _free(domainAllocation);
+            }
+        }
+
+        [Test]
+        public unsafe void BootstrapReloadPreservesLiveAllocationTrackingAndCounters() {
+            BootstrapRuntime.RequireInstalledPlan(editor: true);
+            var persistent = _make(16u, align: 16, allocator: Unity.Collections.Allocator.Persistent);
+            var domain = _make(16u, align: 16, allocator: Unity.Collections.Allocator.Domain);
+            var persistentBeforeFree = 0;
+            var domainBeforeFree = 0;
+            try {
+                for (var pass = 0; pass < 2; ++pass) {
+                    BootstrapRuntime.LoadInstalled(editor: true);
+                    using (var world = World.Create()) {
+                        Assert.AreEqual(true, world.isCreated);
+                    }
+                    Assert.AreEqual((System.IntPtr)persistent.ptr, LeakDetector.Find(persistent).ptr);
+                    Assert.AreEqual((System.IntPtr)domain.ptr, LeakDetector.Find(domain).ptr);
+                }
+            } finally {
+                persistentBeforeFree = LeakDetectorData.counter.Data.Get((int)Unity.Collections.Allocator.Persistent);
+                domainBeforeFree = LeakDetectorData.counter.Data.Get((int)Unity.Collections.Allocator.Domain);
+                _free(persistent, Unity.Collections.Allocator.Persistent);
+                _free(domain, Unity.Collections.Allocator.Domain);
+            }
+            Assert.AreEqual(persistentBeforeFree - 1, LeakDetectorData.counter.Data.Get((int)Unity.Collections.Allocator.Persistent));
+            Assert.AreEqual(domainBeforeFree - 1, LeakDetectorData.counter.Data.Get((int)Unity.Collections.Allocator.Domain));
+        }
+#endif
+
         private void TestProxy(ME.BECS.AllocatorDebugProxy proxy, ME.BECS.AllocatorDebugProxy proxy2) {
             Assert.IsTrue(proxy.zones.Length == proxy2.zones.Length);
             for (var index = 0; index < proxy.zones.Length; ++index) {

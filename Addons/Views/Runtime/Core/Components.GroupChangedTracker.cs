@@ -12,6 +12,9 @@ namespace ME.BECS {
     public struct GroupChangedTracker {
 
         private ushort[] versionByGroup;
+#if ENABLE_BECS_COLLECTIONS_CHECKS
+        private uint initializedGroupCount;
+#endif
 
         /// <summary>
         /// Initializes group changed tracker state from the supplied context.
@@ -20,6 +23,9 @@ namespace ME.BECS {
         public void Initialize(in ViewsTracker.ViewInfo tracker) {
             E.IS_ALREADY_INITIALIZED(versionByGroup);
             this.versionByGroup = System.Buffers.ArrayPool<ushort>.Shared.Rent((int)tracker.tracker.Length);
+#if ENABLE_BECS_COLLECTIONS_CHECKS
+            this.initializedGroupCount = tracker.tracker.Length;
+#endif
 
             for (uint i = 0u; i < this.versionByGroup.Length; ++i) {
                 this.versionByGroup[i] = ushort.MaxValue;
@@ -31,6 +37,7 @@ namespace ME.BECS {
         /// </summary>
         [INLINE(256)]
         public readonly void Invalidate(in EntRO worldEnt, in ViewsTracker.ViewInfo tracker) {
+            this.ValidateShape(in worldEnt, in tracker);
             for (uint i = 0u; i < tracker.tracker.Length; ++i) {
                 this.versionByGroup[i] = unchecked((ushort)(worldEnt.GetVersion(tracker.tracker.Get(i)) - 1));
             }
@@ -51,6 +58,7 @@ namespace ME.BECS {
         public readonly bool HasChanged(in EntRO worldEnt, in ViewsTracker.ViewInfo tracker) {
             var changed = true;
             if (worldEnt.IsAlive() == true && tracker.tracker.IsCreated == true) {
+                this.ValidateShape(in worldEnt, in tracker);
                 changed = false;
                 for (uint j = 0u; j < tracker.tracker.Length; ++j) {
                     var vGroup = worldEnt.GetVersion(tracker.tracker.Get(j));
@@ -61,6 +69,18 @@ namespace ME.BECS {
                 }
             }
             return changed;
+        }
+
+        [System.Diagnostics.Conditional("ENABLE_BECS_COLLECTIONS_CHECKS")]
+        private readonly void ValidateShape(in EntRO worldEnt, in ViewsTracker.ViewInfo tracker) {
+#if ENABLE_BECS_COLLECTIONS_CHECKS
+            var capacity = this.versionByGroup == null ? 0 : this.versionByGroup.Length;
+            if (this.initializedGroupCount != tracker.tracker.Length || tracker.tracker.Length > capacity) {
+                var ent = worldEnt.GetEntity();
+                throw new System.IndexOutOfRangeException($"View tracker shape changed: entity={ent.worldId}:{ent.id}:{ent.gen}, " +
+                    $"initializedGroups={this.initializedGroupCount}, currentGroups={tracker.tracker.Length}, cachedVersions={capacity}.");
+            }
+#endif
         }
 
     }

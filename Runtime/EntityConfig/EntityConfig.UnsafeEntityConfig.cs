@@ -924,6 +924,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public UnsafeEntityConfig(EntityConfig config, uint id = 0u, Ent staticDataEnt = default, bool autoRegisterConfig = true) {
 
+            config.ValidateCollectionTypes();
             E.ValidateConfig(config);
             this = default;
             this.id = id > 0u || autoRegisterConfig == false ? id : EntityConfigRegistry.Register(config, out _);

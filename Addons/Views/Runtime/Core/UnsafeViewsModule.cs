@@ -1198,6 +1198,10 @@ namespace ME.BECS.Views {
             }
             JobUtils.RunScheduled();
 
+            var completeJob = new Jobs.CompleteJob() {
+                mode = mode,
+                viewsModuleData = this.data,
+            };
             {
                 var provider = this.provider.Value;
                 {
@@ -1222,46 +1226,51 @@ namespace ME.BECS.Views {
                     dependsOn.Complete();
                 }
 
-                // Update views logic
-                {
-                    var marker = new Unity.Profiling.ProfilerMarker("[Views Module] ApplyState Views");
-                    marker.Begin();
-                    for (uint i = 0u; i < this.data.ptr->renderingOnSceneApplyState.Count; ++i) {
-                        var entId = this.data.ptr->renderingOnSceneApplyState.sparseSet.dense[in allocator, i];
-                        if (this.data.ptr->renderingOnSceneApplyStateCulling[in allocator, entId] == true) continue;
-                        var idx = this.data.ptr->renderingOnSceneEntToRenderIndex.ReadValue(in allocator, entId);
-                        ref var entData = ref *(this.data.ptr->renderingOnSceneEnts.Ptr + idx);
-                        var view = this.data.ptr->renderingOnScene[in allocator, idx];
-                        var ent = entData.element;
-                        if (entData.version != ent.Version) {
-                            entData.version = ent.Version;
-                            provider.ApplyState(this.data, in view, entData.ViewData);
+                try {
+                    // Update views logic
+                    {
+                        var marker = new Unity.Profiling.ProfilerMarker("[Views Module] ApplyState Views");
+                        using var scope = marker.Auto();
+                        for (uint i = 0u; i < this.data.ptr->renderingOnSceneApplyState.Count; ++i) {
+                            var entId = this.data.ptr->renderingOnSceneApplyState.sparseSet.dense[in allocator, i];
+                            if (this.data.ptr->renderingOnSceneApplyStateCulling[in allocator, entId] == true) {
+                                continue;
+                            }
+                            var idx = this.data.ptr->renderingOnSceneEntToRenderIndex.ReadValue(in allocator, entId);
+                            ref var entData = ref *(this.data.ptr->renderingOnSceneEnts.Ptr + idx);
+                            var view = this.data.ptr->renderingOnScene[in allocator, idx];
+                            var ent = entData.element;
+                            if (entData.version != ent.Version) {
+                                entData.version = ent.Version;
+                                provider.ApplyState(this.data, in view, entData.ViewData);
+                            }
                         }
                     }
-                    marker.End();
-                }
 
-                {
-                    var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Update Views");
-                    marker.Begin();
-                    for (uint i = 0u; i < this.data.ptr->renderingOnSceneUpdate.Count; ++i) {
-                        var entId = this.data.ptr->renderingOnSceneUpdate.sparseSet.dense[in allocator, i];
-                        if (this.data.ptr->renderingOnSceneUpdateCulling[in allocator, entId] == true) continue;
-                        var idx = this.data.ptr->renderingOnSceneEntToRenderIndex.ReadValue(in allocator, entId);
-                        ref var entData = ref *(this.data.ptr->renderingOnSceneEnts.Ptr + idx);
-                        var view = this.data.ptr->renderingOnScene[in allocator, idx];
-                        if (view.prefabInfo.ptr->typeInfo.HasUpdate == true || view.prefabInfo.ptr->HasUpdateModules == true) {
-                            provider.OnUpdate(this.data, in view, entData.ViewData, dt);
+                    {
+                        var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Update Views");
+                        using var scope = marker.Auto();
+                        for (uint i = 0u; i < this.data.ptr->renderingOnSceneUpdate.Count; ++i) {
+                            var entId = this.data.ptr->renderingOnSceneUpdate.sparseSet.dense[in allocator, i];
+                            if (this.data.ptr->renderingOnSceneUpdateCulling[in allocator, entId] == true) {
+                                continue;
+                            }
+                            var idx = this.data.ptr->renderingOnSceneEntToRenderIndex.ReadValue(in allocator, entId);
+                            ref var entData = ref *(this.data.ptr->renderingOnSceneEnts.Ptr + idx);
+                            var view = this.data.ptr->renderingOnScene[in allocator, idx];
+                            if (view.prefabInfo.ptr->typeInfo.HasUpdate == true || view.prefabInfo.ptr->HasUpdateModules == true) {
+                                provider.OnUpdate(this.data, in view, entData.ViewData, dt);
+                            }
                         }
                     }
-                    marker.End();
+                } catch {
+                    // All provider jobs are complete. Do not replay committed operations if a callback throws.
+                    completeJob.Run();
+                    throw;
                 }
             }
             
-            dependsOn = new Jobs.CompleteJob() {
-                mode = mode,
-                viewsModuleData = this.data,
-            }.Schedule(dependsOn);
+            dependsOn = completeJob.Schedule(dependsOn);
             
             return dependsOn;
 

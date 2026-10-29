@@ -1325,6 +1325,125 @@ namespace ME.BECS.Tests {
             }
         }
 
+        [System.Serializable]
+        public class ThrowOnceViewModule : IViewApplyState, IViewUpdate {
+            public bool throwApplyState;
+            public bool throwUpdate;
+
+            public void ApplyState(in ViewData ent) {
+                if (this.throwApplyState == true) {
+                    this.throwApplyState = false;
+                    throw new System.InvalidOperationException("view-apply-state-probe");
+                }
+            }
+
+            public void OnUpdate(in ViewData ent, float dt) {
+                if (this.throwUpdate == true) {
+                    this.throwUpdate = false;
+                    throw new System.InvalidOperationException("view-update-probe");
+                }
+            }
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void CallbackFailureClearsCommittedOperationsBeforeNextUpdate(bool failOnUpdate) {
+            var go = new UnityEngine.GameObject("Throwing view");
+            var prefab = go.AddComponent<DefaultView>();
+            prefab.modules.items = new[] { new ViewModules.Module {
+                enabled = true,
+                module = new ThrowOnceViewModule { throwApplyState = failOnUpdate == false, throwUpdate = failOnUpdate },
+            } };
+            prefab.OnValidate();
+            var world = World.Create();
+            TestInitialize(in world);
+            var properties = ViewsModuleProperties.Default;
+            properties.interpolateState = true;
+            properties.useUnityHierarchy = false;
+            var views = UnsafeViewsModule<EntityView>.Create(ViewsModule.GAMEOBJECT_PROVIDER_ID, ref world, new EntityViewProvider(),
+                WorldProperties.Default.stateProperties.EntitiesCapacity, properties);
+            var moduleType = typeof(ThrowOnceViewModule);
+            var hadName = ViewsTracker.Tracker.names.TryGetValue(moduleType, out var oldName);
+            try {
+                // Editor publication can omit unused test modules; supply its profiling name locally.
+                ViewsTracker.Tracker.names[moduleType] = nameof(ThrowOnceViewModule);
+                var ent = world.NewEnt();
+                ent.Set<TransformAspect>();
+                var source = views.RegisterViewSource(prefab, checkPrefab: false);
+                ent.InstantiateView(source);
+                Batches.Apply(world);
+                var exception = Assert.Throws<System.InvalidOperationException>(() => views.Update(0.01f).Complete());
+                Assert.AreEqual(failOnUpdate == true ? "view-update-probe" : "view-apply-state-probe", exception.Message);
+                // Stop a failing baseline before replaying operations into the native rendering lists.
+                Assert.AreEqual(0, views.data.ptr->toAddTemp.Length);
+                Assert.AreEqual(0, views.data.ptr->toRemoveTemp.Length);
+                Assert.AreEqual(0, views.data.ptr->toAdd.Count());
+                Assert.AreEqual(0, views.data.ptr->toRemove.Count());
+                Assert.AreEqual(0, views.data.ptr->toAssign.Count());
+                Assert.AreEqual(0, views.data.ptr->toChange.Count());
+                Assert.AreEqual(0, views.data.ptr->dirty.Length);
+                views.Update(0.01f).Complete();
+                Assert.AreEqual(1, views.data.ptr->renderingOnSceneEnts.Length);
+                Assert.AreEqual(1, ProviderTransformCount(views));
+                Assert.IsNotNull(views.GetViewByEntity(ent));
+                ent.DestroyView();
+                Batches.Apply(world);
+                views.Update(0.01f).Complete();
+                Assert.AreEqual(0, views.data.ptr->renderingOnSceneEnts.Length);
+                Assert.AreEqual(0, ProviderTransformCount(views));
+                Assert.IsNull(views.GetViewByEntity(ent));
+            } finally {
+                views.Dispose();
+                world.Dispose();
+                UnityEngine.Object.DestroyImmediate(go);
+                if (hadName == true) {
+                    ViewsTracker.Tracker.names[moduleType] = oldName;
+                } else {
+                    ViewsTracker.Tracker.names.Remove(moduleType);
+                }
+            }
+        }
+
+        private static int ProviderTransformCount(UnsafeViewsModule<EntityView> views) {
+            var field = typeof(EntityViewProvider).GetField("renderingOnSceneTransforms",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            return ((UnityEngine.Jobs.TransformAccessArray)field.GetValue(views.provider.Value)).length;
+        }
+
+#if ENABLE_BECS_COLLECTIONS_CHECKS
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ChangedTrackerShapeReportsEntityAndCountsBeforeAccess(bool invalidate) {
+            using var world = World.Create();
+            var ent = world.NewEnt();
+            var entRo = (EntRO)ent;
+            var info = new ViewsTracker.ViewInfo();
+            var tracker = new GroupChangedTracker();
+            var initialized = false;
+            try {
+                info.tracker.Resize(1u);
+                info.tracker.Get(0u) = 0u;
+                tracker.Initialize(in info);
+                initialized = true;
+                info.tracker.Resize(2u);
+                var exception = Assert.Throws<System.IndexOutOfRangeException>(() => {
+                    if (invalidate == true) {
+                        tracker.Invalidate(in entRo, in info);
+                    } else {
+                        tracker.HasChanged(in entRo, in info);
+                    }
+                });
+                Assert.That(exception.Message, Does.Contain($"entity={ent.worldId}:{ent.id}:{ent.gen}")
+                    .And.Contain("initializedGroups=1").And.Contain("currentGroups=2").And.Contain("cachedVersions="));
+            } finally {
+                if (initialized == true) {
+                    tracker.Dispose();
+                }
+                info.tracker.Dispose();
+            }
+        }
+#endif
+
         [Test]
         public void AssignInvalidatesModuleTrackerWithEqualVersions() {
             var go = new UnityEngine.GameObject("Tracked view");

@@ -29,15 +29,18 @@ namespace ME.BECS {
         public static void Initialize() {
             //UnityEngine.Debug.Log("Initialize static world for configs");
             lockSpinner.Lock();
-            if (staticWorld.isCreated == false) {
-                var props = WorldProperties.Default;
-                props.name = "EntityConfig Static World";
-                props.stateProperties.allowStaticStorage = true;
-                staticWorld = World.Create(props, switchContext: false);
-                registryFromId = new UIntDictionary<UnsafeEntityConfig>(ref staticWorld.state.ptr->allocator, 10u);
-                registryToId.Clear();
+            try {
+                if (staticWorld.isCreated == false) {
+                    var props = WorldProperties.Default;
+                    props.name = "EntityConfig Static World";
+                    props.stateProperties.allowStaticStorage = true;
+                    staticWorld = World.Create(props, switchContext: false);
+                    registryFromId = new UIntDictionary<UnsafeEntityConfig>(ref staticWorld.state.ptr->allocator, 10u);
+                    registryToId.Clear();
+                }
+            } finally {
+                lockSpinner.Unlock();
             }
-            lockSpinner.Unlock();
         }
         
         /// <summary>
@@ -54,7 +57,6 @@ namespace ME.BECS {
                 return id;
             }
 
-            var staticConfigEnt = staticWorld.NewEnt();
             var nextId = ObjectReferenceRegistry.GetId(config);
 
             if (nextId == 0u) {
@@ -66,13 +68,18 @@ namespace ME.BECS {
             }
             
             lockSpinner.Lock();
-            unsafeConfig = config.CreateUnsafeConfig(nextId, staticConfigEnt);
-            registryToId.Add(config, nextId);
-            registryFromId.Add(ref staticWorld.state.ptr->allocator, nextId, unsafeConfig);
-            EntityConfigsRegistry.TryAdd(nextId, unsafeConfig);
-            Batches.Apply(in staticWorld);
-            lockSpinner.Unlock();
-            return nextId;
+            try {
+                config.ValidateCollectionTypes();
+                var staticConfigEnt = staticWorld.NewEnt();
+                unsafeConfig = config.CreateUnsafeConfig(nextId, staticConfigEnt);
+                registryToId.Add(config, nextId);
+                registryFromId.Add(ref staticWorld.state.ptr->allocator, nextId, unsafeConfig);
+                EntityConfigsRegistry.TryAdd(nextId, unsafeConfig);
+                Batches.Apply(in staticWorld);
+                return nextId;
+            } finally {
+                lockSpinner.Unlock();
+            }
 
         }
 
@@ -80,7 +87,7 @@ namespace ME.BECS {
         /// Synchronizes the associated state with the supplied source.
         /// </summary>
         public static void Sync(EntityConfig config) {
-            
+            config.ValidateCollectionTypes();
             lockSpinner.Lock();
             if (registryToId.TryGetValue(config, out var id) == true) {
                 if (registryFromId.TryGetValue(in staticWorld.state.ptr->allocator, id, out var unsafeEntityConfig) == true) {

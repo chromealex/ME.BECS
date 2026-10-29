@@ -484,6 +484,9 @@ namespace ME.BECS {
         /// </summary>
         [INLINE(256)]
         public void Read(ref byte* value, uint length) {
+            if (length == 0u) {
+                return;
+            }
             var ptr = this.GetPointerAndMove(length);
             _memcpy(ptr, (safe_ptr)value, length);
         }
@@ -493,6 +496,9 @@ namespace ME.BECS {
         /// </summary>
         [INLINE(256)]
         public void Read<T>(ref T* value, uint length) where T : unmanaged {
+            if (length == 0u) {
+                return;
+            }
             var size = TSize<T>.size * length;
             var ptr = this.GetPointerAndMove(size);
             _memcpy(ptr, (safe_ptr)(byte*)value, size);
@@ -616,6 +622,9 @@ namespace ME.BECS {
         /// </summary>
         [INLINE(256)]
         public void Write(byte* arrBytes, uint length) {
+            if (length == 0u) {
+                return;
+            }
             var ptr = this.GetPointerAndMove(length);
             _memcpy((safe_ptr)arrBytes, ptr, length);
         }
@@ -625,6 +634,9 @@ namespace ME.BECS {
         /// </summary>
         [INLINE(256)]
         public void Write<T>(T* arrBytes, uint length) where T : unmanaged {
+            if (length == 0u) {
+                return;
+            }
             var size = TSize<T>.size * length;
             var ptr = this.GetPointerAndMove(size);
             _memcpy((safe_ptr)(byte*)arrBytes, ptr, size);

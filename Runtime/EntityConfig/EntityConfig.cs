@@ -159,6 +159,71 @@ namespace ME.BECS {
             this.collectionsData.CleanUp(this);
         }
 
+        // Config collections contain boxed serialized values, not necessarily the T
+        // currently declared by their fields. Check before allocating or copying native data.
+        internal void ValidateCollectionTypes() {
+            for (var config = this; config != null; config = config.baseConfig) {
+                if (config.collectionsData.items == null) {
+                    continue;
+                }
+                var visited = new System.Collections.Generic.HashSet<uint>();
+                foreach (var component in config.data.components) {
+                    config.ValidateCollectionFields(component, component?.GetType().FullName, visited);
+                }
+                foreach (var component in config.sharedData.components) {
+                    config.ValidateCollectionFields(component, component?.GetType().FullName, visited);
+                }
+                foreach (var component in config.staticData.components) {
+                    config.ValidateCollectionFields(component, component?.GetType().FullName, visited);
+                }
+                // Unreferenced collections are packed too; their first element sets the stride.
+                foreach (var collection in config.collectionsData.items) {
+                    var type = collection.array != null && collection.array.Count > 0 ? collection.array[0]?.GetType() : null;
+                    config.ValidateCollectionElements(collection, type, "serialized collection");
+                }
+            }
+        }
+
+        private void ValidateCollectionFields(object value, string path, System.Collections.Generic.HashSet<uint> visited) {
+            if (value == null) {
+                return;
+            }
+            foreach (var field in value.GetType().GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)) {
+                if (typeof(IUnmanagedList).IsAssignableFrom(field.FieldType) == true) {
+                    var id = ((IUnmanagedList)field.GetValue(value)).GetConfigId();
+                    if (id == 0u) {
+                        continue;
+                    }
+                    var collection = this.collectionsData.items.Find(item => item.id == id);
+                    if (collection.array == null) {
+                        continue;
+                    }
+                    var fieldPath = path + "." + field.Name;
+                    this.ValidateCollectionElements(collection, field.FieldType.GetGenericArguments()[0], fieldPath);
+                    // Validate each reference's expected T, even when another field uses the same ID.
+                    if (visited.Add(id) == true) {
+                        for (var i = 0; i < collection.array.Count; ++i) {
+                            this.ValidateCollectionFields(collection.array[i], fieldPath + "[" + i + "]", visited);
+                        }
+                    }
+                } else if (field.FieldType.IsValueType == true && field.FieldType.IsPrimitive == false && field.FieldType.IsEnum == false) {
+                    this.ValidateCollectionFields(field.GetValue(value), path + "." + field.Name, visited);
+                }
+            }
+        }
+
+        private void ValidateCollectionElements(CollectionsData.Collection collection, System.Type expected, string path) {
+            if (collection.array == null) {
+                throw new System.ArgumentException($"Config '{this.name}', collection {collection.id} ({path}): null array.");
+            }
+            for (var i = 0; i < collection.array.Count; ++i) {
+                var actual = collection.array[i]?.GetType();
+                if (actual == null || actual != expected) {
+                    throw new System.ArgumentException($"Config '{this.name}', collection {collection.id}, element {i} ({path}): expected {expected?.FullName ?? "non-null value"}, actual {actual?.FullName ?? "null"}.");
+                }
+            }
+        }
+
         /// <summary>
         /// Refreshes or validates state after values change in the Unity Inspector.
         /// </summary>
