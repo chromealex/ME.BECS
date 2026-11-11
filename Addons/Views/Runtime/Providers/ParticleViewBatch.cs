@@ -2,6 +2,12 @@ using System;
 using Unity.Collections;
 using Unity.Profiling;
 using UnityEngine;
+#if FIXED_POINT
+using float3 = ME.BECS.FixedPoint.float3;
+using quaternion = ME.BECS.FixedPoint.quaternion;
+#else
+using Unity.Mathematics;
+#endif
 
 namespace ME.BECS.Views {
 
@@ -33,6 +39,8 @@ namespace ME.BECS.Views {
             internal Vector3[] orbitPositions;
             internal float age;
             internal bool transformHistoryPending;
+            internal Vector3 position;
+            internal Quaternion rotation;
             public void Dispose() {
                 foreach (var node in this.nodes) node?.Dispose();
             }
@@ -259,7 +267,27 @@ namespace ME.BECS.Views {
             this.meshes.Commit();
         }
 
-        private static void CommitOwner(Owner state, in ParticlesProvider.ParticleInstanceData instance, Ent entity, float dt, Camera camera) {
+        private static void CommitOwner(Owner state, in ParticlesProvider.ParticleInstanceData input, Ent entity, float dt, Camera camera) {
+            var instance = input;
+            var position = (Vector3)instance.position;
+            var rotation = (Quaternion)(Unity.Mathematics.quaternion)instance.rotation;
+            var overridden = false;
+            var viewData = new ViewData(entity, default);
+            foreach (var module in state.modules) {
+                if (module is IBatchedParticleViewPose pose) {
+                    overridden |= pose.PreparePose(in viewData, instance.pendingSpawn, ref position, ref rotation);
+                }
+            }
+            if (overridden == true) {
+                instance.position = (float3)position;
+                instance.rotation = (quaternion)(Unity.Mathematics.quaternion)rotation;
+                if (instance.pendingSpawn == false) {
+                    instance.previousPosition = state.position;
+                    instance.previousRotation = state.rotation;
+                }
+            }
+            state.position = position;
+            state.rotation = rotation;
             var graph = state.simulation;
             if (instance.pendingSpawn == true) {
                 using var marker = InitializeMarker.Auto();

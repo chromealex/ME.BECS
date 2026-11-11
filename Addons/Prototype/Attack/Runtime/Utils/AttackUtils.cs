@@ -256,9 +256,15 @@ namespace ME.BECS.Attack {
 
         [INLINE(256)]
         private static BulletAspect CreateBullet_INTERNAL(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in ME.BECS.Views.View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo, in Config muzzleConfig) {
+            return CreateBullet_INTERNAL(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, muzzleLifetimeMs, in jobInfo, in muzzleConfig, out _);
+        }
+
+        [INLINE(256)]
+        private static BulletAspect CreateBullet_INTERNAL(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in ME.BECS.Views.View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo, in Config muzzleConfig, out Ent muzzleEnt) {
+            muzzleEnt = default;
             
             if (muzzleView.IsValid == true) {
-                var muzzleEnt = Ent.New<AttackMuzzlePointEntityType>(in jobInfo, "MuzzlePoint");
+                muzzleEnt = Ent.New<AttackMuzzlePointEntityType>(in jobInfo, "MuzzlePoint");
                 var tr = muzzleEnt.GetOrCreateAspect<TransformAspect>();
                 tr.IsStaticLocal = true;
                 tr.position = position;
@@ -375,8 +381,14 @@ namespace ME.BECS.Attack {
         /// </summary>
         [INLINE(256)]
         public static BulletAspect CreateBulletSpatial(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in ME.BECS.Views.View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo, in Config muzzleConfig) {
+            return CreateBulletSpatial(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, muzzleLifetimeMs, in jobInfo, in muzzleConfig, out _);
+        }
 
-            var bullet = CreateBullet_INTERNAL(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, muzzleLifetimeMs, in jobInfo, in muzzleConfig);
+        /// <summary>Returns the independently timed muzzle so callers can attach per-shot presentation data.</summary>
+        [INLINE(256)]
+        public static BulletAspect CreateBulletSpatial(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in ME.BECS.Views.View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo, in Config muzzleConfig, out Ent muzzleEnt) {
+
+            var bullet = CreateBullet_INTERNAL(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, muzzleLifetimeMs, in jobInfo, in muzzleConfig, out muzzleEnt);
             var attack = bullet.ent.GetOrCreateAspect<SpatialQueryAspect>();
             attack.query.ignoreSorting = true;
             attack.query.treeMask = targetsMask; // Search for targets in this tree

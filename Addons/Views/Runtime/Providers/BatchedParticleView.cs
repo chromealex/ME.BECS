@@ -8,6 +8,11 @@ namespace ME.BECS.Views {
         void PrepareBatch(in ViewData view, float dt, bool newOwner);
     }
 
+    /// <summary>Resolves a presentation pose before native simulation and transform-history restoration.</summary>
+    public interface IBatchedParticleViewPose : IBatchedParticleViewModule {
+        bool PreparePose(in ViewData view, bool newOwner, ref Vector3 position, ref Quaternion rotation);
+    }
+
     /// <summary>Opt-in authoring for owner-isolated native simulation or entity-driven meshes.</summary>
     [DisallowMultipleComponent]
     public sealed class BatchedParticleView : MonoBehaviour {

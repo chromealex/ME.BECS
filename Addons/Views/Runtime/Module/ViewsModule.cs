@@ -177,6 +177,12 @@ namespace ME.BECS {
         private UnsafeViewsModule<EntityView> viewsDrawMeshes;
         private UnsafeViewsModule<EntityView> viewsParticles;
         private bool isActive;
+        private bool deferredParticles;
+
+        /// <summary>Lets the owner commit particle views after normal Animator evaluation.</summary>
+        public void SetDeferredParticles(bool value) {
+            this.deferredParticles = value;
+        }
 
         /// <summary>
         /// Initializes views module state from the supplied context.
@@ -267,9 +273,17 @@ namespace ME.BECS {
             
             var provider1Handle = (this.properties.viewsGameObjects == true ? this.viewsGameObjects.Update(UnityEngine.Time.deltaTime, dependsOn) : default);
             var provider2Handle = (this.properties.viewsDrawMeshes == true ? this.viewsDrawMeshes.Update(UnityEngine.Time.deltaTime, dependsOn) : default);
-            var provider3Handle = (this.properties.viewsParticles == true ? this.viewsParticles.Update(UnityEngine.Time.deltaTime, dependsOn) : default);
+            var provider3Handle = (this.properties.viewsParticles == true && this.deferredParticles == false ? this.viewsParticles.Update(UnityEngine.Time.deltaTime, dependsOn) : dependsOn);
             return JobHandle.CombineDependencies(provider1Handle, provider2Handle, provider3Handle);
 
+        }
+
+        /// <summary>Commits opted-in particles while retaining the ordinary actor/camera update phase.</summary>
+        public JobHandle UpdateDeferredParticles(JobHandle dependsOn) {
+            if (this.isActive == true && this.deferredParticles == true && this.properties.viewsParticles == true) {
+                return this.viewsParticles.Update(UnityEngine.Time.deltaTime, dependsOn);
+            }
+            return dependsOn;
         }
 
         /// <summary>
